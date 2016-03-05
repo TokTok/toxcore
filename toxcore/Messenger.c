@@ -1908,7 +1908,7 @@ Messenger *new_messenger(Logger *log, Messenger_Options *options, unsigned int *
     } else {
         IP ip;
         ip_init(&ip, options->ipv6enabled);
-        m->net = new_networking_upnp(ip, options->port_range[0], options->port_range[1], options->upnp_enabled, &net_err);
+        m->net = new_networking_nat(ip, options->port_range[0], options->port_range[1], options->traversal_type, &net_err);
     }
 
     if (m->net == NULL) {
