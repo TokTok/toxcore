@@ -113,6 +113,7 @@ Tox *tox_new(const struct Tox_Options *options, TOX_ERR_NEW *error)
             load_savedata_tox = 1;
         }
 
+<<<<<<< 49983d56491d1750649ab3280e5f066647bc4246
         m_options.ipv6enabled = tox_options_get_ipv6_enabled(options);
         m_options.udp_disabled = !tox_options_get_udp_enabled(options);
         m_options.port_range[0] = tox_options_get_start_port(options);
@@ -120,6 +121,16 @@ Tox *tox_new(const struct Tox_Options *options, TOX_ERR_NEW *error)
         m_options.tcp_server_port = tox_options_get_tcp_port(options);
         m_options.hole_punching_enabled = tox_options_get_hole_punching_enabled(options);
         m_options.local_discovery_enabled = tox_options_get_local_discovery_enabled(options);
+=======
+        m_options.ipv6enabled = options->ipv6_enabled;
+        m_options.udp_disabled = !options->udp_enabled;
+        m_options.upnp_enabled = options->upnp_enabled;
+        m_options.port_range[0] = options->start_port;
+        m_options.port_range[1] = options->end_port;
+        m_options.tcp_server_port = options->tcp_port;
+        m_options.hole_punching_enabled = options->hole_punching_enabled;
+        m_options.local_discovery_enabled = options->local_discovery_enabled;
+>>>>>>> UPnP: add UPnP to Tox_Options
 
         m_options.log_callback = (logger_cb *)tox_options_get_log_callback(options);
         m_options.log_user_data = tox_options_get_log_user_data(options);
