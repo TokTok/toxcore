@@ -358,6 +358,28 @@ enum class PROXY_TYPE {
 }
 
 /**
+ * Type of technology used to try to traverse a NAT.
+ */
+enum class TRAVERSAL_TYPE {
+  /**
+   * Don't use any particular technology.
+   */
+  NONE,
+  /**
+   * Use UPnP technology.
+   */
+  UPNP,
+  /**
+   * Use NAT-PMP technology.
+   */
+  NATPMP,
+  /**
+   * Use both UPnP and NAT-PMP technologies.
+   */
+  ALL,
+}
+
+/**
  * Type of savedata to create the Tox instance from.
  */
 enum class SAVEDATA_TYPE {
@@ -457,6 +479,11 @@ static class options {
      * Disabling UDP support is necessary when using anonymous proxies or Tor.
      */
     bool udp_enabled;
+
+    /**
+     * Try to traverse a NAT.
+     */
+    TRAVERSAL_TYPE traversal_type;
 
     namespace proxy {
       /**
