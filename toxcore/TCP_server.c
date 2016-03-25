@@ -32,6 +32,10 @@
 #include <sys/ioctl.h>
 #endif
 
+#include <arpa/inet.h>
+#include "util.h"
+#include "nat_traversal.h"
+
 struct TCP_Server {
     Onion *onion;
 
@@ -1024,10 +1028,19 @@ static sock_t new_listening_TCP_socket(int family, uint16_t port)
     return sock;
 }
 
+/**
+ * Added for reverse compatibility with old new_TCP_server calls.
+ */
 TCP_Server *new_TCP_server(uint8_t ipv6_enabled, uint16_t num_sockets, const uint16_t *ports, const uint8_t *secret_key,
                            Onion *onion)
 {
-    if (num_sockets == 0 || ports == NULL) {
+    return new_TCP_server_nat(ipv6_enabled,num_sockets,ports,TOX_TRAVERSAL_TYPE_NONE,secret_key,onion);
+}
+
+TCP_Server *new_TCP_server_nat(uint8_t ipv6_enabled, uint16_t num_sockets, const uint16_t *ports, TOX_TRAVERSAL_TYPE traversal_type,
+                           const uint8_t *secret_key, Onion *onion)
+{
+    if (num_sockets == 0 || ports == NULL)
         return NULL;
     }
 
@@ -1084,6 +1097,16 @@ TCP_Server *new_TCP_server(uint8_t ipv6_enabled, uint16_t num_sockets, const uin
                 continue;
             }
 
+#endif
+
+#ifdef HAVE_LIBMINIUPNPC
+            if ((traversal_type == TOX_TRAVERSAL_TYPE_UPNP) || (traversal_type == TOX_TRAVERSAL_TYPE_ALL))
+                upnp_map_port(NAT_TRAVERSAL_TCP,ntohs(ports[i]));
+#endif
+
+#ifdef HAVE_LIBNATPMP
+            if ((traversal_type == TOX_TRAVERSAL_TYPE_NATPMP) || (traversal_type == TOX_TRAVERSAL_TYPE_ALL))
+                natpmp_map_port(NAT_TRAVERSAL_TCP,ntohs(ports[i]));
 #endif
 
             temp->socks_listening[temp->num_listening_socks] = sock;
