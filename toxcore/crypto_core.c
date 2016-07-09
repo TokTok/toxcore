@@ -28,6 +28,7 @@
 #endif
 
 #include "crypto_core.h"
+#include "util.h"
 
 #if crypto_box_PUBLICKEYBYTES != 32
 #error crypto_box_PUBLICKEYBYTES is required to be 32 bytes for public_key_cmp to work,
@@ -84,7 +85,9 @@ void encrypt_precompute(const uint8_t *public_key, const uint8_t *secret_key, ui
 int encrypt_data_symmetric(const uint8_t *secret_key, const uint8_t *nonce, const uint8_t *plain, uint32_t length,
                            uint8_t *encrypted)
 {
-    if (length == 0 || !secret_key || !nonce || !plain || !encrypted)
+    return_val_if_fail(length > 0, -1);
+
+    if (!secret_key || !nonce || !plain || !encrypted)
         return -1;
 
     uint8_t temp_plain[length + crypto_box_ZEROBYTES];
@@ -104,7 +107,9 @@ int encrypt_data_symmetric(const uint8_t *secret_key, const uint8_t *nonce, cons
 int decrypt_data_symmetric(const uint8_t *secret_key, const uint8_t *nonce, const uint8_t *encrypted, uint32_t length,
                            uint8_t *plain)
 {
-    if (length <= crypto_box_BOXZEROBYTES || !secret_key || !nonce || !encrypted || !plain)
+    return_val_if_fail(length > crypto_box_BOXZEROBYTES, -1);
+
+    if (length < crypto_box_BOXZEROBYTES || !secret_key || !nonce || !encrypted || !plain)
         return -1;
 
     uint8_t temp_plain[length + crypto_box_ZEROBYTES];
