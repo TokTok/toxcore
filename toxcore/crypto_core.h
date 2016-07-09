@@ -44,6 +44,12 @@
 
 #define crypto_box_KEYBYTES (crypto_box_BEFORENMBYTES)
 
+#if DISABLE_CHECKS
+#define return_val_if_fail(cond, val) do {} while (0)
+#else
+#define return_val_if_fail(cond, val) if (!(cond)) return val
+#endif
+
 /* compare 2 public keys of length crypto_box_PUBLICKEYBYTES, not vulnerable to timing attacks.
    returns 0 if both mem locations of length are equal,
    return -1 if they are not. */
