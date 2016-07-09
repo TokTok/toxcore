@@ -27,6 +27,7 @@
 #include "config.h"
 #endif
 
+#include <assert.h>
 #include "crypto_core.h"
 
 #if crypto_box_PUBLICKEYBYTES != 32
@@ -86,6 +87,8 @@ int encrypt_data_symmetric(const uint8_t *secret_key, const uint8_t *nonce, cons
 {
     if (!secret_key || !nonce || !plain || !encrypted)
         return -1;
+
+    assert(length > 0);
 
     uint8_t temp_plain[length + crypto_box_ZEROBYTES];
     uint8_t temp_encrypted[length + crypto_box_MACBYTES + crypto_box_BOXZEROBYTES];
