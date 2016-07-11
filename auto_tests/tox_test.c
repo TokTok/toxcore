@@ -925,8 +925,8 @@ START_TEST(test_many_clients_tcp)
         uint8_t dpk[TOX_PUBLIC_KEY_SIZE];
         tox_self_get_dht_id(toxes[0], dpk);
         int error = 0;
-        ck_assert_msg(tox_add_tcp_relay(toxes[i], "::1", TCP_RELAY_PORT, dpk, &error), "add relay error, %i, %i", i, error);
-        ck_assert_msg(tox_bootstrap(toxes[i], "::1", 33445, dpk, 0), "Bootstrap error");
+        ck_assert_msg(tox_add_tcp_relay(toxes[i], "127.0.0.1", TCP_RELAY_PORT, dpk, &error), "add relay error, %i, %i", i, error);
+        ck_assert_msg(tox_bootstrap(toxes[i], "127.0.0.1", 33445, dpk, 0), "Bootstrap error");
     }
 
     {
@@ -1020,9 +1020,9 @@ START_TEST(test_many_clients_tcp_b)
         tox_callback_friend_request(toxes[i], accept_friend_request, &to_comp);
         uint8_t dpk[TOX_PUBLIC_KEY_SIZE];
         tox_self_get_dht_id(toxes[(i % NUM_TCP_RELAYS)], dpk);
-        ck_assert_msg(tox_add_tcp_relay(toxes[i], "::1", TCP_RELAY_PORT + (i % NUM_TCP_RELAYS), dpk, 0), "add relay error");
+        ck_assert_msg(tox_add_tcp_relay(toxes[i], "127.0.0.1", TCP_RELAY_PORT + (i % NUM_TCP_RELAYS), dpk, 0), "add relay error");
         tox_self_get_dht_id(toxes[0], dpk);
-        ck_assert_msg(tox_bootstrap(toxes[i], "::1", 33445, dpk, 0), "Bootstrap error");
+        ck_assert_msg(tox_bootstrap(toxes[i], "127.0.0.1", 33445, dpk, 0), "Bootstrap error");
     }
 
     {
