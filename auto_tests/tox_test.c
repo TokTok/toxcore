@@ -1,3 +1,13 @@
+/* Auto Tests
+ *
+ * Tox Tests
+ *
+ * These tests required that no other Tox clients are running/accessable at
+ * localhost. These test expect and the timeouts depend on the speed and size
+ * of a private Tox network, trying to connect to outside clients will increase
+ * the length of time each test will take. Often surpassing a reasonable timeout
+ */
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -21,6 +31,12 @@
 #define c_sleep(x) usleep(1000*x)
 #endif
 
+/* The travis container responds poorly to ::1 as a localhost address */
+#ifdef FORCE_TESTS_IPV6
+#define TOX_LOCALHOST "::1"
+#else
+#define TOX_LOCALHOST "127.0.0.1"
+#endif
 
 void accept_friend_request(Tox *m, const uint8_t *public_key, const uint8_t *data, size_t length, void *userdata)
 {
@@ -924,8 +940,9 @@ START_TEST(test_many_clients_tcp)
         tox_callback_friend_request(toxes[i], accept_friend_request, &to_comp);
         uint8_t dpk[TOX_PUBLIC_KEY_SIZE];
         tox_self_get_dht_id(toxes[0], dpk);
-        ck_assert_msg(tox_add_tcp_relay(toxes[i], "::1", TCP_RELAY_PORT, dpk, 0), "add relay error");
-        ck_assert_msg(tox_bootstrap(toxes[i], "::1", 33445, dpk, 0), "Bootstrap error");
+        TOX_ERR_BOOTSTRAP error = 0;
+        ck_assert_msg(tox_add_tcp_relay(toxes[i], TOX_LOCALHOST, TCP_RELAY_PORT, dpk, &error), "add relay error, %i, %i", i, error);
+        ck_assert_msg(tox_bootstrap(toxes[i], TOX_LOCALHOST, 33445, dpk, 0), "Bootstrap error");
     }
 
     {
@@ -1019,9 +1036,9 @@ START_TEST(test_many_clients_tcp_b)
         tox_callback_friend_request(toxes[i], accept_friend_request, &to_comp);
         uint8_t dpk[TOX_PUBLIC_KEY_SIZE];
         tox_self_get_dht_id(toxes[(i % NUM_TCP_RELAYS)], dpk);
-        ck_assert_msg(tox_add_tcp_relay(toxes[i], "::1", TCP_RELAY_PORT + (i % NUM_TCP_RELAYS), dpk, 0), "add relay error");
+        ck_assert_msg(tox_add_tcp_relay(toxes[i], TOX_LOCALHOST, TCP_RELAY_PORT + (i % NUM_TCP_RELAYS), dpk, 0), "add relay error");
         tox_self_get_dht_id(toxes[0], dpk);
-        ck_assert_msg(tox_bootstrap(toxes[i], "::1", 33445, dpk, 0), "Bootstrap error");
+        ck_assert_msg(tox_bootstrap(toxes[i], TOX_LOCALHOST, 33445, dpk, 0), "Bootstrap error");
     }
 
     {
@@ -1278,8 +1295,8 @@ Suite *tox_suite(void)
     DEFTESTCASE(one);
     DEFTESTCASE_SLOW(few_clients, 80);
     DEFTESTCASE_SLOW(many_clients, 80);
-    DEFTESTCASE_SLOW(many_clients_tcp, 20);
-    DEFTESTCASE_SLOW(many_clients_tcp_b, 20);
+    DEFTESTCASE_SLOW(many_clients_tcp, 40);
+    DEFTESTCASE_SLOW(many_clients_tcp_b, 80);
     DEFTESTCASE_SLOW(many_group, 100);
     return s;
 }
