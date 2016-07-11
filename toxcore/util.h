@@ -29,6 +29,12 @@
 #include <stdint.h>
 #include <pthread.h>
 
+#if DISABLE_CHECKS
+#define return_val_if_fail(cond, val) do {} while (0)
+#else
+#define return_val_if_fail(cond, val) if (!(cond)) return val
+#endif
+
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define PAIR(TYPE1__, TYPE2__) struct { TYPE1__ first; TYPE2__ second; }
 
