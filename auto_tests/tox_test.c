@@ -1279,8 +1279,8 @@ Suite *tox_suite(void)
     DEFTESTCASE(one);
     DEFTESTCASE_SLOW(few_clients, 80);
     DEFTESTCASE_SLOW(many_clients, 80);
-    DEFTESTCASE_SLOW(many_clients_tcp, 20);
-    DEFTESTCASE_SLOW(many_clients_tcp_b, 20);
+    DEFTESTCASE_SLOW(many_clients_tcp, 40);
+    DEFTESTCASE_SLOW(many_clients_tcp_b, 80);
     DEFTESTCASE_SLOW(many_group, 100);
     return s;
 }
