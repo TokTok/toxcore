@@ -1,0 +1,18 @@
+#!/bin/sh
+
+set -e -x
+
+cd ..
+
+# Fetch hstox.
+git clone --recursive --depth=1 https://github.com/TokTok/hstox
+
+# Delete all files in the cloned toxcore.
+rm -rf hstox/test/toxcore/toxcore/toxcore
+# Move the toxcore source files to the hstox test directory.
+# The reason we move source files instead of the whole git root directory is
+# that the travis scripts (like this one) need to remain in place.
+mv toxcore/toxcore hstox/test/toxcore/toxcore
+
+cd hstox
+make configure
