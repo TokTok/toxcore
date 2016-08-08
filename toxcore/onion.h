@@ -25,7 +25,7 @@
 
 #include "DHT.h"
 
-typedef struct {
+struct Onion {
     DHT     *dht;
     Networking_Core *net;
     uint8_t secret_symmetric_key[crypto_box_KEYBYTES];
@@ -37,7 +37,9 @@ typedef struct {
 
     int (*recv_1_function)(void *, IP_Port, const uint8_t *, uint16_t);
     void *callback_object;
-} Onion;
+};
+
+typedef struct Onion Onion;
 
 #define ONION_MAX_PACKET_SIZE 1400
 

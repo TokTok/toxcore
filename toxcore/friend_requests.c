@@ -140,5 +140,5 @@ static int friendreq_handlepacket(void *object, const uint8_t *source_pubkey, co
 
 void friendreq_init(Friend_Requests *fr, Tox_Connections *fr_c)
 {
-    set_tox_conn_request_callback(fr_c, &friendreq_handlepacket, fr);
+    set_toxconn_request_callback(fr_c, &friendreq_handlepacket, fr);
 }

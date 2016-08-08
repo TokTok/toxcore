@@ -101,7 +101,7 @@ typedef struct {
 } Tox_Conn;
 
 
-typedef struct {
+typedef struct Tox_Connections{
     Net_Crypto *net_crypto;
     DHT *dht;
     Onion_Client *onion_c;
@@ -118,27 +118,27 @@ typedef struct {
 /* return toxconn_id corresponding to the real public key on success.
  * return -1 on failure.
  */
-int gettox_conn_id_pk(Tox_Connections *tox_conns, const uint8_t *real_pk);
+int toxconn_get_id_from_pk(Tox_Connections *tox_conns, const uint8_t *real_pk);
 
 /* Increases lock_count for the connection with toxconn_id by 1.
  *
  * return 0 on success.
  * return -1 on failure.
  */
-int tox_connection_lock(Tox_Connections *tox_conns, int toxconn_id);
+int toxconn_inc_connection_lock(Tox_Connections *tox_conns, int toxconn_id);
 
 /* return TOXCONN_STATUS_CONNECTED if the peer is connected.
  * return TOXCONN_STATUS_CONNECTING if the peer isn't connected.
  * return TOXCONN_STATUS_NONE on failure.
  */
-unsigned int tox_conn_is_connected(Tox_Connections *tox_conns, int toxconn_id);
+unsigned int toxconn_is_connected(Tox_Connections *tox_conns, int toxconn_id);
 
 /* Copy public keys associated to toxconn_id.
  *
  * return 0 on success.
  * return -1 on failure.
  */
-int tox_conn_get_public_keys(uint8_t *real_pk, uint8_t *dht_temp_pk, Tox_Connections *tox_conns, int toxconn_id);
+int toxconn_get_public_keys(uint8_t *real_pk, uint8_t *dht_temp_pk, Tox_Connections *tox_conns, int toxconn_id);
 
 /* Set temp dht key for connection.
  */
@@ -157,7 +157,7 @@ int toxconn_add_tcp_relay(Tox_Connections *tox_conns, int toxconn_id, IP_Port ip
  * return 0 on success.
  * return -1 on failure
  */
-int tox_conn_set_callbacks(Tox_Connections *tox_conns, int toxconn_id, unsigned int index,
+int toxconn_set_callbacks(Tox_Connections *tox_conns, int toxconn_id, unsigned int index,
                                 int (*status_callback)(void *object, int id, uint8_t status),
                                 int (*data_callback)(void *object, int id, uint8_t *data, uint16_t length),
                                 int (*lossy_data_callback)(void *object, int id, const uint8_t *data, uint16_t length),
@@ -168,7 +168,7 @@ int tox_conn_set_callbacks(Tox_Connections *tox_conns, int toxconn_id, unsigned 
  * return crypt_connection_id on success.
  * return -1 on failure.
  */
-int tox_conn_crypt_connection_id(Tox_Connections *tox_conns, int toxconn_id);
+int toxconn_crypt_connection_id(Tox_Connections *tox_conns, int toxconn_id);
 
 /* Create a new tox connection.
  * If one to that real public key already exists, increase lock count and return it.
@@ -191,14 +191,14 @@ int kill_tox_conn(Tox_Connections *tox_conns, int toxconn_id);
  *  return  0 if it sent the connection request was received directly.
  *  return the number of peers it was routed through if it did not send it directly.
  */
-int send_tox_conn_request_pkt(Tox_Connections *tox_conns, int toxconn_id, uint32_t nospam_num, const uint8_t *data,
+int send_toxconn_request_pkt(Tox_Connections *tox_conns, int toxconn_id, uint32_t nospam_num, const uint8_t *data,
                                uint16_t length);
 
 /* Set connection request callback.
  *
  * This function will be called every time a connection request is received.
  */
-void set_tox_conn_request_callback(Tox_Connections *tox_conns,
+void set_toxconn_request_callback(Tox_Connections *tox_conns,
                                    int (*toxconn_request_callback)(void *, const uint8_t *,const uint8_t *, uint16_t),
                                    void *object);
 

@@ -130,7 +130,7 @@ static Tox_Conn *get_conn(const Tox_Connections *tox_conns, int toxconn_id)
 /* return toxconn_id corresponding to the real public key on success.
  * return -1 on failure.
  */
-int gettox_conn_id_pk(Tox_Connections *tox_conns, const uint8_t *real_pk)
+int toxconn_get_id_from_pk(Tox_Connections *tox_conns, const uint8_t *real_pk)
 {
     uint32_t i;
 
@@ -453,7 +453,7 @@ static int handle_lossy_packet(void *object, int number, const uint8_t *data, ui
 static int handle_new_connections(void *object, New_Connection *n_c)
 {
     Tox_Connections *tox_conns = object;
-    int toxconn_id = gettox_conn_id_pk(tox_conns, n_c->public_key);
+    int toxconn_id = toxconn_get_id_from_pk(tox_conns, n_c->public_key);
     Tox_Conn *tox_con = get_conn(tox_conns, toxconn_id);
 
     if (tox_con) {
@@ -543,7 +543,7 @@ static int send_ping(const Tox_Connections *tox_conns, int toxconn_id)
  * return 0 on success.
  * return -1 on failure.
  */
-int tox_connection_lock(Tox_Connections *tox_conns, int toxconn_id)
+int toxconn_inc_connection_lock(Tox_Connections *tox_conns, int toxconn_id)
 {
     Tox_Conn *tox_con = get_conn(tox_conns, toxconn_id);
 
@@ -558,7 +558,7 @@ int tox_connection_lock(Tox_Connections *tox_conns, int toxconn_id)
  * return TOXCONN_STATUS_CONNECTING if the peer isn't connected.
  * return TOXCONN_STATUS_NONE on failure.
  */
-unsigned int tox_conn_is_connected(Tox_Connections *tox_conns, int toxconn_id)
+unsigned int toxconn_is_connected(Tox_Connections *tox_conns, int toxconn_id)
 {
     Tox_Conn *tox_con = get_conn(tox_conns, toxconn_id);
 
@@ -573,7 +573,7 @@ unsigned int tox_conn_is_connected(Tox_Connections *tox_conns, int toxconn_id)
  * return 0 on success.
  * return -1 on failure.
  */
-int tox_conn_get_public_keys(uint8_t *real_pk, uint8_t *dht_temp_pk, Tox_Connections *tox_conns, int toxconn_id)
+int toxconn_get_public_keys(uint8_t *real_pk, uint8_t *dht_temp_pk, Tox_Connections *tox_conns, int toxconn_id)
 {
     Tox_Conn *tox_con = get_conn(tox_conns, toxconn_id);
 
@@ -601,7 +601,7 @@ void set_dht_temp_pk(Tox_Connections *tox_conns, int toxconn_id, const uint8_t *
  * return 0 on success.
  * return -1 on failure
  */
-int tox_conn_set_callbacks(Tox_Connections *tox_conns, int toxconn_id, unsigned int index,
+int toxconn_set_callbacks(Tox_Connections *tox_conns, int toxconn_id, unsigned int index,
                                 int (*status_callback)(void *object, int id, uint8_t status),
                                 int (*data_callback)(void *object, int id, uint8_t *data, uint16_t length),
                                 int (*lossy_data_callback)(void *object, int id, const uint8_t *data, uint16_t length),
@@ -634,7 +634,7 @@ int tox_conn_set_callbacks(Tox_Connections *tox_conns, int toxconn_id, unsigned 
  * return crypt_connection_id on success.
  * return -1 on failure.
  */
-int tox_conn_crypt_connection_id(Tox_Connections *tox_conns, int toxconn_id)
+int toxconn_crypt_connection_id(Tox_Connections *tox_conns, int toxconn_id)
 {
     Tox_Conn *tox_con = get_conn(tox_conns, toxconn_id);
 
@@ -652,7 +652,7 @@ int tox_conn_crypt_connection_id(Tox_Connections *tox_conns, int toxconn_id)
  */
 int new_tox_conn(Tox_Connections *tox_conns, const uint8_t *real_public_key)
 {
-    int toxconn_id = gettox_conn_id_pk(tox_conns, real_public_key);
+    int toxconn_id = toxconn_get_id_from_pk(tox_conns, real_public_key);
 
     if (toxconn_id != -1) {
         ++tox_conns->conns[toxconn_id].lock_count;
@@ -714,7 +714,7 @@ int kill_tox_conn(Tox_Connections *tox_conns, int toxconn_id)
  *
  * This function will be called every time any connection request packet is received.
  */
-void set_tox_conn_request_callback(Tox_Connections *tox_conns,
+void set_toxconn_request_callback(Tox_Connections *tox_conns,
                                    int (*toxconn_request_callback)(void *, const uint8_t *, const uint8_t *, uint16_t),
                                    void *object)
 {
@@ -729,7 +729,7 @@ void set_tox_conn_request_callback(Tox_Connections *tox_conns,
  *  return  0 if it sent the friend request directly to the friend.
  *  return the number of peers it was routed through if it did not send it directly.
  */
-int send_tox_conn_request_pkt(Tox_Connections *tox_conns, int toxconn_id, uint32_t nospam_num, const uint8_t *data,
+int send_toxconn_request_pkt(Tox_Connections *tox_conns, int toxconn_id, uint32_t nospam_num, const uint8_t *data,
                                uint16_t length)
 {
     if (1 + sizeof(nospam_num) + length > ONION_CLIENT_MAX_DATA_SIZE || length == 0)

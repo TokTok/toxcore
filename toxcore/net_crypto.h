@@ -188,7 +188,9 @@ typedef struct {
     uint8_t cookie_length;
 } New_Connection;
 
-typedef struct {
+typedef struct Net_Crypto {
+    uint32_t nospam;
+
     DHT *dht;
     TCP_Connections *tcp_c;
 
@@ -215,7 +217,6 @@ typedef struct {
 
     BS_LIST ip_port_list;
 } Net_Crypto;
-
 
 /* Set function to be called when someone requests a new connection to us.
  *

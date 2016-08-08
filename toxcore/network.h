@@ -297,7 +297,7 @@ typedef struct {
     void *object;
 } Packet_Handles;
 
-typedef struct {
+typedef struct Networking_Core {
     Packet_Handles packethandlers[256];
 
     sa_family_t family;
