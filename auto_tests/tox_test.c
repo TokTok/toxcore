@@ -1329,7 +1329,10 @@ Suite *tox_suite(void)
      * Anyone reading this is welcome to try to fix it, but because there is a
      * new version of group chats for Tox already completed, and nearly ready to
      * merge, No one is willing/available to give this test the time in needs */
-    // DEFTESTCASE_SLOW(many_group, 140);
+#if 0
+    DEFTESTCASE_SLOW(many_group, 140);
+#endif
+
     return s;
 }
 
