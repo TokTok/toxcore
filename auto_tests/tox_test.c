@@ -32,7 +32,8 @@
 #define c_sleep(x) usleep(1000*x)
 #endif
 
-/* The travis container responds poorly to ::1 as a localhost address */
+/* The Travis-CI container responds poorly to ::1 as a localhost address
+ * You're encouraged to -D FORCE_TESTS_IPV6 on a local test  */
 #ifdef FORCE_TESTS_IPV6
 #define TOX_LOCALHOST "::1"
 #else
@@ -1317,8 +1318,17 @@ Suite *tox_suite(void)
     DEFTESTCASE(one);
     DEFTESTCASE_SLOW(few_clients, 80);
     DEFTESTCASE_SLOW(many_clients, 80);
-    DEFTESTCASE_SLOW(many_clients_tcp, 40);   /* Each tox connects to a single tox TCP    */
-    DEFTESTCASE_SLOW(many_clients_tcp_b, 80); /* Try to make a connection to each tox TCP */
+
+    /* Each tox connects to a single tox TCP    */
+    DEFTESTCASE_SLOW(many_clients_tcp, 40);
+
+    /* Try to make a connection to each "older sibling" tox instance via TCP */
+    DEFTESTCASE_SLOW(many_clients_tcp_b, 80);
+
+    /* This test works VERY unreliably. So it's worthless in its current state.
+     * Anyone reading this is welcome to try to fix it, but because there is a
+     * new version of group chats for Tox already completed, and nearly ready to
+     * merge, No one is willing/available to give this test the time in needs */
     // DEFTESTCASE_SLOW(many_group, 140);
     return s;
 }
