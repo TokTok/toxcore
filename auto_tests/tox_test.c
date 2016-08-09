@@ -1243,7 +1243,7 @@ START_TEST(test_many_group)
         /* We might need to run this test twice */
         if (num_peers != NUM_GROUP_TOX) {
             ++test_run;
-            printf("\tError starting up the first group, going to restart this test. This is attempt %i\n");
+            printf("\tError starting up the first group, going to restart this test. This is attempt %i\n", test_run);
 
             for (j = 0; j < NUM_GROUP_TOX; ++j) {
                 tox_kill(toxes[j]);
