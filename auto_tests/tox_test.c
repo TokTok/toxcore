@@ -1254,6 +1254,12 @@ START_TEST(test_many_group)
             goto group_test_restart;
         }
 
+        /**
+         * This check will never fail because it'll jump before this event
+         * I've decided to leave it in because eventually, we may want to only
+         * restart this test once, in which case this check will become
+         * important again.
+         */
         ck_assert_msg(num_peers == NUM_GROUP_TOX, "\n\tBad number of group peers (pre check)."
                                                   "\n\t\t\tExpected: %u but tox_instance(%u)  only has: %i\n\n",
                                                    NUM_GROUP_TOX, i, num_peers);
