@@ -713,11 +713,11 @@ inline namespace self {
    *
    * TODO: how long should a client wait before bootstrapping again?
    */
-  event connection_status {
+  event connection_status const {
     /**
      * @param connection_status Whether we are connected to the DHT.
      */
-    typedef void(CONNECTION connection_status);
+    typedef `a(CONNECTION connection_status);
   }
 
 }
@@ -734,7 +734,7 @@ const uint32_t iteration_interval();
  * The main loop that needs to be run in intervals of $iteration_interval()
  * milliseconds.
  */
-void iterate();
+`a iterate(`a user_data);
 
 
 /*******************************************************************************

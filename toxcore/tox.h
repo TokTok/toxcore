@@ -762,7 +762,7 @@ TOX_CONNECTION tox_self_get_connection_status(const Tox *tox);
 /**
  * @param connection_status Whether we are connected to the DHT.
  */
-typedef void tox_self_connection_status_cb(Tox *tox, TOX_CONNECTION connection_status, void *user_data);
+typedef void *tox_self_connection_status_cb(Tox *tox, TOX_CONNECTION connection_status, void *user_data);
 
 
 /**
@@ -776,7 +776,7 @@ typedef void tox_self_connection_status_cb(Tox *tox, TOX_CONNECTION connection_s
  *
  * TODO: how long should a client wait before bootstrapping again?
  */
-void tox_callback_self_connection_status(Tox *tox, tox_self_connection_status_cb *callback, void *user_data);
+void tox_callback_self_connection_status(Tox *tox, tox_self_connection_status_cb *callback);
 
 /**
  * Return the time in milliseconds before tox_iterate() should be called again
@@ -788,7 +788,7 @@ uint32_t tox_iteration_interval(const Tox *tox);
  * The main loop that needs to be run in intervals of tox_iteration_interval()
  * milliseconds.
  */
-void tox_iterate(Tox *tox);
+void *tox_iterate(Tox *tox, void *user_data);
 
 
 /*******************************************************************************
