@@ -84,6 +84,21 @@ extern "C" {
  * callback will result in no callback being registered for that event. Only
  * one callback per event can be registered, so if a client needs multiple
  * event listeners, it needs to implement the dispatch functionality itself.
+ *
+ * The last argument to a callback is the user data pointer. It is passed from
+ * tox_iterate to each callback in sequence. The pointer returned from a
+ * callback is then passed as argument to the next callback. The final pointer
+ * is returned by tox_iterate.
+ *
+ * The user data pointer is never stored or dereferenced by any library code, so
+ * can be any pointer, including NULL. Callbacks must return a pointer (or NULL)
+ * to an object of the same type. In the apidsl code (tox.in.h), this is denoted
+ * as returning `any`. The `any` in tox_iterate must be the same `any` as in
+ * all callbacks. In C, lacking parametric polymorphism, this is a void pointer.
+ *
+ * Old style callbacks that are registered together with a user data pointer
+ * receive that pointer as argument when they are called. They can each have
+ * their own user data pointer of their own type.
  */
 /** \subsection threading Threading implications
  *
@@ -762,7 +777,7 @@ TOX_CONNECTION tox_self_get_connection_status(const Tox *tox);
 /**
  * @param connection_status Whether we are connected to the DHT.
  */
-typedef void tox_self_connection_status_cb(Tox *tox, TOX_CONNECTION connection_status, void *user_data);
+typedef void *tox_self_connection_status_cb(Tox *tox, TOX_CONNECTION connection_status, void *user_data);
 
 
 /**
@@ -776,7 +791,7 @@ typedef void tox_self_connection_status_cb(Tox *tox, TOX_CONNECTION connection_s
  *
  * TODO: how long should a client wait before bootstrapping again?
  */
-void tox_callback_self_connection_status(Tox *tox, tox_self_connection_status_cb *callback, void *user_data);
+void tox_callback_self_connection_status(Tox *tox, tox_self_connection_status_cb *callback);
 
 /**
  * Return the time in milliseconds before tox_iterate() should be called again
@@ -788,7 +803,7 @@ uint32_t tox_iteration_interval(const Tox *tox);
  * The main loop that needs to be run in intervals of tox_iteration_interval()
  * milliseconds.
  */
-void tox_iterate(Tox *tox);
+void *tox_iterate(Tox *tox, void *user_data);
 
 
 /*******************************************************************************
