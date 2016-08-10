@@ -10,6 +10,7 @@ Thumbs.db
 *.tmp
 
 # Make
+/_build
 CMakeCache.txt
 CMakeFiles
 Makefile
