@@ -1,0 +1,15 @@
+#!/bin/sh
+
+set -e -x
+
+# Build toxcore and run tests.
+./autogen.sh
+./configure \
+  --with-libsodium-libs=$CACHE_DIR/lib \
+  --with-libsodium-headers=$CACHE_DIR/include \
+  --enable-daemon \
+  --enable-logging \
+  --enable-ntox
+
+make -j `nproc`
+make distcheck -j `nproc` || true
