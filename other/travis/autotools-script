@@ -1,6 +1,7 @@
 #!/bin/sh
 
-set -e -x
+set -e -u -x
+. other/travis/env-$ENV.sh
 
 # Build toxcore and run tests.
 ./autogen.sh
@@ -17,4 +18,6 @@ make -j `nproc`
 # won't find it. We don't care that much about distcheck at this point, but we
 # do care whether it configures/builds at all, which is exercised by the make
 # call above. Tests are executed by the cmake build.
-make distcheck -j `nproc` || true
+echo "*** make distcheck currently fails; see https://github.com/TokTok/toxcore/blob/master/other/travis/autotools-script#L16 ***"
+make distcheck -j `nproc` \
+  || echo "*** make distcheck has failed as expected; don't be alarmed ***"
