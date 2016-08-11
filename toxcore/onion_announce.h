@@ -53,7 +53,7 @@ typedef struct {
     uint64_t time;
 } Onion_Announce_Entry;
 
-typedef struct {
+struct Onion_Announce {
     DHT     *dht;
     Networking_Core *net;
     Onion_Announce_Entry entries[ONION_ANNOUNCE_MAX_ENTRIES];
@@ -61,7 +61,9 @@ typedef struct {
     uint8_t secret_bytes[crypto_box_KEYBYTES];
 
     Shared_Keys shared_keys_recv;
-} Onion_Announce;
+};
+
+typedef struct Onion_Announce Onion_Announce;
 
 /* Create an onion announce request packet in packet of max_packet_length (recommended size ONION_ANNOUNCE_REQUEST_SIZE).
  *

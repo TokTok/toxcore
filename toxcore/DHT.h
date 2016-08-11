@@ -204,7 +204,7 @@ typedef struct {
     void *object;
 } Cryptopacket_Handles;
 
-typedef struct {
+typedef struct DHT {
     Networking_Core *net;
 
     Client_data    close_clientlist[LCLIENT_LIST];
