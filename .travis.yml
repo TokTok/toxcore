@@ -2,14 +2,14 @@ language: c
 
 matrix:
   include:
-    - env: BUILD=hstox
+    - env: BUILD=hstox ENV=linux
       language: haskell
       ghc: 7.8
-    - env: BUILD=toxcore
+    - env: BUILD=toxcore ENV=linux
       compiler: clang
-    - env: BUILD=toxcore
+    - env: BUILD=toxcore ENV=linux
       compiler: gcc
-    - env: BUILD=autotools
+    - env: BUILD=autotools ENV=linux
       compiler: clang
 
 addons:
@@ -28,21 +28,13 @@ cache:
     - $HOME/.ghc
     - $HOME/cache
 
-install:
-  # Globally used environment variables.
-  - export CACHE_DIR=$HOME/cache
-  - export OPAMROOT=$CACHE_DIR/.opam
-  - export LD_LIBRARY_PATH=$CACHE_DIR/lib
-  - export PKG_CONFIG_PATH=$CACHE_DIR/lib/pkgconfig
-  - export ASTYLE=$CACHE_DIR/astyle/build/gcc/bin/astyle
-  # Install required packages.
-  - other/travis/${BUILD}-install
-
-script:
-  - other/travis/${BUILD}-script
-
-after_script:
-  - other/travis/${BUILD}-after_script
+install:      other/travis/${BUILD}-install
+script:       other/travis/${BUILD}-script
+after_script: other/travis/${BUILD}-after_script
 
 notifications:
   irc: "chat.freenode.net#toktok-status"
+
+branches:
+  only:
+    - master
