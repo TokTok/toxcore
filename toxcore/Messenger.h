@@ -27,7 +27,7 @@
 #define MESSENGER_H
 
 #include "friend_requests.h"
-#include "friend_connection.h"
+#include "tox_connection.h"
 
 #define MAX_NAME_LENGTH 128
 /* TODO: this must depend on other variable. */
@@ -218,7 +218,7 @@ struct Messenger {
     Onion_Announce *onion_a;
     Onion_Client *onion_c;
 
-    Friend_Connections *fr_c;
+    Tox_Connections *fr_c;
 
     TCP_Server *tcp_server;
     Friend_Requests fr;
