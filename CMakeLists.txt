@@ -23,6 +23,11 @@ if(LOGGING)
     -DLOGGER_OUTPUT_FILE="libtoxcore.log")
 endif()
 
+option(DEBUG "Enable assertions and other debugging facilities" OFF)
+if(DEBUG)
+  add_definitions(-DDEBUG=1)
+endif()
+
 find_package(PkgConfig REQUIRED)
 find_package(Threads   REQUIRED)
 
@@ -234,6 +239,11 @@ auto_test(toxav_many_test)
 # :: Bootstrap daemon
 #
 ################################################################################
+
+add_executable(DHT_bootstrap
+  other/DHT_bootstrap.c
+  other/bootstrap_node_packets.c)
+target_link_libraries(DHT_bootstrap toxcore ${LIBCONFIG_LIBRARIES})
 
 if(LIBCONFIG_FOUND)
   add_executable(tox-bootstrapd
