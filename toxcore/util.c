@@ -146,7 +146,7 @@ int load_state(load_state_callback_func load_state_callback, void *outer,
         if (lendian_to_host16((cookie_type >> 16)) != cookie_inner) {
             /* something is not matching up in a bad way, give up */
 #ifdef DEBUG
-            fprintf(stderr, "state file garbeled: %04hx != %04hx\n", (cookie_type >> 16), cookie_inner);
+            fprintf(stderr, "state file garbled: %04x != %04x\n", (cookie_type >> 16), cookie_inner);
 #endif
             return -1;
         }
