@@ -348,12 +348,12 @@ void test_addto_lists(IP ip)
     kill_networking(net);
 }
 
+#if 0
 START_TEST(test_addto_lists_ipv4)
 {
     IP ip;
     ip_init(&ip, 0);
     test_addto_lists(ip);
-
 }
 END_TEST
 
@@ -362,9 +362,9 @@ START_TEST(test_addto_lists_ipv6)
     IP ip;
     ip_init(&ip, 1);
     test_addto_lists(ip);
-
 }
 END_TEST
+#endif
 
 #define DHT_DEFAULT_PORT (TOX_PORT_DEFAULT + 20)
 
@@ -575,10 +575,6 @@ START_TEST(test_DHT_test)
         uint16_t tox2;
     } pairs[NUM_DHT_FRIENDS];
 
-    uint8_t address[TOX_ADDRESS_SIZE];
-
-    unsigned int num_f = 0;
-
     for (i = 0; i < NUM_DHT_FRIENDS; ++i) {
 loop_top:
         pairs[i].tox1 = rand() % NUM_DHT;
@@ -637,8 +633,10 @@ Suite *dht_suite(void)
 {
     Suite *s = suite_create("DHT");
 
-    //DEFTESTCASE(addto_lists_ipv4);
-    //DEFTESTCASE(addto_lists_ipv6);
+#if 0
+    DEFTESTCASE(addto_lists_ipv4);
+    DEFTESTCASE(addto_lists_ipv6);
+#endif
     DEFTESTCASE_SLOW(list, 20);
     DEFTESTCASE_SLOW(DHT_test, 50);
     return s;
