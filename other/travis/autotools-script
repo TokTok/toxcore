@@ -15,7 +15,7 @@ RUN ./configure \
 # We use make instead of RUN $MAKE here, because the autotools build will only
 # ever run natively on the Linux container, never on a Windows cross compilation
 # docker instance or an OSX machine.
-make -j`nproc`
+make -j$NPROC
 
 # This doesn't currently work on Travis, because the autotools build is broken.
 # It does not look up libsodium by pkg-config, so without the --with flags it
@@ -23,5 +23,5 @@ make -j`nproc`
 # do care whether it configures/builds at all, which is exercised by the make
 # call above. Tests are executed by the cmake build.
 echo "*** make distcheck currently fails; see https://github.com/TokTok/toxcore/blob/master/other/travis/autotools-script#L16 ***"
-make distcheck -j`nproc` \
+make distcheck -j$NPROC \
   || echo "*** make distcheck has failed as expected; don't be alarmed ***"
