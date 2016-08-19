@@ -381,8 +381,8 @@ int m_delfriend(Messenger *m, int32_t friendnumber)
     if (friend_not_valid(m, friendnumber))
         return -1;
 
-    if (m->friend_connectionstatuschange_internal)
-        m->friend_connectionstatuschange_internal(m, friendnumber, 0, m->friend_connectionstatuschange_internal_userdata);
+    if (m->friend_connstatus_change_av)
+        m->friend_connstatus_change_av(m, friendnumber, 0, m->friend_connstatus_change_avdata);
 
     clear_receipts(m, friendnumber);
     remove_request_received(&(m->fr), m->friendlist[friendnumber].real_pk);
@@ -820,8 +820,8 @@ void m_callback_core_connection(Messenger *m, void (*function)(Messenger *m, uns
 void m_callback_connectionstatus_internal_av(Messenger *m, void (*function)(Messenger *m, uint32_t, uint8_t, void *),
         void *userdata)
 {
-    m->friend_connectionstatuschange_internal = function;
-    m->friend_connectionstatuschange_internal_userdata = userdata;
+    m->friend_connstatus_change_av = function;
+    m->friend_connstatus_change_avdata = userdata;
 }
 
 static void check_friend_tcp_udp(Messenger *m, int32_t friendnumber)
@@ -873,9 +873,9 @@ static void check_friend_connectionstatus(Messenger *m, int32_t friendnumber, ui
 
         check_friend_tcp_udp(m, friendnumber);
 
-        if (m->friend_connectionstatuschange_internal)
-            m->friend_connectionstatuschange_internal(m, friendnumber, is_online,
-                    m->friend_connectionstatuschange_internal_userdata);
+        if (m->friend_connstatus_change_av)
+            m->friend_connstatus_change_av(m, friendnumber, is_online,
+                    m->friend_connstatus_change_avdata);
     }
 }
 
