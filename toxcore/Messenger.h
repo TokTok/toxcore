@@ -249,8 +249,6 @@ struct Messenger {
     void *read_receipt_userdata;
     void (*friend_connectionstatuschange)(struct Messenger *m, uint32_t, unsigned int, void *);
     void *friend_connectionstatuschange_userdata;
-    void (*friend_connectionstatuschange_internal)(struct Messenger *m, uint32_t, uint8_t, void *);
-    void *friend_connectionstatuschange_internal_userdata;
 
     void *group_chat_object; /* Set by new_groupchats()*/
     void (*group_invite)(struct Messenger *m, uint32_t, const uint8_t *, uint16_t);
@@ -268,6 +266,9 @@ struct Messenger {
 
     void (*msi_packet)(struct Messenger *m, uint32_t, const uint8_t *, uint16_t, void *);
     void *msi_packet_userdata;
+    /* The following callback is used in ToxAV to notify ToxAV about friend status changes */
+    void (*friend_connstatus_change_av)(struct Messenger *m, uint32_t, uint8_t, void *);
+    void *friend_connstatus_change_avdata;
 
     void (*lossy_packethandler)(struct Messenger *m, uint32_t, const uint8_t *, size_t, void *);
     void *lossy_packethandler_userdata;
@@ -527,8 +528,9 @@ void m_callback_read_receipt(Messenger *m, void (*function)(Messenger *m, uint32
  */
 void m_callback_connectionstatus(Messenger *m, void (*function)(Messenger *m, uint32_t, unsigned int, void *),
                                  void *userdata);
+
 /* Same as previous but for internal A/V core usage only */
-void m_callback_connectionstatus_internal_av(Messenger *m, void (*function)(Messenger *m, uint32_t, uint8_t, void *),
+void m_callback_connstatus_av(Messenger *m, void (*function)(Messenger *m, uint32_t, uint8_t, void *),
         void *userdata);
 
 
