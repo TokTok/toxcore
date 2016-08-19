@@ -129,7 +129,7 @@ MSISession *msi_new (Messenger *m)
     m_callback_msi_packet(m, handle_msi_packet, retu);
 
     /* This is called when remote terminates session */
-    m_callback_connectionstatus_internal_av(m, on_peer_status, retu);
+    m_callback_connstatus_av(m, on_peer_status, retu);
 
     LOGGER_DEBUG("New msi session: %p ", retu);
     return retu;
