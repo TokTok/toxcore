@@ -7,12 +7,12 @@ set -e -u -x
 ../apidsl/_build/apigen.native other/apidsl/tox.in.h   | $ASTYLE --options=other/astyle/astylerc > toxcore/tox.h
 ../apidsl/_build/apigen.native other/apidsl/toxav.in.h | $ASTYLE --options=other/astyle/astylerc > toxav/toxav.h
 # Check if the code is formatted according to the astyle configuration.
-$ASTYLE --options=other/astyle/astylerc `find . -name "*.[ch]" -and -not -name "*.in.*" -and -not -wholename "*crypto_pwhash*" -and -not -wholename "./super_donators/*"`
+other/astyle/format-source
 git diff --exit-code
 
 # Build toxcore and run tests.
 export CFLAGS="-O3 -fprofile-arcs -ftest-coverage -DTRAVIS_ENV=1"
-RUN $CMAKE -B$BUILD_DIR -H. -DCMAKE_INSTALL_PREFIX:PATH=$PREFIX -DLOGGING=ON -DDEBUG=ON
+RUN $CMAKE -B$BUILD_DIR -H. -DCMAKE_INSTALL_PREFIX:PATH=$PREFIX -DDEBUG=ON -DASSOC_DHT=ON
 
 export CTEST_OUTPUT_ON_FAILURE=1
 

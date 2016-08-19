@@ -761,6 +761,11 @@ static void set_friend_typing(const Messenger *m, int32_t friendnumber, uint8_t 
     m->friendlist[friendnumber].is_typing = is_typing;
 }
 
+void m_callback_log(Messenger *m, logger_cb *function)
+{
+    logger_callback_log(m->log, function);
+}
+
 /* Set the function that will be executed when a friend request is received. */
 void m_callback_friendrequest(Messenger *m, void (*function)(Messenger *m, const uint8_t *, const uint8_t *, size_t,
                               void *), void *userdata)
@@ -1743,7 +1748,7 @@ static int friend_already_added(const uint8_t *real_pk, void *data)
 }
 
 /* Run this at startup. */
-Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
+Messenger *new_messenger(Logger *log, Messenger_Options *options, unsigned int *error)
 {
     Messenger *m = calloc(1, sizeof(Messenger));
 
@@ -1753,6 +1758,8 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
     if ( ! m )
         return NULL;
 
+    m->log = log;
+
     unsigned int net_err = 0;
 
     if (options->udp_disabled) {
@@ -1761,7 +1768,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
     } else {
         IP ip;
         ip_init(&ip, options->ipv6enabled);
-        m->net = new_networking_ex(ip, options->port_range[0], options->port_range[1], &net_err);
+        m->net = new_networking_ex(log, ip, options->port_range[0], options->port_range[1], &net_err);
     }
 
     if (m->net == NULL) {
@@ -1774,7 +1781,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
         return NULL;
     }
 
-    m->dht = new_DHT(m->net);
+    m->dht = new_DHT(m->log, m->net);
 
     if (m->dht == NULL) {
         kill_networking(m->net);
@@ -1782,7 +1789,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
         return NULL;
     }
 
-    m->net_crypto = new_net_crypto(m->dht, &options->proxy_info);
+    m->net_crypto = new_net_crypto(m->log, m->dht, &options->proxy_info);
 
     if (m->net_crypto == NULL) {
         kill_networking(m->net);
@@ -2239,7 +2246,6 @@ static void connection_status_cb(Messenger *m, void *userdata)
 }
 
 
-#ifdef TOX_LOGGER
 #define DUMPING_CLIENTS_FRIENDS_EVERY_N_SECONDS 60UL
 static time_t lastdump = 0;
 static char IDString[crypto_box_PUBLICKEYBYTES * 2 + 1];
@@ -2253,7 +2259,6 @@ static char *ID2String(const uint8_t *pk)
     IDString[crypto_box_PUBLICKEYBYTES * 2] = 0;
     return IDString;
 }
-#endif
 
 /* Minimum messenger run interval in ms
    TODO: A/V */
@@ -2315,8 +2320,6 @@ void do_messenger(Messenger *m, void *userdata)
     do_friends(m);
     connection_status_cb(m, userdata);
 
-#ifdef TOX_LOGGER
-
     if (unix_time() > lastdump + DUMPING_CLIENTS_FRIENDS_EVERY_N_SECONDS) {
 
 #ifdef ENABLE_ASSOC_DHT
@@ -2338,7 +2341,7 @@ void do_messenger(Messenger *m, void *userdata)
                     if (last_pinged > 999)
                         last_pinged = 999;
 
-                    LOGGER_TRACE("C[%2u] %s:%u [%3u] %s",
+                    LOGGER_TRACE(m->log, "C[%2u] %s:%u [%3u] %s",
                                  client, ip_ntoa(&assoc->ip_port.ip), ntohs(assoc->ip_port.port),
                                  last_pinged, ID2String(cptr->public_key));
                 }
@@ -2371,7 +2374,7 @@ void do_messenger(Messenger *m, void *userdata)
                 dht2m[m2dht[friend]] = friend;
 
         if (m->numfriends != m->dht->num_friends) {
-            LOGGER_TRACE("Friend num in DHT %u != friend num in msger %u\n", m->dht->num_friends, m->numfriends);
+            LOGGER_TRACE(m->log, "Friend num in DHT %u != friend num in msger %u\n", m->dht->num_friends, m->numfriends);
         }
 
         Friend *msgfptr;
@@ -2386,11 +2389,11 @@ void do_messenger(Messenger *m, void *userdata)
             dhtfptr = &m->dht->friends_list[friend];
 
             if (msgfptr) {
-                LOGGER_TRACE("F[%2u:%2u] <%s> %s",
+                LOGGER_TRACE(m->log, "F[%2u:%2u] <%s> %s",
                              dht2m[friend], friend, msgfptr->name,
                              ID2String(msgfptr->real_pk));
             } else {
-                LOGGER_TRACE("F[--:%2u] %s", friend, ID2String(dhtfptr->public_key));
+                LOGGER_TRACE(m->log, "F[--:%2u] %s", friend, ID2String(dhtfptr->public_key));
             }
 
             for (client = 0; client < MAX_FRIEND_CLIENTS; client++) {
@@ -2405,7 +2408,7 @@ void do_messenger(Messenger *m, void *userdata)
                         if (last_pinged > 999)
                             last_pinged = 999;
 
-                        LOGGER_TRACE("F[%2u] => C[%2u] %s:%u [%3u] %s",
+                        LOGGER_TRACE(m->log, "F[%2u] => C[%2u] %s:%u [%3u] %s",
                                      friend, client, ip_ntoa(&assoc->ip_port.ip),
                                      ntohs(assoc->ip_port.port), last_pinged,
                                      ID2String(cptr->public_key));
@@ -2413,8 +2416,6 @@ void do_messenger(Messenger *m, void *userdata)
             }
         }
     }
-
-#endif /* TOX_LOGGER */
 }
 
 /* new messenger format for load/save, more robust and forward compatible */
