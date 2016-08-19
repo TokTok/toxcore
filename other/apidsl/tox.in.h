@@ -609,6 +609,51 @@ static this new(const options_t *options) {
 void kill();
 
 
+/**
+ * Severity level of log messages.
+ */
+enum class LOG_LEVEL {
+  /**
+   * Very detailed traces including all network activity.
+   */
+  LOG_TRACE,
+  /**
+   * Debug messages such as which port we bind to.
+   */
+  LOG_DEBUG,
+  /**
+   * Informational log messages such as video call status changes.
+   */
+  LOG_INFO,
+  /**
+   * Warnings about internal inconsistency or logic errors.
+   */
+  LOG_WARNING,
+  /**
+   * Severe unexpected errors caused by external or internal inconsistency.
+   */
+  LOG_ERROR,
+}
+
+/**
+ * This event is triggered when the toxcore library logs an internal message.
+ * This is mostly useful for debugging. Currently, userdata will always be NULL
+ * in the log callback.
+ */
+event log const {
+  /**
+   * @param id The Tox instance number. This is a random 32 bit number.
+   * @param level The severity of the log message.
+   * @param file The source file from which the message originated.
+   * @param line The source line from which the message originated.
+   * @param func The function from which the message originated.
+   * @param message The log message.
+   */
+  typedef void(uint32_t id, LOG_LEVEL level, string file, uint32_t line,
+               string func, string message);
+}
+
+
 uint8_t[size] savedata {
   /**
    * Calculates the number of bytes required to store the tox instance with
