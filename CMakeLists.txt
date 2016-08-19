@@ -15,14 +15,6 @@ set(PROJECT_VERSION "0.0.0")
 
 set(CMAKE_MACOSX_RPATH ON)
 
-option(LOGGING "Enable internal library logging" OFF)
-if(LOGGING)
-  add_definitions(
-    -DTOX_LOGGER=1
-    -DLOGGER_LEVEL=LOG_DEBUG
-    -DLOGGER_OUTPUT_FILE="libtoxcore.log")
-endif()
-
 option(DEBUG "Enable assertions and other debugging facilities" OFF)
 if(DEBUG)
   add_definitions(-DTOX_DEBUG=1)
