@@ -203,6 +203,8 @@ target_link_libraries(toxencryptsave toxcore)
 #
 ################################################################################
 
+add_test(format_test ${CMAKE_SOURCE_DIR}/other/astyle/format-source)
+
 function(auto_test target)
   if(CHECK_FOUND)
     add_executable(auto_${target} auto_tests/${target}.c)
