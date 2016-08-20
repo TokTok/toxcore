@@ -3,8 +3,13 @@ project(toxcore)
 include(CTest)
 
 # This version is for the entire project. All libraries (core, av, ...) move in
-# versions in a synchronised way.
-set(PROJECT_VERSION "0.0.0")
+# versions in a synchronized way.
+execute_process(
+  COMMAND git describe --dirty
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  OUTPUT_VARIABLE PROJECT_VERSION
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
