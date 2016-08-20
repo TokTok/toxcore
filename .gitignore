@@ -65,8 +65,6 @@ build/
 # Netbeans
 nbproject
 
-# astyle
-*.orig
 
 # Android buildscript
 android-toolchain-*
