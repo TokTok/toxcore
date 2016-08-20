@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.65])
-AC_INIT([tox], [0.0.0])
+AC_INIT([tox], [0.1.0])
 AC_CONFIG_AUX_DIR(configure_aux)
 AC_CONFIG_SRCDIR([toxcore/net_crypto.c])
 AC_CONFIG_HEADERS([config.h])
@@ -12,8 +12,7 @@ AC_CONFIG_MACRO_DIR([m4])
 
 EXTRA_LT_LDFLAGS=
 
-LIBTOXCORE_LT_VERSION=0:0:0
-LIBTOXAV_LT_VERSION=0:0:0
+LIBTOXCORE_LT_VERSION=0:1:0
 dnl
 dnl            current:revision:age
 dnl
@@ -44,7 +43,6 @@ WANT_NACL="no"
 ADD_NACL_OBJECTS_TO_PKGCONFIG="yes"
 
 TOXCORE_LT_LDFLAGS="-version-info $LIBTOXCORE_LT_VERSION"
-TOXAV_LT_LDFLAGS="-version-info $LIBTOXAV_LT_VERSION"
 
 AC_ARG_ENABLE([soname-versions],
     [AC_HELP_STRING([--enable-soname-versions], [enable soname versions (must be disabled for android) (default: enabled)]) ],

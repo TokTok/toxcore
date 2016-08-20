@@ -172,7 +172,7 @@ uint32_t tox_version_major(void);
  * breaking the API or ABI. Set to 0 when the major version number is
  * incremented.
  */
-#define TOX_VERSION_MINOR              0
+#define TOX_VERSION_MINOR              1
 
 uint32_t tox_version_minor(void);
 
