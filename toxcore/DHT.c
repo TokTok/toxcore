@@ -1847,7 +1847,7 @@ static int send_NATping(DHT *dht, const uint8_t *public_key, uint64_t ping_id, u
 
 /* Handle a received ping request for. */
 static int handle_NATping(void *object, IP_Port source, const uint8_t *source_pubkey, const uint8_t *packet,
-                          uint16_t length)
+                          uint16_t length, void *userdata)
 {
     if (length != sizeof(uint64_t) + 1)
         return 1;
@@ -2127,7 +2127,7 @@ static uint32_t have_nodes_closelist(DHT *dht, Node_format *nodes, uint16_t num)
 
 /* Handle a received hardening packet */
 static int handle_hardening(void *object, IP_Port source, const uint8_t *source_pubkey, const uint8_t *packet,
-                            uint16_t length)
+                            uint16_t length, void *userdata)
 {
     DHT *dht = object;
 
@@ -2364,7 +2364,7 @@ static int cryptopacket_handle(void *object, IP_Port source, const uint8_t *pack
             if (!dht->cryptopackethandlers[number].function) return 1;
 
             return dht->cryptopackethandlers[number].function(dht->cryptopackethandlers[number].object, source, public_key,
-                    data, len);
+                    data, len, userdata);
 
         } else { /* If request is not for us, try routing it. */
             int retval = route_packet(dht, packet + 1, packet, length);

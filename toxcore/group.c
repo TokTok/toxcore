@@ -598,7 +598,7 @@ static void set_conns_status_groups(Group_Chats *g_c, int friendcon_id, uint8_t 
     }
 }
 
-static int handle_status(void *object, int friendcon_id, uint8_t status)
+static int handle_status(void *object, int friendcon_id, uint8_t status, void *userdata)
 {
     Group_Chats *g_c = object;
 
