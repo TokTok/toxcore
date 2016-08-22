@@ -963,10 +963,10 @@ void tox_callback_friend_read_receipt(Tox *tox, tox_friend_read_receipt_cb *call
     m_callback_read_receipt(m, callback);
 }
 
-void tox_callback_friend_request(Tox *tox, tox_friend_request_cb *callback, void *user_data)
+void tox_callback_friend_request(Tox *tox, tox_friend_request_cb *callback)
 {
     Messenger *m = tox;
-    m_callback_friendrequest(m, callback, user_data);
+    m_callback_friendrequest(m, callback);
 }
 
 void tox_callback_friend_message(Tox *tox, tox_friend_message_cb *callback)
