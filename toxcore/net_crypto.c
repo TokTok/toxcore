@@ -1297,7 +1297,7 @@ static int send_kill_packet(Net_Crypto *c, int crypt_connection_id)
                                    &kill_packet, sizeof(kill_packet));
 }
 
-static void connection_kill(Net_Crypto *c, int crypt_connection_id)
+static void connection_kill(Net_Crypto *c, int crypt_connection_id, void *userdata)
 {
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
@@ -1306,7 +1306,8 @@ static void connection_kill(Net_Crypto *c, int crypt_connection_id)
     }
 
     if (conn->connection_status_callback) {
-        conn->connection_status_callback(conn->connection_status_callback_object, conn->connection_status_callback_id, 0);
+        conn->connection_status_callback(conn->connection_status_callback_object, conn->connection_status_callback_id, 0,
+                                         userdata);
     }
 
     crypto_kill(c, crypt_connection_id);
@@ -1370,7 +1371,7 @@ static int handle_data_packet_helper(Net_Crypto *c, int crypt_connection_id, con
     }
 
     if (real_data[0] == PACKET_ID_KILL) {
-        connection_kill(c, crypt_connection_id);
+        connection_kill(c, crypt_connection_id, userdata);
         return 0;
     }
 
@@ -1379,7 +1380,8 @@ static int handle_data_packet_helper(Net_Crypto *c, int crypt_connection_id, con
         conn->status = CRYPTO_CONN_ESTABLISHED;
 
         if (conn->connection_status_callback) {
-            conn->connection_status_callback(conn->connection_status_callback_object, conn->connection_status_callback_id, 1);
+            conn->connection_status_callback(conn->connection_status_callback_object, conn->connection_status_callback_id, 1,
+                                             userdata);
         }
     }
 
@@ -1525,7 +1527,7 @@ static int handle_packet_connection(Net_Crypto *c, int crypt_connection_id, cons
                     conn->status = CRYPTO_CONN_NOT_CONFIRMED;
                 } else {
                     if (conn->dht_pk_callback) {
-                        conn->dht_pk_callback(conn->dht_pk_callback_object, conn->dht_pk_callback_number, dht_public_key);
+                        conn->dht_pk_callback(conn->dht_pk_callback_object, conn->dht_pk_callback_number, dht_public_key, userdata);
                     }
                 }
             } else {
@@ -1753,7 +1755,9 @@ static int handle_new_connection_handshake(Net_Crypto *c, IP_Port source, const 
         Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
         if (public_key_cmp(n_c.dht_public_key, conn->dht_public_key) != 0) {
-            connection_kill(c, crypt_connection_id);
+            connection_kill(c, crypt_connection_id, NULL);
+            /* In this case it's safe to pass NULL back to connection_kill() because in no sane scenario will we ever
+             * be already connected to our own DHT public_key */
         } else {
             int ret = -1;
 
@@ -2119,7 +2123,7 @@ static void do_tcp(Net_Crypto *c, void *userdata)
  * return 0 on success.
  */
 int connection_status_handler(const Net_Crypto *c, int crypt_connection_id,
-                              int (*connection_status_callback)(void *object, int id, uint8_t status), void *object, int id)
+                              int (*connection_status_callback)(void *object, int id, uint8_t status, void *userdata), void *object, int id)
 {
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
@@ -2191,7 +2195,7 @@ int connection_lossy_data_handler(Net_Crypto *c, int crypt_connection_id,
  * return 0 on success.
  */
 int nc_dht_pk_callback(Net_Crypto *c, int crypt_connection_id, void (*function)(void *data, int32_t number,
-                       const uint8_t *dht_public_key), void *object, uint32_t number)
+                       const uint8_t *dht_public_key, void *userdata), void *object, uint32_t number)
 {
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
@@ -2822,7 +2826,7 @@ Net_Crypto *new_net_crypto(Logger *log, DHT *dht, TCP_Proxy_Info *proxy_info)
     return temp;
 }
 
-static void kill_timedout(Net_Crypto *c)
+static void kill_timedout(Net_Crypto *c, void *userdata)
 {
     uint32_t i;
     //uint64_t temp_time = current_time_monotonic();
@@ -2844,7 +2848,7 @@ static void kill_timedout(Net_Crypto *c)
                 continue;
             }
 
-            connection_kill(c, i);
+            connection_kill(c, i, userdata);
         }
 
 #if 0
@@ -2868,7 +2872,7 @@ uint32_t crypto_run_interval(const Net_Crypto *c)
 void do_net_crypto(Net_Crypto *c, void *userdata)
 {
     unix_time_update();
-    kill_timedout(c);
+    kill_timedout(c, userdata);
     do_tcp(c, userdata);
     send_crypto_packets(c);
 }
