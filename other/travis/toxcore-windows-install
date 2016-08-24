@@ -1,0 +1,7 @@
+#!/bin/sh
+
+DOCKER_IMAGE=iphydf/windows-x86-qt5
+
+docker pull $DOCKER_IMAGE
+docker run --rm $DOCKER_IMAGE > dockcross
+chmod +x dockcross
