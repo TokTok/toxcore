@@ -1,0 +1,7 @@
+#!/bin/sh
+
+if [ -d /cores ]; then
+  for core in /cores/*; do
+    lldb --core $core --batch --one-line "bt"
+  done
+fi

@@ -1,0 +1,8 @@
+#!/bin/sh
+
+# Check if the code is formatted according to the astyle configuration.
+other/astyle/format-source
+git diff --exit-code
+
+# Enable coverage.
+export CFLAGS="$CFLAGS -fprofile-arcs -ftest-coverage"
