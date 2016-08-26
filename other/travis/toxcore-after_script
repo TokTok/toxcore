@@ -7,6 +7,7 @@ set -e -u -x
 # so we arbitrarily choose the alphabetically first one for the report.
 if [ "$CC" = "clang" ]; then
   coveralls               \
+    --exclude _build      \
     --exclude auto_tests  \
     --exclude other       \
     --exclude testing     \
