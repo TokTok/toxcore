@@ -30,6 +30,7 @@ $APIDSL other/apidsl/toxav.in.h > toxav/toxav.h
 
 SOURCES=`find . -name "*.[ch]" -and -not -name "*.in.*" -and -not -wholename "*crypto_pwhash*" -and -not -wholename "./super_donators/*"`
 
+#clang_tidy -checks="*readability-braces-around-statements*" -fix $SOURCES
 $ASTYLE -n --options=other/astyle/astylerc $SOURCES
 
 git diff --exit-code
