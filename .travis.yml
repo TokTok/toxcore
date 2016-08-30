@@ -18,9 +18,12 @@ addons:
       - avsm
     packages:
       - check
+      - libopencv-dev     # For av_test.
+      - libportaudio-dev  # For av_test.
+      - libsndfile1-dev   # For av_test.
       - libvpx-dev
-      - opam            # For apidsl and Frama-C.
-      - texinfo         # For libconfig.
+      - opam              # For apidsl and Frama-C.
+      - texinfo           # For libconfig.
 
 cache:
   directories:
