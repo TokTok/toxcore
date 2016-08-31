@@ -560,15 +560,15 @@ void tox_options_set_udp_enabled(struct Tox_Options *options, bool udp_enabled);
 
 TOX_PROXY_TYPE tox_options_get_proxy_type(const struct Tox_Options *options);
 
-void tox_options_set_proxy_type(struct Tox_Options *options, TOX_PROXY_TYPE type);
+void tox_options_set_proxy_type(struct Tox_Options *options, TOX_PROXY_TYPE proxy_type);
 
 const char *tox_options_get_proxy_host(const struct Tox_Options *options);
 
-void tox_options_set_proxy_host(struct Tox_Options *options, const char *host);
+void tox_options_set_proxy_host(struct Tox_Options *options, const char *proxy_host);
 
 uint16_t tox_options_get_proxy_port(const struct Tox_Options *options);
 
-void tox_options_set_proxy_port(struct Tox_Options *options, uint16_t port);
+void tox_options_set_proxy_port(struct Tox_Options *options, uint16_t proxy_port);
 
 uint16_t tox_options_get_start_port(const struct Tox_Options *options);
 
@@ -584,15 +584,15 @@ void tox_options_set_tcp_port(struct Tox_Options *options, uint16_t tcp_port);
 
 TOX_SAVEDATA_TYPE tox_options_get_savedata_type(const struct Tox_Options *options);
 
-void tox_options_set_savedata_type(struct Tox_Options *options, TOX_SAVEDATA_TYPE type);
+void tox_options_set_savedata_type(struct Tox_Options *options, TOX_SAVEDATA_TYPE savedata_type);
 
 const uint8_t *tox_options_get_savedata_data(const struct Tox_Options *options);
 
-void tox_options_set_savedata_data(struct Tox_Options *options, const uint8_t *data, size_t length);
+void tox_options_set_savedata_data(struct Tox_Options *options, const uint8_t *savedata_data, size_t length);
 
 size_t tox_options_get_savedata_length(const struct Tox_Options *options);
 
-void tox_options_set_savedata_length(struct Tox_Options *options, size_t length);
+void tox_options_set_savedata_length(struct Tox_Options *options, size_t savedata_length);
 
 /**
  * Initialises a Tox_Options object with the default options.
@@ -799,7 +799,7 @@ typedef void tox_log_cb(Tox *tox, TOX_LOG_LEVEL level, const char *file, uint32_
  * registration function must not be called during execution of any other Tox
  * library function (toxcore or toxav).
  */
-void tox_callback_log(Tox *tox, tox_log_cb *callback, void *user_data);
+void tox_callback_log(Tox *tox, tox_log_cb *function, void *userdata);
 
 /**
  * Calculates the number of bytes required to store the tox instance with
@@ -816,7 +816,7 @@ size_t tox_get_savedata_size(const Tox *tox);
  *   Call tox_get_savedata_size to find the number of bytes required. If this parameter
  *   is NULL, this function has no effect.
  */
-void tox_get_savedata(const Tox *tox, uint8_t *savedata);
+void tox_get_savedata(const Tox *tox, uint8_t *data);
 
 
 /*******************************************************************************
@@ -937,7 +937,7 @@ typedef void tox_self_connection_status_cb(Tox *tox, TOX_CONNECTION connection_s
  *
  * TODO: how long should a client wait before bootstrapping again?
  */
-void tox_callback_self_connection_status(Tox *tox, tox_self_connection_status_cb *callback);
+void tox_callback_self_connection_status(Tox *tox, tox_self_connection_status_cb *function);
 
 /**
  * Return the time in milliseconds before tox_iterate() should be called again
@@ -949,7 +949,7 @@ uint32_t tox_iteration_interval(const Tox *tox);
  * The main loop that needs to be run in intervals of tox_iteration_interval()
  * milliseconds.
  */
-void tox_iterate(Tox *tox, void *user_data);
+void tox_iterate(Tox *tox, void *userdata);
 
 
 /*******************************************************************************
@@ -1076,7 +1076,7 @@ void tox_self_get_name(const Tox *tox, uint8_t *name);
  * length is 0, the status parameter is ignored (it can be NULL), and the
  * user status is set back to empty.
  */
-bool tox_self_set_status_message(Tox *tox, const uint8_t *status_message, size_t length, TOX_ERR_SET_INFO *error);
+bool tox_self_set_status_message(Tox *tox, const uint8_t *status, size_t length, TOX_ERR_SET_INFO *error);
 
 /**
  * Return the length of the current status message as passed to tox_self_set_status_message.
@@ -1100,14 +1100,14 @@ size_t tox_self_get_status_message_size(const Tox *tox);
  * @param status A valid memory location large enough to hold the status message.
  *   If this parameter is NULL, the function has no effect.
  */
-void tox_self_get_status_message(const Tox *tox, uint8_t *status_message);
+void tox_self_get_status_message(const Tox *tox, uint8_t *status);
 
 /**
  * Set the client's user status.
  *
  * @param user_status One of the user statuses listed in the enumeration above.
  */
-void tox_self_set_status(Tox *tox, TOX_USER_STATUS status);
+void tox_self_set_status(Tox *tox, TOX_USER_STATUS user_status);
 
 /**
  * Returns the client's user status.
@@ -1309,7 +1309,7 @@ size_t tox_self_get_friend_list_size(const Tox *tox);
  * @param list A memory region with enough space to hold the friend list. If
  *   this parameter is NULL, this function has no effect.
  */
-void tox_self_get_friend_list(const Tox *tox, uint32_t *friend_list);
+void tox_self_get_friend_list(const Tox *tox, uint32_t *list);
 
 typedef enum TOX_ERR_FRIEND_GET_PUBLIC_KEY {
 
@@ -1435,7 +1435,7 @@ typedef void tox_friend_name_cb(Tox *tox, uint32_t friend_number, const uint8_t 
  *
  * This event is triggered when a friend changes their name.
  */
-void tox_callback_friend_name(Tox *tox, tox_friend_name_cb *callback);
+void tox_callback_friend_name(Tox *tox, tox_friend_name_cb *function);
 
 /**
  * Return the length of the friend's status message. If the friend number is
@@ -1455,7 +1455,7 @@ size_t tox_friend_get_status_message_size(const Tox *tox, uint32_t friend_number
  *
  * @param status_message A valid memory region large enough to store the friend's status message.
  */
-bool tox_friend_get_status_message(const Tox *tox, uint32_t friend_number, uint8_t *status_message,
+bool tox_friend_get_status_message(const Tox *tox, uint32_t friend_number, uint8_t *message,
                                    TOX_ERR_FRIEND_QUERY *error);
 
 /**
@@ -1475,7 +1475,7 @@ typedef void tox_friend_status_message_cb(Tox *tox, uint32_t friend_number, cons
  *
  * This event is triggered when a friend changes their status message.
  */
-void tox_callback_friend_status_message(Tox *tox, tox_friend_status_message_cb *callback);
+void tox_callback_friend_status_message(Tox *tox, tox_friend_status_message_cb *function);
 
 /**
  * Return the friend's user status (away/busy/...). If the friend number is
@@ -1499,7 +1499,7 @@ typedef void tox_friend_status_cb(Tox *tox, uint32_t friend_number, TOX_USER_STA
  *
  * This event is triggered when a friend changes their user status.
  */
-void tox_callback_friend_status(Tox *tox, tox_friend_status_cb *callback);
+void tox_callback_friend_status(Tox *tox, tox_friend_status_cb *function);
 
 /**
  * Check whether a friend is currently connected to this client.
@@ -1534,7 +1534,7 @@ typedef void tox_friend_connection_status_cb(Tox *tox, uint32_t friend_number, T
  * This callback is not called when adding friends. It is assumed that when
  * adding friends, their connection status is initially offline.
  */
-void tox_callback_friend_connection_status(Tox *tox, tox_friend_connection_status_cb *callback, void *user_data);
+void tox_callback_friend_connection_status(Tox *tox, tox_friend_connection_status_cb *function, void *user_data);
 
 /**
  * Check whether a friend is currently typing a message.
@@ -1561,7 +1561,7 @@ typedef void tox_friend_typing_cb(Tox *tox, uint32_t friend_number, bool is_typi
  *
  * This event is triggered when a friend starts or stops typing.
  */
-void tox_callback_friend_typing(Tox *tox, tox_friend_typing_cb *callback);
+void tox_callback_friend_typing(Tox *tox, tox_friend_typing_cb *function);
 
 
 /*******************************************************************************
@@ -1597,7 +1597,7 @@ typedef enum TOX_ERR_SET_TYPING {
  *
  * @return true on success.
  */
-bool tox_self_set_typing(Tox *tox, uint32_t friend_number, bool typing, TOX_ERR_SET_TYPING *error);
+bool tox_self_set_typing(Tox *tox, uint32_t friend_number, bool is_typing, TOX_ERR_SET_TYPING *error);
 
 typedef enum TOX_ERR_FRIEND_SEND_MESSAGE {
 
@@ -1679,7 +1679,7 @@ typedef void tox_friend_read_receipt_cb(Tox *tox, uint32_t friend_number, uint32
  * This event is triggered when the friend receives the message sent with
  * tox_friend_send_message with the corresponding message ID.
  */
-void tox_callback_friend_read_receipt(Tox *tox, tox_friend_read_receipt_cb *callback);
+void tox_callback_friend_read_receipt(Tox *tox, tox_friend_read_receipt_cb *function);
 
 
 /*******************************************************************************
@@ -1709,7 +1709,7 @@ typedef void tox_friend_request_cb(Tox *tox, const uint8_t *public_key, const ui
  *
  * This event is triggered when a friend request is received.
  */
-void tox_callback_friend_request(Tox *tox, tox_friend_request_cb *callback, void *user_data);
+void tox_callback_friend_request(Tox *tox, tox_friend_request_cb *function, void *user_data);
 
 /**
  * @param friend_number The friend number of the friend who sent the message.
@@ -1728,7 +1728,7 @@ typedef void tox_friend_message_cb(Tox *tox, uint32_t friend_number, TOX_MESSAGE
  *
  * This event is triggered when a message from a friend is received.
  */
-void tox_callback_friend_message(Tox *tox, tox_friend_message_cb *callback);
+void tox_callback_friend_message(Tox *tox, tox_friend_message_cb *function);
 
 
 /*******************************************************************************
@@ -1896,7 +1896,7 @@ typedef void tox_file_recv_control_cb(Tox *tox, uint32_t friend_number, uint32_t
  * This event is triggered when a file control command is received from a
  * friend.
  */
-void tox_callback_file_recv_control(Tox *tox, tox_file_recv_control_cb *callback, void *user_data);
+void tox_callback_file_recv_control(Tox *tox, tox_file_recv_control_cb *function, void *user_data);
 
 typedef enum TOX_ERR_FILE_SEEK {
 
@@ -2200,7 +2200,7 @@ typedef void tox_file_chunk_request_cb(Tox *tox, uint32_t friend_number, uint32_
  *
  * This event is triggered when Core is ready to send more file data.
  */
-void tox_callback_file_chunk_request(Tox *tox, tox_file_chunk_request_cb *callback, void *user_data);
+void tox_callback_file_chunk_request(Tox *tox, tox_file_chunk_request_cb *function, void *user_data);
 
 
 /*******************************************************************************
@@ -2238,7 +2238,7 @@ typedef void tox_file_recv_cb(Tox *tox, uint32_t friend_number, uint32_t file_nu
  *
  * This event is triggered when a file transfer request is received.
  */
-void tox_callback_file_recv(Tox *tox, tox_file_recv_cb *callback, void *user_data);
+void tox_callback_file_recv(Tox *tox, tox_file_recv_cb *function, void *user_data);
 
 /**
  * When length is 0, the transfer is finished and the client should release the
@@ -2266,7 +2266,7 @@ typedef void tox_file_recv_chunk_cb(Tox *tox, uint32_t friend_number, uint32_t f
  * This event is first triggered when a file transfer request is received, and
  * subsequently when a chunk of file data for an accepted request was received.
  */
-void tox_callback_file_recv_chunk(Tox *tox, tox_file_recv_chunk_cb *callback, void *user_data);
+void tox_callback_file_recv_chunk(Tox *tox, tox_file_recv_chunk_cb *function, void *user_data);
 
 
 /*******************************************************************************
@@ -2396,7 +2396,7 @@ typedef void tox_friend_lossy_packet_cb(Tox *tox, uint32_t friend_number, const 
  * Set the callback for the `friend_lossy_packet` event. Pass NULL to unset.
  *
  */
-void tox_callback_friend_lossy_packet(Tox *tox, tox_friend_lossy_packet_cb *callback, void *user_data);
+void tox_callback_friend_lossy_packet(Tox *tox, tox_friend_lossy_packet_cb *function, void *user_data);
 
 /**
  * @param friend_number The friend number of the friend who sent the packet.
@@ -2411,7 +2411,7 @@ typedef void tox_friend_lossless_packet_cb(Tox *tox, uint32_t friend_number, con
  * Set the callback for the `friend_lossless_packet` event. Pass NULL to unset.
  *
  */
-void tox_callback_friend_lossless_packet(Tox *tox, tox_friend_lossless_packet_cb *callback, void *user_data);
+void tox_callback_friend_lossless_packet(Tox *tox, tox_friend_lossless_packet_cb *function, void *user_data);
 
 
 /*******************************************************************************
