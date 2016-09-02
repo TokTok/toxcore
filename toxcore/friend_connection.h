@@ -143,7 +143,7 @@ int get_friendcon_public_keys(uint8_t *real_pk, uint8_t *dht_temp_pk, Friend_Con
 
 /* Set temp dht key for connection.
  */
-void set_dht_temp_pk(Friend_Connections *fr_c, int friendcon_id, const uint8_t *dht_temp_pk);
+void set_dht_temp_pk(Friend_Connections *fr_c, int friendcon_id, const uint8_t *dht_temp_pk, void *userdata);
 
 /* Add a TCP relay associated to the friend.
  *
