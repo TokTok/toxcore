@@ -327,7 +327,7 @@ static unsigned int pk_in_closest_peers(Group_c *g, uint8_t *real_pk)
 
 static int send_packet_online(Friend_Connections *fr_c, int friendcon_id, uint16_t group_num, uint8_t *identifier);
 
-static int connect_to_closest(Group_Chats *g_c, int groupnumber)
+static int connect_to_closest(Group_Chats *g_c, int groupnumber, void *userdata)
 {
     Group_c *g = get_group_c(g_c, groupnumber);
 
@@ -383,7 +383,7 @@ static int connect_to_closest(Group_Chats *g_c, int groupnumber)
                 continue;
             }
 
-            set_dht_temp_pk(g_c->fr_c, friendcon_id, g->closest_peers[i].temp_pk);
+            set_dht_temp_pk(g_c->fr_c, friendcon_id, g->closest_peers[i].temp_pk, userdata);
         }
 
         add_conn_to_groupchat(g_c, friendcon_id, groupnumber, 1, lock);
@@ -2397,7 +2397,7 @@ Group_Chats *new_groupchats(Messenger *m)
 }
 
 /* main groupchats loop. */
-void do_groupchats(Group_Chats *g_c)
+void do_groupchats(Group_Chats *g_c, void *userdata)
 {
     unsigned int i;
 
@@ -2409,7 +2409,7 @@ void do_groupchats(Group_Chats *g_c)
         }
 
         if (g->status == GROUPCHAT_STATUS_CONNECTED) {
-            connect_to_closest(g_c, i);
+            connect_to_closest(g_c, i, userdata);
             ping_groupchat(g_c, i);
             groupchat_clear_timedout(g_c, i);
         }
