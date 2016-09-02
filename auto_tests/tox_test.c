@@ -462,7 +462,7 @@ START_TEST(test_few_clients)
     uint32_t to_compare = 974536;
     connected_t1 = 0;
     tox_callback_self_connection_status(tox1, tox_connection_status);
-    tox_callback_friend_request(tox2, accept_friend_request, &to_compare);
+    tox_callback_friend_request(tox2, accept_friend_request);
     uint8_t address[TOX_ADDRESS_SIZE];
     tox_self_get_address(tox2, address);
     uint32_t test = tox_friend_add(tox3, address, (uint8_t *)"Gentoo", 7, 0);
@@ -849,7 +849,7 @@ START_TEST(test_many_clients)
     for (i = 0; i < NUM_TOXES; ++i) {
         toxes[i] = tox_new(0, 0);
         ck_assert_msg(toxes[i] != 0, "Failed to create tox instances %u", i);
-        tox_callback_friend_request(toxes[i], accept_friend_request, &to_comp);
+        tox_callback_friend_request(toxes[i], accept_friend_request);
     }
 
     {
@@ -954,7 +954,7 @@ START_TEST(test_many_clients_tcp)
 
         toxes[i] = tox_new(&opts, 0);
         ck_assert_msg(toxes[i] != 0, "Failed to create tox instances %u", i);
-        tox_callback_friend_request(toxes[i], accept_friend_request, &to_comp);
+        tox_callback_friend_request(toxes[i], accept_friend_request);
         uint8_t dpk[TOX_PUBLIC_KEY_SIZE];
         tox_self_get_dht_id(toxes[0], dpk);
         TOX_ERR_BOOTSTRAP error = 0;
@@ -1053,7 +1053,7 @@ START_TEST(test_many_clients_tcp_b)
 
         toxes[i] = tox_new(&opts, 0);
         ck_assert_msg(toxes[i] != 0, "Failed to create tox instances %u", i);
-        tox_callback_friend_request(toxes[i], accept_friend_request, &to_comp);
+        tox_callback_friend_request(toxes[i], accept_friend_request);
         uint8_t dpk[TOX_PUBLIC_KEY_SIZE];
         tox_self_get_dht_id(toxes[(i % NUM_TCP_RELAYS)], dpk);
         ck_assert_msg(tox_add_tcp_relay(toxes[i], TOX_LOCALHOST, TCP_RELAY_PORT + (i % NUM_TCP_RELAYS), dpk, 0),
@@ -1200,7 +1200,7 @@ group_test_restart:
     for (i = 0; i < NUM_GROUP_TOX; ++i) {
         toxes[i] = tox_new(0, 0);
         ck_assert_msg(toxes[i] != 0, "Failed to create tox instances %u", i);
-        tox_callback_friend_request(toxes[i], &g_accept_friend_request, &to_comp);
+        tox_callback_friend_request(toxes[i], &g_accept_friend_request);
         tox_callback_group_invite(toxes[i], &print_group_invite_callback, &to_comp);
     }
 
