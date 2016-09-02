@@ -476,7 +476,7 @@ void tox_iterate(Tox *tox, void *user_data)
 {
     Messenger *m = tox;
     do_messenger(m, user_data);
-    do_groupchats(m->group_chat_object);
+    do_groupchats(m->group_chat_object, user_data);
 }
 
 void tox_self_get_address(const Tox *tox, uint8_t *address)

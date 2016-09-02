@@ -635,10 +635,9 @@ int get_friendcon_public_keys(uint8_t *real_pk, uint8_t *dht_temp_pk, Friend_Con
 
 /* Set temp dht key for connection.
  */
-void set_dht_temp_pk(Friend_Connections *fr_c, int friendcon_id, const uint8_t *dht_temp_pk)
+void set_dht_temp_pk(Friend_Connections *fr_c, int friendcon_id, const uint8_t *dht_temp_pk, void *userdata)
 {
-    /* This is probably VERY bad, but group chats are VERY broken, and I'm not willing to fix something I plan to replace */
-    dht_pk_callback(fr_c, friendcon_id, dht_temp_pk, NULL);
+    dht_pk_callback(fr_c, friendcon_id, dht_temp_pk, userdata);
 }
 
 /* Set the callbacks for the friend connection.
