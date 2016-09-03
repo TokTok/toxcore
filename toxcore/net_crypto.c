@@ -1731,7 +1731,8 @@ void new_connection_handler(Net_Crypto *c, int (*new_connection_callback)(void *
  * return -1 on failure.
  * return 0 on success.
  */
-static int handle_new_connection_handshake(Net_Crypto *c, IP_Port source, const uint8_t *data, uint16_t length)
+static int handle_new_connection_handshake(Net_Crypto *c, IP_Port source, const uint8_t *data, uint16_t length,
+        void *userdata)
 {
     New_Connection n_c;
     n_c.cookie = malloc(COOKIE_LENGTH);
@@ -1755,9 +1756,7 @@ static int handle_new_connection_handshake(Net_Crypto *c, IP_Port source, const 
         Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
         if (public_key_cmp(n_c.dht_public_key, conn->dht_public_key) != 0) {
-            connection_kill(c, crypt_connection_id, NULL);
-            /* In this case it's safe to pass NULL back to connection_kill() because in no sane scenario will we ever
-             * be already connected to our own DHT public_key */
+            connection_kill(c, crypt_connection_id, userdata);
         } else {
             int ret = -1;
 
@@ -1970,7 +1969,7 @@ static int tcp_data_callback(void *object, int id, const uint8_t *data, uint16_t
 }
 
 static int tcp_oob_callback(void *object, const uint8_t *public_key, unsigned int tcp_connections_number,
-                            const uint8_t *data, uint16_t length)
+                            const uint8_t *data, uint16_t length, void *userdata)
 {
     if (length == 0 || length > MAX_CRYPTO_PACKET_SIZE) {
         return -1;
@@ -1988,7 +1987,7 @@ static int tcp_oob_callback(void *object, const uint8_t *public_key, unsigned in
         source.ip.family = TCP_FAMILY;
         source.ip.ip6.uint32[0] = tcp_connections_number;
 
-        if (handle_new_connection_handshake(c, source, data, length) != 0) {
+        if (handle_new_connection_handshake(c, source, data, length, userdata) != 0) {
             return -1;
         }
 
@@ -2243,7 +2242,7 @@ static int udp_handle_packet(void *object, IP_Port source, const uint8_t *packet
             return 1;
         }
 
-        if (handle_new_connection_handshake(c, source, packet, length) != 0) {
+        if (handle_new_connection_handshake(c, source, packet, length, userdata) != 0) {
             return 1;
         }
 
