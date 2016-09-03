@@ -1756,6 +1756,9 @@ static int handle_new_connection_handshake(Net_Crypto *c, IP_Port source, const 
         Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
         if (public_key_cmp(n_c.dht_public_key, conn->dht_public_key) != 0) {
+            /* TODO: we're connected to our own DHT pubkey, in no world is this okay
+             * at the minimum an assert should be here. Ideally toxcore should exit()
+             * -- Grayhatter */
             connection_kill(c, crypt_connection_id, userdata);
         } else {
             int ret = -1;
