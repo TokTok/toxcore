@@ -43,8 +43,8 @@
 //Windows XP
 #define WINVER 0x0501
 #endif
-#include <windows.h>
 #include <winsock2.h>
+#include <windows.h>
 #include <ws2tcpip.h>
 
 #ifndef IPV6_V6ONLY
