@@ -838,8 +838,8 @@ void m_callback_log(Messenger *m, logger_cb *function, void *userdata)
 void m_callback_friendrequest(Messenger *m, void (*function)(Messenger *m, const uint8_t *, const uint8_t *, size_t,
                               void *), void *userdata)
 {
-    void (*handle_friendrequest)(void *, const uint8_t *, const uint8_t *, size_t, void *) = (void *)function;
-    callback_friendrequest(&(m->fr), handle_friendrequest, m, userdata);
+    callback_friendrequest(&(m->fr), (void (*)(void *, const uint8_t *, const uint8_t *, size_t, void *))function, m,
+                           userdata);
 }
 
 /* Set the function that will be executed when a message from a friend is received. */
