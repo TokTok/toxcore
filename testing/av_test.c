@@ -409,7 +409,6 @@ int main (int argc, char **argv)
     long audio_out_dev_idx = -1;
 
     int32_t audio_frame_duration = 20;
-    int32_t video_frame_duration = 10;
 
     /* Parse settings */
 CHECK_ARG:
@@ -434,18 +433,6 @@ CHECK_ARG:
         case 'v':
             vf_name = optarg;
             goto CHECK_ARG;
-
-        case 'x': {
-            char *d;
-            video_frame_duration = strtol(optarg, &d, 10);
-
-            if (*d) {
-                printf("Invalid value for argument: 'x'");
-                exit(1);
-            }
-
-            goto CHECK_ARG;
-        }
 
         case 'o': {
             char *d;
