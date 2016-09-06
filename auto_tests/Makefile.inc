@@ -1,7 +1,7 @@
 if BUILD_TESTS
 
-TESTS = encryptsave_test messenger_autotest crypto_test network_test onion_test TCP_test dht_autotest tox_strncasecmp_test
-check_PROGRAMS = encryptsave_test messenger_autotest crypto_test network_test onion_test TCP_test dht_autotest tox_strncasecmp_test
+TESTS = groupchat_test encryptsave_test messenger_autotest crypto_test network_test onion_test TCP_test dht_autotest tox_strncasecmp_test
+check_PROGRAMS = groupchat_test encryptsave_test messenger_autotest crypto_test network_test onion_test TCP_test dht_autotest tox_strncasecmp_test
 
 AUTOTEST_CFLAGS = \
                          $(LIBSODIUM_CFLAGS) \
@@ -112,6 +112,13 @@ tox_strncasecmp_test_SOURCES = ../auto_tests/tox_strncasecmp_test.c
 tox_strncasecmp_test_CFLAGS = $(AUTOTEST_CFLAGS)
 
 tox_strncasecmp_test_LDADD = $(AUTOTEST_LDADD)
+
+
+groupchat_test_SOURCES = ../auto_tests/groupchat_test.c
+
+groupchat_test_CFLAGS = $(AUTOTEST_CFLAGS)
+
+groupchat_test_LDADD = $(AUTOTEST_LDADD)
 
 
 EXTRA_DIST += $(top_srcdir)/auto_tests/check_compat.h
