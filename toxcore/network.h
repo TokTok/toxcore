@@ -100,35 +100,45 @@ typedef int sock_t;
 #endif
 #endif
 
-#define MAX_UDP_PACKET_SIZE 2048
+#define MAX_UDP_PACKET_SIZE 65507
 
-#define NET_PACKET_PING_REQUEST    0   /* Ping request packet ID. */
-#define NET_PACKET_PING_RESPONSE   1   /* Ping response packet ID. */
-#define NET_PACKET_GET_NODES       2   /* Get nodes request packet ID. */
-#define NET_PACKET_SEND_NODES_IPV6 4   /* Send nodes response packet ID for other addresses. */
-#define NET_PACKET_COOKIE_REQUEST  24  /* Cookie request packet */
-#define NET_PACKET_COOKIE_RESPONSE 25  /* Cookie response packet */
-#define NET_PACKET_CRYPTO_HS       26  /* Crypto handshake packet */
-#define NET_PACKET_CRYPTO_DATA     27  /* Crypto data packet */
-#define NET_PACKET_CRYPTO          32  /* Encrypted data packet ID. */
-#define NET_PACKET_LAN_DISCOVERY   33  /* LAN discovery packet ID. */
+#define NET_PACKET_PING_REQUEST    16   /* Ping request packet ID. */
+#define NET_PACKET_PING_RESPONSE   17   /* Ping response packet ID. */
+#define NET_PACKET_GET_NODES       18   /* Get nodes request packet ID. */
+#define NET_PACKET_SEND_NODES_IPV6 19   /* Send nodes response packet ID for other addresses. */
+
+#define NET_PACKET_COOKIE_REQUEST  206  /* Cookie request packet */
+#define NET_PACKET_COOKIE_RESPONSE 207  /* Cookie response packet */
+#define NET_PACKET_CRYPTO_HS       208  /* Crypto handshake packet */
+#define NET_PACKET_CRYPTO_DATA     209  /* Crypto data packet */
+#define NET_PACKET_CRYPTO          210  /* Encrypted data packet ID. */
+#define NET_PACKET_LAN_DISCOVERY   211  /* LAN discovery packet ID. */
 
 /* See:  docs/Prevent_Tracking.txt and onion.{c, h} */
-#define NET_PACKET_ONION_SEND_INITIAL 128
-#define NET_PACKET_ONION_SEND_1 129
-#define NET_PACKET_ONION_SEND_2 130
+#define NET_PACKET_ONION_SEND_INITIAL 29
+#define NET_PACKET_ONION_SEND_1 21
+#define NET_PACKET_ONION_SEND_2 22
 
-#define NET_PACKET_ANNOUNCE_REQUEST 131
-#define NET_PACKET_ANNOUNCE_RESPONSE 132
-#define NET_PACKET_ONION_DATA_REQUEST 133
-#define NET_PACKET_ONION_DATA_RESPONSE 134
+#define NET_PACKET_ANNOUNCE_REQUEST 75
+#define NET_PACKET_ANNOUNCE_RESPONSE 76
+#define NET_PACKET_ONION_DATA_REQUEST 77
+#define NET_PACKET_ONION_DATA_RESPONSE 78
 
-#define NET_PACKET_ONION_RECV_3 140
-#define NET_PACKET_ONION_RECV_2 141
-#define NET_PACKET_ONION_RECV_1 142
+#define NET_PACKET_ONION_RECV_3 53
+#define NET_PACKET_ONION_RECV_2 54
+#define NET_PACKET_ONION_RECV_1 55
+
+#define NET_PACKET_GC_HANDSHAKE      90  /* Group chat handshake packet ID */
+#define NET_PACKET_GC_LOSSLESS       91  /* Group chat lossless packet ID */
+#define NET_PACKET_GC_LOSSY          92  /* Group chat lossy packet ID */
+#define NET_PACKET_GCA_ANNOUNCE      93  /* Group announce announcement packet ID */
+#define NET_PACKET_GCA_GET_NODES     94  /* Group announce get nodes request packet ID */
+#define NET_PACKET_GCA_SEND_NODES    95  /* Group announce send nodes packet ID */
+#define NET_PACKET_GCA_PING_REQUEST  96  /* Group announce ping request packet ID */
+#define NET_PACKET_GCA_PING_RESPONSE 97  /* Group announce ping response packet ID */
 
 /* Only used for bootstrap nodes */
-#define BOOTSTRAP_INFO_PACKET_ID 240
+#define BOOTSTRAP_INFO_PACKET_ID 245
 
 
 #define TOX_PORTRANGE_FROM 33445
@@ -247,6 +257,8 @@ int ipport_equal(const IP_Port *a, const IP_Port *b);
 
 /* nulls out ip */
 void ip_reset(IP *ip);
+/* nulls out ip_port */
+void ipport_reset(IP_Port *ipport);
 /* nulls out ip, sets family according to flag */
 void ip_init(IP *ip, uint8_t ipv6enabled);
 /* checks if ip is valid */
