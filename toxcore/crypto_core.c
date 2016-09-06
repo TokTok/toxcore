@@ -29,6 +29,10 @@
 
 #include "ccompat.h"
 #include "crypto_core.h"
+#include "util.h"
+
+// Need dht because of ENC_SECRET_KEY and ENC_PUBLIC_KEY
+#include "DHT.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -47,40 +51,70 @@
 #define crypto_box_MACBYTES (crypto_box_ZEROBYTES - crypto_box_BOXZEROBYTES)
 #endif
 
+#ifndef VANILLA_NACL
+#if CRYPTO_SIGNATURE_SIZE != crypto_sign_BYTES
+#error CRYPTO_SIGNATURE_SIZE should be equal to crypto_sign_BYTES
+#endif
+
+#if CRYPTO_SIGN_PUBLIC_KEY_SIZE != crypto_sign_PUBLICKEYBYTES
+#error CRYPTO_SIGN_PUBLIC_KEY_SIZE should be equal to crypto_sign_PUBLICKEYBYTES
+#endif
+
+#if CRYPTO_SIGN_SECRET_KEY_SIZE != crypto_sign_SECRETKEYBYTES
+#error CRYPTO_SIGN_SECRET_KEY_SIZE should be equal to crypto_sign_SECRETKEYBYTES
+#endif
+#endif /* VANILLA_NACL */
+
 #if CRYPTO_PUBLIC_KEY_SIZE != crypto_box_PUBLICKEYBYTES
-#error "CRYPTO_PUBLIC_KEY_SIZE should be equal to crypto_box_PUBLICKEYBYTES"
+#error CRYPTO_PUBLIC_KEY_SIZE should be equal to crypto_box_PUBLICKEYBYTES
 #endif
 
 #if CRYPTO_SECRET_KEY_SIZE != crypto_box_SECRETKEYBYTES
-#error "CRYPTO_SECRET_KEY_SIZE should be equal to crypto_box_SECRETKEYBYTES"
+#error CRYPTO_SECRET_KEY_SIZE should be equal to crypto_box_SECRETKEYBYTES
 #endif
 
 #if CRYPTO_SHARED_KEY_SIZE != crypto_box_BEFORENMBYTES
-#error "CRYPTO_SHARED_KEY_SIZE should be equal to crypto_box_BEFORENMBYTES"
+#error CRYPTO_SHARED_KEY_SIZE should be equal to crypto_box_BEFORENMBYTES
 #endif
 
 #if CRYPTO_SYMMETRIC_KEY_SIZE != crypto_box_BEFORENMBYTES
-#error "CRYPTO_SYMMETRIC_KEY_SIZE should be equal to crypto_box_BEFORENMBYTES"
+#error CRYPTO_SYMMETRIC_KEY_SIZE should be equal to crypto_box_BEFORENMBYTES
 #endif
 
 #if CRYPTO_MAC_SIZE != crypto_box_MACBYTES
-#error "CRYPTO_MAC_SIZE should be equal to crypto_box_MACBYTES"
+#error CRYPTO_MAC_SIZE should be equal to crypto_box_MACBYTES
 #endif
 
 #if CRYPTO_NONCE_SIZE != crypto_box_NONCEBYTES
-#error "CRYPTO_NONCE_SIZE should be equal to crypto_box_NONCEBYTES"
+#error CRYPTO_NONCE_SIZE should be equal to crypto_box_NONCEBYTES
 #endif
 
 #if CRYPTO_SHA256_SIZE != crypto_hash_sha256_BYTES
-#error "CRYPTO_SHA256_SIZE should be equal to crypto_hash_sha256_BYTES"
+#error CRYPTO_SHA256_SIZE should be equal to crypto_hash_sha256_BYTES
 #endif
 
 #if CRYPTO_SHA512_SIZE != crypto_hash_sha512_BYTES
-#error "CRYPTO_SHA512_SIZE should be equal to crypto_hash_sha512_BYTES"
+#error CRYPTO_SHA512_SIZE should be equal to crypto_hash_sha512_BYTES
 #endif
 
-#if CRYPTO_PUBLIC_KEY_SIZE != 32
-#error "CRYPTO_PUBLIC_KEY_SIZE is required to be 32 bytes for public_key_cmp to work,"
+#ifndef VANILLA_NACL
+/* Extended keypair: curve + ed. Encryption keys are derived from the signature keys.
+ * Used for group chats and group DHT announcements.
+ * pk and sk must have room for at least EXT_PUBLIC_KEY bytes each.
+ */
+int32_t create_extended_keypair(uint8_t *pk, uint8_t *sk)
+{
+    /* create signature key pair */
+    crypto_sign_keypair(pk + ENC_PUBLIC_KEY, sk + ENC_SECRET_KEY);
+
+    /* convert public signature key to public encryption key */
+    int result = crypto_sign_ed25519_pk_to_curve25519(pk, pk + ENC_PUBLIC_KEY);
+
+    /* convert secret signature key to secret encryption key */
+    crypto_sign_ed25519_sk_to_curve25519(sk, sk + ENC_SECRET_KEY);
+
+    return result;
+}
 #endif
 
 static uint8_t *crypto_malloc(size_t bytes)
@@ -99,6 +133,9 @@ static void crypto_free(uint8_t *ptr, size_t bytes)
 
 int32_t public_key_cmp(const uint8_t *pk1, const uint8_t *pk2)
 {
+#if CRYPTO_PUBLIC_KEY_SIZE != 32
+#error CRYPTO_PUBLIC_KEY_SIZE is required to be 32 bytes for public_key_cmp to work,
+#endif
     return crypto_verify_32(pk1, pk2);
 }
 
@@ -130,13 +167,21 @@ uint64_t random_u64(void)
     return randnum;
 }
 
+#ifndef VANILLA_NACL
+/* Return a value between 0 and upper_bound using a uniform distribution */
+uint32_t random_int_range(uint32_t upper_bound)
+{
+    return randombytes_uniform(upper_bound);
+}
+#endif
+
 bool public_key_valid(const uint8_t *public_key)
 {
     if (public_key[31] >= 128) { /* Last bit of key is always zero. */
-        return 0;
+        return false;
     }
 
-    return 1;
+    return true;
 }
 
 /* Precomputes the shared key from their public_key and our secret_key.
@@ -236,7 +281,7 @@ int32_t encrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const
     uint8_t k[crypto_box_BEFORENMBYTES];
     encrypt_precompute(public_key, secret_key, k);
     int ret = encrypt_data_symmetric(k, nonce, plain, length, encrypted);
-    crypto_memzero(k, sizeof(k));
+    crypto_memzero(k, sizeof k);
     return ret;
 }
 
@@ -250,7 +295,7 @@ int32_t decrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const
     uint8_t k[crypto_box_BEFORENMBYTES];
     encrypt_precompute(public_key, secret_key, k);
     int ret = decrypt_data_symmetric(k, nonce, encrypted, length, plain);
-    crypto_memzero(k, sizeof(k));
+    crypto_memzero(k, sizeof k);
     return ret;
 }
 
