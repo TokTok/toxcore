@@ -1221,7 +1221,7 @@ static int send_message_group(const Group_Chats *g_c, int groupnumber, uint8_t m
                               uint16_t len);
 
 #define GROUP_MESSAGE_PING_ID 0
-static int group_ping_send(const Group_Chats *g_c, int groupnumber)
+int group_ping_send(const Group_Chats *g_c, int groupnumber)
 {
     if (send_message_group(g_c, groupnumber, GROUP_MESSAGE_PING_ID, 0, 0) > 0) {
         return 0;
@@ -1236,8 +1236,8 @@ static int group_ping_send(const Group_Chats *g_c, int groupnumber)
  * return 0 on success
  * return -1 on failure
  */
-static int group_new_peer_send(const Group_Chats *g_c, int groupnumber, uint16_t peer_num, const uint8_t *real_pk,
-                               uint8_t *temp_pk)
+int group_new_peer_send(const Group_Chats *g_c, int groupnumber, uint16_t peer_num, const uint8_t *real_pk,
+                        uint8_t *temp_pk)
 {
     uint8_t packet[GROUP_MESSAGE_NEW_PEER_LENGTH];
 
@@ -2453,7 +2453,7 @@ Group_Chats *new_groupchats(Messenger *m)
     temp->m = m;
     temp->fr_c = m->fr_c;
     m->group_chat_object = temp;
-    m_callback_group_invite(m, &handle_friend_invite_packet);
+    m_callback_conversation_invite(m, &handle_friend_invite_packet);
 
     return temp;
 }
@@ -2489,7 +2489,7 @@ void kill_groupchats(Group_Chats *g_c)
         del_groupchat(g_c, i);
     }
 
-    m_callback_group_invite(g_c->m, NULL);
+    m_callback_conversation_invite(g_c->m, NULL);
     g_c->m->group_chat_object = 0;
     free(g_c);
 }

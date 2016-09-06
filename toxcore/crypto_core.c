@@ -28,10 +28,30 @@
 #endif
 
 #include "crypto_core.h"
+#include "util.h"
+
+// Need dht because of ENC_SECRET_KEY and ENC_PUBLIC_KEY
+#include "DHT.h"
 
 #if crypto_box_PUBLICKEYBYTES != 32
 #error crypto_box_PUBLICKEYBYTES is required to be 32 bytes for public_key_cmp to work,
 #endif
+
+/* Extended keypair: curve + ed. Encryption keys are derived from the signature keys.
+ * Used for group chats and group DHT announcements.
+ * pk and sk must have room for at least EXT_PUBLIC_KEY bytes each.
+ */
+void create_extended_keypair(uint8_t *pk, uint8_t *sk)
+{
+    /* create signature key pair */
+    crypto_sign_keypair(pk + ENC_PUBLIC_KEY, sk + ENC_SECRET_KEY);
+
+    /* convert public signature key to public encryption key */
+    crypto_sign_ed25519_pk_to_curve25519(pk, pk + ENC_PUBLIC_KEY);
+
+    /* convert secret signature key to secret encryption key */
+    crypto_sign_ed25519_sk_to_curve25519(sk, sk + ENC_SECRET_KEY);
+}
 
 /* compare 2 public keys of length crypto_box_PUBLICKEYBYTES, not vulnerable to timing attacks.
    returns 0 if both mem locations of length are equal,
@@ -41,7 +61,7 @@ int public_key_cmp(const uint8_t *pk1, const uint8_t *pk2)
     return crypto_verify_32(pk1, pk2);
 }
 
-/*  return a random number.
+/*  return a random uint32_t.
  */
 uint32_t random_int(void)
 {
@@ -55,6 +75,12 @@ uint64_t random_64b(void)
     uint64_t randnum;
     randombytes((uint8_t *)&randnum, sizeof(randnum));
     return randnum;
+}
+
+/* Return a value between 0 and upper_bound using a uniform distribution */
+uint32_t random_int_range(uint32_t upper_bound)
+{
+    return randombytes_uniform(upper_bound);
 }
 
 /* Check if a Tox public key crypto_box_PUBLICKEYBYTES is valid or not.
