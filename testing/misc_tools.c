@@ -34,6 +34,7 @@
 
 #include <assert.h>
 #include <ctype.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -102,7 +103,7 @@ int tox_strncasecmp(const char *s1, const char *s2, size_t n)
     return 0;
 }
 
-int cmdline_parsefor_ipv46(int argc, char **argv, uint8_t *ipv6enabled)
+int cmdline_parsefor_ipv46(int argc, char **argv, bool *ipv6enabled)
 {
     int argvoffset = 0, argi;
 
