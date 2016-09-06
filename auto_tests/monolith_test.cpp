@@ -65,6 +65,11 @@ namespace friend_request_test
 int main(void);
 #include "friend_request_test.c"
 }
+namespace groupchat_test
+{
+int main(void);
+#include "groupchat_test.c"
+}
 namespace lan_discovery_test
 {
 int main(void);
@@ -239,7 +244,7 @@ int main(int argc, char *argv[])
     // toxcore/Messenger
     CHECK_SIZE(File_Transfers, 72);
     CHECK_SIZE(Friend, 39264);
-    CHECK_SIZE(Messenger, 2008);
+    CHECK_SIZE(Messenger, 2040);
     CHECK_SIZE(Messenger_Options, 72);
     CHECK_SIZE(Receipts, 16);
     // toxcore/net_crypto

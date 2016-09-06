@@ -320,19 +320,27 @@ set(toxcore_SOURCES ${toxcore_SOURCES}
   toxcore/friend_requests.c
   toxcore/friend_requests.h)
 
-# LAYER 6: Tox messenger
+# LAYER 6: DHT based group chats
+# ----------------------
+set(toxcore_SOURCES ${toxcore_SOURCES}
+  toxcore/group_announce.c
+  toxcore/group_chats.c
+  toxcore/group_connection.c
+  toxcore/group_moderation.c)
+
+# LAYER 7: Tox messenger
 # ----------------------
 set(toxcore_SOURCES ${toxcore_SOURCES}
   toxcore/Messenger.c
   toxcore/Messenger.h)
 
-# LAYER 7: Group chats
+# LAYER 8: Conferences: friend based group chats
 # --------------------
 set(toxcore_SOURCES ${toxcore_SOURCES}
   toxcore/group.c
   toxcore/group.h)
 
-# LAYER 8: Public API
+# LAYER 9: Public API
 # -------------------
 apidsl(toxcore/tox.api.h)
 set(toxcore_SOURCES ${toxcore_SOURCES}
@@ -505,6 +513,7 @@ auto_test(dht                           MSVC_DONT_BUILD)
 auto_test(encryptsave)
 auto_test(file_transfer)
 auto_test(friend_request)
+auto_test(groupchat)
 auto_test(lan_discovery)
 auto_test(lossless_packet)
 auto_test(lossy_packet)
@@ -612,3 +621,12 @@ target_link_modules(DHT_test toxcore)
 add_executable(Messenger_test ${CPUFEATURES}
   testing/Messenger_test.c)
 target_link_modules(Messenger_test toxcore)
+
+add_executable(group_announce_test testing/groupchats/group_announce_test.c)
+target_link_modules(group_announce_test toxcore)
+
+add_executable(group_bootstrap_n_chat testing/groupchats/group_bootstrap_n_chat.c)
+target_link_modules(group_bootstrap_n_chat toxcore)
+
+add_executable(group_newpeers_dos_attack testing/groupchats/group_newpeers_dos_attack.c)
+target_link_modules(group_newpeers_dos_attack toxcore)
