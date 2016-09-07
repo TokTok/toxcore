@@ -838,7 +838,7 @@ void m_callback_log(Messenger *m, logger_cb *function, void *userdata)
 void m_callback_friendrequest(Messenger *m, void (*function)(Messenger *m, const uint8_t *, const uint8_t *, size_t,
                               void *))
 {
-    callback_friendrequest(&(m->fr), (void (*)(void *, const uint8_t *, const uint8_t *, size_t, void *))function, m);
+    callback_friendrequest(&(m->fr), (void ( *)(void *, const uint8_t *, const uint8_t *, size_t, void *))function, m);
 }
 
 /* Set the function that will be executed when a message from a friend is received. */
@@ -2158,7 +2158,7 @@ static int handle_packet(void *object, int i, const uint8_t *temp, uint16_t len,
             break;
         }
 
-        case PACKET_ID_MESSAGE:
+        case PACKET_ID_MESSAGE: // fall-through
         case PACKET_ID_ACTION: {
             if (data_length == 0) {
                 break;
