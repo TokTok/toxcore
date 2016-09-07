@@ -375,6 +375,9 @@ int pack_nodes(uint8_t *data, uint16_t length, const Node_format *nodes, uint16_
 
         memcpy(data + packed_length, nodes[i].public_key, crypto_box_PUBLICKEYBYTES);
         packed_length += crypto_box_PUBLICKEYBYTES;
+
+        uint32_t increment = ipp_size + crypto_box_PUBLICKEYBYTES;
+        assert(increment == PACKED_NODE_SIZE_IP4 || increment == PACKED_NODE_SIZE_IP6);
     }
 
     return packed_length;
@@ -408,6 +411,9 @@ int unpack_nodes(Node_format *nodes, uint16_t max_num_nodes, uint16_t *processed
         memcpy(nodes[num].public_key, data + len_processed, crypto_box_PUBLICKEYBYTES);
         len_processed += crypto_box_PUBLICKEYBYTES;
         ++num;
+
+        uint32_t increment = ipp_size + crypto_box_PUBLICKEYBYTES;
+        assert(increment == PACKED_NODE_SIZE_IP4 || increment == PACKED_NODE_SIZE_IP6);
     }
 
     if (processed_data_len) {
