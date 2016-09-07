@@ -1059,6 +1059,7 @@ bool tox_file_seek(Tox *tox, uint32_t friend_number, uint32_t file_number, uint6
             return 0;
 
         case -4:
+        /* intentional fallthrough */
         case -5:
             SET_ERROR_PARAMETER(error, TOX_ERR_FILE_SEEK_DENIED);
             return 0;

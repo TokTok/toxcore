@@ -683,6 +683,7 @@ void handle_init (MSICall *call, const MSIMessage *msg)
         break;
 
         case msi_CallRequested:
+        /* intentional fallthrough */
         case msi_CallRequesting: {
             LOGGER_WARNING(call->session->messenger->log, "Session: %p Invalid state on 'init'");
             call->error = msi_EInvalidState;
@@ -739,6 +740,7 @@ void handle_push (MSICall *call, const MSIMessage *msg)
 
         /* Pushes during initialization state are ignored */
         case msi_CallInactive:
+        /* intentional fallthrough */
         case msi_CallRequested: {
             LOGGER_WARNING(call->session->messenger->log, "Ignoring invalid push");
         }

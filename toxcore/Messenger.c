@@ -2159,6 +2159,7 @@ static int handle_packet(void *object, int i, const uint8_t *temp, uint16_t len,
         }
 
         case PACKET_ID_MESSAGE:
+        /* intentional fallthrough */
         case PACKET_ID_ACTION: {
             if (data_length == 0) {
                 break;
