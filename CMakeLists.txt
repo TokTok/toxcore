@@ -346,7 +346,6 @@ install(FILES
 install(FILES
   toxav/toxav.h
   toxcore/tox.h
-  toxcore/tox_group.h
   toxdns/toxdns.h
   toxencryptsave/toxencryptsave.h
   DESTINATION "include/tox")
