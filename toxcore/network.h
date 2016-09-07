@@ -51,8 +51,12 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 
-#include <windows.h>
+// The mingw32/64 Windows library warns about including winsock2.h after
+// windows.h even though with the above it's a valid thing to do. So, to make
+// mingw32 headers happy, we include winsock2.h first.
 #include <winsock2.h>
+
+#include <windows.h>
 #include <ws2tcpip.h>
 
 #ifndef IPV6_V6ONLY
