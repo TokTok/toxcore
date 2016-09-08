@@ -394,3 +394,37 @@ install(FILES
   toxdns/toxdns.h
   toxencryptsave/toxencryptsave.h
   DESTINATION "include/tox")
+
+
+################################################################################
+#
+# :: Strict ABI
+#
+################################################################################
+
+function(make_version_script header ns lib)
+  execute_process(
+    COMMAND sh -c "egrep '^\\w' ${header} | grep '${ns}_[a-z_]*(' | grep -v '^typedef' | grep -o '${ns}_[a-z_]*(' | egrep -o '\\w+' | sort -u"
+    OUTPUT_VARIABLE ${lib}_SYMS
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  string(REPLACE "\n" ";" ${lib}_SYMS ${${lib}_SYMS})
+
+  set(${lib}_VERSION_SCRIPT "${CMAKE_BINARY_DIR}/${lib}.ld")
+
+  file(WRITE ${${lib}_VERSION_SCRIPT}
+    "{ global:\n")
+  foreach(sym ${${lib}_SYMS})
+    file(APPEND ${${lib}_VERSION_SCRIPT}
+      "${sym};\n")
+  endforeach(sym)
+  file(APPEND ${${lib}_VERSION_SCRIPT}
+    "local: *; };\n")
+
+  target_link_libraries(${lib} -Wl,--version-script,${${lib}_VERSION_SCRIPT})
+endfunction()
+
+option(STRICT_ABI "Enforce strict ABI export in dynamic libraries" OFF)
+if(STRICT_ABI)
+  make_version_script(${CMAKE_SOURCE_DIR}/toxav/toxav.h toxav toxav)
+  make_version_script(${CMAKE_SOURCE_DIR}/toxcore/tox.h tox toxcore)
+endif()
