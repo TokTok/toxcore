@@ -1074,7 +1074,6 @@ static char *idpart2str(uint8_t *id, size_t len)
 void Assoc_status(const Assoc *assoc)
 {
     if (!assoc) {
-        LOGGER_TRACE(assoc->log, "Assoc status: no assoc");
         return;
     }
 
