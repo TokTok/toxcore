@@ -1377,7 +1377,7 @@ namespace friend {
    * This callback is not called when adding friends. It is assumed that when
    * adding friends, their connection status is initially offline.
    */
-  event connection_status {
+  event connection_status const {
     /**
      * @param friend_number The friend number of the friend whose connection status
      *   changed.
@@ -1698,7 +1698,7 @@ namespace file {
    * This event is triggered when a file control command is received from a
    * friend.
    */
-  event recv_control {
+  event recv_control const {
     /**
      * When receiving ${CONTROL.CANCEL}, the client should release the
      * resources associated with the file number and consider the transfer failed.
@@ -1927,7 +1927,7 @@ namespace file {
   /**
    * This event is triggered when Core is ready to send more file data.
    */
-  event chunk_request {
+  event chunk_request const {
     /**
      * If the length parameter is 0, the file transfer is finished, and the client's
      * resources associated with the file number should be released. After a call
@@ -1968,7 +1968,7 @@ namespace file {
   /**
    * This event is triggered when a file transfer request is received.
    */
-  event recv {
+  event recv const {
     /**
      * The client should acquire resources to be associated with the file transfer.
      * Incoming file transfers start in the PAUSED state. After this callback
@@ -1996,7 +1996,7 @@ namespace file {
    * This event is first triggered when a file transfer request is received, and
    * subsequently when a chunk of file data for an accepted request was received.
    */
-  event recv_chunk {
+  event recv_chunk const {
     /**
      * When length is 0, the transfer is finished and the client should release the
      * resources it acquired for the transfer. After a call with length = 0, the
@@ -2120,7 +2120,7 @@ namespace friend {
   }
 
 
-  event lossy_packet {
+  event lossy_packet const {
     /**
      * @param friend_number The friend number of the friend who sent a lossy packet.
      * @param data A byte array containing the received packet data.
@@ -2130,7 +2130,7 @@ namespace friend {
   }
 
 
-  event lossless_packet {
+  event lossless_packet const {
     /**
      * @param friend_number The friend number of the friend who sent the packet.
      * @param data A byte array containing the received packet data.
