@@ -25,16 +25,14 @@
 #include "config.h"
 #endif
 
+#define TOX_DEFINED
+typedef struct Messenger Tox;
+#include "tox.h"
+
+#include "../toxencryptsave/defines.h"
 #include "Messenger.h"
 #include "group.h"
 #include "logger.h"
-
-#include "../toxencryptsave/defines.h"
-
-#define TOX_DEFINED
-typedef struct Messenger Tox;
-
-#include "tox.h"
 
 #define SET_ERROR_PARAMETER(param, x) {if(param) {*param = x;}}
 
