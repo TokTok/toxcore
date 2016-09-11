@@ -30,6 +30,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define TOXAV_PAIR(TYPE1__, TYPE2__) struct { TYPE1__ first; TYPE2__ second; }
 %}
 
 /** \page av Public audio/video API for Tox clients.
@@ -216,7 +218,7 @@ const uint32_t iteration_interval();
  * toxav_iteration_interval() milliseconds. It is best called in the separate
  * thread from tox_iterate.
  */
-void iterate();
+void iterate(void *userdata);
 
 
 /*******************************************************************************
@@ -269,7 +271,7 @@ bool call(uint32_t friend_number, uint32_t audio_bit_rate, uint32_t video_bit_ra
   INVALID_BIT_RATE,
 }
 
-event call {
+event call const {
   /**
    * The function type for the ${event call} callback.
    *
@@ -359,7 +361,7 @@ bitmask FRIEND_CALL_STATE {
   ACCEPTING_V,
 }
 
-event call_state {
+event call_state const {
  /**
   * The function type for the ${event call_state} callback.
   *
@@ -490,7 +492,7 @@ namespace bit_rate {
     FRIEND_NOT_IN_CALL,
   }
 
-  event status {
+  event status const {
     /**
      * The function type for the ${event status} callback. The event is triggered
      * when the network becomes too saturated for current bit rates at which
@@ -601,7 +603,7 @@ namespace video {
 
 
 namespace audio {
-  event receive_frame {
+  event receive_frame const {
     /**
      * The function type for the ${event receive_frame} callback. The callback can be
      * called multiple times per single iteration depending on the amount of queued
@@ -620,7 +622,7 @@ namespace audio {
 }
 
 namespace video {
-  event receive_frame {
+  event receive_frame const {
     /**
      * The function type for the ${event receive_frame} callback.
      *

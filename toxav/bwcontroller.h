@@ -26,8 +26,8 @@
 typedef struct BWController_s BWController;
 
 BWController *bwc_new(Messenger *m, uint32_t friendnumber,
-                      void (*mcb) (BWController *, uint32_t, float, void *),
-                      void *udata);
+                      void (*mcb) (BWController *, uint32_t, float, void *, void *),
+                      void *call_data);
 void bwc_kill(BWController *bwc);
 
 void bwc_feed_avg(BWController *bwc, uint32_t bytes);

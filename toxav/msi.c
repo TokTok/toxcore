@@ -80,15 +80,16 @@ int msg_parse_in (Logger *log, MSIMessage *dest, const uint8_t *data, uint16_t l
 uint8_t *msg_parse_header_out (MSIHeaderID id, uint8_t *dest, const void *value, uint8_t value_len, uint16_t *length);
 static int send_message (Messenger *m, uint32_t friend_number, const MSIMessage *msg);
 int send_error (Messenger *m, uint32_t friend_number, MSIError error);
-static int invoke_callback(MSICall *call, MSICallbackID cb);
+static int invoke_callback(MSICall *call, MSICallbackID cb, void *userdata);
 static MSICall *get_call (MSISession *session, uint32_t friend_number);
 MSICall *new_call (MSISession *session, uint32_t friend_number);
 void kill_call (MSICall *call);
-void on_peer_status(Messenger *m, uint32_t friend_number, uint8_t status, void *data);
-void handle_init (MSICall *call, const MSIMessage *msg);
-void handle_push (MSICall *call, const MSIMessage *msg);
-void handle_pop (MSICall *call, const MSIMessage *msg);
-void handle_msi_packet (Messenger *m, uint32_t friend_number, const uint8_t *data, uint16_t length, void *object);
+void on_peer_status(Messenger *m, uint32_t friend_number, uint8_t status, void *data, void *userdata);
+void handle_init (MSICall *call, const MSIMessage *msg, void *userdata);
+void handle_push (MSICall *call, const MSIMessage *msg, void *userdata);
+void handle_pop (MSICall *call, const MSIMessage *msg, void *userdata);
+void handle_msi_packet (Messenger *m, uint32_t friend_number, const uint8_t *data, uint16_t length, void *object,
+                        void *userdata);
 
 
 /**
@@ -478,14 +479,14 @@ int send_error (Messenger *m, uint32_t friend_number, MSIError error)
     send_message (m, friend_number, &msg);
     return 0;
 }
-int invoke_callback(MSICall *call, MSICallbackID cb)
+int invoke_callback(MSICall *call, MSICallbackID cb, void *userdata)
 {
     assert(call);
 
     if (call->session->callbacks[cb]) {
         LOGGER_DEBUG(call->session->messenger->log, "Invoking callback function: %d", cb);
 
-        if (call->session->callbacks[cb] (call->session->av, call) != 0) {
+        if (call->session->callbacks[cb] (call->session->av, call, userdata) != 0) {
             LOGGER_WARNING(call->session->messenger->log,
                            "Callback state handling failed, sending error");
             goto FAILURE;
@@ -607,7 +608,7 @@ CLEAR_CONTAINER:
     free(call);
     session->calls = NULL;
 }
-void on_peer_status(Messenger *m, uint32_t friend_number, uint8_t status, void *data)
+void on_peer_status(Messenger *m, uint32_t friend_number, uint8_t status, void *data, void *userdata)
 {
     (void)m;
     MSISession *session = data;
@@ -624,7 +625,7 @@ void on_peer_status(Messenger *m, uint32_t friend_number, uint8_t status, void *
                 return;
             }
 
-            invoke_callback(call, msi_OnPeerTimeout); /* Failure is ignored */
+            invoke_callback(call, msi_OnPeerTimeout, userdata); /* Failure is ignored */
             kill_call(call);
             pthread_mutex_unlock(session->mutex);
         }
@@ -634,7 +635,7 @@ void on_peer_status(Messenger *m, uint32_t friend_number, uint8_t status, void *
             break;
     }
 }
-void handle_init (MSICall *call, const MSIMessage *msg)
+void handle_init (MSICall *call, const MSIMessage *msg, void *userdata)
 {
     assert(call);
     LOGGER_DEBUG(call->session->messenger->log,
@@ -652,7 +653,7 @@ void handle_init (MSICall *call, const MSIMessage *msg)
             call->peer_capabilities = msg->capabilities.value;
             call->state = msi_CallRequested;
 
-            if (invoke_callback(call, msi_OnInvite) == -1) {
+            if (invoke_callback(call, msi_OnInvite, userdata) == -1) {
                 goto FAILURE;
             }
         }
@@ -696,7 +697,7 @@ FAILURE:
     send_error(call->session->messenger, call->friend_number, call->error);
     kill_call(call);
 }
-void handle_push (MSICall *call, const MSIMessage *msg)
+void handle_push (MSICall *call, const MSIMessage *msg, void *userdata)
 {
     assert(call);
 
@@ -717,7 +718,7 @@ void handle_push (MSICall *call, const MSIMessage *msg)
 
                 call->peer_capabilities = msg->capabilities.value;
 
-                if (invoke_callback(call, msi_OnCapabilities) == -1) {
+                if (invoke_callback(call, msi_OnCapabilities, userdata) == -1) {
                     goto FAILURE;
                 }
             }
@@ -731,7 +732,7 @@ void handle_push (MSICall *call, const MSIMessage *msg)
             call->peer_capabilities = msg->capabilities.value;
             call->state = msi_CallActive;
 
-            if (invoke_callback(call, msi_OnStart) == -1) {
+            if (invoke_callback(call, msi_OnStart, userdata) == -1) {
                 goto FAILURE;
             }
         }
@@ -751,7 +752,7 @@ FAILURE:
     send_error(call->session->messenger, call->friend_number, call->error);
     kill_call(call);
 }
-void handle_pop (MSICall *call, const MSIMessage *msg)
+void handle_pop (MSICall *call, const MSIMessage *msg, void *userdata)
 {
     assert(call);
 
@@ -763,7 +764,7 @@ void handle_pop (MSICall *call, const MSIMessage *msg)
     if (msg->error.exists) {
         LOGGER_WARNING(call->session->messenger->log, "Friend detected an error: %d", msg->error.value);
         call->error = msg->error.value;
-        invoke_callback(call, msi_OnError);
+        invoke_callback(call, msi_OnError, userdata);
     } else {
         switch (call->state) {
             case msi_CallInactive: {
@@ -775,21 +776,21 @@ void handle_pop (MSICall *call, const MSIMessage *msg)
             case msi_CallActive: {
                 /* Hangup */
                 LOGGER_INFO(call->session->messenger->log, "Friend hung up on us");
-                invoke_callback(call, msi_OnEnd);
+                invoke_callback(call, msi_OnEnd, userdata);
             }
             break;
 
             case msi_CallRequesting: {
                 /* Reject */
                 LOGGER_INFO(call->session->messenger->log, "Friend rejected our call");
-                invoke_callback(call, msi_OnEnd);
+                invoke_callback(call, msi_OnEnd, userdata);
             }
             break;
 
             case msi_CallRequested: {
                 /* Cancel */
                 LOGGER_INFO(call->session->messenger->log, "Friend canceled call invite");
-                invoke_callback(call, msi_OnEnd);
+                invoke_callback(call, msi_OnEnd, userdata);
             }
             break;
         }
@@ -797,7 +798,8 @@ void handle_pop (MSICall *call, const MSIMessage *msg)
 
     kill_call (call);
 }
-void handle_msi_packet (Messenger *m, uint32_t friend_number, const uint8_t *data, uint16_t length, void *object)
+void handle_msi_packet (Messenger *m, uint32_t friend_number, const uint8_t *data, uint16_t length, void *object,
+                        void *userdata)
 {
     LOGGER_DEBUG(m->log, "Got msi message");
 
@@ -833,15 +835,15 @@ void handle_msi_packet (Messenger *m, uint32_t friend_number, const uint8_t *dat
 
     switch (msg.request.value) {
         case requ_init:
-            handle_init(call, &msg);
+            handle_init(call, &msg, userdata);
             break;
 
         case requ_push:
-            handle_push(call, &msg);
+            handle_push(call, &msg, userdata);
             break;
 
         case requ_pop:
-            handle_pop(call, &msg); /* always kills the call */
+            handle_pop(call, &msg, userdata); /* always kills the call */
             break;
     }
 
