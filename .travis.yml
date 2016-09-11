@@ -38,9 +38,9 @@ cache:
     - $HOME/.ghc
     - $HOME/cache
 
-install:      other/travis/${BUILD}-install
-script:       other/travis/${BUILD}-script
-after_script: other/travis/${BUILD}-after_script
+install:      other/travis/phase $BUILD $ENV install
+script:       other/travis/phase $BUILD $ENV script
+after_script: other/travis/phase $BUILD $ENV after_script
 
 notifications:
   irc: "chat.freenode.net#toktok-status"
