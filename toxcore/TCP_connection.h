@@ -242,6 +242,7 @@ TCP_Connections *new_tcp_connections(const uint8_t *secret_key, TCP_Proxy_Info *
 
 void do_tcp_connections(TCP_Connections *tcp_c, void *userdata);
 void kill_tcp_connections(TCP_Connections *tcp_c);
+int tcp_collect_fds(TCP_Connections *tcp_c, uint32_t *sockets, uint32_t max_sockets);
 
 #endif
 

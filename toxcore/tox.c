@@ -480,6 +480,80 @@ void tox_iterate(Tox *tox, void *user_data)
     do_groupchats(m->group_chat_object, user_data);
 }
 
+/**
+ * gathers a list of every network FD to wait on
+ */
+uint32_t tox_fds(Tox *tox, uint32_t *sockets, uint32_t max_sockets)
+{
+    Messenger *m = tox;
+    int count;
+
+    if (max_sockets >= 1) {
+        sockets[0] = m->net->sock;
+        sockets++;
+        max_sockets--;
+        count++;
+    }
+
+    TCP_Connections *conns = m->net_crypto->tcp_c;
+    count += tcp_collect_fds(conns, sockets, max_sockets);
+    return count;
+}
+
+void tox_callback_loop_start(Tox *tox, tox_loop_start_cb *callback)
+{
+    Messenger *m = tox;
+    m->loop_start_cb = callback;
+}
+
+void tox_callback_loop_stop(Tox *tox, tox_loop_start_cb *callback)
+{
+    Messenger *m = tox;
+    m->loop_stop_cb = callback;
+}
+
+uint32_t tox_loop(Tox *tox, void *user_data)
+{
+    struct timeval timeout;
+    int maxfd;
+    uint32_t fdlist[20], i;
+    Messenger *m = tox;
+    m->loop_run = true;
+    fd_set readable;
+
+    while (m->loop_run) {
+        maxfd = 0;
+        FD_ZERO(&readable);
+        uint32_t fdcount = tox_fds(tox, fdlist, 20);
+
+        for (i = 0; i < fdcount; i++) {
+            FD_SET(fdlist[i], &readable);
+
+            if (fdlist[i] > maxfd) maxfd = fdlist[i];
+        }
+
+        timeout.tv_sec = 0;
+        timeout.tv_usec = tox_iteration_interval(tox) * 1000 * 2; // TODO, use a longer timeout
+        int ret = select(maxfd, &readable, NULL, NULL, &timeout);
+
+        if (ret < 0) return ret;
+
+        if (m->loop_start_cb) m->loop_start_cb(tox, user_data);
+
+        tox_iterate(tox, user_data);
+
+        if (m->loop_stop_cb) m->loop_stop_cb(tox, user_data);
+    }
+
+    return 0;
+}
+
+void tox_loop_stop(Tox *tox)
+{
+    Messenger *m = tox;
+    m->loop_run = false;
+}
+
 void tox_self_get_address(const Tox *tox, uint8_t *address)
 {
     if (address) {

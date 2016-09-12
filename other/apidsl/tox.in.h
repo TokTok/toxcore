@@ -811,6 +811,36 @@ const uint32_t iteration_interval();
  */
 void iterate(any user_data);
 
+/**
+ * run tox_iterate automaticaly, only returns after tox_loop_stop()
+ */
+uint32_t loop(any user_data);
+
+namespace loop {
+  /**
+   * tell tox_loop to return
+   */
+  void stop();
+  /**
+   * event ran when tox_loop begins to use Tox*
+   */
+  event start const {
+    /**
+     * callback ran when tox_loop calls into tox_iterate, the client can lock a mutex here
+     */
+    typedef void();
+  }
+  /**
+   * event ran with tox_loop is finished with Tox*
+   */
+  event stop const {
+    /**
+     * callback ran when tox_loop is finished with tox_iterate, the client can unlock the mutex here
+     */
+    typedef void();
+  }
+}
+
 
 /*******************************************************************************
  *

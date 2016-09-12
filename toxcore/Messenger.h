@@ -267,6 +267,10 @@ struct Messenger {
     void (*core_connection_change)(struct Messenger *m, unsigned int, void *);
     unsigned int last_connection_status;
 
+    uint8_t loop_run;
+    void (*loop_start_cb)(struct Messenger *tox, void *user_data);
+    void (*loop_stop_cb)(struct Messenger *tox, void *user_data);
+
     Messenger_Options options;
 };
 

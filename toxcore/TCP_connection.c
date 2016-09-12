@@ -1439,3 +1439,19 @@ void kill_tcp_connections(TCP_Connections *tcp_c)
     free(tcp_c->connections);
     free(tcp_c);
 }
+int tcp_collect_fds(TCP_Connections *tcp_c, uint32_t *sockets, uint32_t max_sockets)
+{
+    int x;
+    int count = 0;
+
+    for (x = 0; x < tcp_c->tcp_connections_length; x++) {
+        if (max_sockets == 0) break;
+
+        TCP_con *conn = &tcp_c->tcp_connections[x];
+        sockets[count] = conn->connection->sock;
+        count++;
+        max_sockets--;
+    }
+
+    return count;
+}
