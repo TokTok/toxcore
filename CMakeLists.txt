@@ -261,6 +261,7 @@ auto_test(skeleton_test)
 auto_test(tox_test)
 auto_test(toxav_basic_test)
 auto_test(toxav_many_test)
+auto_test(tox_loop_test)
 
 
 ################################################################################
