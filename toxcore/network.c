@@ -489,14 +489,15 @@ int networking_at_startup(void)
     return 0;
 }
 
-/* TODO: Put this somewhere
+/* TODO(irungentoo): Put this somewhere */
+#if 0
 static void at_shutdown(void)
 {
 #if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
     WSACleanup();
 #endif
 }
-*/
+#endif
 
 /* Initialize networking.
  * Added for reverse compatibility with old new_networking calls.
