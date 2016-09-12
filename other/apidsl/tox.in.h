@@ -1295,7 +1295,6 @@ namespace friend {
      */
     get(uint32_t friend_number)
         with error for query;
-
   }
 
 
@@ -1840,7 +1839,9 @@ namespace file {
    *   On failure, this function returns UINT32_MAX. Any pattern in file numbers
    *   should not be relied on.
    */
-  uint32_t send(uint32_t friend_number, uint32_t kind, uint64_t file_size, const uint8_t[FILE_ID_LENGTH] file_id, const uint8_t[filename_length <= MAX_FILENAME_LENGTH] filename) {
+  uint32_t send(uint32_t friend_number, uint32_t kind, uint64_t file_size,
+                const uint8_t[FILE_ID_LENGTH] file_id,
+                const uint8_t[filename_length <= MAX_FILENAME_LENGTH] filename) {
     NULL,
     /**
      * The friend_number passed did not designate a valid friend.
@@ -1981,7 +1982,7 @@ namespace file {
      * @param filename_length Size in bytes of the filename.
      */
     typedef void(uint32_t friend_number, uint32_t file_number, uint32_t kind,
-        uint64_t file_size, const uint8_t[filename_length <= MAX_FILENAME_LENGTH] filename);
+                 uint64_t file_size, const uint8_t[filename_length <= MAX_FILENAME_LENGTH] filename);
   }
 
 
@@ -2007,7 +2008,7 @@ namespace file {
      * @param length The length of the received chunk.
      */
     typedef void(uint32_t friend_number, uint32_t file_number, uint64_t position,
-        const uint8_t[length] data);
+                 const uint8_t[length] data);
   }
 
 }
@@ -2227,14 +2228,14 @@ namespace conference {
    * @return true on success.
    */
   bool invite(uint32_t friend_number, uint32_t conference_number) {
-      /**
-       * The conference number passed did not designate a valid conference.
-       */
-      CONFERENCE_NOT_FOUND,
-      /**
-       * The invite packet failed to send.
-       */
-      FAIL_SEND,
+    /**
+     * The conference number passed did not designate a valid conference.
+     */
+    CONFERENCE_NOT_FOUND,
+    /**
+     * The invite packet failed to send.
+     */
+    FAIL_SEND,
   }
 
 
@@ -2248,30 +2249,30 @@ namespace conference {
    * @return conference number on success, UINT32_MAX on failure.
    */
   uint32_t join(uint32_t friend_number, const uint8_t[length] cookie) {
-      /**
-       * The cookie passed has an invalid length.
-       */
-      INVALID_LENGTH,
-      /**
-       * The conference is not the expected type. This indicates an invalid cookie.
-       */
-      WRONG_TYPE,
-      /**
-       * The friend number passed does not designate a valid friend.
-       */
-      FRIEND_NOT_FOUND,
-      /**
-       * Client is already in this conference.
-       */
-      DUPLICATE,
-      /**
-       * Conference instance failed to initialize.
-       */
-      INIT_FAIL,
-      /**
-       * The join packet failed to send.
-       */
-      FAIL_SEND,
+    /**
+     * The cookie passed has an invalid length.
+     */
+    INVALID_LENGTH,
+    /**
+     * The conference is not the expected type. This indicates an invalid cookie.
+     */
+    WRONG_TYPE,
+    /**
+     * The friend number passed does not designate a valid friend.
+     */
+    FRIEND_NOT_FOUND,
+    /**
+     * Client is already in this conference.
+     */
+    DUPLICATE,
+    /**
+     * Conference instance failed to initialize.
+     */
+    INIT_FAIL,
+    /**
+     * The join packet failed to send.
+     */
+    FAIL_SEND,
   }
 
 
@@ -2316,18 +2317,18 @@ namespace conference {
   }
 
   error for title {
-      /**
-       * The conference number passed did not designate a valid conference.
-       */
-      CONFERENCE_NOT_FOUND,
-      /**
-       * The title is too long or empty.
-       */
-      INVALID_LENGTH,
-      /**
-       * The title packet failed to send.
-       */
-      FAIL_SEND,
+    /**
+     * The conference number passed did not designate a valid conference.
+     */
+    CONFERENCE_NOT_FOUND,
+    /**
+     * The title is too long or empty.
+     */
+    INVALID_LENGTH,
+    /**
+     * The title packet failed to send.
+     */
+    FAIL_SEND,
   }
 
   uint8_t[length <= MAX_NAME_LENGTH] title {
