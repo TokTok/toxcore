@@ -944,6 +944,42 @@ uint32_t tox_iteration_interval(const Tox *tox);
  */
 void tox_iterate(Tox *tox, void *user_data);
 
+/**
+ * Run tox_iterate() automaticaly, only returns after tox_loop_stop().
+ */
+uint32_t tox_loop(Tox *tox, void *user_data);
+
+/**
+ * Tell tox_loop() to return.
+ */
+void tox_loop_stop(Tox *tox);
+
+/**
+ * No extra parameters.
+ */
+typedef void tox_loop_start_cb(Tox *tox, void *user_data);
+
+
+/**
+ * Set the callback for the `loop_start` event. Pass NULL to unset.
+ *
+ * Callback ran when tox_loop() calls into tox_iterate(), the client can lock a mutex here.
+ */
+void tox_callback_loop_start(Tox *tox, tox_loop_start_cb *callback);
+
+/**
+ * No extra parameters.
+ */
+typedef void tox_loop_stop_cb(Tox *tox, void *user_data);
+
+
+/**
+ * Set the callback for the `loop_stop` event. Pass NULL to unset.
+ *
+ * Callback ran when tox_loop() is finished with tox_iterate(), the client can unlock the mutex here.
+ */
+void tox_callback_loop_stop(Tox *tox, tox_loop_stop_cb *callback);
+
 
 /*******************************************************************************
  *

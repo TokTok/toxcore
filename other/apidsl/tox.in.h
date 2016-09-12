@@ -811,6 +811,39 @@ const uint32_t iteration_interval();
  */
 void iterate(any user_data);
 
+/**
+ * Run $iterate() automaticaly, only returns after ${loop.stop}().
+ */
+uint32_t loop(any user_data);
+
+namespace loop {
+  /**
+   * Tell $loop() to return.
+   */
+
+  void stop();
+
+  /**
+   * Callback ran when $loop() calls into $iterate(), the client can lock a mutex here.
+   */
+  event start const {
+    /**
+     * No extra parameters.
+     */
+    typedef void();
+  }
+
+  /**
+   * Callback ran when $loop() is finished with $iterate(), the client can unlock the mutex here.
+   */
+  event stop const {
+    /**
+     * No extra parameters.
+     */
+    typedef void();
+  }
+}
+
 
 /*******************************************************************************
  *
