@@ -316,7 +316,7 @@ enum class USER_STATUS {
 
 
 /**
- * Represents message types for ${tox.friend.send.message} and group chat
+ * Represents message types for ${tox.friend.send.message} and conference
  * messages.
  */
 enum class MESSAGE_TYPE {
@@ -2046,7 +2046,7 @@ namespace conference {
   /**
    * This event is triggered when the client is invited to join a conference.
    */
-  event invite {
+  event invite const {
     /**
      * The invitation will remain valid until the inviting friend goes offline
      * or exits the conference.
@@ -2064,7 +2064,7 @@ namespace conference {
   /**
    * This event is triggered when the client receives a conference message.
    */
-  event message {
+  event message const {
     /**
      * @param conference_number The conference number of the conference the message is intended for.
      * @param peer_number The ID of the peer who sent the message.
@@ -2082,7 +2082,7 @@ namespace conference {
    *
    * if peer_number == UINT32_MAX, then author is unknown (e.g. initial joining the conference).
    */
-  event title {
+  event title const {
     /**
      * @param conference_number The conference number of the conference the title change is intended for.
      * @param peer_number The ID of the peer who changed the title.
@@ -2113,7 +2113,7 @@ namespace conference {
   /**
    * This event is triggered when the peer list changes (name change, peer join, peer exit).
    */
-  event namelist_change {
+  event namelist_change const {
     /**
      * @param conference_number The conference number of the conference the title change is intended for.
      * @param peer_number The ID of the peer who changed the title.
@@ -2130,8 +2130,12 @@ namespace conference {
    *
    * @return conference number on success, or UINT32_MAX on failure.
    */
-  uint32_t new()
-      with error for conference;
+  uint32_t new() {
+    /**
+     * The conference instance failed to initialize.
+     */
+    INIT,
+  }
 
   /**
    * This function deletes a conference.
@@ -2140,17 +2144,39 @@ namespace conference {
    *
    * @return true on success.
    */
-  bool delete(uint32_t conference_number)
-      with error for conference;
+  bool delete(uint32_t conference_number) {
+    /**
+     * The conference number passed did not designate a valid conference.
+     */
+    CONFERENCE_NOT_FOUND,
+  }
 
 
   namespace peer {
 
     /**
+     * Error codes for peer info queries.
+     */
+    error for query {
+      /**
+       * The conference number passed did not designate a valid conference.
+       */
+      CONFERENCE_NOT_FOUND,
+      /**
+       * The peer number passed did not designate a valid peer.
+       */
+      PEER_NOT_FOUND,
+      /**
+       * The client is not connected to the conference.
+       */
+      NO_CONNECTION,
+    }
+
+    /**
      * Return the number of peers in the conference, or UINT32_MAX on error.
      */
     const uint32_t count(uint32_t conference_number)
-        with error for conference;
+        with error for query;
 
     uint8_t[size] name {
 
@@ -2159,7 +2185,7 @@ namespace conference {
        * return value is unspecified.
        */
       size(uint32_t conference_number, uint32_t peer_number)
-          with error for conference;
+          with error for query;
 
       /**
        * Copy the name of peer_number who is in conference_number to name.
@@ -2168,7 +2194,7 @@ namespace conference {
        * @return true on success.
        */
       get(uint32_t conference_number, uint32_t peer_number)
-          with error for conference;
+          with error for query;
     }
 
     /**
@@ -2179,7 +2205,7 @@ namespace conference {
      */
     uint8_t[PUBLIC_KEY_SIZE] public_key {
       get(uint32_t conference_number, uint32_t peer_number)
-          with error for conference;
+          with error for query;
     }
 
     /**
@@ -2200,8 +2226,16 @@ namespace conference {
    *
    * @return true on success.
    */
-  bool invite(uint32_t friend_number, uint32_t conference_number)
-      with error for conference;
+  bool invite(uint32_t friend_number, uint32_t conference_number) {
+      /**
+       * The conference number passed did not designate a valid conference.
+       */
+      CONFERENCE_NOT_FOUND,
+      /**
+       * The invite packet failed to send.
+       */
+      FAIL_SEND,
+  }
 
 
   /**
@@ -2213,8 +2247,32 @@ namespace conference {
    *
    * @return conference number on success, UINT32_MAX on failure.
    */
-  uint32_t join(uint32_t friend_number, const uint8_t[length] cookie)
-      with error for conference;
+  uint32_t join(uint32_t friend_number, const uint8_t[length] cookie) {
+      /**
+       * The cookie passed has an invalid length.
+       */
+      INVALID_LENGTH,
+      /**
+       * The conference is not the expected type. This indicates an invalid cookie.
+       */
+      WRONG_TYPE,
+      /**
+       * The friend number passed does not designate a valid friend.
+       */
+      FRIEND_NOT_FOUND,
+      /**
+       * Client is already in this conference.
+       */
+      DUPLICATE,
+      /**
+       * Conference instance failed to initialize.
+       */
+      INIT_FAIL,
+      /**
+       * The join packet failed to send.
+       */
+      FAIL_SEND,
+  }
 
 
   namespace send {
@@ -2237,13 +2295,43 @@ namespace conference {
      *
      * @return true on success.
      */
-    bool message(uint32_t conference_number, MESSAGE_TYPE type, const uint8_t[length] message)
-        with error for conference;
-
+    bool message(uint32_t conference_number, MESSAGE_TYPE type, const uint8_t[length] message) {
+      /**
+       * The conference number passed did not designate a valid conference.
+       */
+      CONFERENCE_NOT_FOUND,
+      /**
+       * The message is too long.
+       */
+      TOO_LONG,
+      /**
+       * The client is not connected to the conference.
+       */
+      NO_CONNECTION,
+      /**
+       * The message packet failed to send.
+       */
+      FAIL_SEND,
+    }
   }
 
+  error for title {
+      /**
+       * The conference number passed did not designate a valid conference.
+       */
+      CONFERENCE_NOT_FOUND,
+      /**
+       * The title is too long or empty.
+       */
+      INVALID_LENGTH,
+      /**
+       * The title packet failed to send.
+       */
+      FAIL_SEND,
+  }
 
   uint8_t[length <= MAX_NAME_LENGTH] title {
+
     /**
      * Return the length of the conference title. If the conference number is invalid, the
      * return value is unspecified.
@@ -2252,7 +2340,7 @@ namespace conference {
      * `${event title}` callback.
      */
     size(uint32_t conference_number)
-        with error for conference;
+        with error for title;
 
     /**
      * Write the title designated by the given conference number to a byte array.
@@ -2268,17 +2356,17 @@ namespace conference {
      * @return true on success.
      */
     get(uint32_t conference_number)
-        with error for conference;
+        with error for title;
 
     /**
-     * Set the conference title and broadcast it to the rest of the group.
+     * Set the conference title and broadcast it to the rest of the conference.
      *
      * title length cannot be longer than $MAX_NAME_LENGTH.
      *
      * @return true on success.
      */
     set(uint32_t conference_number)
-        with error for conference;
+        with error for title;
   }
 
 
@@ -2306,8 +2394,12 @@ namespace conference {
    * unspecified on failure.
    */
   TYPE type {
-    get(uint32_t conference_number)
-        with error for conference;
+    get(uint32_t conference_number) {
+      /**
+       * The conference number passed did not designate a valid conference.
+       */
+      CONFERENCE_NOT_FOUND,
+    }
   }
 
 }
