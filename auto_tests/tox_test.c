@@ -1256,9 +1256,9 @@ group_test_restart:
 
     printf("friends connected, took %llu seconds\n", time(NULL) - cur_time);
 
-    ck_assert_msg(tox_conference_new(toxes[0], NULL) != -1, "Failed to create group");
-    ck_assert_msg(tox_conference_invite(toxes[0], 0, 0, NULL) == 0, "Failed to invite friend");
-    ck_assert_msg(tox_conference_set_title(toxes[0], 0, (const uint8_t *)"Gentoo", sizeof("Gentoo") - 1, NULL) == 0,
+    ck_assert_msg(tox_conference_new(toxes[0], NULL) != UINT32_MAX, "Failed to create group");
+    ck_assert_msg(tox_conference_invite(toxes[0], 0, 0, NULL) != 0, "Failed to invite friend");
+    ck_assert_msg(tox_conference_set_title(toxes[0], 0, (const uint8_t *)"Gentoo", sizeof("Gentoo") - 1, NULL) != 0,
                   "Failed to set group title");
     invite_counter = ~0;
 
@@ -1271,7 +1271,7 @@ group_test_restart:
         }
 
         if (!invite_counter) {
-            ck_assert_msg(tox_conference_invite(invite_tox, 0, 0, NULL) == 0, "Failed to invite friend");
+            ck_assert_msg(tox_conference_invite(invite_tox, 0, 0, NULL) != 0, "Failed to invite friend");
         }
 
         if (done == invite_counter) {
@@ -1283,7 +1283,7 @@ group_test_restart:
     }
 
     for (i = 0; i < NUM_GROUP_TOX; ++i) {
-        int num_peers = tox_conference_peer_count(toxes[i], 0, NULL);
+        int num_peers = tox_conference_peer_count(toxes[i], 0);
 
         /**
          * Group chats fail unpredictably, currently they'll rerun as many times
@@ -1354,7 +1354,7 @@ group_test_restart:
         }
 
         for (i = 0; i < (k - 1); ++i) {
-            int num_peers = tox_conference_peer_count(toxes[i], 0, NULL);
+            int num_peers = tox_conference_peer_count(toxes[i], 0);
             ck_assert_msg(num_peers == (k - 1), "\n\tBad number of group peers (post check)."
                           "\n\t\t\tExpected: %u but tox_instance(%u)  only has: %i\n\n",
                           (k - 1), i, num_peers);
