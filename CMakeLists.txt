@@ -190,8 +190,7 @@ target_link_libraries(toxgroup toxmessenger)
 # LAYER 8: Public API
 # -------------------
 add_library(toxcore ${LIBTYPE}
-  toxcore/tox.c
-  toxcore/tox_group.c)
+  toxcore/tox.c)
 target_link_libraries(toxcore toxgroup)
 
 
