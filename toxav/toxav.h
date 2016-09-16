@@ -30,8 +30,6 @@
 extern "C" {
 #endif
 
-#define TOXAV_PAIR(TYPE1__, TYPE2__) struct { TYPE1__ first; TYPE2__ second; }
-
 /** \page av Public audio/video API for Tox clients.
  *
  * This API can handle multiple calls. Each call has its state, in very rare

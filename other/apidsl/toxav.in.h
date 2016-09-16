@@ -30,8 +30,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#define TOXAV_PAIR(TYPE1__, TYPE2__) struct { TYPE1__ first; TYPE2__ second; }
 %}
 
 /** \page av Public audio/video API for Tox clients.
@@ -218,7 +216,7 @@ const uint32_t iteration_interval();
  * toxav_iteration_interval() milliseconds. It is best called in the separate
  * thread from tox_iterate.
  */
-void iterate(void *userdata);
+void iterate(any userdata);
 
 
 /*******************************************************************************

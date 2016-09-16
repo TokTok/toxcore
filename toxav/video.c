@@ -101,7 +101,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
 
     vc->linfts = current_time_monotonic();
     vc->lcfd = 60;
-    vc->toxav_video_frame_fxn = cb;
+    vc->on_video_frame = cb;
     vc->friend_number = friend_number;
     vc->av = av;
     vc->log = log;
@@ -164,10 +164,10 @@ void vc_iterate(VCSession *vc, void *userdata)
 
             /* Play decoded images */
             for (; dest; dest = vpx_codec_get_frame(vc->decoder, &iter)) {
-                if (vc->toxav_video_frame_fxn) {
-                    vc->toxav_video_frame_fxn(vc->av, vc->friend_number, dest->d_w, dest->d_h,
-                                              (const uint8_t *)dest->planes[0], (const uint8_t *)dest->planes[1], (const uint8_t *)dest->planes[2],
-                                              dest->stride[0], dest->stride[1], dest->stride[2], userdata);
+                if (vc->on_video_frame) {
+                    vc->on_video_frame(vc->av, vc->friend_number, dest->d_w, dest->d_h,
+                                       (const uint8_t *)dest->planes[0], (const uint8_t *)dest->planes[1], (const uint8_t *)dest->planes[2],
+                                       dest->stride[0], dest->stride[1], dest->stride[2], userdata);
                 }
 
                 vpx_img_free(dest);

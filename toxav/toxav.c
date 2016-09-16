@@ -34,6 +34,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define TOXAV_PAIR(TYPE1__, TYPE2__) struct { TYPE1__ first; TYPE2__ second; }
+
 #define MAX_ENCODE_TIME_US ((1000 / 24) * 1000)
 
 typedef struct ToxAVCall_s {
@@ -77,8 +79,8 @@ struct ToxAV {
     toxav_call_state_cb *toxav_call_state_fxn;
     toxav_bit_rate_status_cb *toxav_bitrate_status_fxn;
 
-    toxav_audio_receive_frame_cb *toxav_audio_frame_fxn; /* Audio frame receive callback */
-    toxav_video_receive_frame_cb *toxav_video_frame_fxn; /* Video frame receive callback */
+    toxav_audio_receive_frame_cb *on_audio_frame;
+    toxav_video_receive_frame_cb *on_video_frame;
 
     /** Decode time measures */
     int32_t dmssc; /** Measure count */
@@ -855,13 +857,13 @@ END:
 void toxav_callback_audio_receive_frame(ToxAV *av, toxav_audio_receive_frame_cb *callback)
 {
     pthread_mutex_lock(av->mutex);
-    av->toxav_audio_frame_fxn = callback;
+    av->on_audio_frame = callback;
     pthread_mutex_unlock(av->mutex);
 }
 void toxav_callback_video_receive_frame(ToxAV *av, toxav_video_receive_frame_cb *callback)
 {
     pthread_mutex_lock(av->mutex);
-    av->toxav_video_frame_fxn = callback;
+    av->on_video_frame = callback;
     pthread_mutex_unlock(av->mutex);
 }
 
@@ -1188,7 +1190,7 @@ bool call_prepare_transmission(ToxAVCall *call)
 
     ToxAV *av = call->av;
 
-    if (!av->toxav_audio_frame_fxn && !av->toxav_video_frame_fxn) {
+    if (!av->on_audio_frame && !av->on_video_frame) {
         /* It makes no sense to have CSession without callbacks */
         return false;
     }
@@ -1214,7 +1216,7 @@ bool call_prepare_transmission(ToxAVCall *call)
     call->bwc = bwc_new(av->m, call->friend_number, callback_bwc, call);
 
     { /* Prepare audio */
-        call->audio.second = ac_new(av->m->log, av, call->friend_number, av->toxav_audio_frame_fxn);
+        call->audio.second = ac_new(av->m->log, av, call->friend_number, av->on_audio_frame);
 
         if (!call->audio.second) {
             LOGGER_ERROR(av->m->log, "Failed to create audio codec session");
@@ -1230,7 +1232,7 @@ bool call_prepare_transmission(ToxAVCall *call)
         }
     }
     { /* Prepare video */
-        call->video.second = vc_new(av->m->log, av, call->friend_number, av->toxav_video_frame_fxn);
+        call->video.second = vc_new(av->m->log, av, call->friend_number, av->on_video_frame);
 
         if (!call->video.second) {
             LOGGER_ERROR(av->m->log, "Failed to create video codec session");
