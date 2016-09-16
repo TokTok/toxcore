@@ -56,7 +56,7 @@ typedef struct VCSession_s {
     ToxAV *av;
     uint32_t friend_number;
 
-    toxav_video_receive_frame_cb *toxav_video_frame_fxn; /* Video frame receive callback */
+    toxav_video_receive_frame_cb *on_video_frame; /* Video frame receive callback */
 
     pthread_mutex_t queue_mutex[1];
 } VCSession;

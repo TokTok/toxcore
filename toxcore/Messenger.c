@@ -1713,10 +1713,10 @@ static int handle_filecontrol(Messenger *m, int32_t friendnumber, uint8_t receiv
  *  Function(Messenger *m, int friendnumber, uint8_t *data, uint16_t length, void *userdata)
  */
 void m_callback_msi_packet(Messenger *m, void (*function)(Messenger *m, uint32_t, const uint8_t *, uint16_t, void *,
-                           void *), void *toxav_session)
+                           void *), void *object)
 {
     m->msi_packet = function;
-    m->msi_packet_userdata = toxav_session;
+    m->msi_packet_userdata = object;
 }
 
 /* Send an msi packet.
