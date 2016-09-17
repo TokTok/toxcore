@@ -77,9 +77,9 @@ struct ToxAV {
     uint32_t calls_head;
     pthread_mutex_t mutex[1];
 
-    toxav_call_cb *toxav_call_fxn;
-    toxav_call_state_cb *toxav_call_state_fxn;
-    toxav_bit_rate_status_cb *toxav_bitrate_status_fxn;
+    toxav_call_cb *on_call;
+    toxav_call_state_cb *on_call_state;
+    toxav_bit_rate_status_cb *on_bitrate_change;
 
     toxav_audio_receive_frame_cb *on_audio_frame;
     toxav_video_receive_frame_cb *on_video_frame;
@@ -335,7 +335,7 @@ END:
 void toxav_callback_call(ToxAV *av, toxav_call_cb *callback)
 {
     pthread_mutex_lock(av->mutex);
-    av->toxav_call_fxn = callback;
+    av->on_call = callback;
     pthread_mutex_unlock(av->mutex);
 }
 bool toxav_answer(ToxAV *av, uint32_t friend_number, uint32_t audio_bit_rate, uint32_t video_bit_rate,
@@ -393,7 +393,7 @@ END:
 void toxav_callback_call_state(ToxAV *av, toxav_call_state_cb *callback)
 {
     pthread_mutex_lock(av->mutex);
-    av->toxav_call_state_fxn = callback;
+    av->on_call_state = callback;
     pthread_mutex_unlock(av->mutex);
 }
 bool toxav_call_control(ToxAV *av, uint32_t friend_number, TOXAV_CALL_CONTROL control, TOXAV_ERR_CALL_CONTROL *error)
@@ -668,7 +668,7 @@ END:
 void toxav_callback_bit_rate_status(ToxAV *av, toxav_bit_rate_status_cb *callback)
 {
     pthread_mutex_lock(av->mutex);
-    av->toxav_bitrate_status_fxn = callback;
+    av->on_bitrate_change = callback;
     pthread_mutex_unlock(av->mutex);
 }
 bool toxav_audio_send_frame(ToxAV *av, uint32_t friend_number, const int16_t *pcm, size_t sample_count,
@@ -895,18 +895,18 @@ void callback_bwc(BWController *bwc, uint32_t friend_number, float loss, void *c
 
     pthread_mutex_lock(call->av->mutex);
 
-    if (!call->av->toxav_bitrate_status_fxn) {
+    if (!call->av->on_bitrate_change) {
         pthread_mutex_unlock(call->av->mutex);
         LOGGER_WARNING(call->av->m->log, "No callback to report loss on");
         return;
     }
 
     if (call->video_bit_rate) {
-        (*call->av->toxav_bitrate_status_fxn)(call->av, friend_number, call->audio_bit_rate,
+        (*call->av->on_bitrate_change)(call->av, friend_number, call->audio_bit_rate,
                                               call->video_bit_rate - (call->video_bit_rate * loss),
                                               userdata);
     } else if (call->audio_bit_rate) {
-        (*call->av->toxav_bitrate_status_fxn)(call->av, friend_number,
+        (*call->av->on_bitrate_change)(call->av, friend_number,
                                               call->audio_bit_rate - (call->audio_bit_rate * loss),
                                               0, userdata);
     }
@@ -929,8 +929,8 @@ int callback_invite(void *toxav_inst, MSICall *call, void *userdata)
     call->av_call = av_call;
     av_call->msi_call = call;
 
-    if (toxav->toxav_call_fxn) {
-        toxav->toxav_call_fxn(toxav, call->friend_number, call->peer_capabilities & msi_CapSAudio,
+    if (toxav->on_call) {
+        toxav->on_call(toxav, call->friend_number, call->peer_capabilities & msi_CapSAudio,
                               call->peer_capabilities & msi_CapSVideo, userdata);
     } else {
         /* No handler to capture the call request, send failure */
@@ -1036,8 +1036,8 @@ bool video_bit_rate_invalid(uint32_t bit_rate)
 }
 bool invoke_call_state_callback(ToxAV *av, uint32_t friend_number, uint32_t state, void *userdata)
 {
-    if (av->toxav_call_state_fxn) {
-        av->toxav_call_state_fxn(av, friend_number, state, userdata);
+    if (av->on_call_state) {
+        av->on_call_state(av, friend_number, state, userdata);
     } else {
         return false;
     }
