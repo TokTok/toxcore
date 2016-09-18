@@ -1414,9 +1414,12 @@ static Suite *tox_suite(void)
     return s;
 }
 
+void set_custom_packet_error(int ret, TOX_ERR_FRIEND_CUSTOM_PACKET *error);
+
 int main(int argc, char *argv[])
 {
     srand((unsigned int) time(NULL));
+    set_custom_packet_error(0, 0);
 
     Suite *tox = tox_suite();
     SRunner *test_runner = srunner_create(tox);

@@ -1550,7 +1550,7 @@ TOX_CONFERENCE_TYPE tox_conference_get_type(const Tox *tox, uint32_t conference_
     return ret;
 }
 
-static void set_custom_packet_error(int ret, TOX_ERR_FRIEND_CUSTOM_PACKET *error)
+void set_custom_packet_error(int ret, TOX_ERR_FRIEND_CUSTOM_PACKET *error)
 {
     switch (ret) {
         case 0:
