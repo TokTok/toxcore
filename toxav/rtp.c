@@ -47,7 +47,7 @@ RTPSession *rtp_new(int payload_type, Messenger *m, uint32_t friendnumber,
     assert(cs);
     assert(m);
 
-    RTPSession *retu = calloc(1, sizeof(RTPSession));
+    RTPSession *retu = (RTPSession *)calloc(1, sizeof(RTPSession));
 
     if (!retu) {
         LOGGER_WARNING(m->log, "Alloc failed! Program might misbehave!");
@@ -220,7 +220,8 @@ static struct RTPMessage *new_message(size_t allocate_len, const uint8_t *data, 
 {
     assert(allocate_len >= data_length);
 
-    struct RTPMessage *msg = calloc(sizeof(struct RTPMessage) + (allocate_len - sizeof(struct RTPHeader)), 1);
+    struct RTPMessage *msg = (struct RTPMessage *)calloc(sizeof(struct RTPMessage) + (allocate_len - sizeof(
+                                 struct RTPHeader)), 1);
 
     msg->len = data_length - sizeof(struct RTPHeader);
     memcpy(&msg->header, data, data_length);
@@ -240,7 +241,7 @@ int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, 
     (void) m;
     (void) friendnumber;
 
-    RTPSession *session = object;
+    RTPSession *session = (RTPSession *)object;
 
     data ++;
     length--;

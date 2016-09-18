@@ -65,7 +65,7 @@ static int realloc_friendlist(Messenger *m, uint32_t num)
         return 0;
     }
 
-    Friend *newfriendlist = realloc(m->friendlist, num * sizeof(Friend));
+    Friend *newfriendlist = (Friend *)realloc(m->friendlist, num * sizeof(Friend));
 
     if (newfriendlist == NULL) {
         return -1;
@@ -337,23 +337,23 @@ static int add_receipt(Messenger *m, int32_t friendnumber, uint32_t packet_num, 
         return -1;
     }
 
-    struct Receipts *new = calloc(1, sizeof(struct Receipts));
+    struct Receipts *new_receipts = (struct Receipts *)calloc(1, sizeof(struct Receipts));
 
-    if (!new) {
+    if (!new_receipts) {
         return -1;
     }
 
-    new->packet_num = packet_num;
-    new->msg_id = msg_id;
+    new_receipts->packet_num = packet_num;
+    new_receipts->msg_id = msg_id;
 
     if (!m->friendlist[friendnumber].receipts_start) {
-        m->friendlist[friendnumber].receipts_start = new;
+        m->friendlist[friendnumber].receipts_start = new_receipts;
     } else {
-        m->friendlist[friendnumber].receipts_end->next = new;
+        m->friendlist[friendnumber].receipts_end->next = new_receipts;
     }
 
-    m->friendlist[friendnumber].receipts_end = new;
-    new->next = NULL;
+    m->friendlist[friendnumber].receipts_end = new_receipts;
+    new_receipts->next = NULL;
     return 0;
 }
 /*
@@ -676,7 +676,7 @@ int m_set_userstatus(Messenger *m, uint8_t status)
         return 0;
     }
 
-    m->userstatus = status;
+    m->userstatus = (USERSTATUS)status;
     uint32_t i;
 
     for (i = 0; i < m->numfriends; ++i) {
@@ -823,7 +823,7 @@ static int set_friend_statusmessage(const Messenger *m, int32_t friendnumber, co
 
 static void set_friend_userstatus(const Messenger *m, int32_t friendnumber, uint8_t status)
 {
-    m->friendlist[friendnumber].userstatus = status;
+    m->friendlist[friendnumber].userstatus = (USERSTATUS)status;
 }
 
 static void set_friend_typing(const Messenger *m, int32_t friendnumber, uint8_t is_typing)
@@ -1732,7 +1732,7 @@ int m_msi_packet(const Messenger *m, int32_t friendnumber, const uint8_t *data, 
 static int handle_custom_lossy_packet(void *object, int friend_num, const uint8_t *packet, uint16_t length,
                                       void *userdata)
 {
-    Messenger *m = object;
+    Messenger *m = (Messenger *)object;
 
     if (friend_not_valid(m, friend_num)) {
         return 1;
@@ -1816,7 +1816,7 @@ int send_custom_lossy_packet(const Messenger *m, int32_t friendnumber, const uin
 static int handle_custom_lossless_packet(void *object, int friend_num, const uint8_t *packet, uint16_t length,
         void *userdata)
 {
-    Messenger *m = object;
+    Messenger *m = (Messenger *)object;
 
     if (friend_not_valid(m, friend_num)) {
         return -1;
@@ -1876,7 +1876,7 @@ int send_custom_lossless_packet(const Messenger *m, int32_t friendnumber, const 
 /* Function to filter out some friend requests*/
 static int friend_already_added(const uint8_t *real_pk, void *data)
 {
-    const Messenger *m = data;
+    const Messenger *m = (const Messenger *)data;
 
     if (getfriend_id(m, real_pk) == -1) {
         return 0;
@@ -1888,7 +1888,7 @@ static int friend_already_added(const uint8_t *real_pk, void *data)
 /* Run this at startup. */
 Messenger *new_messenger(Logger *log, Messenger_Options *options, unsigned int *error)
 {
-    Messenger *m = calloc(1, sizeof(Messenger));
+    Messenger *m = (Messenger *)calloc(1, sizeof(Messenger));
 
     if (error) {
         *error = MESSENGER_ERROR_OTHER;
@@ -1904,7 +1904,7 @@ Messenger *new_messenger(Logger *log, Messenger_Options *options, unsigned int *
 
     if (options->udp_disabled) {
         /* this is the easiest way to completely disable UDP without changing too much code. */
-        m->net = calloc(1, sizeof(Networking_Core));
+        m->net = (Networking_Core *)calloc(1, sizeof(Networking_Core));
     } else {
         IP ip;
         ip_init(&ip, options->ipv6enabled);
@@ -2037,7 +2037,7 @@ static void check_friend_request_timed_out(Messenger *m, uint32_t i, uint64_t t,
 
 static int handle_status(void *object, int i, uint8_t status, void *userdata)
 {
-    Messenger *m = object;
+    Messenger *m = (Messenger *)object;
 
     if (status) { /* Went online. */
         send_online_packet(m, i);
@@ -2056,7 +2056,7 @@ static int handle_packet(void *object, int i, const uint8_t *temp, uint16_t len,
         return -1;
     }
 
-    Messenger *m = object;
+    Messenger *m = (Messenger *)object;
     uint8_t packet_id = temp[0];
     const uint8_t *data = temp + 1;
     uint32_t data_length = len - 1;
@@ -2124,7 +2124,7 @@ static int handle_packet(void *object, int i, const uint8_t *temp, uint16_t len,
                 break;
             }
 
-            USERSTATUS status = data[0];
+            USERSTATUS status = (USERSTATUS)data[0];
 
             if (status >= USERSTATUS_INVALID) {
                 break;
@@ -2529,32 +2529,32 @@ void do_messenger(Messenger *m, void *userdata)
         }
 
 
-        uint32_t friend, dhtfriend;
+        uint32_t myfriend, dhtfriend;
 
         /* dht contains additional "friends" (requests) */
         uint32_t num_dhtfriends = m->dht->num_friends;
         int32_t m2dht[num_dhtfriends];
         int32_t dht2m[num_dhtfriends];
 
-        for (friend = 0; friend < num_dhtfriends; friend++) {
-            m2dht[friend] = -1;
-            dht2m[friend] = -1;
+        for (myfriend = 0; myfriend < num_dhtfriends; myfriend++) {
+            m2dht[myfriend] = -1;
+            dht2m[myfriend] = -1;
 
-            if (friend >= m->numfriends) {
+            if (myfriend >= m->numfriends) {
                 continue;
             }
 
             for (dhtfriend = 0; dhtfriend < m->dht->num_friends; dhtfriend++) {
-                if (id_equal(m->friendlist[friend].real_pk, m->dht->friends_list[dhtfriend].public_key)) {
-                    m2dht[friend] = dhtfriend;
+                if (id_equal(m->friendlist[myfriend].real_pk, m->dht->friends_list[dhtfriend].public_key)) {
+                    m2dht[myfriend] = dhtfriend;
                     break;
                 }
             }
         }
 
-        for (friend = 0; friend < num_dhtfriends; friend++) {
-            if (m2dht[friend] >= 0) {
-                dht2m[m2dht[friend]] = friend;
+        for (myfriend = 0; myfriend < num_dhtfriends; myfriend++) {
+            if (m2dht[myfriend] >= 0) {
+                dht2m[m2dht[myfriend]] = myfriend;
             }
         }
 
@@ -2565,21 +2565,21 @@ void do_messenger(Messenger *m, void *userdata)
         Friend *msgfptr;
         DHT_Friend *dhtfptr;
 
-        for (friend = 0; friend < num_dhtfriends; friend++) {
-            if (dht2m[friend] >= 0) {
-                msgfptr = &m->friendlist[dht2m[friend]];
+        for (myfriend = 0; myfriend < num_dhtfriends; myfriend++) {
+            if (dht2m[myfriend] >= 0) {
+                msgfptr = &m->friendlist[dht2m[myfriend]];
             } else {
                 msgfptr = NULL;
             }
 
-            dhtfptr = &m->dht->friends_list[friend];
+            dhtfptr = &m->dht->friends_list[myfriend];
 
             if (msgfptr) {
                 LOGGER_TRACE(m->log, "F[%2u:%2u] <%s> %s",
-                             dht2m[friend], friend, msgfptr->name,
+                             dht2m[myfriend], myfriend, msgfptr->name,
                              ID2String(msgfptr->real_pk));
             } else {
-                LOGGER_TRACE(m->log, "F[--:%2u] %s", friend, ID2String(dhtfptr->public_key));
+                LOGGER_TRACE(m->log, "F[--:%2u] %s", myfriend, ID2String(dhtfptr->public_key));
             }
 
             for (client = 0; client < MAX_FRIEND_CLIENTS; client++) {
@@ -2596,7 +2596,7 @@ void do_messenger(Messenger *m, void *userdata)
                         }
 
                         LOGGER_TRACE(m->log, "F[%2u] => C[%2u] %s:%u [%3u] %s",
-                                     friend, client, ip_ntoa(&assoc->ip_port.ip),
+                                     myfriend, client, ip_ntoa(&assoc->ip_port.ip),
                                      ntohs(assoc->ip_port.port), last_pinged,
                                      ID2String(cptr->public_key));
                     }
@@ -2836,7 +2836,7 @@ void messenger_save(const Messenger *m, uint8_t *data)
 
 static int messenger_load_state_callback(void *outer, const uint8_t *data, uint32_t length, uint16_t type)
 {
-    Messenger *m = outer;
+    Messenger *m = (Messenger *)outer;
 
     switch (type) {
         case MESSENGER_STATE_TYPE_NOSPAMKEYS:
