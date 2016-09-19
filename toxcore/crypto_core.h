@@ -44,6 +44,12 @@
 
 #define crypto_box_KEYBYTES (crypto_box_BEFORENMBYTES)
 
+/* Extended keypair: curve + ed. Encryption keys are derived from the signature keys.
+ * Used for group chats and group DHT announcements.
+ * pk and sk must have room for at least EXT_PUBLIC_KEY bytes each.
+ */
+void create_extended_keypair(uint8_t *pk, uint8_t *sk);
+
 /* compare 2 public keys of length crypto_box_PUBLICKEYBYTES, not vulnerable to timing attacks.
    returns 0 if both mem locations of length are equal,
    return -1 if they are not. */
@@ -56,6 +62,9 @@ int public_key_cmp(const uint8_t *pk1, const uint8_t *pk2);
  */
 uint32_t random_int(void);
 uint64_t random_64b(void);
+
+/* Return a value between 0 and upper_bound using a uniform distribution */
+uint32_t random_int_range(uint32_t upper_bound);
 
 /* Check if a Tox public key crypto_box_PUBLICKEYBYTES is valid or not.
  * This should only be used for input validation.

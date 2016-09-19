@@ -22,14 +22,30 @@
  *  along with Tox.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __UTIL_H__
-#define __UTIL_H__
+#ifndef UTIL_H
+#define UTIL_H
 
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdint.h>
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
+#define POWER_OF_2(x) (((x) != 0) && (((x) & ((~(x)) + 1)) == (x)))
+
+/* Enlarges static buffers returned by id_toa and ip_ntoa so that
+ * they can be used multiple times in same output
+ */
+#define STATIC_BUFFER_COPIES    10
+#define STATIC_BUFFER_DEFINE(name,len)  static char stat_buffer_##name[(len)*STATIC_BUFFER_COPIES]; \
+                                        static unsigned stat_buffer_counter_##name=0;
+#define STATIC_BUFFER_GETBUF(name,len)  (&stat_buffer_##name[(len)*(stat_buffer_counter_##name++%STATIC_BUFFER_COPIES)])
+
+/* Macros for groupchat extended keys */
+#define ENC_KEY(key) (key)
+#define SIG_PK(key) (key + ENC_PUBLIC_KEY)
+#define SIG_SK(key) (key + ENC_SECRET_KEY)
+#define CHAT_ID(key) (key + ENC_PUBLIC_KEY)
+
 
 void unix_time_update(void);
 uint64_t unix_time(void);
@@ -38,7 +54,14 @@ int is_timeout(uint64_t timestamp, uint64_t timeout);
 
 /* id functions */
 bool id_equal(const uint8_t *dest, const uint8_t *src);
+
+/* compares two group chat_id's */
+bool chat_id_equal(const uint8_t *dest, const uint8_t *src);
+
 uint32_t id_copy(uint8_t *dest, const uint8_t *src); /* return value is CLIENT_ID_SIZE */
+
+// For printing purposes
+char *id_toa(const uint8_t *id);
 
 void host_to_net(uint8_t *num, uint16_t numbytes);
 #define net_to_host(x, y) host_to_net(x, y)
@@ -54,6 +77,27 @@ typedef int (*load_state_callback_func)(void *outer, const uint8_t *data, uint32
 int load_state(load_state_callback_func load_state_callback, void *outer,
                const uint8_t *data, uint32_t length, uint16_t cookie_inner);
 
+/* frees all pointers in a uint8_t pointer array, as well as the array itself. */
+void free_uint8_t_pointer_array(uint8_t **ary, size_t n_items);
+
+/* Converts 8 bytes to uint64_t */
+void bytes_to_U64(uint64_t *dest, const uint8_t *bytes);
+
+/* Converts 4 bytes to uint32_t */
+void bytes_to_U32(uint32_t *dest, const uint8_t *bytes);
+
+/* Converts 2 bytes to uint16_t */
+void bytes_to_U16(uint16_t *dest, const uint8_t *bytes);
+
+/* Convert uint64_t to byte string of size 8 */
+void U64_to_bytes(uint8_t *dest, uint64_t value);
+
+/* Convert uint32_t to byte string of size 4 */
+void U32_to_bytes(uint8_t *dest, uint32_t value);
+
+/* Convert uint16_t to byte string of size 2 */
+void U16_to_bytes(uint8_t *dest, uint16_t value);
+
 /* Returns -1 if failed or 0 if success */
 int create_recursive_mutex(pthread_mutex_t *mutex);
 
@@ -68,4 +112,7 @@ void rb_kill(RingBuffer *b);
 uint16_t rb_size(const RingBuffer *b);
 uint16_t rb_data(const RingBuffer *b, void **dest);
 
-#endif /* __UTIL_H__ */
+/* Returns a 32-bit hash of key of size len */
+uint32_t jenkins_one_at_a_time_hash(const uint8_t *key, size_t len);
+
+#endif /* UTIL_H */

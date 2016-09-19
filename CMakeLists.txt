@@ -153,19 +153,28 @@ add_module(toxfriends
   toxcore/friend_requests.c)
 target_link_modules(toxfriends toxnetcrypto)
 
-# LAYER 6: Tox messenger
+# LAYER 6: DHT based group chats
+# ----------------------
+add_module(toxdhtgroup
+  toxcore/group_announce.c
+  toxcore/group_chats.c
+  toxcore/group_connection.c
+  toxcore/group_moderation.c)
+target_link_modules(toxdhtgroup toxfriends)
+
+# LAYER 7: Tox messenger
 # ----------------------
 add_module(toxmessenger
   toxcore/Messenger.c)
-target_link_modules(toxmessenger toxfriends)
+target_link_modules(toxmessenger toxdhtgroup)
 
-# LAYER 7: Group chats
+# LAYER 8: Conferences: friend based group chats
 # --------------------
 add_module(toxgroup
   toxcore/group.c)
 target_link_modules(toxgroup toxmessenger)
 
-# LAYER 8: Public API
+# LAYER 9: Public API
 # -------------------
 add_module(toxcore
   toxcore/tox.c)
@@ -236,6 +245,7 @@ auto_test(assoc_test)
 auto_test(crypto_test)
 auto_test(dht_test)
 auto_test(encryptsave_test)
+auto_test(groupchat_test)
 auto_test(messenger_test)
 auto_test(network_test)
 auto_test(onion_test)
@@ -304,6 +314,15 @@ target_link_modules(Messenger_test toxmessenger)
 add_executable(dns3_test testing/dns3_test.c)
 target_link_modules(dns3_test toxdns)
 
+add_executable(group_announce_test testing/groupchats/group_announce_test.c)
+target_link_modules(group_announce_test toxmessenger)
+
+#add_executable(group_bootstrap_n_chat testing/groupchats/group_bootstrap_n_chat.c)
+#target_link_modules(group_bootstrap_n_chat toxmessenger)
+
+add_executable(group_newpeers_dos_attack testing/groupchats/group_newpeers_dos_attack.c)
+target_link_modules(group_newpeers_dos_attack toxmessenger)
+
 if(NOT WIN32)
   add_executable(tox_sync testing/tox_sync.c)
   target_link_modules(tox_sync toxcore)
@@ -358,6 +377,7 @@ install(FILES
   ${CMAKE_BINARY_DIR}/toxdns.pc
   ${CMAKE_BINARY_DIR}/toxencryptsave.pc
   DESTINATION "lib/pkgconfig")
+
 install(FILES
   toxcore/tox.h
   toxdns/toxdns.h
