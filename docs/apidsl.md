@@ -20,12 +20,12 @@ Command to run from ``toxcore`` directory (quick way, involves using curl):
 ```bash
 # For tox.h:
 curl -X POST --data-binary @- https://apidsl.herokuapp.com/apidsl \
-  < other/apidsl/tox.in.h \
+  < toxcore/tox.api.h \
   | astyle --options=other/astyle/astylerc \
   > toxcore/tox.h
 # For toxav.h:
 curl -X POST --data-binary @- https://apidsl.herokuapp.com/apidsl \
-  < other/apidsl/toxav.in.h \
+  < toxav/toxav.api.h \
   | astyle --options=other/astyle/astylerc \
   > toxav/toxav.h
 ```
