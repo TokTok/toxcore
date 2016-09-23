@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.65])
-AC_INIT([tox], m4_esyscmd_s([echo $(git describe --dirty)]))
+AC_INIT([tox], m4_esyscmd_s([echo $(other/tox-version .)]))
 AC_CONFIG_AUX_DIR(configure_aux)
 AC_CONFIG_SRCDIR([toxcore/net_crypto.c])
 AC_CONFIG_HEADERS([config.h])
@@ -12,7 +12,7 @@ AC_CONFIG_MACRO_DIR([m4])
 
 EXTRA_LT_LDFLAGS=
 
-LIBTOXCORE_LT_VERSION="${TOXVERSION_MAJOR}:${TOXVERSION_MINOR}:${TOXVERSION_PATCH}"
+LIBTOXCORE_LT_VERSION=m4_esyscmd([echo $(other/tox-version :)])
 dnl
 dnl            current:revision:age
 dnl

@@ -22,9 +22,6 @@ update() {
   fi
 }
 
-update "configure.ac" 's/AC_INIT(\[tox\], \[.*\])/AC_INIT([tox], ['$VER'])/'
-update "configure.ac" 's/LT_VERSION=.*/LT_VERSION='$LTVER'/'
-
 update "other/apidsl/tox.in.h" 's/\(const VERSION_MAJOR *= \).*;/\1'$MAJOR';/'
 update "other/apidsl/tox.in.h" 's/\(const VERSION_MINOR *= \).*;/\1'$MINOR';/'
 update "other/apidsl/tox.in.h" 's/\(const VERSION_PATCH *= \).*;/\1'$PATCH';/'

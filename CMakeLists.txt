@@ -3,12 +3,13 @@ project(toxcore)
 include(CTest)
 
 # This version is for the entire project. All libraries (core, av, ...) move in
-# versions in a synchronised way.
-set(PROJECT_VERSION_MAJOR "0")
-set(PROJECT_VERSION_MINOR "0")
-set(PROJECT_VERSION_PATCH "0")
-set(PROJECT_VERSION
-  "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
+# versions in a synchronized way.
+execute_process(
+  COMMAND other/tox-version .
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  OUTPUT_VARIABLE PROJECT_VERSION
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
@@ -379,30 +380,13 @@ endif()
 
 ################################################################################
 #
-# :: Update versions in various places
-#
-################################################################################
-
-find_program(SH NAMES sh dash bash zsh)
-
-if(SH)
-  execute_process(
-    COMMAND ${SH} ${CMAKE_SOURCE_DIR}/other/version-sync
-      ${CMAKE_SOURCE_DIR}
-      ${PROJECT_VERSION_MAJOR}
-      ${PROJECT_VERSION_MINOR}
-      ${PROJECT_VERSION_PATCH})
-endif()
-
-################################################################################
-#
 # :: Strict ABI
 #
 ################################################################################
 
 function(make_version_script header ns lib)
   execute_process(
-    COMMAND ${SH} -c "egrep '^\\w' ${header} | grep '${ns}_[a-z0-9_]*(' | grep -v '^typedef' | grep -o '${ns}_[a-z0-9_]*(' | egrep -o '\\w+' | sort -u"
+    COMMAND sh -c "egrep '^\\w' ${header} | grep '${ns}_[a-z0-9_]*(' | grep -v '^typedef' | grep -o '${ns}_[a-z0-9_]*(' | egrep -o '\\w+' | sort -u"
     OUTPUT_VARIABLE ${lib}_SYMS
     OUTPUT_STRIP_TRAILING_WHITESPACE)
   string(REPLACE "\n" ";" ${lib}_SYMS ${${lib}_SYMS})
@@ -428,7 +412,7 @@ if(WIN32 OR APPLE)
   set(STRICT_ABI OFF)
 endif()
 
-if(STRICT_ABI AND SH)
+if(STRICT_ABI)
   if(BUILD_TOXAV)
     make_version_script(${CMAKE_SOURCE_DIR}/toxav/toxav.h toxav toxav)
   endif()
