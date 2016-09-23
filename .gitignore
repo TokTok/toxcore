@@ -12,7 +12,7 @@ Thumbs.db
 # Make
 /_build
 /_install
-/tox-0.0.0*
+/tox-*.*.*
 CMakeCache.txt
 CMakeFiles
 Makefile
