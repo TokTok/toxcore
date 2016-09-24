@@ -21,7 +21,7 @@
 #define c_sleep(x) usleep(1000*x)
 #endif
 
-#define NUM_TOXES 15
+#define NUM_TOXES 5
 
 START_TEST(test_text_all)
 {
