@@ -1,0 +1,24 @@
+#!/bin/sh
+
+MAJOR=$(grep "#define TOX_VERSION_MINOR" toxcore/tox.h | sed 's/[^0-9]*//')
+MINOR=$(grep "#define TOX_VERSION_MINOR" toxcore/tox.h | sed 's/[^0-9]*//')
+PATCH=$(grep "#define TOX_VERSION_MINOR" toxcore/tox.h | sed 's/[^0-9]*//')
+
+usage () {
+    echo "$0: prints the version string for toxcore in requested format."
+    echo ""
+    echo "$0 <version delimiter> [<Major> <Minor> <Patch>]"
+}
+
+if [ $# -eq 4 ]; then
+    MAJOR=$2
+    MINOR=$3
+    PATCH=$4
+    echo -n "${MAJOR}$1${MINOR}$1${PATCH}"
+elif [ -d .git ] && [ "$1" = "git" ]; then
+    echo -n $(git describe --dirty)
+elif [ $# -lt 1 ]; then
+    echo -n "${MAJOR}.${MINOR}.${PATCH}"
+else
+    echo -n "${MAJOR}$1${MINOR}$1${PATCH}"
+fi
