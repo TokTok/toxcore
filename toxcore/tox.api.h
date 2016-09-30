@@ -297,7 +297,10 @@ const FILE_ID_LENGTH              = 32;
  */
 const MAX_FILENAME_LENGTH         = 255;
 
-
+/**
+ * Max legnth of names queried by toxcore
+ */
+const MAX_QUERY_NAME_LENGTH       = 255;
 /*******************************************************************************
  *
  * :: Global enumerations
@@ -766,6 +769,53 @@ bool bootstrap(string address, uint16_t port, const uint8_t[PUBLIC_KEY_SIZE] pub
 bool add_tcp_relay(string address, uint16_t port, const uint8_t[PUBLIC_KEY_SIZE] public_key)
     with error for bootstrap;
 
+namespace query {
+
+  /**
+   * Queries the server at IP port, with PUBKEY, for the TOXID at $name
+   *
+   * TODO(grayhatter) add a bool to send request from a one time use keypair.
+   * NOTE(requires net_crypto.c support)
+   *
+   * param address the IPv4, or IPv6 Address for the server.
+   * param port the port the server is listening on.
+   * param public_key the long term public key for the name server.
+   * @return true on success.
+   */
+  bool request(string address, uint16_t port, const uint8_t[PUBLIC_KEY_SIZE] public_key,
+    const uint8_t[length <= MAX_QUERY_NAME_LENGTH] name) {
+    NULL,
+    /**
+     * The address could not be resolved to an IP address, or the IP address
+     * passed was invalid.
+     */
+    BAD_HOST,
+    /**
+     * The port passed was invalid. The valid port range is (1, 65535).
+     */
+    BAD_PORT,
+    /**
+     * There is an existing request at this address with this name.
+     */
+    PENDING,
+    /**
+     * Unable to malloc and save this query.
+     */
+    MALLOC,
+    /**
+     * Unknown error of some kind, this feature is likely incomplete.
+     */
+    UNKNOWN,
+  }
+
+  event response const {
+    /**
+     * this is the comments for this callback
+     * TODO(grayhatter) finish this...
+     */
+    typedef void(const uint8_t[length <= MAX_QUERY_NAME_LENGTH] request, const uint8_t[ADDRESS_SIZE] tox_id);
+  }
+}
 
 /**
  * Protocols that can be used to connect to the network or friends.

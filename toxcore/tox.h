@@ -320,6 +320,13 @@ uint32_t tox_file_id_length(void);
 
 uint32_t tox_max_filename_length(void);
 
+/**
+ * Max legnth of names queried by toxcore
+ */
+#define TOX_MAX_QUERY_NAME_LENGTH      255
+
+uint32_t tox_max_query_name_length(void);
+
 
 /*******************************************************************************
  *
@@ -913,6 +920,75 @@ bool tox_bootstrap(Tox *tox, const char *address, uint16_t port, const uint8_t *
  */
 bool tox_add_tcp_relay(Tox *tox, const char *address, uint16_t port, const uint8_t *public_key,
                        TOX_ERR_BOOTSTRAP *error);
+
+typedef enum TOX_ERR_QUERY_REQUEST {
+
+    /**
+     * The function returned successfully.
+     */
+    TOX_ERR_QUERY_REQUEST_OK,
+
+    /**
+     * One of the arguments to the function was NULL when it was not expected.
+     */
+    TOX_ERR_QUERY_REQUEST_NULL,
+
+    /**
+     * The address could not be resolved to an IP address, or the IP address
+     * passed was invalid.
+     */
+    TOX_ERR_QUERY_REQUEST_BAD_HOST,
+
+    /**
+     * The port passed was invalid. The valid port range is (1, 65535).
+     */
+    TOX_ERR_QUERY_REQUEST_BAD_PORT,
+
+    /**
+     * There is an existing request at this address with this name.
+     */
+    TOX_ERR_QUERY_REQUEST_PENDING,
+
+    /**
+     * Unable to malloc and save this query.
+     */
+    TOX_ERR_QUERY_REQUEST_MALLOC,
+
+    /**
+     * Unknown error of some kind, this feature is likely incomplete.
+     */
+    TOX_ERR_QUERY_REQUEST_UNKNOWN,
+
+} TOX_ERR_QUERY_REQUEST;
+
+
+/**
+ * Queries the server at IP port, with PUBKEY, for the TOXID at <unresolved>
+ *
+ * TODO(grayhatter) add a bool to send request from a one time use keypair.
+ * NOTE(requires net_crypto.c support)
+ *
+ * param address the IPv4, or IPv6 Address for the server.
+ * param port the port the server is listening on.
+ * param public_key the long term public key for the name server.
+ * @return true on success.
+ */
+bool tox_query_request(Tox *tox, const char *address, uint16_t port, const uint8_t *public_key, const uint8_t *name,
+                       size_t length, TOX_ERR_QUERY_REQUEST *error);
+
+/**
+ * this is the comments for this callback
+ * TODO(grayhatter) finish this...
+ */
+typedef void tox_query_response_cb(Tox *tox, const uint8_t *request, size_t length, const uint8_t *tox_id,
+                                   void *user_data);
+
+
+/**
+ * Set the callback for the `query_response` event. Pass NULL to unset.
+ *
+ */
+void tox_callback_query_response(Tox *tox, tox_query_response_cb *callback);
 
 /**
  * Protocols that can be used to connect to the network or friends.
