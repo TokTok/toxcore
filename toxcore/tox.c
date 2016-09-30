@@ -75,7 +75,6 @@ bool tox_version_is_compatible(uint32_t major, uint32_t minor, uint32_t patch)
     return TOX_VERSION_IS_API_COMPATIBLE(major, minor, patch);
 }
 
-
 Tox *tox_new(const struct Tox_Options *options, TOX_ERR_NEW *error)
 {
     Messenger_Options m_options = {0};
@@ -331,6 +330,74 @@ bool tox_add_tcp_relay(Tox *tox, const char *address, uint16_t port, const uint8
 
     SET_ERROR_PARAMETER(error, TOX_ERR_BOOTSTRAP_BAD_HOST);
     return 0;
+}
+
+
+
+/**
+ * Queries the server at IP port, with PUBKEY, for the TOXID at <unresolved>
+ *
+ * @param address the IPv4, or IPv6 Address for the server.
+ * @param port the port the server is listening on.
+ * @param public_key the long term public key for the name server.
+
+ * @return true on success.
+ */
+bool tox_query_request(Tox *tox, const char *address, uint16_t port, const uint8_t *public_key, const uint8_t *name,
+                       size_t length, TOX_ERR_QUERY_REQUEST *error)
+{
+    if (!address || !name || !length) {
+        SET_ERROR_PARAMETER(error, TOX_ERR_QUERY_REQUEST_NULL);
+        return false;
+    }
+
+    if (port == 0) {
+        SET_ERROR_PARAMETER(error, TOX_ERR_QUERY_REQUEST_BAD_PORT);
+        return false;
+    }
+
+    switch (query_send_request(tox, address, port, public_key, name, length)) {
+        case 0: {
+            SET_ERROR_PARAMETER(error, TOX_ERR_QUERY_REQUEST_OK);
+            return true;
+        }
+
+        case -1: {
+            SET_ERROR_PARAMETER(error, TOX_ERR_QUERY_REQUEST_BAD_HOST);
+            return false;
+        }
+
+        case -2: {
+            SET_ERROR_PARAMETER(error, TOX_ERR_QUERY_REQUEST_PENDING);
+            return false;
+        }
+
+        case -3: {
+            SET_ERROR_PARAMETER(error, TOX_ERR_QUERY_REQUEST_MALLOC);
+            return false;
+        }
+
+        case -4: {
+            SET_ERROR_PARAMETER(error, TOX_ERR_QUERY_REQUEST_UNKNOWN);
+            return false;
+        }
+    }
+
+
+    SET_ERROR_PARAMETER(error, TOX_ERR_QUERY_REQUEST_UNKNOWN);
+    return false;
+}
+
+/**
+ * Set the callback for the `query_response` event. Pass NULL to unset.
+ *
+ */
+void tox_callback_query_response(Tox *tox, tox_query_response_cb *callback)
+{
+    Messenger *m = (Messenger *)tox;
+
+    m->dht->queries->query_response = callback;
+    m->dht->queries->query_response_object = tox;
 }
 
 TOX_CONNECTION tox_self_get_connection_status(const Tox *tox)
