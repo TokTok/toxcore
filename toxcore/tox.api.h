@@ -290,7 +290,10 @@ const FILE_ID_LENGTH              = 32;
  */
 const MAX_FILENAME_LENGTH         = 255;
 
-
+/**
+ * Max size (in bytes) of names queried by toxcore
+ */
+const QUERY_MAX_NAME_SIZE         = 255;
 /*******************************************************************************
  *
  * :: Global enumerations
@@ -764,6 +767,55 @@ bool bootstrap(string address, uint16_t port, const uint8_t[PUBLIC_KEY_SIZE] pub
 bool add_tcp_relay(string address, uint16_t port, const uint8_t[PUBLIC_KEY_SIZE] public_key)
     with error for bootstrap;
 
+namespace query {
+
+  /**
+   * Queries the server at given address, port, public key, for the ToxID associated with supplied name.
+   *
+   * TODO(grayhatter) add a bool to send request from a one time use keypair. (Needs net_crypto/dht refactor)
+   * NOTE(requires net_crypto.c support)
+   *
+   * @param address the IPv4 or IPv6 address for the server. Will attempt to resolve DNS addresses.
+   * @param port the port the server is listening on.
+   * @param public_key the long term public key for the name server.
+   * @param name the string (name) you want to give to the server to request the associated ToxID.
+   *
+   * @return true on success.
+   */
+  bool request(string address, uint16_t port, const uint8_t[PUBLIC_KEY_SIZE] public_key,
+    const uint8_t[length <= MAX_QUERY_NAME_SIZE] name) {
+    NULL,
+    /**
+     * The address could not be resolved to an IP address, or the IP address
+     * passed was invalid.
+     */
+    BAD_HOST,
+    /**
+     * The port passed was invalid. The valid port range is (1, 65535).
+     */
+    BAD_PORT,
+    /**
+     * There is an existing request at this address with this name.
+     */
+    PENDING,
+    /**
+     * Unable to allocate the needed memory for this query.
+     */
+    MALLOC,
+    /**
+     * Unknown error of some kind; this indicates an error in toxcore. Please report this bug!
+     */
+    UNKNOWN,
+  }
+
+  event response const {
+    /**
+     * This callback will be invoked when a response from a pending query was received.
+     * Once this callback is received, the query will have already been removed.
+     */
+    typedef void(const uint8_t[length <= MAX_QUERY_NAME_SIZE] request, const uint8_t[ADDRESS_SIZE] tox_id);
+  }
+}
 
 /**
  * Protocols that can be used to connect to the network or friends.
