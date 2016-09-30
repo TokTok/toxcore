@@ -34,10 +34,8 @@
 static void clear_entry(Ping_Array *array, uint32_t index)
 {
     free(array->entries[index].data);
-    array->entries[index].data = NULL;
-    array->entries[index].length =
-        array->entries[index].time =
-            array->entries[index].ping_id = 0;
+    array->entries[index].data   = NULL;
+    array->entries[index].length = array->entries[index].time = array->entries[index].ping_id = 0;
 }
 
 /* Clear timed out entries.
@@ -79,7 +77,7 @@ uint64_t ping_array_add(Ping_Array *array, const uint8_t *data, uint32_t length)
 
     memcpy(array->entries[index].data, data, length);
     array->entries[index].length = length;
-    array->entries[index].time = unix_time();
+    array->entries[index].time   = unix_time();
     ++array->last_added;
     uint64_t ping_id = random_64b();
     ping_id /= array->total_size;
@@ -152,8 +150,8 @@ int ping_array_init(Ping_Array *empty_array, uint32_t size, uint32_t timeout)
     }
 
     empty_array->last_deleted = empty_array->last_added = 0;
-    empty_array->total_size = size;
-    empty_array->timeout = timeout;
+    empty_array->total_size                             = size;
+    empty_array->timeout                                = timeout;
     return 0;
 }
 
@@ -170,4 +168,3 @@ void ping_array_free_all(Ping_Array *array)
     free(array->entries);
     array->entries = NULL;
 }
-

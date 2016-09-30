@@ -26,10 +26,10 @@
 #include "DHT.h"
 
 typedef struct {
-    DHT     *dht;
+    DHT *            dht;
     Networking_Core *net;
-    uint8_t secret_symmetric_key[crypto_box_KEYBYTES];
-    uint64_t timestamp;
+    uint8_t          secret_symmetric_key[crypto_box_KEYBYTES];
+    uint64_t         timestamp;
 
     Shared_Keys shared_keys_1;
     Shared_Keys shared_keys_2;
@@ -47,8 +47,8 @@ typedef struct {
 
 #define ONION_SEND_BASE (crypto_box_PUBLICKEYBYTES + SIZE_IPPORT + crypto_box_MACBYTES)
 #define ONION_SEND_3 (crypto_box_NONCEBYTES + ONION_SEND_BASE + ONION_RETURN_2)
-#define ONION_SEND_2 (crypto_box_NONCEBYTES + ONION_SEND_BASE*2 + ONION_RETURN_1)
-#define ONION_SEND_1 (crypto_box_NONCEBYTES + ONION_SEND_BASE*3)
+#define ONION_SEND_2 (crypto_box_NONCEBYTES + ONION_SEND_BASE * 2 + ONION_RETURN_1)
+#define ONION_SEND_1 (crypto_box_NONCEBYTES + ONION_SEND_BASE * 3)
 
 #define ONION_MAX_DATA_SIZE (ONION_MAX_PACKET_SIZE - (ONION_SEND_1 + 1))
 #define ONION_RESPONSE_MAX_DATA_SIZE (ONION_MAX_PACKET_SIZE - (1 + ONION_RETURN_3))
@@ -64,14 +64,14 @@ typedef struct {
     uint8_t public_key2[crypto_box_PUBLICKEYBYTES];
     uint8_t public_key3[crypto_box_PUBLICKEYBYTES];
 
-    IP_Port     ip_port1;
-    uint8_t     node_public_key1[crypto_box_PUBLICKEYBYTES];
+    IP_Port ip_port1;
+    uint8_t node_public_key1[crypto_box_PUBLICKEYBYTES];
 
-    IP_Port     ip_port2;
-    uint8_t     node_public_key2[crypto_box_PUBLICKEYBYTES];
+    IP_Port ip_port2;
+    uint8_t node_public_key2[crypto_box_PUBLICKEYBYTES];
 
-    IP_Port     ip_port3;
-    uint8_t     node_public_key3[crypto_box_PUBLICKEYBYTES];
+    IP_Port ip_port3;
+    uint8_t node_public_key3[crypto_box_PUBLICKEYBYTES];
 
     uint32_t path_num;
 } Onion_Path;
@@ -144,17 +144,19 @@ int send_onion_response(Networking_Core *net, IP_Port dest, const uint8_t *data,
  *
  * Used to handle these packets that are received in a non traditional way (by TCP for example).
  *
- * Source family must be set to something else than AF_INET6 or AF_INET so that the callback gets called
+ * Source family must be set to something else than AF_INET6 or AF_INET so that the callback gets
+ * called
  * when the response is received.
  */
 int onion_send_1(const Onion *onion, const uint8_t *plain, uint16_t len, IP_Port source, const uint8_t *nonce);
 
-/* Set the callback to be called when the dest ip_port doesn't have AF_INET6 or AF_INET as the family.
+/* Set the callback to be called when the dest ip_port doesn't have AF_INET6 or AF_INET as the
+ * family.
  *
  * Format: function(void *object, IP_Port dest, uint8_t *data, uint16_t length)
  */
 void set_callback_handle_recv_1(Onion *onion, int (*function)(void *, IP_Port, const uint8_t *, uint16_t),
-                                void *object);
+                                void * object);
 
 Onion *new_onion(DHT *dht);
 

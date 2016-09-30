@@ -71,8 +71,8 @@ int public_key_valid(const uint8_t *public_key);
  *  return -1 if there was a problem.
  *  return length of encrypted data if everything was fine.
  */
-int encrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const uint8_t *nonce,
-                 const uint8_t *plain, uint32_t length, uint8_t *encrypted);
+int encrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const uint8_t *nonce, const uint8_t *plain,
+                 uint32_t length, uint8_t *encrypted);
 
 
 /* Decrypts encrypted of length length to plain of length length - 16 using the
@@ -81,8 +81,8 @@ int encrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const uin
  *  return -1 if there was a problem (decryption failed).
  *  return length of plain data if everything was fine.
  */
-int decrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const uint8_t *nonce,
-                 const uint8_t *encrypted, uint32_t length, uint8_t *plain);
+int decrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const uint8_t *nonce, const uint8_t *encrypted,
+                 uint32_t length, uint8_t *plain);
 
 /* Fast encrypt/decrypt operations. Use if this is not a one-time communication.
    encrypt_precompute does the shared-key generation once so it does not have
@@ -124,10 +124,10 @@ void new_nonce(uint8_t *nonce);
 
 #define MAX_CRYPTO_REQUEST_SIZE 1024
 
-#define CRYPTO_PACKET_FRIEND_REQ    32  /* Friend request crypto packet ID. */
-#define CRYPTO_PACKET_HARDENING     48  /* Hardening crypto packet ID. */
-#define CRYPTO_PACKET_DHTPK         156
-#define CRYPTO_PACKET_NAT_PING      254 /* NAT ping crypto packet ID. */
+#define CRYPTO_PACKET_FRIEND_REQ 32 /* Friend request crypto packet ID. */
+#define CRYPTO_PACKET_HARDENING 48  /* Hardening crypto packet ID. */
+#define CRYPTO_PACKET_DHTPK 156
+#define CRYPTO_PACKET_NAT_PING 254 /* NAT ping crypto packet ID. */
 
 /* Create a request to peer.
  * send_public_key and send_secret_key are the pub/secret keys of the sender.

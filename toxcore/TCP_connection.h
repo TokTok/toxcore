@@ -56,7 +56,7 @@ typedef struct {
     uint8_t public_key[crypto_box_PUBLICKEYBYTES]; /* The dht public key of the peer */
 
     struct {
-        uint32_t tcp_connection;
+        uint32_t     tcp_connection;
         unsigned int status;
         unsigned int connection_id;
     } connections[MAX_FRIEND_TCP_CONNECTIONS];
@@ -65,17 +65,17 @@ typedef struct {
 } TCP_Connection_to;
 
 typedef struct {
-    uint8_t status;
+    uint8_t                status;
     TCP_Client_Connection *connection;
-    uint64_t connected_time;
-    uint32_t lock_count;
-    uint32_t sleep_count;
-    bool onion;
+    uint64_t               connected_time;
+    uint32_t               lock_count;
+    uint32_t               sleep_count;
+    bool                   onion;
 
     /* Only used when connection is sleeping. */
     IP_Port ip_port;
     uint8_t relay_pk[crypto_box_PUBLICKEYBYTES];
-    bool unsleep; /* set to 1 to unsleep connection. */
+    bool    unsleep; /* set to 1 to unsleep connection. */
 } TCP_con;
 
 typedef struct TCP_Connections TCP_Connections;
@@ -126,23 +126,31 @@ int tcp_send_oob_packet(TCP_Connections *tcp_c, unsigned int tcp_connections_num
 
 /* Set the callback for TCP data packets.
  */
-void set_packet_tcp_connection_callback(TCP_Connections *tcp_c, int (*tcp_data_callback)(void *object, int id,
-                                        const uint8_t *data, uint16_t length, void *userdata), void *object);
+void set_packet_tcp_connection_callback(TCP_Connections *tcp_c,
+                                        int (*tcp_data_callback)(void *object, int id, const uint8_t *data,
+                                                                 uint16_t length, void *userdata),
+                                        void *object);
 
 /* Set the callback for TCP onion packets.
  */
-void set_onion_packet_tcp_connection_callback(TCP_Connections *tcp_c, int (*tcp_onion_callback)(void *object,
-        const uint8_t *data, uint16_t length, void *userdata), void *object);
+void set_onion_packet_tcp_connection_callback(TCP_Connections *tcp_c,
+                                              int (*tcp_onion_callback)(void *object, const uint8_t *data,
+                                                                        uint16_t length, void *userdata),
+                                              void *object);
 
 /* Set the callback for TCP oob data packets.
  */
-void set_oob_packet_tcp_connection_callback(TCP_Connections *tcp_c, int (*tcp_oob_callback)(void *object,
-        const uint8_t *public_key, unsigned int tcp_connections_number, const uint8_t *data, uint16_t length, void *userdata),
-        void *object);
+void set_oob_packet_tcp_connection_callback(TCP_Connections *tcp_c,
+                                            int (*tcp_oob_callback)(void *object, const uint8_t *public_key,
+                                                                    unsigned int   tcp_connections_number,
+                                                                    const uint8_t *data, uint16_t length,
+                                                                    void *userdata),
+                                            void *object);
 
 /* Create a new TCP connection to public_key.
  *
- * public_key must be the counterpart to the secret key that the other peer used with new_tcp_connections().
+ * public_key must be the counterpart to the secret key that the other peer used with
+ * new_tcp_connections().
  *
  * id is the id in the callbacks for that connection.
  *
@@ -185,7 +193,8 @@ int add_tcp_number_relay_connection(TCP_Connections *tcp_c, int connections_numb
 
 /* Add a TCP relay tied to a connection.
  *
- * This should be called with the same relay by two peers who want to create a TCP connection with each other.
+ * This should be called with the same relay by two peers who want to create a TCP connection with
+ * each other.
  *
  * return 0 on success.
  * return -1 on failure.
@@ -220,4 +229,3 @@ void do_tcp_connections(TCP_Connections *tcp_c, void *userdata);
 void kill_tcp_connections(TCP_Connections *tcp_c);
 
 #endif
-

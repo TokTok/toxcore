@@ -56,19 +56,15 @@
 #define SHARE_RELAYS_INTERVAL (5 * 60)
 
 
-enum {
-    FRIENDCONN_STATUS_NONE,
-    FRIENDCONN_STATUS_CONNECTING,
-    FRIENDCONN_STATUS_CONNECTED
-};
+enum { FRIENDCONN_STATUS_NONE, FRIENDCONN_STATUS_CONNECTING, FRIENDCONN_STATUS_CONNECTED };
 
 typedef struct {
     uint8_t status;
 
-    uint8_t real_public_key[crypto_box_PUBLICKEYBYTES];
-    uint8_t dht_temp_pk[crypto_box_PUBLICKEYBYTES];
+    uint8_t  real_public_key[crypto_box_PUBLICKEYBYTES];
+    uint8_t  dht_temp_pk[crypto_box_PUBLICKEYBYTES];
     uint16_t dht_lock;
-    IP_Port dht_ip_port;
+    IP_Port  dht_ip_port;
     uint64_t dht_pk_lastrecv, dht_ip_port_lastrecv;
 
     int onion_friendnum;
@@ -83,25 +79,25 @@ typedef struct {
         int (*lossy_data_callback)(void *object, int id, const uint8_t *data, uint16_t length, void *userdata);
 
         void *callback_object;
-        int callback_id;
+        int   callback_id;
     } callbacks[MAX_FRIEND_CONNECTION_CALLBACKS];
 
     uint16_t lock_count;
 
     Node_format tcp_relays[FRIEND_MAX_STORED_TCP_RELAYS];
-    uint16_t tcp_relay_counter;
+    uint16_t    tcp_relay_counter;
 
     bool hosting_tcp_relay;
 } Friend_Conn;
 
 
 typedef struct {
-    Net_Crypto *net_crypto;
-    DHT *dht;
+    Net_Crypto *  net_crypto;
+    DHT *         dht;
     Onion_Client *onion_c;
 
     Friend_Conn *conns;
-    uint32_t num_cons;
+    uint32_t     num_cons;
 
     int (*fr_request_callback)(void *object, const uint8_t *source_pubkey, const uint8_t *data, uint16_t len,
                                void *userdata);
@@ -147,15 +143,18 @@ void set_dht_temp_pk(Friend_Connections *fr_c, int friendcon_id, const uint8_t *
 int friend_add_tcp_relay(Friend_Connections *fr_c, int friendcon_id, IP_Port ip_port, const uint8_t *public_key);
 
 /* Set the callbacks for the friend connection.
- * index is the index (0 to (MAX_FRIEND_CONNECTION_CALLBACKS - 1)) we want the callback to set in the array.
+ * index is the index (0 to (MAX_FRIEND_CONNECTION_CALLBACKS - 1)) we want the callback to set in
+ * the array.
  *
  * return 0 on success.
  * return -1 on failure
  */
 int friend_connection_callbacks(Friend_Connections *fr_c, int friendcon_id, unsigned int index,
                                 int (*status_callback)(void *object, int id, uint8_t status, void *userdata),
-                                int (*data_callback)(void *object, int id, const uint8_t *data, uint16_t len, void *userdata),
-                                int (*lossy_data_callback)(void *object, int id, const uint8_t *data, uint16_t length, void *userdata),
+                                int (*data_callback)(void *object, int id, const uint8_t *data, uint16_t len,
+                                                     void *userdata),
+                                int (*lossy_data_callback)(void *object, int id, const uint8_t *data, uint16_t length,
+                                                           void *userdata),
                                 void *object, int number);
 
 /* return the crypt_connection_id for the connection.
@@ -193,8 +192,9 @@ int send_friend_request_packet(Friend_Connections *fr_c, int friendcon_id, uint3
  *
  * This function will be called every time a friend request is received.
  */
-void set_friend_request_callback(Friend_Connections *fr_c, int (*fr_request_callback)(void *, const uint8_t *,
-                                 const uint8_t *, uint16_t, void *), void *object);
+void set_friend_request_callback(Friend_Connections *fr_c,
+                                 int (*fr_request_callback)(void *, const uint8_t *, const uint8_t *, uint16_t, void *),
+                                 void *object);
 
 /* Create new friend_connections instance. */
 Friend_Connections *new_friend_connections(Onion_Client *onion_c);

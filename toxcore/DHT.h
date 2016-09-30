@@ -65,7 +65,8 @@
 #define TOX_TCP_INET 130
 #define TOX_TCP_INET6 138
 
-/* The number of "fake" friends to add (for optimization purposes and so our paths for the onion part are more random) */
+/* The number of "fake" friends to add (for optimization purposes and so our paths for the onion
+ * part are more random) */
 #define DHT_FAKE_FRIEND_NUMBER 2
 
 /* Functions to transfer ips safely across wire. */
@@ -75,88 +76,87 @@ void to_net_family(IP *ip);
 int to_host_family(IP *ip);
 
 typedef struct {
-    IP_Port     ip_port;
-    uint64_t    timestamp;
+    IP_Port  ip_port;
+    uint64_t timestamp;
 } IPPTs;
 
 typedef struct {
     /* Node routes request correctly (true (1) or false/didn't check (0)) */
-    uint8_t     routes_requests_ok;
+    uint8_t routes_requests_ok;
     /* Time which we last checked this.*/
-    uint64_t    routes_requests_timestamp;
-    uint8_t     routes_requests_pingedid[crypto_box_PUBLICKEYBYTES];
+    uint64_t routes_requests_timestamp;
+    uint8_t  routes_requests_pingedid[crypto_box_PUBLICKEYBYTES];
     /* Node sends correct send_node (true (1) or false/didn't check (0)) */
-    uint8_t     send_nodes_ok;
+    uint8_t send_nodes_ok;
     /* Time which we last checked this.*/
-    uint64_t    send_nodes_timestamp;
-    uint8_t     send_nodes_pingedid[crypto_box_PUBLICKEYBYTES];
+    uint64_t send_nodes_timestamp;
+    uint8_t  send_nodes_pingedid[crypto_box_PUBLICKEYBYTES];
     /* Node can be used to test other nodes (true (1) or false/didn't check (0)) */
-    uint8_t     testing_requests;
+    uint8_t testing_requests;
     /* Time which we last checked this.*/
-    uint64_t    testing_timestamp;
-    uint8_t     testing_pingedid[crypto_box_PUBLICKEYBYTES];
+    uint64_t testing_timestamp;
+    uint8_t  testing_pingedid[crypto_box_PUBLICKEYBYTES];
 } Hardening;
 
 typedef struct {
-    IP_Port     ip_port;
-    uint64_t    timestamp;
-    uint64_t    last_pinged;
+    IP_Port  ip_port;
+    uint64_t timestamp;
+    uint64_t last_pinged;
 
     Hardening hardening;
     /* Returned by this node. Either our friend or us. */
-    IP_Port     ret_ip_port;
-    uint64_t    ret_timestamp;
+    IP_Port  ret_ip_port;
+    uint64_t ret_timestamp;
 } IPPTsPng;
 
 typedef struct {
-    uint8_t     public_key[crypto_box_PUBLICKEYBYTES];
-    IPPTsPng    assoc4;
-    IPPTsPng    assoc6;
+    uint8_t  public_key[crypto_box_PUBLICKEYBYTES];
+    IPPTsPng assoc4;
+    IPPTsPng assoc6;
 } Client_data;
 
 /*----------------------------------------------------------------------------------*/
 
 typedef struct {
     /* 1 if currently hole punching, otherwise 0 */
-    uint8_t     hole_punching;
-    uint32_t    punching_index;
-    uint32_t    tries;
-    uint32_t    punching_index2;
+    uint8_t  hole_punching;
+    uint32_t punching_index;
+    uint32_t tries;
+    uint32_t punching_index2;
 
-    uint64_t    punching_timestamp;
-    uint64_t    recvNATping_timestamp;
-    uint64_t    NATping_id;
-    uint64_t    NATping_timestamp;
+    uint64_t punching_timestamp;
+    uint64_t recvNATping_timestamp;
+    uint64_t NATping_id;
+    uint64_t NATping_timestamp;
 } NAT;
 
 #define DHT_FRIEND_MAX_LOCKS 32
 
 typedef struct {
-    uint8_t     public_key[crypto_box_PUBLICKEYBYTES];
-    IP_Port     ip_port;
-}
-Node_format;
+    uint8_t public_key[crypto_box_PUBLICKEYBYTES];
+    IP_Port ip_port;
+} Node_format;
 
 typedef struct {
     uint8_t     public_key[crypto_box_PUBLICKEYBYTES];
     Client_data client_list[MAX_FRIEND_CLIENTS];
 
     /* Time at which the last get_nodes request was sent. */
-    uint64_t    lastgetnode;
+    uint64_t lastgetnode;
     /* number of times get_node packets were sent. */
-    uint32_t    bootstrap_times;
+    uint32_t bootstrap_times;
 
     /* Symetric NAT hole punching stuff. */
-    NAT         nat;
+    NAT nat;
 
     uint16_t lock_count;
     struct {
         void (*ip_callback)(void *, int32_t, IP_Port);
-        void *data;
+        void *  data;
         int32_t number;
     } callbacks[DHT_FRIEND_MAX_LOCKS];
 
-    Node_format to_bootstrap[MAX_SENT_NODES];
+    Node_format  to_bootstrap[MAX_SENT_NODES];
     unsigned int num_to_bootstrap;
 } DHT_Friend;
 
@@ -189,8 +189,8 @@ int unpack_nodes(Node_format *nodes, uint16_t max_num_nodes, uint16_t *processed
 #define KEYS_TIMEOUT 600
 typedef struct {
     struct {
-        uint8_t public_key[crypto_box_PUBLICKEYBYTES];
-        uint8_t shared_key[crypto_box_BEFORENMBYTES];
+        uint8_t  public_key[crypto_box_PUBLICKEYBYTES];
+        uint8_t  shared_key[crypto_box_BEFORENMBYTES];
         uint32_t times_requested;
         uint8_t  stored; /* 0 if not, 1 if is */
         uint64_t time_last_requested;
@@ -200,48 +200,48 @@ typedef struct {
 /*----------------------------------------------------------------------------------*/
 
 typedef int (*cryptopacket_handler_callback)(void *object, IP_Port ip_port, const uint8_t *source_pubkey,
-        const uint8_t *data, uint16_t len, void *userdata);
+                                             const uint8_t *data, uint16_t len, void *userdata);
 
 typedef struct {
     cryptopacket_handler_callback function;
-    void *object;
+    void *                        object;
 } Cryptopacket_Handles;
 
 typedef struct {
-    Logger *log;
+    Logger *         log;
     Networking_Core *net;
 
-    Client_data    close_clientlist[LCLIENT_LIST];
-    uint64_t       close_lastgetnodes;
-    uint32_t       close_bootstrap_times;
+    Client_data close_clientlist[LCLIENT_LIST];
+    uint64_t    close_lastgetnodes;
+    uint32_t    close_bootstrap_times;
 
     /* Note: this key should not be/is not used to transmit any sensitive materials */
-    uint8_t      secret_symmetric_key[crypto_box_KEYBYTES];
+    uint8_t secret_symmetric_key[crypto_box_KEYBYTES];
     /* DHT keypair */
     uint8_t self_public_key[crypto_box_PUBLICKEYBYTES];
     uint8_t self_secret_key[crypto_box_SECRETKEYBYTES];
 
-    DHT_Friend    *friends_list;
-    uint16_t       num_friends;
+    DHT_Friend *friends_list;
+    uint16_t    num_friends;
 
-    Node_format   *loaded_nodes_list;
-    uint32_t       loaded_num_nodes;
-    unsigned int   loaded_nodes_index;
+    Node_format *loaded_nodes_list;
+    uint32_t     loaded_num_nodes;
+    unsigned int loaded_nodes_index;
 
     Shared_Keys shared_keys_recv;
     Shared_Keys shared_keys_sent;
 
-    struct PING   *ping;
-    Ping_Array    dht_ping_array;
-    Ping_Array    dht_harden_ping_array;
+    struct PING *ping;
+    Ping_Array   dht_ping_array;
+    Ping_Array   dht_harden_ping_array;
 #ifdef ENABLE_ASSOC_DHT
-    struct Assoc  *assoc;
+    struct Assoc *assoc;
 #endif
-    uint64_t       last_run;
+    uint64_t last_run;
 
     Cryptopacket_Handles cryptopackethandlers[256];
 
-    Node_format to_bootstrap[MAX_CLOSE_TO_BOOTSTRAP_NODES];
+    Node_format  to_bootstrap[MAX_CLOSE_TO_BOOTSTRAP_NODES];
     unsigned int num_to_bootstrap;
 } DHT;
 /*----------------------------------------------------------------------------------*/
@@ -367,8 +367,8 @@ void DHT_bootstrap(DHT *dht, IP_Port ip_port, const uint8_t *public_key);
  *  returns 1 if the address could be converted into an IP address
  *  returns 0 otherwise
  */
-int DHT_bootstrap_from_address(DHT *dht, const char *address, uint8_t ipv6enabled,
-                               uint16_t port, const uint8_t *public_key);
+int DHT_bootstrap_from_address(DHT *dht, const char *address, uint8_t ipv6enabled, uint16_t port,
+                               const uint8_t *public_key);
 
 /* Start sending packets after DHT loaded_friends_list and loaded_clients_list are set.
  *
@@ -429,4 +429,3 @@ int DHT_non_lan_connected(const DHT *dht);
 int addto_lists(DHT *dht, IP_Port ip_port, const uint8_t *public_key);
 
 #endif
-

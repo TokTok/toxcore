@@ -38,9 +38,9 @@
 #include <string.h>
 #include <time.h>
 
-#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32) /* Put win32 includes here */
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32) /* Put win32 includes here */
 #ifndef WINVER
-//Windows XP
+// Windows XP
 #define WINVER 0x0501
 #endif
 
@@ -81,20 +81,21 @@ typedef int sock_t;
 #endif
 
 #if defined(__AIX__)
-#   define _XOPEN_SOURCE 1
+#define _XOPEN_SOURCE 1
 #endif
 
 #if defined(__sun__)
 #define __EXTENSIONS__ 1 // SunOS!
-#if defined(__SunOS5_6__) || defined(__SunOS5_7__) || defined(__SunOS5_8__) || defined(__SunOS5_9__) || defined(__SunOS5_10__)
-//Nothing needed
+#if defined(__SunOS5_6__) || defined(__SunOS5_7__) || defined(__SunOS5_8__) || defined(__SunOS5_9__) \
+    || defined(__SunOS5_10__)
+// Nothing needed
 #else
 #define __MAKECONTEXT_V2_SOURCE 1
 #endif
 #endif
 
 #ifndef IPV6_ADD_MEMBERSHIP
-#ifdef  IPV6_JOIN_GROUP
+#ifdef IPV6_JOIN_GROUP
 #define IPV6_ADD_MEMBERSHIP IPV6_JOIN_GROUP
 #define IPV6_DROP_MEMBERSHIP IPV6_LEAVE_GROUP
 #endif
@@ -102,16 +103,16 @@ typedef int sock_t;
 
 #define MAX_UDP_PACKET_SIZE 2048
 
-#define NET_PACKET_PING_REQUEST    0   /* Ping request packet ID. */
-#define NET_PACKET_PING_RESPONSE   1   /* Ping response packet ID. */
-#define NET_PACKET_GET_NODES       2   /* Get nodes request packet ID. */
-#define NET_PACKET_SEND_NODES_IPV6 4   /* Send nodes response packet ID for other addresses. */
-#define NET_PACKET_COOKIE_REQUEST  24  /* Cookie request packet */
-#define NET_PACKET_COOKIE_RESPONSE 25  /* Cookie response packet */
-#define NET_PACKET_CRYPTO_HS       26  /* Crypto handshake packet */
-#define NET_PACKET_CRYPTO_DATA     27  /* Crypto data packet */
-#define NET_PACKET_CRYPTO          32  /* Encrypted data packet ID. */
-#define NET_PACKET_LAN_DISCOVERY   33  /* LAN discovery packet ID. */
+#define NET_PACKET_PING_REQUEST 0     /* Ping request packet ID. */
+#define NET_PACKET_PING_RESPONSE 1    /* Ping response packet ID. */
+#define NET_PACKET_GET_NODES 2        /* Get nodes request packet ID. */
+#define NET_PACKET_SEND_NODES_IPV6 4  /* Send nodes response packet ID for other addresses. */
+#define NET_PACKET_COOKIE_REQUEST 24  /* Cookie request packet */
+#define NET_PACKET_COOKIE_RESPONSE 25 /* Cookie response packet */
+#define NET_PACKET_CRYPTO_HS 26       /* Crypto handshake packet */
+#define NET_PACKET_CRYPTO_DATA 27     /* Crypto data packet */
+#define NET_PACKET_CRYPTO 32          /* Encrypted data packet ID. */
+#define NET_PACKET_LAN_DISCOVERY 33   /* LAN discovery packet ID. */
 
 /* See:  docs/Prevent_Tracking.txt and onion.{c, h} */
 #define NET_PACKET_ONION_SEND_INITIAL 128
@@ -132,8 +133,8 @@ typedef int sock_t;
 
 
 #define TOX_PORTRANGE_FROM 33445
-#define TOX_PORTRANGE_TO   33545
-#define TOX_PORT_DEFAULT   TOX_PORTRANGE_FROM
+#define TOX_PORTRANGE_TO 33545
+#define TOX_PORT_DEFAULT TOX_PORTRANGE_FROM
 
 /* TCP related */
 #define TCP_ONION_FAMILY (AF_INET6 + 1)
@@ -142,21 +143,19 @@ typedef int sock_t;
 #define TCP_FAMILY (AF_INET6 + 4)
 
 typedef union {
-    uint8_t uint8[4];
-    uint16_t uint16[2];
-    uint32_t uint32;
+    uint8_t        uint8[4];
+    uint16_t       uint16[2];
+    uint32_t       uint32;
     struct in_addr in_addr;
-}
-IP4;
+} IP4;
 
 typedef union {
-    uint8_t uint8[16];
-    uint16_t uint16[8];
-    uint32_t uint32[4];
-    uint64_t uint64[2];
+    uint8_t         uint8[16];
+    uint16_t        uint16[8];
+    uint32_t        uint32[4];
+    uint64_t        uint64[2];
     struct in6_addr in6_addr;
-}
-IP6;
+} IP6;
 
 typedef struct {
     uint8_t family;
@@ -164,17 +163,15 @@ typedef struct {
         IP4 ip4;
         IP6 ip6;
     };
-}
-IP;
+} IP;
 
 typedef struct {
-    IP ip;
+    IP       ip;
     uint16_t port;
-}
-IP_Port;
+} IP_Port;
 
 /* Does the IP6 struct a contain an IPv4 address in an IPv6 one? */
-#define IPV6_IPV4_IN_V6(a) ((a.uint64[0] == 0) && (a.uint32[2] == htonl (0xffff)))
+#define IPV6_IPV4_IN_V6(a) ((a.uint64[0] == 0) && (a.uint32[2] == htonl(0xffff)))
 
 #define SIZE_IP4 4
 #define SIZE_IP6 16
@@ -185,7 +182,7 @@ IP_Port;
 #define TOX_ENABLE_IPV6_DEFAULT 1
 
 /* addr_resolve return values */
-#define TOX_ADDR_RESOLVE_INET  1
+#define TOX_ADDR_RESOLVE_INET 1
 #define TOX_ADDR_RESOLVE_INET6 2
 
 /* ip_ntoa
@@ -303,15 +300,15 @@ typedef int (*packet_handler_callback)(void *object, IP_Port ip_port, const uint
 
 typedef struct {
     packet_handler_callback function;
-    void *object;
+    void *                  object;
 } Packet_Handles;
 
 typedef struct {
-    Logger *log;
+    Logger *       log;
     Packet_Handles packethandlers[256];
 
     sa_family_t family;
-    uint16_t port;
+    uint16_t    port;
     /* Our UDP socket. */
     sock_t sock;
 } Networking_Core;

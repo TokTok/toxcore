@@ -40,7 +40,6 @@ extern "C" {
  ******************************************************************************/
 
 
-
 /** \page core Public core API for Tox clients.
  *
  * Every function that can fail takes a function-specific error code pointer
@@ -154,7 +153,6 @@ typedef struct Tox Tox;
  ******************************************************************************/
 
 
-
 /**
  * The major version number. Incremented when the API or ABI changes in an
  * incompatible way.
@@ -163,7 +161,7 @@ typedef struct Tox Tox;
  * library. They can be used to display the Tox library version or to check
  * whether the client is compatible with the dynamically linked version of Tox.
  */
-#define TOX_VERSION_MAJOR              0
+#define TOX_VERSION_MAJOR 0
 
 uint32_t tox_version_major(void);
 
@@ -172,7 +170,7 @@ uint32_t tox_version_major(void);
  * breaking the API or ABI. Set to 0 when the major version number is
  * incremented.
  */
-#define TOX_VERSION_MINOR              0
+#define TOX_VERSION_MINOR 0
 
 uint32_t tox_version_minor(void);
 
@@ -180,7 +178,7 @@ uint32_t tox_version_minor(void);
  * The patch or revision number. Incremented when bugfixes are applied without
  * changing any functionality or API or ABI.
  */
-#define TOX_VERSION_PATCH              1
+#define TOX_VERSION_PATCH 1
 
 uint32_t tox_version_patch(void);
 
@@ -188,18 +186,16 @@ uint32_t tox_version_patch(void);
  * A macro to check at preprocessing time whether the client code is compatible
  * with the installed version of Tox.
  */
-#define TOX_VERSION_IS_API_COMPATIBLE(MAJOR, MINOR, PATCH)      \
-  (TOX_VERSION_MAJOR == MAJOR &&                                \
-   (TOX_VERSION_MINOR > MINOR ||                                \
-    (TOX_VERSION_MINOR == MINOR &&                              \
-     TOX_VERSION_PATCH >= PATCH)))
+#define TOX_VERSION_IS_API_COMPATIBLE(MAJOR, MINOR, PATCH) \
+    (TOX_VERSION_MAJOR == MAJOR                            \
+     && (TOX_VERSION_MINOR > MINOR || (TOX_VERSION_MINOR == MINOR && TOX_VERSION_PATCH >= PATCH)))
 
 /**
  * A macro to make compilation fail if the client code is not compatible with
  * the installed version of Tox.
  */
-#define TOX_VERSION_REQUIRE(MAJOR, MINOR, PATCH)                \
-  typedef char tox_required_version[TOX_IS_COMPATIBLE(MAJOR, MINOR, PATCH) ? 1 : -1]
+#define TOX_VERSION_REQUIRE(MAJOR, MINOR, PATCH) \
+    typedef char tox_required_version[TOX_IS_COMPATIBLE(MAJOR, MINOR, PATCH) ? 1 : -1]
 
 /**
  * Return whether the compiled library version is compatible with the passed
@@ -211,8 +207,8 @@ bool tox_version_is_compatible(uint32_t major, uint32_t minor, uint32_t patch);
  * A convenience macro to call tox_version_is_compatible with the currently
  * compiling API version.
  */
-#define TOX_VERSION_IS_ABI_COMPATIBLE()                         \
-  tox_version_is_compatible(TOX_VERSION_MAJOR, TOX_VERSION_MINOR, TOX_VERSION_PATCH)
+#define TOX_VERSION_IS_ABI_COMPATIBLE() \
+    tox_version_is_compatible(TOX_VERSION_MAJOR, TOX_VERSION_MINOR, TOX_VERSION_PATCH)
 
 
 /*******************************************************************************
@@ -226,18 +222,17 @@ bool tox_version_is_compatible(uint32_t major, uint32_t minor, uint32_t patch);
  ******************************************************************************/
 
 
-
 /**
  * The size of a Tox Public Key in bytes.
  */
-#define TOX_PUBLIC_KEY_SIZE            32
+#define TOX_PUBLIC_KEY_SIZE 32
 
 uint32_t tox_public_key_size(void);
 
 /**
  * The size of a Tox Secret Key in bytes.
  */
-#define TOX_SECRET_KEY_SIZE            32
+#define TOX_SECRET_KEY_SIZE 32
 
 uint32_t tox_secret_key_size(void);
 
@@ -249,63 +244,63 @@ uint32_t tox_secret_key_size(void);
  * byte is an XOR of all the even bytes (0, 2, 4, ...), the second byte is an
  * XOR of all the odd bytes (1, 3, 5, ...) of the Public Key and nospam.
  */
-#define TOX_ADDRESS_SIZE               (TOX_PUBLIC_KEY_SIZE + sizeof(uint32_t) + sizeof(uint16_t))
+#define TOX_ADDRESS_SIZE (TOX_PUBLIC_KEY_SIZE + sizeof(uint32_t) + sizeof(uint16_t))
 
 uint32_t tox_address_size(void);
 
 /**
  * Maximum length of a nickname in bytes.
  */
-#define TOX_MAX_NAME_LENGTH            128
+#define TOX_MAX_NAME_LENGTH 128
 
 uint32_t tox_max_name_length(void);
 
 /**
  * Maximum length of a status message in bytes.
  */
-#define TOX_MAX_STATUS_MESSAGE_LENGTH  1007
+#define TOX_MAX_STATUS_MESSAGE_LENGTH 1007
 
 uint32_t tox_max_status_message_length(void);
 
 /**
  * Maximum length of a friend request message in bytes.
  */
-#define TOX_MAX_FRIEND_REQUEST_LENGTH  1016
+#define TOX_MAX_FRIEND_REQUEST_LENGTH 1016
 
 uint32_t tox_max_friend_request_length(void);
 
 /**
  * Maximum length of a single message after which it should be split.
  */
-#define TOX_MAX_MESSAGE_LENGTH         1372
+#define TOX_MAX_MESSAGE_LENGTH 1372
 
 uint32_t tox_max_message_length(void);
 
 /**
  * Maximum size of custom packets. TODO(iphydf): should be LENGTH?
  */
-#define TOX_MAX_CUSTOM_PACKET_SIZE     1373
+#define TOX_MAX_CUSTOM_PACKET_SIZE 1373
 
 uint32_t tox_max_custom_packet_size(void);
 
 /**
  * The number of bytes in a hash generated by tox_hash.
  */
-#define TOX_HASH_LENGTH                32
+#define TOX_HASH_LENGTH 32
 
 uint32_t tox_hash_length(void);
 
 /**
  * The number of bytes in a file id.
  */
-#define TOX_FILE_ID_LENGTH             32
+#define TOX_FILE_ID_LENGTH 32
 
 uint32_t tox_file_id_length(void);
 
 /**
  * Maximum file name length for file transfers.
  */
-#define TOX_MAX_FILENAME_LENGTH        255
+#define TOX_MAX_FILENAME_LENGTH 255
 
 uint32_t tox_max_filename_length(void);
 
@@ -315,7 +310,6 @@ uint32_t tox_max_filename_length(void);
  * :: Global enumerations
  *
  ******************************************************************************/
-
 
 
 /**
@@ -363,13 +357,11 @@ typedef enum TOX_MESSAGE_TYPE {
 } TOX_MESSAGE_TYPE;
 
 
-
 /*******************************************************************************
  *
  * :: Startup options
  *
  ******************************************************************************/
-
 
 
 /**
@@ -539,7 +531,6 @@ struct Tox_Options {
      * The length of the savedata.
      */
     size_t savedata_length;
-
 };
 
 
@@ -641,7 +632,6 @@ void tox_options_free(struct Tox_Options *options);
  * :: Creation and destruction
  *
  ******************************************************************************/
-
 
 
 typedef enum TOX_ERR_NEW {
@@ -819,7 +809,6 @@ void tox_get_savedata(const Tox *tox, uint8_t *savedata);
  ******************************************************************************/
 
 
-
 typedef enum TOX_ERR_BOOTSTRAP {
 
     /**
@@ -952,7 +941,6 @@ void tox_iterate(Tox *tox, void *user_data);
  ******************************************************************************/
 
 
-
 /**
  * Writes the Tox friend address of the client to a byte array. The address is
  * not in human-readable format. If a client wants to display the address,
@@ -998,7 +986,6 @@ void tox_self_get_secret_key(const Tox *tox, uint8_t *secret_key);
  * :: User-visible client information (nickname/status)
  *
  ******************************************************************************/
-
 
 
 /**
@@ -1113,7 +1100,6 @@ TOX_USER_STATUS tox_self_get_status(const Tox *tox);
  * :: Friend list management
  *
  ******************************************************************************/
-
 
 
 typedef enum TOX_ERR_FRIEND_ADD {
@@ -1251,7 +1237,6 @@ bool tox_friend_delete(Tox *tox, uint32_t friend_number, TOX_ERR_FRIEND_DELETE *
  ******************************************************************************/
 
 
-
 typedef enum TOX_ERR_FRIEND_BY_PUBLIC_KEY {
 
     /**
@@ -1362,7 +1347,6 @@ uint64_t tox_friend_get_last_online(const Tox *tox, uint32_t friend_number, TOX_
  ******************************************************************************/
 
 
-
 /**
  * Common error codes for friend state query functions.
  */
@@ -1460,7 +1444,7 @@ bool tox_friend_get_status_message(const Tox *tox, uint32_t friend_number, uint8
  *   tox_friend_get_status_message_size.
  */
 typedef void tox_friend_status_message_cb(Tox *tox, uint32_t friend_number, const uint8_t *message, size_t length,
-        void *user_data);
+                                          void *user_data);
 
 
 /**
@@ -1515,7 +1499,7 @@ TOX_CONNECTION tox_friend_get_connection_status(const Tox *tox, uint32_t friend_
  *   tox_friend_get_connection_status on the passed friend_number.
  */
 typedef void tox_friend_connection_status_cb(Tox *tox, uint32_t friend_number, TOX_CONNECTION connection_status,
-        void *user_data);
+                                             void *user_data);
 
 
 /**
@@ -1562,7 +1546,6 @@ void tox_callback_friend_typing(Tox *tox, tox_friend_typing_cb *callback);
  * :: Sending private messages
  *
  ******************************************************************************/
-
 
 
 typedef enum TOX_ERR_SET_TYPING {
@@ -1682,7 +1665,6 @@ void tox_callback_friend_read_receipt(Tox *tox, tox_friend_read_receipt_cb *call
  ******************************************************************************/
 
 
-
 /**
  * @param public_key The Public Key of the user who sent the friend request.
  * @param time_delta A delta in seconds between when the message was composed
@@ -1729,7 +1711,6 @@ void tox_callback_friend_message(Tox *tox, tox_friend_message_cb *callback);
  * :: File transmission: common between sending and receiving
  *
  ******************************************************************************/
-
 
 
 /**
@@ -1991,7 +1972,6 @@ bool tox_file_get_file_id(const Tox *tox, uint32_t friend_number, uint32_t file_
  ******************************************************************************/
 
 
-
 typedef enum TOX_ERR_FILE_SEND {
 
     /**
@@ -2203,7 +2183,6 @@ void tox_callback_file_chunk_request(Tox *tox, tox_file_chunk_request_cb *callba
  ******************************************************************************/
 
 
-
 /**
  * The client should acquire resources to be associated with the file transfer.
  * Incoming file transfers start in the PAUSED state. After this callback
@@ -2269,7 +2248,6 @@ void tox_callback_file_recv_chunk(Tox *tox, tox_file_recv_chunk_cb *callback);
  ******************************************************************************/
 
 
-
 /**
  * Conference types for the conference_invite event.
  */
@@ -2328,7 +2306,8 @@ typedef void tox_conference_message_cb(Tox *tox, uint32_t conference_number, uin
 void tox_callback_conference_message(Tox *tox, tox_conference_message_cb *callback);
 
 /**
- * @param conference_number The conference number of the conference the title change is intended for.
+ * @param conference_number The conference number of the conference the title change is intended
+ * for.
  * @param peer_number The ID of the peer who changed the title.
  * @param title The title data.
  * @param length The title length.
@@ -2370,12 +2349,13 @@ typedef enum TOX_CONFERENCE_STATE_CHANGE {
 
 
 /**
- * @param conference_number The conference number of the conference the title change is intended for.
+ * @param conference_number The conference number of the conference the title change is intended
+ * for.
  * @param peer_number The ID of the peer who changed the title.
  * @param change The type of change (one of TOX_CONFERENCE_STATE_CHANGE).
  */
 typedef void tox_conference_namelist_change_cb(Tox *tox, uint32_t conference_number, uint32_t peer_number,
-        TOX_CONFERENCE_STATE_CHANGE change, void *user_data);
+                                               TOX_CONFERENCE_STATE_CHANGE change, void *user_data);
 
 
 /**
@@ -2470,7 +2450,7 @@ uint32_t tox_conference_peer_count(const Tox *tox, uint32_t conference_number, T
  * Return the length of the peer's name. Return value is unspecified on failure.
  */
 size_t tox_conference_peer_get_name_size(const Tox *tox, uint32_t conference_number, uint32_t peer_number,
-        TOX_ERR_CONFERENCE_PEER_QUERY *error);
+                                         TOX_ERR_CONFERENCE_PEER_QUERY *error);
 
 /**
  * Copy the name of peer_number who is in conference_number to name.
@@ -2723,7 +2703,7 @@ typedef enum TOX_ERR_CONFERENCE_GET_TYPE {
 
 
 TOX_CONFERENCE_TYPE tox_conference_get_type(const Tox *tox, uint32_t conference_number,
-        TOX_ERR_CONFERENCE_GET_TYPE *error);
+                                            TOX_ERR_CONFERENCE_GET_TYPE *error);
 
 
 /*******************************************************************************
@@ -2731,7 +2711,6 @@ TOX_CONFERENCE_TYPE tox_conference_get_type(const Tox *tox, uint32_t conference_
  * :: Low-level custom packet sending and receiving
  *
  ******************************************************************************/
-
 
 
 typedef enum TOX_ERR_FRIEND_CUSTOM_PACKET {
@@ -2843,7 +2822,7 @@ void tox_callback_friend_lossy_packet(Tox *tox, tox_friend_lossy_packet_cb *call
  * @param length The length of the packet data byte array.
  */
 typedef void tox_friend_lossless_packet_cb(Tox *tox, uint32_t friend_number, const uint8_t *data, size_t length,
-        void *user_data);
+                                           void *user_data);
 
 
 /**
@@ -2858,7 +2837,6 @@ void tox_callback_friend_lossless_packet(Tox *tox, tox_friend_lossless_packet_cb
  * :: Low-level network information
  *
  ******************************************************************************/
-
 
 
 /**

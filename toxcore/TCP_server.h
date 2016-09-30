@@ -49,7 +49,7 @@
 #define NUM_RESERVED_PORTS 16
 #define NUM_CLIENT_CONNECTIONS (256 - NUM_RESERVED_PORTS)
 
-#define TCP_PACKET_ROUTING_REQUEST  0
+#define TCP_PACKET_ROUTING_REQUEST 0
 #define TCP_PACKET_ROUTING_RESPONSE 1
 #define TCP_PACKET_CONNECTION_NOTIFICATION 2
 #define TCP_PACKET_DISCONNECT_NOTIFICATION 3
@@ -57,7 +57,7 @@
 #define TCP_PACKET_PONG 5
 #define TCP_PACKET_OOB_SEND 6
 #define TCP_PACKET_OOB_RECV 7
-#define TCP_PACKET_ONION_REQUEST  8
+#define TCP_PACKET_ONION_REQUEST 8
 #define TCP_PACKET_ONION_RESPONSE 9
 
 #define ARRAY_ENTRY_SIZE 6
@@ -84,25 +84,25 @@ typedef struct TCP_Priority_List TCP_Priority_List;
 
 struct TCP_Priority_List {
     TCP_Priority_List *next;
-    uint16_t size, sent;
-    uint8_t data[];
+    uint16_t           size, sent;
+    uint8_t            data[];
 };
 
 typedef struct TCP_Secure_Connection {
-    sock_t  sock;
-    uint8_t public_key[crypto_box_PUBLICKEYBYTES];
-    uint8_t recv_nonce[crypto_box_NONCEBYTES]; /* Nonce of received packets. */
-    uint8_t sent_nonce[crypto_box_NONCEBYTES]; /* Nonce of sent packets. */
-    uint8_t shared_key[crypto_box_BEFORENMBYTES];
+    sock_t   sock;
+    uint8_t  public_key[crypto_box_PUBLICKEYBYTES];
+    uint8_t  recv_nonce[crypto_box_NONCEBYTES]; /* Nonce of received packets. */
+    uint8_t  sent_nonce[crypto_box_NONCEBYTES]; /* Nonce of sent packets. */
+    uint8_t  shared_key[crypto_box_BEFORENMBYTES];
     uint16_t next_packet_length;
     struct {
-        uint8_t public_key[crypto_box_PUBLICKEYBYTES];
+        uint8_t  public_key[crypto_box_PUBLICKEYBYTES];
         uint32_t index;
-        uint8_t status; /* 0 if not used, 1 if other is offline, 2 if other is online. */
-        uint8_t other_id;
+        uint8_t  status; /* 0 if not used, 1 if other is offline, 2 if other is online. */
+        uint8_t  other_id;
     } connections[NUM_CLIENT_CONNECTIONS];
-    uint8_t last_packet[2 + MAX_PACKET_SIZE];
-    uint8_t status;
+    uint8_t  last_packet[2 + MAX_PACKET_SIZE];
+    uint8_t  status;
     uint16_t last_packet_length;
     uint16_t last_packet_sent;
 

@@ -28,23 +28,17 @@
 
 struct Logger {
     logger_cb *callback;
-    void *context;
-    void *userdata;
+    void *     context;
+    void *     userdata;
 };
 
 
 /**
  * Public Functions
  */
-Logger *logger_new()
-{
-    return (Logger *)calloc(1, sizeof(Logger));
-}
+Logger *logger_new() { return (Logger *)calloc(1, sizeof(Logger)); }
 
-void logger_kill(Logger *log)
-{
-    free(log);
-}
+void logger_kill(Logger *log) { free(log); }
 
 void logger_callback_log(Logger *log, logger_cb *function, void *context, void *userdata)
 {
@@ -61,7 +55,7 @@ void logger_write(Logger *log, LOGGER_LEVEL level, const char *file, int line, c
     }
 
     /* Format message */
-    char msg[1024];
+    char    msg[1024];
     va_list args;
     va_start(args, format);
     vsnprintf(msg, sizeof msg, format, args);

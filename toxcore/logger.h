@@ -29,18 +29,12 @@
 #define MIN_LOGGER_LEVEL LOG_INFO
 #endif
 
-typedef enum {
-    LOG_TRACE,
-    LOG_DEBUG,
-    LOG_INFO,
-    LOG_WARNING,
-    LOG_ERROR
-} LOGGER_LEVEL;
+typedef enum { LOG_TRACE, LOG_DEBUG, LOG_INFO, LOG_WARNING, LOG_ERROR } LOGGER_LEVEL;
 
 typedef struct Logger Logger;
 
-typedef void logger_cb(void *context, LOGGER_LEVEL level, const char *file, int line,
-                       const char *func, const char *message, void *userdata);
+typedef void logger_cb(void *context, LOGGER_LEVEL level, const char *file, int line, const char *func,
+                       const char *message, void *userdata);
 
 /**
  * Creates a new logger with logging disabled (callback is NULL) by default.
@@ -62,18 +56,18 @@ void logger_write(Logger *log, LOGGER_LEVEL level, const char *file, int line, c
                   ...);
 
 
-#define LOGGER_WRITE(log, level, ...) \
-    do { \
-        if (level >= MIN_LOGGER_LEVEL) { \
+#define LOGGER_WRITE(log, level, ...)                                            \
+    do {                                                                         \
+        if (level >= MIN_LOGGER_LEVEL) {                                         \
             logger_write(log, level, __FILE__, __LINE__, __func__, __VA_ARGS__); \
-        } \
+        }                                                                        \
     } while (0)
 
 /* To log with an logger */
-#define LOGGER_TRACE(log, ...)   LOGGER_WRITE(log, LOG_TRACE  , __VA_ARGS__)
-#define LOGGER_DEBUG(log, ...)   LOGGER_WRITE(log, LOG_DEBUG  , __VA_ARGS__)
-#define LOGGER_INFO(log, ...)    LOGGER_WRITE(log, LOG_INFO   , __VA_ARGS__)
+#define LOGGER_TRACE(log, ...) LOGGER_WRITE(log, LOG_TRACE, __VA_ARGS__)
+#define LOGGER_DEBUG(log, ...) LOGGER_WRITE(log, LOG_DEBUG, __VA_ARGS__)
+#define LOGGER_INFO(log, ...) LOGGER_WRITE(log, LOG_INFO, __VA_ARGS__)
 #define LOGGER_WARNING(log, ...) LOGGER_WRITE(log, LOG_WARNING, __VA_ARGS__)
-#define LOGGER_ERROR(log, ...)   LOGGER_WRITE(log, LOG_ERROR  , __VA_ARGS__)
+#define LOGGER_ERROR(log, ...) LOGGER_WRITE(log, LOG_ERROR, __VA_ARGS__)
 
 #endif /* TOXLOGGER_H */

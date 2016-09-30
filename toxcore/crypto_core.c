@@ -36,17 +36,14 @@
 /* compare 2 public keys of length crypto_box_PUBLICKEYBYTES, not vulnerable to timing attacks.
    returns 0 if both mem locations of length are equal,
    return -1 if they are not. */
-int public_key_cmp(const uint8_t *pk1, const uint8_t *pk2)
-{
-    return crypto_verify_32(pk1, pk2);
-}
+int public_key_cmp(const uint8_t *pk1, const uint8_t *pk2) { return crypto_verify_32(pk1, pk2); }
 
 /*  return a random number.
  */
 uint32_t random_int(void)
 {
     uint32_t randnum;
-    randombytes((uint8_t *)&randnum , sizeof(randnum));
+    randombytes((uint8_t *)&randnum, sizeof(randnum));
     return randnum;
 }
 
@@ -125,8 +122,8 @@ int decrypt_data_symmetric(const uint8_t *secret_key, const uint8_t *nonce, cons
     return length - crypto_box_MACBYTES;
 }
 
-int encrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const uint8_t *nonce,
-                 const uint8_t *plain, uint32_t length, uint8_t *encrypted)
+int encrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const uint8_t *nonce, const uint8_t *plain,
+                 uint32_t length, uint8_t *encrypted)
 {
     if (!public_key || !secret_key) {
         return -1;
@@ -139,8 +136,8 @@ int encrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const uin
     return ret;
 }
 
-int decrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const uint8_t *nonce,
-                 const uint8_t *encrypted, uint32_t length, uint8_t *plain)
+int decrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const uint8_t *nonce, const uint8_t *encrypted,
+                 uint32_t length, uint8_t *plain)
 {
     if (!public_key || !secret_key) {
         return -1;
@@ -157,18 +154,19 @@ int decrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const uin
 /* Increment the given nonce by 1. */
 void increment_nonce(uint8_t *nonce)
 {
-    /* TODO(irungentoo): use increment_nonce_number(nonce, 1) or sodium_increment (change to little endian)
+    /* TODO(irungentoo): use increment_nonce_number(nonce, 1) or sodium_increment (change to little
+     * endian)
      * NOTE don't use breaks inside this loop
      * In particular, make sure, as far as possible,
      * that loop bounds and their potential underflow or overflow
      * are independent of user-controlled input (you may have heard of the Heartbleed bug).
      */
-    uint32_t i = crypto_box_NONCEBYTES;
+    uint32_t      i     = crypto_box_NONCEBYTES;
     uint_fast16_t carry = 1U;
 
     for (; i != 0; --i) {
-        carry += (uint_fast16_t) nonce[i - 1];
-        nonce[i - 1] = (uint8_t) carry;
+        carry += (uint_fast16_t)nonce[i - 1];
+        nonce[i - 1] = (uint8_t)carry;
         carry >>= 8;
     }
 }
@@ -180,41 +178,32 @@ void increment_nonce_number(uint8_t *nonce, uint32_t host_order_num)
      * that loop bounds and their potential underflow or overflow
      * are independent of user-controlled input (you may have heard of the Heartbleed bug).
      */
-    const uint32_t big_endian_num = htonl(host_order_num);
-    const uint8_t *const num_vec = (const uint8_t *) &big_endian_num;
-    uint8_t num_as_nonce[crypto_box_NONCEBYTES] = {0};
-    num_as_nonce[crypto_box_NONCEBYTES - 4] = num_vec[0];
-    num_as_nonce[crypto_box_NONCEBYTES - 3] = num_vec[1];
-    num_as_nonce[crypto_box_NONCEBYTES - 2] = num_vec[2];
-    num_as_nonce[crypto_box_NONCEBYTES - 1] = num_vec[3];
+    const uint32_t       big_endian_num                      = htonl(host_order_num);
+    const uint8_t *const num_vec                             = (const uint8_t *)&big_endian_num;
+    uint8_t              num_as_nonce[crypto_box_NONCEBYTES] = {0};
+    num_as_nonce[crypto_box_NONCEBYTES - 4]                  = num_vec[0];
+    num_as_nonce[crypto_box_NONCEBYTES - 3]                  = num_vec[1];
+    num_as_nonce[crypto_box_NONCEBYTES - 2]                  = num_vec[2];
+    num_as_nonce[crypto_box_NONCEBYTES - 1]                  = num_vec[3];
 
-    uint32_t i = crypto_box_NONCEBYTES;
+    uint32_t      i     = crypto_box_NONCEBYTES;
     uint_fast16_t carry = 0U;
 
     for (; i != 0; --i) {
-        carry += (uint_fast16_t) nonce[i - 1] + (uint_fast16_t) num_as_nonce[i - 1];
-        nonce[i - 1] = (unsigned char) carry;
+        carry += (uint_fast16_t)nonce[i - 1] + (uint_fast16_t)num_as_nonce[i - 1];
+        nonce[i - 1] = (unsigned char)carry;
         carry >>= 8;
     }
 }
 
 /* Fill the given nonce with random bytes. */
-void random_nonce(uint8_t *nonce)
-{
-    randombytes(nonce, crypto_box_NONCEBYTES);
-}
+void random_nonce(uint8_t *nonce) { randombytes(nonce, crypto_box_NONCEBYTES); }
 
 /* Fill a key crypto_box_KEYBYTES big with random bytes */
-void new_symmetric_key(uint8_t *key)
-{
-    randombytes(key, crypto_box_KEYBYTES);
-}
+void new_symmetric_key(uint8_t *key) { randombytes(key, crypto_box_KEYBYTES); }
 
 /* Gives a nonce guaranteed to be different from previous ones.*/
-void new_nonce(uint8_t *nonce)
-{
-    random_nonce(nonce);
-}
+void new_nonce(uint8_t *nonce) { random_nonce(nonce); }
 
 /* Create a request to peer.
  * send_public_key and send_secret_key are the pub/secret keys of the sender.
@@ -233,8 +222,8 @@ int create_request(const uint8_t *send_public_key, const uint8_t *send_secret_ke
         return -1;
     }
 
-    if (MAX_CRYPTO_REQUEST_SIZE < length + 1 + crypto_box_PUBLICKEYBYTES * 2 + crypto_box_NONCEBYTES + 1 +
-            crypto_box_MACBYTES) {
+    if (MAX_CRYPTO_REQUEST_SIZE
+        < length + 1 + crypto_box_PUBLICKEYBYTES * 2 + crypto_box_NONCEBYTES + 1 + crypto_box_MACBYTES) {
         return -1;
     }
 
@@ -270,8 +259,8 @@ int handle_request(const uint8_t *self_public_key, const uint8_t *self_secret_ke
         return -1;
     }
 
-    if (length <= crypto_box_PUBLICKEYBYTES * 2 + crypto_box_NONCEBYTES + 1 + crypto_box_MACBYTES ||
-            length > MAX_CRYPTO_REQUEST_SIZE) {
+    if (length <= crypto_box_PUBLICKEYBYTES * 2 + crypto_box_NONCEBYTES + 1 + crypto_box_MACBYTES
+        || length > MAX_CRYPTO_REQUEST_SIZE) {
         return -1;
     }
 
@@ -281,8 +270,8 @@ int handle_request(const uint8_t *self_public_key, const uint8_t *self_secret_ke
 
     memcpy(public_key, packet + 1 + crypto_box_PUBLICKEYBYTES, crypto_box_PUBLICKEYBYTES);
     const uint8_t *nonce = packet + 1 + crypto_box_PUBLICKEYBYTES * 2;
-    uint8_t temp[MAX_CRYPTO_REQUEST_SIZE]; // TODO(irungentoo): sodium_memzero before exit function
-    int len1 = decrypt_data(public_key, self_secret_key, nonce,
+    uint8_t        temp[MAX_CRYPTO_REQUEST_SIZE]; // TODO(irungentoo): sodium_memzero before exit function
+    int            len1 = decrypt_data(public_key, self_secret_key, nonce,
                             packet + 1 + crypto_box_PUBLICKEYBYTES * 2 + crypto_box_NONCEBYTES,
                             length - (crypto_box_PUBLICKEYBYTES * 2 + crypto_box_NONCEBYTES + 1), temp);
 

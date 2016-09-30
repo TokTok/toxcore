@@ -32,7 +32,8 @@
  *   at the cost of slow add/remove functions for large lists
  * -Starts at 1/2 of the array, compares the element in the array with the data,
  *   then moves +/- 1/4 of the array depending on whether the value is greater or lower,
- *   then +- 1/8, etc, until the value is matched or its position where it should be in the array is found
+ *   then +- 1/8, etc, until the value is matched or its position where it should be in the array is
+ * found
  * -some considerations since the array size is never perfect
  */
 
@@ -47,20 +48,20 @@
  */
 static int find(const BS_LIST *list, const uint8_t *data)
 {
-    //should work well, but could be improved
+    // should work well, but could be improved
     if (list->n == 0) {
         return INDEX(0);
     }
 
-    uint32_t i = list->n / 2; //current position in the array
-    uint32_t delta = i / 2;   //how much we move in the array
+    uint32_t i     = list->n / 2; // current position in the array
+    uint32_t delta = i / 2;       // how much we move in the array
 
     if (!delta) {
         delta = 1;
     }
 
-    int d = -1; //used to determine if closest match is found
-    //closest match is found if we move back to where we have already been
+    int d = -1; // used to determine if closest match is found
+    // closest match is found if we move back to where we have already been
 
     while (1) {
         int r = memcmp(data, list->data + list->element_size * i, list->element_size);
@@ -70,12 +71,12 @@ static int find(const BS_LIST *list, const uint8_t *data)
         }
 
         if (r > 0) {
-            //data is greater
-            //move down
+            // data is greater
+            // move down
             i += delta;
 
             if (d == 0 || i == list->n) {
-                //reached bottom of list, or closest match
+                // reached bottom of list, or closest match
                 return INDEX(i);
             }
 
@@ -83,23 +84,23 @@ static int find(const BS_LIST *list, const uint8_t *data)
 
             if (delta == 0) {
                 delta = 1;
-                d = 1;
+                d     = 1;
             }
         } else {
-            //data is smaller
+            // data is smaller
             if (d == 1 || i == 0) {
-                //reached top or list or closest match
+                // reached top or list or closest match
                 return INDEX(i);
             }
 
-            //move up
+            // move up
             i -= delta;
 
             delta = (delta) / 2;
 
             if (delta == 0) {
                 delta = 1;
-                d = 0;
+                d     = 0;
             }
         }
     }
@@ -135,12 +136,12 @@ static int resize(BS_LIST *list, uint32_t new_size)
 
 int bs_list_init(BS_LIST *list, uint32_t element_size, uint32_t initial_capacity)
 {
-    //set initial values
-    list->n = 0;
+    // set initial values
+    list->n            = 0;
     list->element_size = element_size;
-    list->capacity = 0;
-    list->data = NULL;
-    list->ids = NULL;
+    list->capacity     = 0;
+    list->data         = NULL;
+    list->ids          = NULL;
 
     if (initial_capacity != 0) {
         if (!resize(list, initial_capacity)) {
@@ -155,7 +156,7 @@ int bs_list_init(BS_LIST *list, uint32_t element_size, uint32_t initial_capacity
 
 void bs_list_free(BS_LIST *list)
 {
-    //free both arrays
+    // free both arrays
     free(list->data);
     free(list->ids);
 }
@@ -164,7 +165,7 @@ int bs_list_find(const BS_LIST *list, const uint8_t *data)
 {
     int r = find(list, data);
 
-    //return only -1 and positive values
+    // return only -1 and positive values
     if (r < 0) {
         return -1;
     }
@@ -174,18 +175,18 @@ int bs_list_find(const BS_LIST *list, const uint8_t *data)
 
 int bs_list_add(BS_LIST *list, const uint8_t *data, int id)
 {
-    //find where the new element should be inserted
-    //see: return value of find()
+    // find where the new element should be inserted
+    // see: return value of find()
     int i = find(list, data);
 
     if (i >= 0) {
-        //already in list
+        // already in list
         return 0;
     }
 
     i = ~i;
 
-    //increase the size of the arrays if needed
+    // increase the size of the arrays if needed
     if (list->n == list->capacity) {
         // 1.5 * n + 1
         const uint32_t new_capacity = list->n + list->n / 2 + 1;
@@ -197,16 +198,16 @@ int bs_list_add(BS_LIST *list, const uint8_t *data, int id)
         list->capacity = new_capacity;
     }
 
-    //insert data to element array
+    // insert data to element array
     memmove(list->data + (i + 1) * list->element_size, list->data + i * list->element_size,
             (list->n - i) * list->element_size);
     memcpy(list->data + i * list->element_size, data, list->element_size);
 
-    //insert id to id array
+    // insert id to id array
     memmove(&list->ids[i + 1], &list->ids[i], (list->n - i) * sizeof(int));
     list->ids[i] = id;
 
-    //increase n
+    // increase n
     list->n++;
 
     return 1;
@@ -221,11 +222,11 @@ int bs_list_remove(BS_LIST *list, const uint8_t *data, int id)
     }
 
     if (list->ids[i] != id) {
-        //this should never happen
+        // this should never happen
         return 0;
     }
 
-    //decrease the size of the arrays if needed
+    // decrease the size of the arrays if needed
     if (list->n < list->capacity / 2) {
         const uint32_t new_capacity = list->capacity / 2;
 

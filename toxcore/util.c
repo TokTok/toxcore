@@ -46,22 +46,13 @@ void unix_time_update(void)
     unix_time_value = (current_time_monotonic() / 1000ULL) + unix_base_time_value;
 }
 
-uint64_t unix_time(void)
-{
-    return unix_time_value;
-}
+uint64_t unix_time(void) { return unix_time_value; }
 
-int is_timeout(uint64_t timestamp, uint64_t timeout)
-{
-    return timestamp + timeout <= unix_time();
-}
+int is_timeout(uint64_t timestamp, uint64_t timeout) { return timestamp + timeout <= unix_time(); }
 
 
 /* id functions */
-bool id_equal(const uint8_t *dest, const uint8_t *src)
-{
-    return public_key_cmp(dest, src) == 0;
-}
+bool id_equal(const uint8_t *dest, const uint8_t *src) { return public_key_cmp(dest, src) == 0; }
 
 uint32_t id_copy(uint8_t *dest, const uint8_t *src)
 {
@@ -73,7 +64,7 @@ void host_to_net(uint8_t *num, uint16_t numbytes)
 {
 #ifndef WORDS_BIGENDIAN
     uint32_t i;
-    uint8_t buff[numbytes];
+    uint8_t  buff[numbytes];
 
     for (i = 0; i < numbytes; ++i) {
         buff[i] = num[numbytes - i - 1];
@@ -92,7 +83,7 @@ uint16_t lendian_to_host16(uint16_t lendian)
 #endif
 }
 
-void host_to_lendian32(uint8_t *dest,  uint32_t num)
+void host_to_lendian32(uint8_t *dest, uint32_t num)
 {
 #ifdef WORDS_BIGENDIAN
     num = ((num << 8) & 0xFF00FF00) | ((num >> 8) & 0xFF00FF);
@@ -113,8 +104,8 @@ void lendian_to_host32(uint32_t *dest, const uint8_t *lendian)
 }
 
 /* state load/save */
-int load_state(load_state_callback_func load_state_callback, void *outer,
-               const uint8_t *data, uint32_t length, uint16_t cookie_inner)
+int load_state(load_state_callback_func load_state_callback, void *outer, const uint8_t *data, uint32_t length,
+               uint16_t cookie_inner)
 {
     if (!load_state_callback || !data) {
 #ifdef TOX_DEBUG
@@ -135,7 +126,7 @@ int load_state(load_state_callback_func load_state_callback, void *outer,
         length -= size_head;
 
         if (length < length_sub) {
-            /* file truncated */
+/* file truncated */
 #ifdef TOX_DEBUG
             fprintf(stderr, "state file too short: %u < %u\n", length, length_sub);
 #endif
@@ -143,7 +134,7 @@ int load_state(load_state_callback_func load_state_callback, void *outer,
         }
 
         if (lendian_to_host16((cookie_type >> 16)) != cookie_inner) {
-            /* something is not matching up in a bad way, give up */
+/* something is not matching up in a bad way, give up */
 #ifdef DEBUG
             fprintf(stderr, "state file garbled: %04x != %04x\n", (cookie_type >> 16), cookie_inner);
 #endif

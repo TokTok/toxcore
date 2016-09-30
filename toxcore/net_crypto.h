@@ -32,9 +32,9 @@
 #include <pthread.h>
 
 #define CRYPTO_CONN_NO_CONNECTION 0
-#define CRYPTO_CONN_COOKIE_REQUESTING 1 //send cookie request packets
-#define CRYPTO_CONN_HANDSHAKE_SENT 2 //send handshake packets
-#define CRYPTO_CONN_NOT_CONFIRMED 3 //send handshake packets, we have received one from the other
+#define CRYPTO_CONN_COOKIE_REQUESTING 1 // send cookie request packets
+#define CRYPTO_CONN_HANDSHAKE_SENT 2    // send handshake packets
+#define CRYPTO_CONN_NOT_CONFIRMED 3     // send handshake packets, we have received one from the other
 #define CRYPTO_CONN_ESTABLISHED 4
 
 /* Maximum size of receiving and sending packet buffers. */
@@ -66,7 +66,7 @@
 
 #define PACKET_ID_PADDING 0 /* Denotes padding */
 #define PACKET_ID_REQUEST 1 /* Used to request unreceived packets */
-#define PACKET_ID_KILL    2 /* Used to kill connection */
+#define PACKET_ID_KILL 2    /* Used to kill connection */
 
 /* Packet ids 0 to CRYPTO_RESERVED_PACKETS - 1 are reserved for use by net_crypto. */
 #define CRYPTO_RESERVED_PACKETS 16
@@ -92,38 +92,41 @@
 typedef struct {
     uint64_t sent_time;
     uint16_t length;
-    uint8_t data[MAX_CRYPTO_DATA_SIZE];
+    uint8_t  data[MAX_CRYPTO_DATA_SIZE];
 } Packet_Data;
 
 typedef struct {
     Packet_Data *buffer[CRYPTO_PACKET_BUFFER_SIZE];
-    uint32_t  buffer_start;
-    uint32_t  buffer_end; /* packet numbers in array: {buffer_start, buffer_end) */
+    uint32_t     buffer_start;
+    uint32_t     buffer_end; /* packet numbers in array: {buffer_start, buffer_end) */
 } Packets_Array;
 
 typedef struct {
-    uint8_t public_key[crypto_box_PUBLICKEYBYTES]; /* The real public key of the peer. */
-    uint8_t recv_nonce[crypto_box_NONCEBYTES]; /* Nonce of received packets. */
-    uint8_t sent_nonce[crypto_box_NONCEBYTES]; /* Nonce of sent packets. */
-    uint8_t sessionpublic_key[crypto_box_PUBLICKEYBYTES]; /* Our public key for this session. */
-    uint8_t sessionsecret_key[crypto_box_SECRETKEYBYTES]; /* Our private key for this session. */
+    uint8_t public_key[crypto_box_PUBLICKEYBYTES];            /* The real public key of the peer. */
+    uint8_t recv_nonce[crypto_box_NONCEBYTES];                /* Nonce of received packets. */
+    uint8_t sent_nonce[crypto_box_NONCEBYTES];                /* Nonce of sent packets. */
+    uint8_t sessionpublic_key[crypto_box_PUBLICKEYBYTES];     /* Our public key for this session. */
+    uint8_t sessionsecret_key[crypto_box_SECRETKEYBYTES];     /* Our private key for this session. */
     uint8_t peersessionpublic_key[crypto_box_PUBLICKEYBYTES]; /* The public key of the peer. */
-    uint8_t shared_key[crypto_box_BEFORENMBYTES]; /* The precomputed shared key from encrypt_precompute. */
-    uint8_t status; /* 0 if no connection, 1 we are sending cookie request packets,
-                     * 2 if we are sending handshake packets
-                     * 3 if connection is not confirmed yet (we have received a handshake but no data packets yet),
-                     * 4 if the connection is established.
-                     */
+    uint8_t shared_key[crypto_box_BEFORENMBYTES];             /* The precomputed shared key from
+                                                                 encrypt_precompute. */
+    uint8_t status;                 /* 0 if no connection, 1 we are sending cookie request packets,
+                                     * 2 if we are sending handshake packets
+                                     * 3 if connection is not confirmed yet (we have received a handshake but no data
+                                     * packets yet),
+                                     * 4 if the connection is established.
+                                     */
     uint64_t cookie_request_number; /* number used in the cookie request packets for this connection */
-    uint8_t dht_public_key[crypto_box_PUBLICKEYBYTES]; /* The dht public key of the peer */
+    uint8_t  dht_public_key[crypto_box_PUBLICKEYBYTES]; /* The dht public key of the peer */
 
-    uint8_t *temp_packet; /* Where the cookie request/handshake packet is stored while it is being sent. */
+    uint8_t *temp_packet; /* Where the cookie request/handshake packet is stored while it is being
+                             sent. */
     uint16_t temp_packet_length;
     uint64_t temp_packet_sent_time; /* The time at which the last temp_packet was sent in ms. */
     uint32_t temp_packet_num_sent;
 
-    IP_Port ip_portv4; /* The ip and port to contact this guy directly.*/
-    IP_Port ip_portv6;
+    IP_Port  ip_portv4; /* The ip and port to contact this guy directly.*/
+    IP_Port  ip_portv6;
     uint64_t direct_lastrecv_timev4; /* The Time at which we last received a direct packet in ms. */
     uint64_t direct_lastrecv_timev6;
 
@@ -134,36 +137,36 @@ typedef struct {
 
     int (*connection_status_callback)(void *object, int id, uint8_t status, void *userdata);
     void *connection_status_callback_object;
-    int connection_status_callback_id;
+    int   connection_status_callback_id;
 
     int (*connection_data_callback)(void *object, int id, const uint8_t *data, uint16_t length, void *userdata);
     void *connection_data_callback_object;
-    int connection_data_callback_id;
+    int   connection_data_callback_id;
 
     int (*connection_lossy_data_callback)(void *object, int id, const uint8_t *data, uint16_t length, void *userdata);
     void *connection_lossy_data_callback_object;
-    int connection_lossy_data_callback_id;
+    int   connection_lossy_data_callback_id;
 
     uint64_t last_request_packet_sent;
     uint64_t direct_send_attempt_time;
 
     uint32_t packet_counter;
-    double packet_recv_rate;
+    double   packet_recv_rate;
     uint64_t packet_counter_set;
 
-    double packet_send_rate;
+    double   packet_send_rate;
     uint32_t packets_left;
     uint64_t last_packets_left_set;
-    double last_packets_left_rem;
+    double   last_packets_left_rem;
 
-    double packet_send_rate_requested;
+    double   packet_send_rate_requested;
     uint32_t packets_left_requested;
     uint64_t last_packets_left_requested_set;
-    double last_packets_left_requested_rem;
+    double   last_packets_left_requested_rem;
 
-    uint32_t last_sendqueue_size[CONGESTION_QUEUE_ARRAY_SIZE], last_sendqueue_counter;
+    uint32_t        last_sendqueue_size[CONGESTION_QUEUE_ARRAY_SIZE], last_sendqueue_counter;
     long signed int last_num_packets_sent[CONGESTION_LAST_SENT_ARRAY_SIZE],
-         last_num_packets_resent[CONGESTION_LAST_SENT_ARRAY_SIZE];
+        last_num_packets_resent[CONGESTION_LAST_SENT_ARRAY_SIZE];
     uint32_t packets_sent, packets_resent;
     uint64_t last_congestion_event;
     uint64_t rtt_time;
@@ -176,31 +179,31 @@ typedef struct {
     pthread_mutex_t mutex;
 
     void (*dht_pk_callback)(void *data, int32_t number, const uint8_t *dht_public_key, void *userdata);
-    void *dht_pk_callback_object;
+    void *   dht_pk_callback_object;
     uint32_t dht_pk_callback_number;
 } Crypto_Connection;
 
 typedef struct {
-    IP_Port source;
-    uint8_t public_key[crypto_box_PUBLICKEYBYTES]; /* The real public key of the peer. */
-    uint8_t dht_public_key[crypto_box_PUBLICKEYBYTES]; /* The dht public key of the peer. */
-    uint8_t recv_nonce[crypto_box_NONCEBYTES]; /* Nonce of received packets. */
-    uint8_t peersessionpublic_key[crypto_box_PUBLICKEYBYTES]; /* The public key of the peer. */
+    IP_Port  source;
+    uint8_t  public_key[crypto_box_PUBLICKEYBYTES];            /* The real public key of the peer. */
+    uint8_t  dht_public_key[crypto_box_PUBLICKEYBYTES];        /* The dht public key of the peer. */
+    uint8_t  recv_nonce[crypto_box_NONCEBYTES];                /* Nonce of received packets. */
+    uint8_t  peersessionpublic_key[crypto_box_PUBLICKEYBYTES]; /* The public key of the peer. */
     uint8_t *cookie;
-    uint8_t cookie_length;
+    uint8_t  cookie_length;
 } New_Connection;
 
 typedef struct {
     Logger *log;
 
-    DHT *dht;
+    DHT *            dht;
     TCP_Connections *tcp_c;
 
     Crypto_Connection *crypto_connections;
-    pthread_mutex_t tcp_mutex;
+    pthread_mutex_t    tcp_mutex;
 
     pthread_mutex_t connections_mutex;
-    unsigned int connection_use_counter;
+    unsigned int    connection_use_counter;
 
     uint32_t crypto_connections_length; /* Length of connections array. */
 
@@ -265,9 +268,11 @@ int set_direct_ip_port(Net_Crypto *c, int crypt_connection_id, IP_Port ip_port, 
  * return 0 on success.
  */
 int connection_status_handler(const Net_Crypto *c, int crypt_connection_id,
-                              int (*connection_status_callback)(void *object, int id, uint8_t status, void *userdata), void *object, int id);
+                              int (*connection_status_callback)(void *object, int id, uint8_t status, void *userdata),
+                              void *object, int id);
 
-/* Set function to be called when connection with crypt_connection_id receives a lossless data packet of length.
+/* Set function to be called when connection with crypt_connection_id receives a lossless data
+ * packet of length.
  *
  * The set function should return -1 on failure and 0 on success.
  * Object and id will be passed to this function untouched.
@@ -275,11 +280,14 @@ int connection_status_handler(const Net_Crypto *c, int crypt_connection_id,
  * return -1 on failure.
  * return 0 on success.
  */
-int connection_data_handler(const Net_Crypto *c, int crypt_connection_id, int (*connection_data_callback)(void *object,
-                            int id, const uint8_t *data, uint16_t length, void *userdata), void *object, int id);
+int connection_data_handler(const Net_Crypto *c, int crypt_connection_id,
+                            int (*connection_data_callback)(void *object, int id, const uint8_t *data, uint16_t length,
+                                                            void *userdata),
+                            void *object, int id);
 
 
-/* Set function to be called when connection with crypt_connection_id receives a lossy data packet of length.
+/* Set function to be called when connection with crypt_connection_id receives a lossy data packet
+ * of length.
  *
  * The set function should return -1 on failure and 0 on success.
  * Object and id will be passed to this function untouched.
@@ -288,9 +296,9 @@ int connection_data_handler(const Net_Crypto *c, int crypt_connection_id, int (*
  * return 0 on success.
  */
 int connection_lossy_data_handler(Net_Crypto *c, int crypt_connection_id,
-                                  int (*connection_lossy_data_callback)(void *object, int id, const uint8_t *data, uint16_t length, void *userdata),
-                                  void *object,
-                                  int id);
+                                  int (*connection_lossy_data_callback)(void *object, int id, const uint8_t *data,
+                                                                        uint16_t length, void *userdata),
+                                  void *object, int id);
 
 /* Set the function for this friend that will be callbacked with object and number if
  * the friend sends us a different dht public key than we have associated to him.
@@ -302,15 +310,17 @@ int connection_lossy_data_handler(Net_Crypto *c, int crypt_connection_id,
  * return -1 on failure.
  * return 0 on success.
  */
-int nc_dht_pk_callback(Net_Crypto *c, int crypt_connection_id, void (*function)(void *data, int32_t number,
-                       const uint8_t *dht_public_key, void *userdata), void *object, uint32_t number);
+int nc_dht_pk_callback(Net_Crypto *c, int crypt_connection_id,
+                       void (*function)(void *data, int32_t number, const uint8_t *dht_public_key, void *userdata),
+                       void *object, uint32_t number);
 
 /* returns the number of packet slots left in the sendbuffer.
  * return 0 if failure.
  */
 uint32_t crypto_num_free_sendqueue_slots(const Net_Crypto *c, int crypt_connection_id);
 
-/* Return 1 if max speed was reached for this connection (no more data can be physically through the pipe).
+/* Return 1 if max speed was reached for this connection (no more data can be physically through the
+ * pipe).
  * Return 0 if it wasn't reached.
  */
 bool max_speed_reached(Net_Crypto *c, int crypt_connection_id);
@@ -320,7 +330,8 @@ bool max_speed_reached(Net_Crypto *c, int crypt_connection_id);
  * return -1 if data could not be put in packet queue.
  * return positive packet number if data was put into the queue.
  *
- * The first byte of data must be in the CRYPTO_RESERVED_PACKETS to PACKET_ID_LOSSY_RANGE_START range.
+ * The first byte of data must be in the CRYPTO_RESERVED_PACKETS to PACKET_ID_LOSSY_RANGE_START
+ * range.
  *
  * congestion_control: should congestion control apply to this packet?
  */
@@ -422,7 +433,6 @@ uint32_t crypto_run_interval(const Net_Crypto *c);
 void do_net_crypto(Net_Crypto *c, void *userdata);
 
 void kill_net_crypto(Net_Crypto *c);
-
 
 
 #endif

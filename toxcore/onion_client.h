@@ -61,35 +61,35 @@
 #define ONION_DATA_DHTPK CRYPTO_PACKET_DHTPK
 
 typedef struct {
-    uint8_t     public_key[crypto_box_PUBLICKEYBYTES];
-    IP_Port     ip_port;
-    uint8_t     ping_id[ONION_PING_ID_SIZE];
-    uint8_t     data_public_key[crypto_box_PUBLICKEYBYTES];
-    uint8_t     is_stored;
+    uint8_t public_key[crypto_box_PUBLICKEYBYTES];
+    IP_Port ip_port;
+    uint8_t ping_id[ONION_PING_ID_SIZE];
+    uint8_t data_public_key[crypto_box_PUBLICKEYBYTES];
+    uint8_t is_stored;
 
-    uint64_t    timestamp;
+    uint64_t timestamp;
 
-    uint64_t    last_pinged;
+    uint64_t last_pinged;
 
-    uint32_t    path_used;
+    uint32_t path_used;
 } Onion_Node;
 
 typedef struct {
     Onion_Path paths[NUMBER_ONION_PATHS];
-    uint64_t last_path_success[NUMBER_ONION_PATHS];
-    uint64_t last_path_used[NUMBER_ONION_PATHS];
-    uint64_t path_creation_time[NUMBER_ONION_PATHS];
+    uint64_t   last_path_success[NUMBER_ONION_PATHS];
+    uint64_t   last_path_used[NUMBER_ONION_PATHS];
+    uint64_t   path_creation_time[NUMBER_ONION_PATHS];
     /* number of times used without success. */
     unsigned int last_path_used_times[NUMBER_ONION_PATHS];
 } Onion_Client_Paths;
 
 typedef struct {
-    uint8_t     public_key[crypto_box_PUBLICKEYBYTES];
-    uint64_t    timestamp;
+    uint8_t  public_key[crypto_box_PUBLICKEYBYTES];
+    uint64_t timestamp;
 } Last_Pinged;
 
 typedef struct {
-    uint8_t status; /* 0 if friend is not valid, 1 if friend is valid.*/
+    uint8_t status;    /* 0 if friend is not valid, 1 if friend is valid.*/
     uint8_t is_online; /* Set by the onion_set_friend_status function. */
 
     uint8_t know_dht_public_key; /* 0 if we don't know the dht public key of the other, 1 if we do. */
@@ -97,8 +97,8 @@ typedef struct {
     uint8_t real_public_key[crypto_box_PUBLICKEYBYTES];
 
     Onion_Node clients_list[MAX_ONION_CLIENTS];
-    uint8_t temp_public_key[crypto_box_PUBLICKEYBYTES];
-    uint8_t temp_secret_key[crypto_box_SECRETKEYBYTES];
+    uint8_t    temp_public_key[crypto_box_PUBLICKEYBYTES];
+    uint8_t    temp_secret_key[crypto_box_SECRETKEYBYTES];
 
     uint64_t last_dht_pk_onion_sent;
     uint64_t last_dht_pk_dht_sent;
@@ -108,35 +108,35 @@ typedef struct {
     uint64_t last_seen;
 
     Last_Pinged last_pinged[MAX_STORED_PINGED_NODES];
-    uint8_t last_pinged_index;
+    uint8_t     last_pinged_index;
 
     int (*tcp_relay_node_callback)(void *object, uint32_t number, IP_Port ip_port, const uint8_t *public_key);
-    void *tcp_relay_node_callback_object;
+    void *   tcp_relay_node_callback_object;
     uint32_t tcp_relay_node_callback_number;
 
     void (*dht_pk_callback)(void *data, int32_t number, const uint8_t *dht_public_key, void *userdata);
-    void *dht_pk_callback_object;
+    void *   dht_pk_callback_object;
     uint32_t dht_pk_callback_number;
 
     uint32_t run_count;
 } Onion_Friend;
 
-typedef int (*oniondata_handler_callback)(void *object, const uint8_t *source_pubkey, const uint8_t *data,
-        uint16_t len, void *userdata);
+typedef int (*oniondata_handler_callback)(void *object, const uint8_t *source_pubkey, const uint8_t *data, uint16_t len,
+                                          void *userdata);
 
 typedef struct {
-    DHT     *dht;
-    Net_Crypto *c;
+    DHT *            dht;
+    Net_Crypto *     c;
     Networking_Core *net;
-    Onion_Friend    *friends_list;
-    uint16_t       num_friends;
+    Onion_Friend *   friends_list;
+    uint16_t         num_friends;
 
     Onion_Node clients_announce_list[MAX_ONION_CLIENTS_ANNOUNCE];
 
     Onion_Client_Paths onion_paths_self;
     Onion_Client_Paths onion_paths_friends;
 
-    uint8_t secret_symmetric_key[crypto_box_KEYBYTES];
+    uint8_t  secret_symmetric_key[crypto_box_KEYBYTES];
     uint64_t last_run, first_run;
 
     uint8_t temp_public_key[crypto_box_PUBLICKEYBYTES];
@@ -145,22 +145,22 @@ typedef struct {
     Last_Pinged last_pinged[MAX_STORED_PINGED_NODES];
 
     Node_format path_nodes[MAX_PATH_NODES];
-    uint16_t path_nodes_index;
+    uint16_t    path_nodes_index;
 
     Node_format path_nodes_bs[MAX_PATH_NODES];
-    uint16_t path_nodes_index_bs;
+    uint16_t    path_nodes_index_bs;
 
     Ping_Array announce_ping_array;
-    uint8_t last_pinged_index;
+    uint8_t    last_pinged_index;
     struct {
         oniondata_handler_callback function;
-        void *object;
+        void *                     object;
     } Onion_Data_Handlers[256];
 
     uint64_t last_packet_recv;
 
     unsigned int onion_connected;
-    bool UDP_connected;
+    bool         UDP_connected;
 } Onion_Client;
 
 
@@ -199,7 +199,8 @@ int onion_addfriend(Onion_Client *onion_c, const uint8_t *public_key);
 int onion_delfriend(Onion_Client *onion_c, int friend_num);
 
 /* Set if friend is online or not.
- * NOTE: This function is there and should be used so that we don't send useless packets to the friend if he is online.
+ * NOTE: This function is there and should be used so that we don't send useless packets to the
+ * friend if he is online.
  *
  * is_online 1 means friend is online.
  * is_online 0 means friend is offline
@@ -226,8 +227,10 @@ int onion_getfriendip(const Onion_Client *onion_c, int friend_num, IP_Port *ip_p
  * return -1 on failure.
  * return 0 on success.
  */
-int recv_tcp_relay_handler(Onion_Client *onion_c, int friend_num, int (*tcp_relay_node_callback)(void *object,
-                           uint32_t number, IP_Port ip_port, const uint8_t *public_key), void *object, uint32_t number);
+int recv_tcp_relay_handler(Onion_Client *onion_c, int friend_num,
+                           int (*tcp_relay_node_callback)(void *object, uint32_t number, IP_Port ip_port,
+                                                          const uint8_t *public_key),
+                           void *object, uint32_t number);
 
 
 /* Set the function for this friend that will be callbacked with object and number
@@ -238,8 +241,9 @@ int recv_tcp_relay_handler(Onion_Client *onion_c, int friend_num, int (*tcp_rela
  * return -1 on failure.
  * return 0 on success.
  */
-int onion_dht_pk_callback(Onion_Client *onion_c, int friend_num, void (*function)(void *data, int32_t number,
-                          const uint8_t *dht_public_key, void *userdata), void *object, uint32_t number);
+int onion_dht_pk_callback(Onion_Client *onion_c, int friend_num,
+                          void (*function)(void *data, int32_t number, const uint8_t *dht_public_key, void *userdata),
+                          void *object, uint32_t number);
 
 /* Set a friends DHT public key.
  * timestamp is the time (current_time_monotonic()) at which the key was last confirmed belonging to

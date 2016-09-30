@@ -27,28 +27,21 @@
 
 #include "Messenger.h"
 
-enum {
-    GROUPCHAT_STATUS_NONE,
-    GROUPCHAT_STATUS_VALID,
-    GROUPCHAT_STATUS_CONNECTED
-};
+enum { GROUPCHAT_STATUS_NONE, GROUPCHAT_STATUS_VALID, GROUPCHAT_STATUS_CONNECTED };
 
-enum {
-    GROUPCHAT_TYPE_TEXT,
-    GROUPCHAT_TYPE_AV
-};
+enum { GROUPCHAT_TYPE_TEXT, GROUPCHAT_TYPE_AV };
 
 #define MAX_LOSSY_COUNT 256
 
 typedef struct {
-    uint8_t     real_pk[crypto_box_PUBLICKEYBYTES];
-    uint8_t     temp_pk[crypto_box_PUBLICKEYBYTES];
+    uint8_t real_pk[crypto_box_PUBLICKEYBYTES];
+    uint8_t temp_pk[crypto_box_PUBLICKEYBYTES];
 
-    uint64_t    last_recv;
-    uint32_t    last_message_number;
+    uint64_t last_recv;
+    uint32_t last_message_number;
 
-    uint8_t     nick[MAX_NAME_LENGTH];
-    uint8_t     nick_len;
+    uint8_t nick[MAX_NAME_LENGTH];
+    uint8_t nick_len;
 
     uint16_t peer_number;
 
@@ -60,23 +53,21 @@ typedef struct {
 
 #define DESIRED_CLOSE_CONNECTIONS 4
 #define MAX_GROUP_CONNECTIONS 16
-#define GROUP_IDENTIFIER_LENGTH (1 + crypto_box_KEYBYTES) /* type + crypto_box_KEYBYTES so we can use new_symmetric_key(...) to fill it */
+#define GROUP_IDENTIFIER_LENGTH                                                                     \
+    (1 + crypto_box_KEYBYTES) /* type + crypto_box_KEYBYTES so we can use new_symmetric_key(...) to \
+                                 fill it */
 
-enum {
-    GROUPCHAT_CLOSE_NONE,
-    GROUPCHAT_CLOSE_CONNECTION,
-    GROUPCHAT_CLOSE_ONLINE
-};
+enum { GROUPCHAT_CLOSE_NONE, GROUPCHAT_CLOSE_CONNECTION, GROUPCHAT_CLOSE_ONLINE };
 
 typedef struct {
     uint8_t status;
 
     Group_Peer *group;
-    uint32_t numpeers;
+    uint32_t    numpeers;
 
     struct {
-        uint8_t type; /* GROUPCHAT_CLOSE_* */
-        uint8_t closest;
+        uint8_t  type; /* GROUPCHAT_CLOSE_* */
+        uint8_t  closest;
         uint32_t number;
         uint16_t group_number;
     } close[MAX_GROUP_CONNECTIONS];
@@ -110,7 +101,7 @@ typedef struct {
 } Group_c;
 
 typedef struct {
-    Messenger *m;
+    Messenger *         m;
     Friend_Connections *fr_c;
 
     Group_c *chats;
@@ -128,33 +119,37 @@ typedef struct {
 
 /* Set the callback for group invites.
  *
- *  Function(Group_Chats *g_c, int32_t friendnumber, uint8_t type, uint8_t *data, uint16_t length, void *userdata)
+ *  Function(Group_Chats *g_c, int32_t friendnumber, uint8_t type, uint8_t *data, uint16_t length,
+ * void *userdata)
  *
  *  data of length is what needs to be passed to join_groupchat().
  */
-void g_callback_group_invite(Group_Chats *g_c, void (*function)(Messenger *m, uint32_t, int, const uint8_t *,
-                             size_t, void *));
+void g_callback_group_invite(Group_Chats *g_c,
+                             void (*function)(Messenger *m, uint32_t, int, const uint8_t *, size_t, void *));
 
 /* Set the callback for group messages.
  *
- *  Function(Group_Chats *g_c, int groupnumber, int friendgroupnumber, uint8_t * message, uint16_t length, void *userdata)
+ *  Function(Group_Chats *g_c, int groupnumber, int friendgroupnumber, uint8_t * message, uint16_t
+ * length, void *userdata)
  */
-void g_callback_group_message(Group_Chats *g_c, void (*function)(Messenger *m, uint32_t, uint32_t, int, const uint8_t *,
-                              size_t, void *));
+void g_callback_group_message(Group_Chats *g_c,
+                              void (*function)(Messenger *m, uint32_t, uint32_t, int, const uint8_t *, size_t, void *));
 
 
 /* Set callback function for title changes.
  *
- * Function(Group_Chats *g_c, int groupnumber, int friendgroupnumber, uint8_t * title, uint8_t length, void *userdata)
+ * Function(Group_Chats *g_c, int groupnumber, int friendgroupnumber, uint8_t * title, uint8_t
+ * length, void *userdata)
  * if friendgroupnumber == -1, then author is unknown (e.g. initial joining the group)
  */
-void g_callback_group_title(Group_Chats *g_c, void (*function)(Messenger *m, uint32_t, uint32_t, const uint8_t *,
-                            size_t, void *));
+void g_callback_group_title(Group_Chats *g_c,
+                            void (*function)(Messenger *m, uint32_t, uint32_t, const uint8_t *, size_t, void *));
 
 /* Set callback function for peer name list changes.
  *
  * It gets called every time the name list changes(new peer/name, deleted peer)
- *  Function(Group_Chats *g_c, int groupnumber, int peernumber, TOX_CHAT_CHANGE change, void *userdata)
+ *  Function(Group_Chats *g_c, int groupnumber, int peernumber, TOX_CHAT_CHANGE change, void
+ * *userdata)
  */
 enum {
     CHAT_CHANGE_PEER_ADD,
@@ -293,10 +288,11 @@ int group_names(const Group_Chats *g_c, int groupnumber, uint8_t names[][MAX_NAM
  *
  * NOTE: Handler must return 0 if packet is to be relayed, -1 if the packet should not be relayed.
  *
- * Function(void *group object (set with group_set_object), int groupnumber, int friendgroupnumber, void *group peer object (set with group_peer_set_object), const uint8_t *packet, uint16_t length)
+ * Function(void *group object (set with group_set_object), int groupnumber, int friendgroupnumber,
+ * void *group peer object (set with group_peer_set_object), const uint8_t *packet, uint16_t length)
  */
-void group_lossy_packet_registerhandler(Group_Chats *g_c, uint8_t byte, int (*function)(void *, int, int, void *,
-                                        const uint8_t *, uint16_t));
+void group_lossy_packet_registerhandler(Group_Chats *g_c, uint8_t byte,
+                                        int (*function)(void *, int, int, void *, const uint8_t *, uint16_t));
 
 /* High level function to send custom lossy packets.
  *
@@ -368,7 +364,8 @@ int callback_groupchat_peer_new(const Group_Chats *g_c, int groupnumber, void (*
 
 /* Set a function to be called when a peer leaves a group chat.
  *
- * Function(void *group object (set with group_set_object), int groupnumber, int friendgroupnumber, void *group peer object (set with group_peer_set_object))
+ * Function(void *group object (set with group_set_object), int groupnumber, int friendgroupnumber,
+ * void *group peer object (set with group_peer_set_object))
  *
  * return 0 on success.
  * return -1 on failure.

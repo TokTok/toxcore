@@ -30,29 +30,23 @@
 #include "util.h"
 
 /* Set and get the nospam variable used to prevent one type of friend request spam. */
-void set_nospam(Friend_Requests *fr, uint32_t num)
-{
-    fr->nospam = num;
-}
+void set_nospam(Friend_Requests *fr, uint32_t num) { fr->nospam = num; }
 
-uint32_t get_nospam(const Friend_Requests *fr)
-{
-    return fr->nospam;
-}
+uint32_t get_nospam(const Friend_Requests *fr) { return fr->nospam; }
 
 
 /* Set the function that will be executed when a friend request is received. */
-void callback_friendrequest(Friend_Requests *fr, void (*function)(void *, const uint8_t *, const uint8_t *, size_t,
-                            void *), void *object)
+void callback_friendrequest(Friend_Requests *fr,
+                            void (*function)(void *, const uint8_t *, const uint8_t *, size_t, void *), void *object)
 {
-    fr->handle_friendrequest = function;
-    fr->handle_friendrequest_isset = 1;
+    fr->handle_friendrequest        = function;
+    fr->handle_friendrequest_isset  = 1;
     fr->handle_friendrequest_object = object;
 }
 /* Set the function used to check if a friend request should be displayed to the user or not. */
 void set_filter_function(Friend_Requests *fr, int (*function)(const uint8_t *, void *), void *userdata)
 {
-    fr->filter_function = function;
+    fr->filter_function          = function;
     fr->filter_function_userdata = userdata;
 }
 
@@ -138,7 +132,7 @@ static int friendreq_handlepacket(void *object, const uint8_t *source_pubkey, co
     addto_receivedlist(fr, source_pubkey);
 
     uint32_t message_len = length - sizeof(fr->nospam);
-    uint8_t message[message_len + 1];
+    uint8_t  message[message_len + 1];
     memcpy(message, packet + sizeof(fr->nospam), message_len);
     message[sizeof(message) - 1] = 0; /* Be sure the message is null terminated. */
 

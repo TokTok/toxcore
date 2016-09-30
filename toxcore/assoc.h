@@ -28,14 +28,14 @@ typedef struct Assoc Assoc;
 /* custom distance handler, if it's not ID-distance based
  * return values exactly like id_closest() */
 typedef int (*Assoc_distance_relative_callback)(const Assoc *assoc, void *callback_data, const uint8_t *client_id,
-        const uint8_t *client_id1, const uint8_t *client_id2);
+                                                const uint8_t *client_id1, const uint8_t *client_id2);
 
 #define DISTANCE_INDEX_DISTANCE_BITS 44
 
 /* absolute distance: can be same for different client_id_check values
  * return value should have DISTANCE_INDEX_DISTANCE_BITS valid bits */
 typedef uint64_t (*Assoc_distance_absolute_callback)(const Assoc *assoc, void *callback_data,
-        const uint8_t *client_id_ref, const uint8_t *client_id_check);
+                                                     const uint8_t *client_id_ref, const uint8_t *client_id_check);
 
 /*****************************************************************************/
 
@@ -53,16 +53,16 @@ typedef enum AssocCloseEntriesFlags {
 } AssocCloseEntriesFlags;
 
 typedef struct Assoc_close_entries {
-    void                              *custom_data;        /* given to distance functions */
-    const uint8_t                     *wanted_id;          /* the target client_id */
-    uint8_t                            flags;              /* additional flags */
+    void *         custom_data; /* given to distance functions */
+    const uint8_t *wanted_id;   /* the target client_id */
+    uint8_t        flags;       /* additional flags */
 
-    Assoc_distance_relative_callback   distance_relative_func;
-    Assoc_distance_absolute_callback   distance_absolute_func;
+    Assoc_distance_relative_callback distance_relative_func;
+    Assoc_distance_absolute_callback distance_absolute_func;
 
-    uint8_t                            count_good;   /* that many should be "good" w.r.t. timeout */
-    uint8_t                            count;        /* allocated number of close_indices */
-    Client_data                      **result;
+    uint8_t       count_good; /* that many should be "good" w.r.t. timeout */
+    uint8_t       count;      /* allocated number of close_indices */
+    Client_data **result;
 } Assoc_close_entries;
 
 /* find up to close_count nodes to put into close_nodes_used of ID_Nodes

@@ -22,7 +22,7 @@
  */
 
 #if (_WIN32_WINNT >= _WIN32_WINNT_WINXP)
-#define _WIN32_WINNT  0x501
+#define _WIN32_WINNT 0x501
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -34,7 +34,7 @@
 #include "logger.h"
 #include "util.h"
 
-#if !defined(_WIN32) && !defined(__WIN32__) && !defined (WIN32)
+#if !defined(_WIN32) && !defined(__WIN32__) && !defined(WIN32)
 #include <errno.h>
 #endif
 
@@ -43,7 +43,7 @@
 #include <mach/mach.h>
 #endif
 
-#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 
 static const char *inet_ntop(sa_family_t family, const void *addr, char *buf, size_t bufsize)
 {
@@ -52,7 +52,7 @@ static const char *inet_ntop(sa_family_t family, const void *addr, char *buf, si
         memset(&saddr, 0, sizeof(saddr));
 
         saddr.sin_family = AF_INET;
-        saddr.sin_addr = *(const struct in_addr *)addr;
+        saddr.sin_addr   = *(const struct in_addr *)addr;
 
         DWORD len = bufsize;
 
@@ -66,7 +66,7 @@ static const char *inet_ntop(sa_family_t family, const void *addr, char *buf, si
         memset(&saddr, 0, sizeof(saddr));
 
         saddr.sin6_family = AF_INET6;
-        saddr.sin6_addr = *(const struct in6_addr *)addr;
+        saddr.sin6_addr   = *(const struct in6_addr *)addr;
 
         DWORD len = bufsize;
 
@@ -122,7 +122,7 @@ static int inet_pton(sa_family_t family, const char *addrString, void *addrbuf)
  */
 int sock_valid(sock_t sock)
 {
-#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 
     if (sock == INVALID_SOCKET) {
 #else
@@ -139,7 +139,7 @@ int sock_valid(sock_t sock)
  */
 void kill_sock(sock_t sock)
 {
-#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
     closesocket(sock);
 #else
     close(sock);
@@ -153,7 +153,7 @@ void kill_sock(sock_t sock)
  */
 int set_socket_nonblock(sock_t sock)
 {
-#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
     u_long mode = 1;
     return (ioctlsocket(sock, FIONBIO, &mode) == 0);
 #else
@@ -194,9 +194,9 @@ int set_socket_reuseaddr(sock_t sock)
  */
 int set_socket_dualstack(sock_t sock)
 {
-    int ipv6only = 0;
-    socklen_t optsize = sizeof(ipv6only);
-    int res = getsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, (void *)&ipv6only, &optsize);
+    int       ipv6only = 0;
+    socklen_t optsize  = sizeof(ipv6only);
+    int       res      = getsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, (void *)&ipv6only, &optsize);
 
     if ((res == 0) && (ipv6only == 0)) {
         return 1;
@@ -211,7 +211,7 @@ int set_socket_dualstack(sock_t sock)
 static uint64_t current_time_actual(void)
 {
     uint64_t time;
-#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
     /* This probably works fine */
     FILETIME ft;
     GetSystemTimeAsFileTime(&ft);
@@ -229,7 +229,7 @@ static uint64_t current_time_actual(void)
 }
 
 
-#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 static uint64_t last_monotime;
 static uint64_t add_monotime;
 #endif
@@ -238,7 +238,7 @@ static uint64_t add_monotime;
 uint64_t current_time_monotonic(void)
 {
     uint64_t time;
-#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
     time = (uint64_t)GetTickCount() + add_monotime;
 
     if (time < last_monotime) { /* Prevent time from ever decreasing because of 32 bit wrap. */
@@ -253,19 +253,19 @@ uint64_t current_time_monotonic(void)
 #if defined(__linux__) && defined(CLOCK_MONOTONIC_RAW)
     clock_gettime(CLOCK_MONOTONIC_RAW, &monotime);
 #elif defined(__APPLE__)
-    clock_serv_t muhclock;
+    clock_serv_t    muhclock;
     mach_timespec_t machtime;
 
     host_get_clock_service(mach_host_self(), SYSTEM_CLOCK, &muhclock);
     clock_get_time(muhclock, &machtime);
     mach_port_deallocate(mach_task_self(), muhclock);
 
-    monotime.tv_sec = machtime.tv_sec;
+    monotime.tv_sec  = machtime.tv_sec;
     monotime.tv_nsec = machtime.tv_nsec;
 #else
     clock_gettime(CLOCK_MONOTONIC, &monotime);
 #endif
-    time = 1000ULL * monotime.tv_sec + (monotime.tv_nsec / 1000000ULL);
+    time              = 1000ULL * monotime.tv_sec + (monotime.tv_nsec / 1000000ULL);
 #endif
     return time;
 }
@@ -279,24 +279,21 @@ static uint32_t data_1(uint16_t buflen, const uint8_t *buffer)
     return buflen > 7 ? ntohl(*(const uint32_t *)&buffer[5]) : 0;
 }
 
-static void loglogdata(Logger *log, const char *message, const uint8_t *buffer,
-                       uint16_t buflen, IP_Port ip_port, int res)
+static void loglogdata(Logger *log, const char *message, const uint8_t *buffer, uint16_t buflen, IP_Port ip_port,
+                       int res)
 {
     if (res < 0) { /* Windows doesn't necessarily know %zu */
-        LOGGER_TRACE(log, "[%2u] %s %3hu%c %s:%hu (%u: %s) | %04x%04x",
-                     buffer[0], message, (buflen < 999 ? (uint16_t)buflen : 999), 'E',
-                     ip_ntoa(&ip_port.ip), ntohs(ip_port.port), errno, strerror(errno), data_0(buflen, buffer),
-                     data_1(buflen, buffer));
+        LOGGER_TRACE(log, "[%2u] %s %3hu%c %s:%hu (%u: %s) | %04x%04x", buffer[0], message,
+                     (buflen < 999 ? (uint16_t)buflen : 999), 'E', ip_ntoa(&ip_port.ip), ntohs(ip_port.port), errno,
+                     strerror(errno), data_0(buflen, buffer), data_1(buflen, buffer));
     } else if ((res > 0) && ((size_t)res <= buflen)) {
-        LOGGER_TRACE(log, "[%2u] %s %3zu%c %s:%hu (%u: %s) | %04x%04x",
-                     buffer[0], message, (res < 999 ? (size_t)res : 999), ((size_t)res < buflen ? '<' : '='),
-                     ip_ntoa(&ip_port.ip), ntohs(ip_port.port), 0, "OK", data_0(buflen, buffer), data_1(buflen,
-                             buffer));
+        LOGGER_TRACE(log, "[%2u] %s %3zu%c %s:%hu (%u: %s) | %04x%04x", buffer[0], message,
+                     (res < 999 ? (size_t)res : 999), ((size_t)res < buflen ? '<' : '='), ip_ntoa(&ip_port.ip),
+                     ntohs(ip_port.port), 0, "OK", data_0(buflen, buffer), data_1(buflen, buffer));
     } else { /* empty or overwrite */
-        LOGGER_TRACE(log, "[%2u] %s %zu%c%zu %s:%hu (%u: %s) | %04x%04x",
-                     buffer[0], message, (size_t)res, (!res ? '!' : '>'), buflen,
-                     ip_ntoa(&ip_port.ip), ntohs(ip_port.port), 0, "OK", data_0(buflen, buffer), data_1(buflen,
-                             buffer));
+        LOGGER_TRACE(log, "[%2u] %s %zu%c%zu %s:%hu (%u: %s) | %04x%04x", buffer[0], message, (size_t)res,
+                     (!res ? '!' : '>'), buflen, ip_ntoa(&ip_port.ip), ntohs(ip_port.port), 0, "OK",
+                     data_0(buflen, buffer), data_1(buflen, buffer));
     }
 }
 
@@ -324,18 +321,18 @@ int sendpacket(Networking_Core *net, IP_Port ip_port, const uint8_t *data, uint1
             /* must convert to IPV4-in-IPV6 address */
             struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *)&addr;
 
-            addrsize = sizeof(struct sockaddr_in6);
+            addrsize           = sizeof(struct sockaddr_in6);
             addr6->sin6_family = AF_INET6;
-            addr6->sin6_port = ip_port.port;
+            addr6->sin6_port   = ip_port.port;
 
             /* there should be a macro for this in a standards compliant
              * environment, not found */
             IP6 ip6;
 
-            ip6.uint32[0] = 0;
-            ip6.uint32[1] = 0;
-            ip6.uint32[2] = htonl(0xFFFF);
-            ip6.uint32[3] = ip_port.ip.ip4.uint32;
+            ip6.uint32[0]    = 0;
+            ip6.uint32[1]    = 0;
+            ip6.uint32[2]    = htonl(0xFFFF);
+            ip6.uint32[3]    = ip_port.ip.ip4.uint32;
             addr6->sin6_addr = ip6.in6_addr;
 
             addr6->sin6_flowinfo = 0;
@@ -343,18 +340,18 @@ int sendpacket(Networking_Core *net, IP_Port ip_port, const uint8_t *data, uint1
         } else {
             struct sockaddr_in *addr4 = (struct sockaddr_in *)&addr;
 
-            addrsize = sizeof(struct sockaddr_in);
+            addrsize          = sizeof(struct sockaddr_in);
             addr4->sin_family = AF_INET;
-            addr4->sin_addr = ip_port.ip.ip4.in_addr;
-            addr4->sin_port = ip_port.port;
+            addr4->sin_addr   = ip_port.ip.ip4.in_addr;
+            addr4->sin_port   = ip_port.port;
         }
     } else if (ip_port.ip.family == AF_INET6) {
         struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *)&addr;
 
-        addrsize = sizeof(struct sockaddr_in6);
+        addrsize           = sizeof(struct sockaddr_in6);
         addr6->sin6_family = AF_INET6;
-        addr6->sin6_port = ip_port.port;
-        addr6->sin6_addr = ip_port.ip.ip6.in6_addr;
+        addr6->sin6_port   = ip_port.port;
+        addr6->sin6_addr   = ip_port.ip.ip6.in6_addr;
 
         addr6->sin6_flowinfo = 0;
         addr6->sin6_scope_id = 0;
@@ -363,7 +360,7 @@ int sendpacket(Networking_Core *net, IP_Port ip_port, const uint8_t *data, uint1
         return -1;
     }
 
-    int res = sendto(net->sock, (const char *) data, length, 0, (struct sockaddr *)&addr, addrsize);
+    int res = sendto(net->sock, (const char *)data, length, 0, (struct sockaddr *)&addr, addrsize);
 
     loglogdata(net->log, "O=>", data, length, ip_port, res);
 
@@ -379,13 +376,13 @@ static int receivepacket(Logger *log, sock_t sock, IP_Port *ip_port, uint8_t *da
 {
     memset(ip_port, 0, sizeof(IP_Port));
     struct sockaddr_storage addr;
-#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
     int addrlen = sizeof(addr);
 #else
     socklen_t addrlen = sizeof(addr);
 #endif
-    *length = 0;
-    int fail_or_len = recvfrom(sock, (char *) data, MAX_UDP_PACKET_SIZE, 0, (struct sockaddr *)&addr, &addrlen);
+    *length         = 0;
+    int fail_or_len = recvfrom(sock, (char *)data, MAX_UDP_PACKET_SIZE, 0, (struct sockaddr *)&addr, &addrlen);
 
     if (fail_or_len < 0) {
 
@@ -401,17 +398,17 @@ static int receivepacket(Logger *log, sock_t sock, IP_Port *ip_port, uint8_t *da
     if (addr.ss_family == AF_INET) {
         struct sockaddr_in *addr_in = (struct sockaddr_in *)&addr;
 
-        ip_port->ip.family = addr_in->sin_family;
+        ip_port->ip.family      = addr_in->sin_family;
         ip_port->ip.ip4.in_addr = addr_in->sin_addr;
-        ip_port->port = addr_in->sin_port;
+        ip_port->port           = addr_in->sin_port;
     } else if (addr.ss_family == AF_INET6) {
         struct sockaddr_in6 *addr_in6 = (struct sockaddr_in6 *)&addr;
-        ip_port->ip.family = addr_in6->sin6_family;
-        ip_port->ip.ip6.in6_addr = addr_in6->sin6_addr;
-        ip_port->port = addr_in6->sin6_port;
+        ip_port->ip.family            = addr_in6->sin6_family;
+        ip_port->ip.ip6.in6_addr      = addr_in6->sin6_addr;
+        ip_port->port                 = addr_in6->sin6_port;
 
         if (IPV6_IPV4_IN_V6(ip_port->ip.ip6)) {
-            ip_port->ip.family = AF_INET;
+            ip_port->ip.family     = AF_INET;
             ip_port->ip.ip4.uint32 = ip_port->ip.ip6.uint32[3];
         }
     } else {
@@ -426,7 +423,7 @@ static int receivepacket(Logger *log, sock_t sock, IP_Port *ip_port, uint8_t *da
 void networking_registerhandler(Networking_Core *net, uint8_t byte, packet_handler_callback cb, void *object)
 {
     net->packethandlers[byte].function = cb;
-    net->packethandlers[byte].object = object;
+    net->packethandlers[byte].object   = object;
 }
 
 void networking_poll(Networking_Core *net, void *userdata)
@@ -437,8 +434,8 @@ void networking_poll(Networking_Core *net, void *userdata)
 
     unix_time_update();
 
-    IP_Port ip_port;
-    uint8_t data[MAX_UDP_PACKET_SIZE];
+    IP_Port  ip_port;
+    uint8_t  data[MAX_UDP_PACKET_SIZE];
     uint32_t length;
 
     while (receivepacket(net->log, net->sock, &ip_port, data, &length) != -1) {
@@ -461,7 +458,7 @@ void networking_poll(Networking_Core *net, void *userdata)
 #endif
 
 static uint8_t at_startup_ran = 0;
-int networking_at_startup(void)
+int            networking_at_startup(void)
 {
     if (at_startup_ran != 0) {
         return 0;
@@ -479,9 +476,9 @@ int networking_at_startup(void)
 
 #endif /*USE_RANDOMBYTES_STIR*/
 
-#endif/*VANILLA_NACL*/
+#endif /*VANILLA_NACL*/
 
-#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
     WSADATA wsaData;
 
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != NO_ERROR) {
@@ -498,7 +495,7 @@ int networking_at_startup(void)
 #if 0
 static void at_shutdown(void)
 {
-#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
     WSACleanup();
 #endif
 }
@@ -530,15 +527,15 @@ Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint1
      */
     if (port_from == 0 && port_to == 0) {
         port_from = TOX_PORTRANGE_FROM;
-        port_to = TOX_PORTRANGE_TO;
+        port_to   = TOX_PORTRANGE_TO;
     } else if (port_from == 0 && port_to != 0) {
         port_from = port_to;
     } else if (port_from != 0 && port_to == 0) {
         port_to = port_from;
     } else if (port_from > port_to) {
         uint16_t temp = port_from;
-        port_from = port_to;
-        port_to = temp;
+        port_from     = port_to;
+        port_to       = temp;
     }
 
     if (error) {
@@ -563,9 +560,9 @@ Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint1
         return NULL;
     }
 
-    temp->log = log;
+    temp->log    = log;
     temp->family = ip.family;
-    temp->port = 0;
+    temp->port   = 0;
 
     /* Initialize our socket. */
     /* add log message what we're creating */
@@ -618,26 +615,26 @@ Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint1
     }
 
     /* Bind our socket to port PORT and the given IP address (usually 0.0.0.0 or ::) */
-    uint16_t *portptr = NULL;
+    uint16_t *              portptr = NULL;
     struct sockaddr_storage addr;
-    size_t addrsize;
+    size_t                  addrsize;
 
     if (temp->family == AF_INET) {
         struct sockaddr_in *addr4 = (struct sockaddr_in *)&addr;
 
-        addrsize = sizeof(struct sockaddr_in);
+        addrsize          = sizeof(struct sockaddr_in);
         addr4->sin_family = AF_INET;
-        addr4->sin_port = 0;
-        addr4->sin_addr = ip.ip4.in_addr;
+        addr4->sin_port   = 0;
+        addr4->sin_addr   = ip.ip4.in_addr;
 
         portptr = &addr4->sin_port;
     } else if (temp->family == AF_INET6) {
         struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *)&addr;
 
-        addrsize = sizeof(struct sockaddr_in6);
+        addrsize           = sizeof(struct sockaddr_in6);
         addr6->sin6_family = AF_INET6;
-        addr6->sin6_port = 0;
-        addr6->sin6_addr = ip.ip6.in6_addr;
+        addr6->sin6_port   = 0;
+        addr6->sin6_addr   = ip.ip6.in6_addr;
 
         addr6->sin6_flowinfo = 0;
         addr6->sin6_scope_id = 0;
@@ -651,18 +648,20 @@ Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint1
     if (ip.family == AF_INET6) {
         int is_dualstack = set_socket_dualstack(temp->sock);
         LOGGER_DEBUG(log, "Dual-stack socket: %s",
-                     is_dualstack ? "enabled" : "Failed to enable, won't be able to receive from/send to IPv4 addresses");
+                     is_dualstack ? "enabled"
+                                  : "Failed to enable, won't be able to receive from/send to IPv4 addresses");
         /* multicast local nodes */
         struct ipv6_mreq mreq;
         memset(&mreq, 0, sizeof(mreq));
-        mreq.ipv6mr_multiaddr.s6_addr[ 0] = 0xFF;
-        mreq.ipv6mr_multiaddr.s6_addr[ 1] = 0x02;
+        mreq.ipv6mr_multiaddr.s6_addr[0]  = 0xFF;
+        mreq.ipv6mr_multiaddr.s6_addr[1]  = 0x02;
         mreq.ipv6mr_multiaddr.s6_addr[15] = 0x01;
-        mreq.ipv6mr_interface = 0;
+        mreq.ipv6mr_interface             = 0;
         int res = setsockopt(temp->sock, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, (char *)&mreq, sizeof(mreq));
 
-        LOGGER_DEBUG(log, res < 0 ? "Failed to activate local multicast membership. (%u, %s)" :
-                     "Local multicast group FF02::1 joined successfully", errno, strerror(errno));
+        LOGGER_DEBUG(log, res < 0 ? "Failed to activate local multicast membership. (%u, %s)"
+                                  : "Local multicast group FF02::1 joined successfully",
+                     errno, strerror(errno));
     }
 
     /* a hanging program or a different user might block the standard port;
@@ -682,7 +681,7 @@ Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint1
      *   it worked ok (which it did previously without a successful bind)
      */
     uint16_t port_to_try = port_from;
-    *portptr = htons(port_to_try);
+    *portptr             = htons(port_to_try);
     int tries;
 
     for (tries = port_from; tries <= port_to; tries++) {
@@ -773,7 +772,7 @@ int ip_equal(const IP *a, const IP *b)
         if (IPV6_IPV4_IN_V6(b->ip6)) {
             return (a->ip4.in_addr.s_addr == b->ip6.uint32[3]);
         }
-    } else if ((a->family == AF_INET6)  && (b->family == AF_INET)) {
+    } else if ((a->family == AF_INET6) && (b->family == AF_INET)) {
         if (IPV6_IPV4_IN_V6(a->ip6)) {
             return (a->ip6.uint32[3] == b->ip4.in_addr.s_addr);
         }
@@ -890,8 +889,8 @@ const char *ip_ntoa(const IP *ip)
 
             addresstext[0] = '[';
             inet_ntop(ip->family, addr, &addresstext[1], sizeof(addresstext) - 3);
-            size_t len = strlen(addresstext);
-            addresstext[len] = ']';
+            size_t len           = strlen(addresstext);
+            addresstext[len]     = ']';
             addresstext[len + 1] = 0;
         } else {
             snprintf(addresstext, sizeof(addresstext), "(IP invalid, family %u)", ip->family);
@@ -961,7 +960,7 @@ int addr_parse_ip(const char *address, IP *to)
     struct in_addr addr4;
 
     if (1 == inet_pton(AF_INET, address, &addr4)) {
-        to->family = AF_INET;
+        to->family      = AF_INET;
         to->ip4.in_addr = addr4;
         return 1;
     }
@@ -969,7 +968,7 @@ int addr_parse_ip(const char *address, IP *to)
     struct in6_addr addr6;
 
     if (1 == inet_pton(AF_INET6, address, &addr6)) {
-        to->family = AF_INET6;
+        to->family       = AF_INET6;
         to->ip6.in6_addr = addr6;
         return 1;
     }
@@ -1005,9 +1004,9 @@ int addr_resolve(const char *address, IP *to, IP *extra)
     struct addrinfo *server = NULL;
     struct addrinfo *walker = NULL;
     struct addrinfo  hints;
-    int rc;
-    int result = 0;
-    int done = 0;
+    int              rc;
+    int              result = 0;
+    int              done   = 0;
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family   = family;
@@ -1034,12 +1033,12 @@ int addr_resolve(const char *address, IP *to, IP *extra)
             case AF_INET:
                 if (walker->ai_family == family) { /* AF_INET requested, done */
                     struct sockaddr_in *addr = (struct sockaddr_in *)walker->ai_addr;
-                    to->ip4.in_addr = addr->sin_addr;
-                    result = TOX_ADDR_RESOLVE_INET;
-                    done = 1;
+                    to->ip4.in_addr          = addr->sin_addr;
+                    result                   = TOX_ADDR_RESOLVE_INET;
+                    done                     = 1;
                 } else if (!(result & TOX_ADDR_RESOLVE_INET)) { /* AF_UNSPEC requested, store away */
                     struct sockaddr_in *addr = (struct sockaddr_in *)walker->ai_addr;
-                    ip4.ip4.in_addr = addr->sin_addr;
+                    ip4.ip4.in_addr          = addr->sin_addr;
                     result |= TOX_ADDR_RESOLVE_INET;
                 }
 
@@ -1049,14 +1048,14 @@ int addr_resolve(const char *address, IP *to, IP *extra)
                 if (walker->ai_family == family) { /* AF_INET6 requested, done */
                     if (walker->ai_addrlen == sizeof(struct sockaddr_in6)) {
                         struct sockaddr_in6 *addr = (struct sockaddr_in6 *)walker->ai_addr;
-                        to->ip6.in6_addr = addr->sin6_addr;
-                        result = TOX_ADDR_RESOLVE_INET6;
-                        done = 1;
+                        to->ip6.in6_addr          = addr->sin6_addr;
+                        result                    = TOX_ADDR_RESOLVE_INET6;
+                        done                      = 1;
                     }
                 } else if (!(result & TOX_ADDR_RESOLVE_INET6)) { /* AF_UNSPEC requested, store away */
                     if (walker->ai_addrlen == sizeof(struct sockaddr_in6)) {
                         struct sockaddr_in6 *addr = (struct sockaddr_in6 *)walker->ai_addr;
-                        ip6.ip6.in6_addr = addr->sin6_addr;
+                        ip6.ip6.in6_addr          = addr->sin6_addr;
                         result |= TOX_ADDR_RESOLVE_INET6;
                     }
                 }

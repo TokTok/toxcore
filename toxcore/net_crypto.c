@@ -58,7 +58,8 @@ static uint8_t crypt_connection_id_not_valid(const Net_Crypto *c, int crypt_conn
 #define COOKIE_LENGTH (crypto_box_NONCEBYTES + COOKIE_CONTENTS_LENGTH + crypto_box_MACBYTES)
 
 #define COOKIE_REQUEST_PLAIN_LENGTH (COOKIE_DATA_LENGTH + sizeof(uint64_t))
-#define COOKIE_REQUEST_LENGTH (1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES + COOKIE_REQUEST_PLAIN_LENGTH + crypto_box_MACBYTES)
+#define COOKIE_REQUEST_LENGTH \
+    (1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES + COOKIE_REQUEST_PLAIN_LENGTH + crypto_box_MACBYTES)
 #define COOKIE_RESPONSE_LENGTH (1 + crypto_box_NONCEBYTES + COOKIE_LENGTH + sizeof(uint64_t) + crypto_box_MACBYTES)
 
 /* Create a cookie request packet and put it in packet.
@@ -95,19 +96,21 @@ static int create_cookie_request(const Net_Crypto *c, uint8_t *packet, uint8_t *
     return (1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES + len);
 }
 
-/* Create cookie of length COOKIE_LENGTH from bytes of length COOKIE_DATA_LENGTH using encryption_key
+/* Create cookie of length COOKIE_LENGTH from bytes of length COOKIE_DATA_LENGTH using
+ * encryption_key
  *
  * return -1 on failure.
  * return 0 on success.
  */
 static int create_cookie(uint8_t *cookie, const uint8_t *bytes, const uint8_t *encryption_key)
 {
-    uint8_t contents[COOKIE_CONTENTS_LENGTH];
+    uint8_t  contents[COOKIE_CONTENTS_LENGTH];
     uint64_t temp_time = unix_time();
     memcpy(contents, &temp_time, sizeof(temp_time));
     memcpy(contents + sizeof(temp_time), bytes, COOKIE_DATA_LENGTH);
     new_nonce(cookie);
-    int len = encrypt_data_symmetric(encryption_key, cookie, contents, sizeof(contents), cookie + crypto_box_NONCEBYTES);
+    int len =
+        encrypt_data_symmetric(encryption_key, cookie, contents, sizeof(contents), cookie + crypto_box_NONCEBYTES);
 
     if (len != COOKIE_LENGTH - crypto_box_NONCEBYTES) {
         return -1;
@@ -124,7 +127,7 @@ static int create_cookie(uint8_t *cookie, const uint8_t *bytes, const uint8_t *e
 static int open_cookie(uint8_t *bytes, const uint8_t *cookie, const uint8_t *encryption_key)
 {
     uint8_t contents[COOKIE_CONTENTS_LENGTH];
-    int len = decrypt_data_symmetric(encryption_key, cookie, cookie + crypto_box_NONCEBYTES,
+    int     len = decrypt_data_symmetric(encryption_key, cookie, cookie + crypto_box_NONCEBYTES,
                                      COOKIE_LENGTH - crypto_box_NONCEBYTES, contents);
 
     if (len != sizeof(contents)) {
@@ -177,7 +180,8 @@ static int create_cookie_response(const Net_Crypto *c, uint8_t *packet, const ui
 
 /* Handle the cookie request packet of length length.
  * Put what was in the request in request_plain (must be of size COOKIE_REQUEST_PLAIN_LENGTH)
- * Put the key used to decrypt the request into shared_key (of size crypto_box_BEFORENMBYTES) for use in the response.
+ * Put the key used to decrypt the request into shared_key (of size crypto_box_BEFORENMBYTES) for
+ * use in the response.
  *
  * return -1 on failure.
  * return 0 on success.
@@ -192,8 +196,8 @@ static int handle_cookie_request(const Net_Crypto *c, uint8_t *request_plain, ui
     memcpy(dht_public_key, packet + 1, crypto_box_PUBLICKEYBYTES);
     DHT_get_shared_key_sent(c->dht, shared_key, dht_public_key);
     int len = decrypt_data_symmetric(shared_key, packet + 1 + crypto_box_PUBLICKEYBYTES,
-                                     packet + 1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES, COOKIE_REQUEST_PLAIN_LENGTH + crypto_box_MACBYTES,
-                                     request_plain);
+                                     packet + 1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES,
+                                     COOKIE_REQUEST_PLAIN_LENGTH + crypto_box_MACBYTES, request_plain);
 
     if (len != COOKIE_REQUEST_PLAIN_LENGTH) {
         return -1;
@@ -208,9 +212,9 @@ static int udp_handle_cookie_request(void *object, IP_Port source, const uint8_t
                                      void *userdata)
 {
     Net_Crypto *c = (Net_Crypto *)object;
-    uint8_t request_plain[COOKIE_REQUEST_PLAIN_LENGTH];
-    uint8_t shared_key[crypto_box_BEFORENMBYTES];
-    uint8_t dht_public_key[crypto_box_PUBLICKEYBYTES];
+    uint8_t     request_plain[COOKIE_REQUEST_PLAIN_LENGTH];
+    uint8_t     shared_key[crypto_box_BEFORENMBYTES];
+    uint8_t     dht_public_key[crypto_box_PUBLICKEYBYTES];
 
     if (handle_cookie_request(c, request_plain, shared_key, dht_public_key, packet, length) != 0) {
         return 1;
@@ -254,7 +258,7 @@ static int tcp_handle_cookie_request(Net_Crypto *c, int connections_number, cons
 /* Handle the cookie request packet (for TCP oob packets)
  */
 static int tcp_oob_handle_cookie_request(const Net_Crypto *c, unsigned int tcp_connections_number,
-        const uint8_t *dht_public_key, const uint8_t *packet, uint16_t length)
+                                         const uint8_t *dht_public_key, const uint8_t *packet, uint16_t length)
 {
     uint8_t request_plain[COOKIE_REQUEST_PLAIN_LENGTH];
     uint8_t shared_key[crypto_box_BEFORENMBYTES];
@@ -294,7 +298,7 @@ static int handle_cookie_response(uint8_t *cookie, uint64_t *number, const uint8
     }
 
     uint8_t plain[COOKIE_LENGTH + sizeof(uint64_t)];
-    int len = decrypt_data_symmetric(shared_key, packet + 1, packet + 1 + crypto_box_NONCEBYTES,
+    int     len = decrypt_data_symmetric(shared_key, packet + 1, packet + 1 + crypto_box_NONCEBYTES,
                                      length - (1 + crypto_box_NONCEBYTES), plain);
 
     if (len != sizeof(plain)) {
@@ -306,7 +310,9 @@ static int handle_cookie_response(uint8_t *cookie, uint64_t *number, const uint8
     return COOKIE_LENGTH;
 }
 
-#define HANDSHAKE_PACKET_LENGTH (1 + COOKIE_LENGTH + crypto_box_NONCEBYTES + crypto_box_NONCEBYTES + crypto_box_PUBLICKEYBYTES + crypto_hash_sha512_BYTES + COOKIE_LENGTH + crypto_box_MACBYTES)
+#define HANDSHAKE_PACKET_LENGTH                                                                    \
+    (1 + COOKIE_LENGTH + crypto_box_NONCEBYTES + crypto_box_NONCEBYTES + crypto_box_PUBLICKEYBYTES \
+     + crypto_hash_sha512_BYTES + COOKIE_LENGTH + crypto_box_MACBYTES)
 
 /* Create a handshake packet and put it in packet.
  * cookie must be COOKIE_LENGTH bytes.
@@ -316,7 +322,8 @@ static int handle_cookie_response(uint8_t *cookie, uint64_t *number, const uint8
  * return HANDSHAKE_PACKET_LENGTH on success.
  */
 static int create_crypto_handshake(const Net_Crypto *c, uint8_t *packet, const uint8_t *cookie, const uint8_t *nonce,
-                                   const uint8_t *session_pk, const uint8_t *peer_real_pk, const uint8_t *peer_dht_pubkey)
+                                   const uint8_t *session_pk, const uint8_t *peer_real_pk,
+                                   const uint8_t *peer_dht_pubkey)
 {
     uint8_t plain[crypto_box_NONCEBYTES + crypto_box_PUBLICKEYBYTES + crypto_hash_sha512_BYTES + COOKIE_LENGTH];
     memcpy(plain, nonce, crypto_box_NONCEBYTES);
@@ -326,8 +333,9 @@ static int create_crypto_handshake(const Net_Crypto *c, uint8_t *packet, const u
     memcpy(cookie_plain, peer_real_pk, crypto_box_PUBLICKEYBYTES);
     memcpy(cookie_plain + crypto_box_PUBLICKEYBYTES, peer_dht_pubkey, crypto_box_PUBLICKEYBYTES);
 
-    if (create_cookie(plain + crypto_box_NONCEBYTES + crypto_box_PUBLICKEYBYTES + crypto_hash_sha512_BYTES, cookie_plain,
-                      c->secret_symmetric_key) != 0) {
+    if (create_cookie(plain + crypto_box_NONCEBYTES + crypto_box_PUBLICKEYBYTES + crypto_hash_sha512_BYTES,
+                      cookie_plain, c->secret_symmetric_key)
+        != 0) {
         return -1;
     }
 
@@ -364,7 +372,8 @@ static int create_crypto_handshake(const Net_Crypto *c, uint8_t *packet, const u
  * return 0 on success.
  */
 static int handle_crypto_handshake(const Net_Crypto *c, uint8_t *nonce, uint8_t *session_pk, uint8_t *peer_real_pk,
-                                   uint8_t *dht_public_key, uint8_t *cookie, const uint8_t *packet, uint16_t length, const uint8_t *expected_real_pk)
+                                   uint8_t *dht_public_key, uint8_t *cookie, const uint8_t *packet, uint16_t length,
+                                   const uint8_t *expected_real_pk)
 {
     if (length != HANDSHAKE_PACKET_LENGTH) {
         return -1;
@@ -386,7 +395,7 @@ static int handle_crypto_handshake(const Net_Crypto *c, uint8_t *nonce, uint8_t 
     crypto_hash_sha512(cookie_hash, packet + 1, COOKIE_LENGTH);
 
     uint8_t plain[crypto_box_NONCEBYTES + crypto_box_PUBLICKEYBYTES + crypto_hash_sha512_BYTES + COOKIE_LENGTH];
-    int len = decrypt_data(cookie_plain, c->self_secret_key, packet + 1 + COOKIE_LENGTH,
+    int     len = decrypt_data(cookie_plain, c->self_secret_key, packet + 1 + COOKIE_LENGTH,
                            packet + 1 + COOKIE_LENGTH + crypto_box_NONCEBYTES,
                            HANDSHAKE_PACKET_LENGTH - (1 + COOKIE_LENGTH + crypto_box_NONCEBYTES), plain);
 
@@ -394,8 +403,8 @@ static int handle_crypto_handshake(const Net_Crypto *c, uint8_t *nonce, uint8_t 
         return -1;
     }
 
-    if (sodium_memcmp(cookie_hash, plain + crypto_box_NONCEBYTES + crypto_box_PUBLICKEYBYTES,
-                      crypto_hash_sha512_BYTES) != 0) {
+    if (sodium_memcmp(cookie_hash, plain + crypto_box_NONCEBYTES + crypto_box_PUBLICKEYBYTES, crypto_hash_sha512_BYTES)
+        != 0) {
         return -1;
     }
 
@@ -473,7 +482,7 @@ static IP_Port return_ip_port_connection(Net_Crypto *c, int crypt_connection_id)
     }
 
     uint64_t current_time = unix_time();
-    bool v6 = 0, v4 = 0;
+    bool     v6 = 0, v4 = 0;
 
     if ((UDP_DIRECT_TIMEOUT + conn->direct_lastrecv_timev4) > current_time) {
         v4 = 1;
@@ -505,7 +514,7 @@ static IP_Port return_ip_port_connection(Net_Crypto *c, int crypt_connection_id)
  */
 static int send_packet_to(Net_Crypto *c, int crypt_connection_id, const uint8_t *data, uint16_t length)
 {
-// TODO(irungentoo): TCP, etc...
+    // TODO(irungentoo): TCP, etc...
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == 0) {
@@ -536,9 +545,9 @@ static int send_packet_to(Net_Crypto *c, int crypt_connection_id, const uint8_t 
         uint64_t current_time = unix_time();
 
         if ((((UDP_DIRECT_TIMEOUT / 2) + conn->direct_send_attempt_time) > current_time && length < 96)
-                || data[0] == NET_PACKET_COOKIE_REQUEST || data[0] == NET_PACKET_CRYPTO_HS) {
+            || data[0] == NET_PACKET_COOKIE_REQUEST || data[0] == NET_PACKET_CRYPTO_HS) {
             if ((uint32_t)sendpacket(c->dht->net, ip_port, data, length) == length) {
-                direct_send_attempt = 1;
+                direct_send_attempt            = 1;
                 conn->direct_send_attempt_time = unix_time();
             }
         }
@@ -570,10 +579,7 @@ static int send_packet_to(Net_Crypto *c, int crypt_connection_id, const uint8_t 
 /* Return number of packets in array
  * Note that holes are counted too.
  */
-static uint32_t num_packets_array(const Packets_Array *array)
-{
-    return array->buffer_end - array->buffer_start;
-}
+static uint32_t num_packets_array(const Packets_Array *array) { return array->buffer_end - array->buffer_start; }
 
 /* Add data with packet number to array.
  *
@@ -650,7 +656,7 @@ static int64_t add_data_end_of_buffer(Packets_Array *array, const Packet_Data *d
     }
 
     memcpy(new_d, data, sizeof(Packet_Data));
-    uint32_t id = array->buffer_end;
+    uint32_t id                                   = array->buffer_end;
     array->buffer[id % CRYPTO_PACKET_BUFFER_SIZE] = new_d;
     ++array->buffer_end;
     return id;
@@ -776,7 +782,7 @@ static int generate_request_packet(uint8_t *data, uint16_t length, const Packets
 
         if (!recv_array->buffer[num]) {
             data[cur_len] = n;
-            n = 0;
+            n             = 0;
             ++cur_len;
 
             if (length <= cur_len) {
@@ -784,7 +790,7 @@ static int generate_request_packet(uint8_t *data, uint16_t length, const Packets
             }
         } else if (n == 255) {
             data[cur_len] = 0;
-            n = 0;
+            n             = 0;
             ++cur_len;
 
             if (length <= cur_len) {
@@ -825,7 +831,7 @@ static int handle_request_packet(Packets_Array *send_array, const uint8_t *data,
     uint32_t i, n = 1;
     uint32_t requested = 0;
 
-    uint64_t temp_time = current_time_monotonic();
+    uint64_t temp_time   = current_time_monotonic();
     uint64_t l_sent_time = ~0;
 
     for (i = send_array->buffer_start; i != send_array->buffer_end; ++i) {
@@ -932,10 +938,10 @@ static int send_data_packet_helper(Net_Crypto *c, int crypt_connection_id, uint3
         return -1;
     }
 
-    num = htonl(num);
-    buffer_start = htonl(buffer_start);
+    num                     = htonl(num);
+    buffer_start            = htonl(buffer_start);
     uint16_t padding_length = (MAX_CRYPTO_DATA_SIZE - length) % CRYPTO_MAX_PADDING;
-    uint8_t packet[sizeof(uint32_t) + sizeof(uint32_t) + padding_length + length];
+    uint8_t  packet[sizeof(uint32_t) + sizeof(uint32_t) + padding_length + length];
     memcpy(packet, &buffer_start, sizeof(uint32_t));
     memcpy(packet + sizeof(uint32_t), &num, sizeof(uint32_t));
     memset(packet + (sizeof(uint32_t) * 2), PACKET_ID_PADDING, padding_length);
@@ -955,16 +961,17 @@ static int reset_max_speed_reached(Net_Crypto *c, int crypt_connection_id)
     /* If last packet send failed, try to send packet again.
        If sending it fails we won't be able to send the new packet. */
     if (conn->maximum_speed_reached) {
-        Packet_Data *dt = NULL;
-        uint32_t packet_num = conn->send_array.buffer_end - 1;
-        int ret = get_data_pointer(&conn->send_array, &dt, packet_num);
+        Packet_Data *dt         = NULL;
+        uint32_t     packet_num = conn->send_array.buffer_end - 1;
+        int          ret        = get_data_pointer(&conn->send_array, &dt, packet_num);
 
         uint8_t send_failed = 0;
 
         if (ret == 1) {
             if (!dt->sent_time) {
                 if (send_data_packet_helper(c, crypt_connection_id, conn->recv_array.buffer_start, packet_num, dt->data,
-                                            dt->length) != 0) {
+                                            dt->length)
+                    != 0) {
                     send_failed = 1;
                 } else {
                     dt->sent_time = current_time_monotonic();
@@ -1008,7 +1015,7 @@ static int64_t send_lossless_packet(Net_Crypto *c, int crypt_connection_id, cons
 
     Packet_Data dt;
     dt.sent_time = 0;
-    dt.length = length;
+    dt.length    = length;
     memcpy(dt.data, data, length);
     pthread_mutex_lock(&conn->mutex);
     int64_t packet_num = add_data_end_of_buffer(&conn->send_array, &dt);
@@ -1073,7 +1080,7 @@ static int handle_data_packet(const Net_Crypto *c, int crypt_connection_id, uint
     uint16_t num_cur_nonce = get_nonce_uint16(nonce);
     uint16_t num;
     memcpy(&num, packet + 1, sizeof(uint16_t));
-    num = ntohs(num);
+    num           = ntohs(num);
     uint16_t diff = num - num_cur_nonce;
     increment_nonce_number(nonce, diff);
     int len = decrypt_data_symmetric(conn->shared_key, nonce, packet + 1 + sizeof(uint16_t),
@@ -1104,14 +1111,14 @@ static int send_request_packet(Net_Crypto *c, int crypt_connection_id)
     }
 
     uint8_t data[MAX_CRYPTO_DATA_SIZE];
-    int len = generate_request_packet(data, sizeof(data), &conn->recv_array);
+    int     len = generate_request_packet(data, sizeof(data), &conn->recv_array);
 
     if (len == -1) {
         return -1;
     }
 
-    return send_data_packet_helper(c, crypt_connection_id, conn->recv_array.buffer_start, conn->send_array.buffer_end, data,
-                                   len);
+    return send_data_packet_helper(c, crypt_connection_id, conn->recv_array.buffer_start, conn->send_array.buffer_end,
+                                   data, len);
 }
 
 /* Send up to max num previously requested data packets.
@@ -1136,8 +1143,8 @@ static int send_requested_packets(Net_Crypto *c, int crypt_connection_id, uint32
 
     for (i = 0; i < array_size; ++i) {
         Packet_Data *dt;
-        uint32_t packet_num = (i + conn->send_array.buffer_start);
-        int ret = get_data_pointer(&conn->send_array, &dt, packet_num);
+        uint32_t     packet_num = (i + conn->send_array.buffer_start);
+        int          ret        = get_data_pointer(&conn->send_array, &dt, packet_num);
 
         if (ret == -1) {
             return -1;
@@ -1152,7 +1159,8 @@ static int send_requested_packets(Net_Crypto *c, int crypt_connection_id, uint32
         }
 
         if (send_data_packet_helper(c, crypt_connection_id, conn->recv_array.buffer_start, packet_num, dt->data,
-                                    dt->length) == 0) {
+                                    dt->length)
+            == 0) {
             dt->sent_time = temp_time;
             ++num_sent;
         }
@@ -1194,10 +1202,10 @@ static int new_temp_packet(const Net_Crypto *c, int crypt_connection_id, const u
     }
 
     memcpy(temp_packet, packet, length);
-    conn->temp_packet = temp_packet;
-    conn->temp_packet_length = length;
+    conn->temp_packet           = temp_packet;
+    conn->temp_packet_length    = length;
     conn->temp_packet_sent_time = 0;
-    conn->temp_packet_num_sent = 0;
+    conn->temp_packet_num_sent  = 0;
     return 0;
 }
 
@@ -1218,10 +1226,10 @@ static int clear_temp_packet(const Net_Crypto *c, int crypt_connection_id)
         free(conn->temp_packet);
     }
 
-    conn->temp_packet = 0;
-    conn->temp_packet_length = 0;
+    conn->temp_packet           = 0;
+    conn->temp_packet_length    = 0;
     conn->temp_packet_sent_time = 0;
-    conn->temp_packet_num_sent = 0;
+    conn->temp_packet_num_sent  = 0;
     return 0;
 }
 
@@ -1270,7 +1278,8 @@ static int create_send_handshake(Net_Crypto *c, int crypt_connection_id, const u
     uint8_t handshake_packet[HANDSHAKE_PACKET_LENGTH];
 
     if (create_crypto_handshake(c, handshake_packet, cookie, conn->sent_nonce, conn->sessionpublic_key,
-                                conn->public_key, dht_public_key) != sizeof(handshake_packet)) {
+                                conn->public_key, dht_public_key)
+        != sizeof(handshake_packet)) {
         return -1;
     }
 
@@ -1309,8 +1318,8 @@ static void connection_kill(Net_Crypto *c, int crypt_connection_id, void *userda
     }
 
     if (conn->connection_status_callback) {
-        conn->connection_status_callback(conn->connection_status_callback_object, conn->connection_status_callback_id, 0,
-                                         userdata);
+        conn->connection_status_callback(conn->connection_status_callback_object, conn->connection_status_callback_id,
+                                         0, userdata);
     }
 
     crypto_kill(c, crypt_connection_id);
@@ -1335,7 +1344,7 @@ static int handle_data_packet_helper(Net_Crypto *c, int crypt_connection_id, con
     }
 
     uint8_t data[MAX_DATA_DATA_PACKET_SIZE];
-    int len = handle_data_packet(c, crypt_connection_id, data, packet, length);
+    int     len = handle_data_packet(c, crypt_connection_id, data, packet, length);
 
     if (len <= (int)(sizeof(uint32_t) * 2)) {
         return -1;
@@ -1345,7 +1354,7 @@ static int handle_data_packet_helper(Net_Crypto *c, int crypt_connection_id, con
     memcpy(&buffer_start, data, sizeof(uint32_t));
     memcpy(&num, data + sizeof(uint32_t), sizeof(uint32_t));
     buffer_start = ntohl(buffer_start);
-    num = ntohl(num);
+    num          = ntohl(num);
 
     uint64_t rtt_calc_time = 0;
 
@@ -1361,7 +1370,7 @@ static int handle_data_packet_helper(Net_Crypto *c, int crypt_connection_id, con
         }
     }
 
-    uint8_t *real_data = data + (sizeof(uint32_t) * 2);
+    uint8_t *real_data   = data + (sizeof(uint32_t) * 2);
     uint16_t real_length = len - (sizeof(uint32_t) * 2);
 
     while (real_data[0] == PACKET_ID_PADDING) { /* Remove Padding */
@@ -1383,8 +1392,8 @@ static int handle_data_packet_helper(Net_Crypto *c, int crypt_connection_id, con
         conn->status = CRYPTO_CONN_ESTABLISHED;
 
         if (conn->connection_status_callback) {
-            conn->connection_status_callback(conn->connection_status_callback_object, conn->connection_status_callback_id, 1,
-                                             userdata);
+            conn->connection_status_callback(conn->connection_status_callback_object,
+                                             conn->connection_status_callback_id, 1, userdata);
         }
     }
 
@@ -1425,8 +1434,8 @@ static int handle_data_packet_helper(Net_Crypto *c, int crypt_connection_id, con
             }
 
             if (conn->connection_data_callback) {
-                conn->connection_data_callback(conn->connection_data_callback_object, conn->connection_data_callback_id, dt.data,
-                                               dt.length, userdata);
+                conn->connection_data_callback(conn->connection_data_callback_object, conn->connection_data_callback_id,
+                                               dt.data, dt.length, userdata);
             }
 
             /* conn might get killed in callback. */
@@ -1439,14 +1448,15 @@ static int handle_data_packet_helper(Net_Crypto *c, int crypt_connection_id, con
 
         /* Packet counter. */
         ++conn->packet_counter;
-    } else if (real_data[0] >= PACKET_ID_LOSSY_RANGE_START &&
-               real_data[0] < (PACKET_ID_LOSSY_RANGE_START + PACKET_ID_LOSSY_RANGE_SIZE)) {
+    } else if (real_data[0] >= PACKET_ID_LOSSY_RANGE_START
+               && real_data[0] < (PACKET_ID_LOSSY_RANGE_START + PACKET_ID_LOSSY_RANGE_SIZE)) {
 
         set_buffer_end(&conn->recv_array, num);
 
         if (conn->connection_lossy_data_callback) {
             conn->connection_lossy_data_callback(conn->connection_lossy_data_callback_object,
-                                                 conn->connection_lossy_data_callback_id, real_data, real_length, userdata);
+                                                 conn->connection_lossy_data_callback_id, real_data, real_length,
+                                                 userdata);
         }
     } else {
         return -1;
@@ -1487,7 +1497,7 @@ static int handle_packet_connection(Net_Crypto *c, int crypt_connection_id, cons
                 return -1;
             }
 
-            uint8_t cookie[COOKIE_LENGTH];
+            uint8_t  cookie[COOKIE_LENGTH];
             uint64_t number;
 
             if (handle_cookie_response(cookie, &number, packet, length, conn->shared_key) != sizeof(cookie)) {
@@ -1508,13 +1518,14 @@ static int handle_packet_connection(Net_Crypto *c, int crypt_connection_id, cons
 
         case NET_PACKET_CRYPTO_HS: {
             if (conn->status == CRYPTO_CONN_COOKIE_REQUESTING || conn->status == CRYPTO_CONN_HANDSHAKE_SENT
-                    || conn->status == CRYPTO_CONN_NOT_CONFIRMED) {
+                || conn->status == CRYPTO_CONN_NOT_CONFIRMED) {
                 uint8_t peer_real_pk[crypto_box_PUBLICKEYBYTES];
                 uint8_t dht_public_key[crypto_box_PUBLICKEYBYTES];
                 uint8_t cookie[COOKIE_LENGTH];
 
-                if (handle_crypto_handshake(c, conn->recv_nonce, conn->peersessionpublic_key, peer_real_pk, dht_public_key, cookie,
-                                            packet, length, conn->public_key) != 0) {
+                if (handle_crypto_handshake(c, conn->recv_nonce, conn->peersessionpublic_key, peer_real_pk,
+                                            dht_public_key, cookie, packet, length, conn->public_key)
+                    != 0) {
                     return -1;
                 }
 
@@ -1530,7 +1541,8 @@ static int handle_packet_connection(Net_Crypto *c, int crypt_connection_id, cons
                     conn->status = CRYPTO_CONN_NOT_CONFIRMED;
                 } else {
                     if (conn->dht_pk_callback) {
-                        conn->dht_pk_callback(conn->dht_pk_callback_object, conn->dht_pk_callback_number, dht_public_key, userdata);
+                        conn->dht_pk_callback(conn->dht_pk_callback_object, conn->dht_pk_callback_number,
+                                              dht_public_key, userdata);
                     }
                 }
             } else {
@@ -1569,8 +1581,8 @@ static int realloc_cryptoconnection(Net_Crypto *c, uint32_t num)
         return 0;
     }
 
-    Crypto_Connection *newcrypto_connections = (Crypto_Connection *)realloc(c->crypto_connections,
-            num * sizeof(Crypto_Connection));
+    Crypto_Connection *newcrypto_connections =
+        (Crypto_Connection *)realloc(c->crypto_connections, num * sizeof(Crypto_Connection));
 
     if (newcrypto_connections == NULL) {
         return -1;
@@ -1725,7 +1737,7 @@ static int crypto_connection_add_source(Net_Crypto *c, int crypt_connection_id, 
 void new_connection_handler(Net_Crypto *c, int (*new_connection_callback)(void *object, New_Connection *n_c),
                             void *object)
 {
-    c->new_connection_callback = new_connection_callback;
+    c->new_connection_callback        = new_connection_callback;
     c->new_connection_callback_object = object;
 }
 
@@ -1736,7 +1748,7 @@ void new_connection_handler(Net_Crypto *c, int (*new_connection_callback)(void *
  * return 0 on success.
  */
 static int handle_new_connection_handshake(Net_Crypto *c, IP_Port source, const uint8_t *data, uint16_t length,
-        void *userdata)
+                                           void *userdata)
 {
     New_Connection n_c;
     n_c.cookie = (uint8_t *)malloc(COOKIE_LENGTH);
@@ -1745,11 +1757,12 @@ static int handle_new_connection_handshake(Net_Crypto *c, IP_Port source, const 
         return -1;
     }
 
-    n_c.source = source;
+    n_c.source        = source;
     n_c.cookie_length = COOKIE_LENGTH;
 
     if (handle_crypto_handshake(c, n_c.recv_nonce, n_c.peersessionpublic_key, n_c.public_key, n_c.dht_public_key,
-                                n_c.cookie, data, length, 0) != 0) {
+                                n_c.cookie, data, length, 0)
+        != 0) {
         free(n_c.cookie);
         return -1;
     }
@@ -1773,7 +1786,7 @@ static int handle_new_connection_handshake(Net_Crypto *c, IP_Port source, const 
 
                 if (create_send_handshake(c, crypt_connection_id, n_c.cookie, n_c.dht_public_key) == 0) {
                     conn->status = CRYPTO_CONN_NOT_CONFIRMED;
-                    ret = 0;
+                    ret          = 0;
                 }
             }
 
@@ -1836,10 +1849,10 @@ int accept_crypto_connection(Net_Crypto *c, New_Connection *n_c)
     }
 
     memcpy(conn->dht_public_key, n_c->dht_public_key, crypto_box_PUBLICKEYBYTES);
-    conn->packet_send_rate = CRYPTO_PACKET_MIN_RATE;
+    conn->packet_send_rate           = CRYPTO_PACKET_MIN_RATE;
     conn->packet_send_rate_requested = CRYPTO_PACKET_MIN_RATE;
-    conn->packets_left = CRYPTO_MIN_QUEUE_LENGTH;
-    conn->rtt_time = DEFAULT_PING_CONNECTION;
+    conn->packets_left               = CRYPTO_MIN_QUEUE_LENGTH;
+    conn->rtt_time                   = DEFAULT_PING_CONNECTION;
     crypto_connection_add_source(c, crypt_connection_id, n_c->source);
     return crypt_connection_id;
 }
@@ -1882,19 +1895,19 @@ int new_crypto_connection(Net_Crypto *c, const uint8_t *real_public_key, const u
     memcpy(conn->public_key, real_public_key, crypto_box_PUBLICKEYBYTES);
     random_nonce(conn->sent_nonce);
     crypto_box_keypair(conn->sessionpublic_key, conn->sessionsecret_key);
-    conn->status = CRYPTO_CONN_COOKIE_REQUESTING;
-    conn->packet_send_rate = CRYPTO_PACKET_MIN_RATE;
+    conn->status                     = CRYPTO_CONN_COOKIE_REQUESTING;
+    conn->packet_send_rate           = CRYPTO_PACKET_MIN_RATE;
     conn->packet_send_rate_requested = CRYPTO_PACKET_MIN_RATE;
-    conn->packets_left = CRYPTO_MIN_QUEUE_LENGTH;
-    conn->rtt_time = DEFAULT_PING_CONNECTION;
+    conn->packets_left               = CRYPTO_MIN_QUEUE_LENGTH;
+    conn->rtt_time                   = DEFAULT_PING_CONNECTION;
     memcpy(conn->dht_public_key, dht_public_key, crypto_box_PUBLICKEYBYTES);
 
     conn->cookie_request_number = random_64b();
     uint8_t cookie_request[COOKIE_REQUEST_LENGTH];
 
-    if (create_cookie_request(c, cookie_request, conn->dht_public_key, conn->cookie_request_number,
-                              conn->shared_key) != sizeof(cookie_request)
-            || new_temp_packet(c, crypt_connection_id, cookie_request, sizeof(cookie_request)) != 0) {
+    if (create_cookie_request(c, cookie_request, conn->dht_public_key, conn->cookie_request_number, conn->shared_key)
+            != sizeof(cookie_request)
+        || new_temp_packet(c, crypt_connection_id, cookie_request, sizeof(cookie_request)) != 0) {
         pthread_mutex_lock(&c->tcp_mutex);
         kill_tcp_connection_to(c->tcp_c, conn->connection_number_tcp);
         pthread_mutex_unlock(&c->tcp_mutex);
@@ -1987,8 +2000,8 @@ static int tcp_oob_callback(void *object, const uint8_t *public_key, unsigned in
 
     if (data[0] == NET_PACKET_CRYPTO_HS) {
         IP_Port source;
-        source.port = 0;
-        source.ip.family = TCP_FAMILY;
+        source.port             = 0;
+        source.ip.family        = TCP_FAMILY;
         source.ip.ip6.uint32[0] = tcp_connections_number;
 
         if (handle_new_connection_handshake(c, source, data, length, userdata) != 0) {
@@ -2126,7 +2139,8 @@ static void do_tcp(Net_Crypto *c, void *userdata)
  * return 0 on success.
  */
 int connection_status_handler(const Net_Crypto *c, int crypt_connection_id,
-                              int (*connection_status_callback)(void *object, int id, uint8_t status, void *userdata), void *object, int id)
+                              int (*connection_status_callback)(void *object, int id, uint8_t status, void *userdata),
+                              void *object, int id)
 {
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
@@ -2134,13 +2148,14 @@ int connection_status_handler(const Net_Crypto *c, int crypt_connection_id,
         return -1;
     }
 
-    conn->connection_status_callback = connection_status_callback;
+    conn->connection_status_callback        = connection_status_callback;
     conn->connection_status_callback_object = object;
-    conn->connection_status_callback_id = id;
+    conn->connection_status_callback_id     = id;
     return 0;
 }
 
-/* Set function to be called when connection with crypt_connection_id receives a data packet of length.
+/* Set function to be called when connection with crypt_connection_id receives a data packet of
+ * length.
  *
  * The set function should return -1 on failure and 0 on success.
  * Object and id will be passed to this function untouched.
@@ -2148,8 +2163,10 @@ int connection_status_handler(const Net_Crypto *c, int crypt_connection_id,
  * return -1 on failure.
  * return 0 on success.
  */
-int connection_data_handler(const Net_Crypto *c, int crypt_connection_id, int (*connection_data_callback)(void *object,
-                            int id, const uint8_t *data, uint16_t length, void *userdata), void *object, int id)
+int connection_data_handler(const Net_Crypto *c, int crypt_connection_id,
+                            int (*connection_data_callback)(void *object, int id, const uint8_t *data, uint16_t length,
+                                                            void *userdata),
+                            void *object, int id)
 {
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
@@ -2157,13 +2174,14 @@ int connection_data_handler(const Net_Crypto *c, int crypt_connection_id, int (*
         return -1;
     }
 
-    conn->connection_data_callback = connection_data_callback;
+    conn->connection_data_callback        = connection_data_callback;
     conn->connection_data_callback_object = object;
-    conn->connection_data_callback_id = id;
+    conn->connection_data_callback_id     = id;
     return 0;
 }
 
-/* Set function to be called when connection with crypt_connection_id receives a lossy data packet of length.
+/* Set function to be called when connection with crypt_connection_id receives a lossy data packet
+ * of length.
  *
  * The set function should return -1 on failure and 0 on success.
  * Object and id will be passed to this function untouched.
@@ -2172,7 +2190,8 @@ int connection_data_handler(const Net_Crypto *c, int crypt_connection_id, int (*
  * return 0 on success.
  */
 int connection_lossy_data_handler(Net_Crypto *c, int crypt_connection_id,
-                                  int (*connection_lossy_data_callback)(void *object, int id, const uint8_t *data, uint16_t length, void *userdata),
+                                  int (*connection_lossy_data_callback)(void *object, int id, const uint8_t *data,
+                                                                        uint16_t length, void *userdata),
                                   void *object, int id)
 {
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
@@ -2181,9 +2200,9 @@ int connection_lossy_data_handler(Net_Crypto *c, int crypt_connection_id,
         return -1;
     }
 
-    conn->connection_lossy_data_callback = connection_lossy_data_callback;
+    conn->connection_lossy_data_callback        = connection_lossy_data_callback;
     conn->connection_lossy_data_callback_object = object;
-    conn->connection_lossy_data_callback_id = id;
+    conn->connection_lossy_data_callback_id     = id;
     return 0;
 }
 
@@ -2198,8 +2217,9 @@ int connection_lossy_data_handler(Net_Crypto *c, int crypt_connection_id,
  * return -1 on failure.
  * return 0 on success.
  */
-int nc_dht_pk_callback(Net_Crypto *c, int crypt_connection_id, void (*function)(void *data, int32_t number,
-                       const uint8_t *dht_public_key, void *userdata), void *object, uint32_t number)
+int nc_dht_pk_callback(Net_Crypto *c, int crypt_connection_id,
+                       void (*function)(void *data, int32_t number, const uint8_t *dht_public_key, void *userdata),
+                       void *object, uint32_t number)
 {
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
@@ -2207,7 +2227,7 @@ int nc_dht_pk_callback(Net_Crypto *c, int crypt_connection_id, void (*function)(
         return -1;
     }
 
-    conn->dht_pk_callback = function;
+    conn->dht_pk_callback        = function;
     conn->dht_pk_callback_object = object;
     conn->dht_pk_callback_number = number;
     return 0;
@@ -2239,8 +2259,8 @@ static int udp_handle_packet(void *object, IP_Port source, const uint8_t *packet
         return 1;
     }
 
-    Net_Crypto *c = (Net_Crypto *)object;
-    int crypt_connection_id = crypto_id_ip_port(c, source);
+    Net_Crypto *c                   = (Net_Crypto *)object;
+    int         crypt_connection_id = crypto_id_ip_port(c, source);
 
     if (crypt_connection_id == -1) {
         if (packet[0] != NET_PACKET_CRYPTO_HS) {
@@ -2297,8 +2317,8 @@ static int udp_handle_packet(void *object, IP_Port source, const uint8_t *packet
 static void send_crypto_packets(Net_Crypto *c)
 {
     uint32_t i;
-    uint64_t temp_time = current_time_monotonic();
-    double total_send_rate = 0;
+    uint64_t temp_time                    = current_time_monotonic();
+    double   total_send_rate              = 0;
     uint32_t peak_request_packet_interval = ~0;
 
     for (i = 0; i < c->crypto_connections_length; ++i) {
@@ -2313,7 +2333,7 @@ static void send_crypto_packets(Net_Crypto *c)
         }
 
         if ((conn->status == CRYPTO_CONN_NOT_CONFIRMED || conn->status == CRYPTO_CONN_ESTABLISHED)
-                && ((CRYPTO_SEND_PACKET_INTERVAL) + conn->last_request_packet_sent) < temp_time) {
+            && ((CRYPTO_SEND_PACKET_INTERVAL) + conn->last_request_packet_sent) < temp_time) {
             if (send_request_packet(c, i) == 0) {
                 conn->last_request_packet_sent = temp_time;
             }
@@ -2321,11 +2341,13 @@ static void send_crypto_packets(Net_Crypto *c)
 
         if (conn->status == CRYPTO_CONN_ESTABLISHED) {
             if (conn->packet_recv_rate > CRYPTO_PACKET_MIN_RATE) {
-                double request_packet_interval = (REQUEST_PACKETS_COMPARE_CONSTANT / (((double)num_packets_array(
-                                                      &conn->recv_array) + 1.0) / (conn->packet_recv_rate + 1.0)));
+                double request_packet_interval =
+                    (REQUEST_PACKETS_COMPARE_CONSTANT
+                     / (((double)num_packets_array(&conn->recv_array) + 1.0) / (conn->packet_recv_rate + 1.0)));
 
-                double request_packet_interval2 = ((CRYPTO_PACKET_MIN_RATE / conn->packet_recv_rate) *
-                                                   (double)CRYPTO_SEND_PACKET_INTERVAL) + (double)PACKET_COUNTER_AVERAGE_INTERVAL;
+                double request_packet_interval2 =
+                    ((CRYPTO_PACKET_MIN_RATE / conn->packet_recv_rate) * (double)CRYPTO_SEND_PACKET_INTERVAL)
+                    + (double)PACKET_COUNTER_AVERAGE_INTERVAL;
 
                 if (request_packet_interval2 < request_packet_interval) {
                     request_packet_interval = request_packet_interval2;
@@ -2354,51 +2376,55 @@ static void send_crypto_packets(Net_Crypto *c)
 
                 double dt = temp_time - conn->packet_counter_set;
 
-                conn->packet_recv_rate = (double)conn->packet_counter / (dt / 1000.0);
-                conn->packet_counter = 0;
+                conn->packet_recv_rate   = (double)conn->packet_counter / (dt / 1000.0);
+                conn->packet_counter     = 0;
                 conn->packet_counter_set = temp_time;
 
                 uint32_t packets_sent = conn->packets_sent;
-                conn->packets_sent = 0;
+                conn->packets_sent    = 0;
 
                 uint32_t packets_resent = conn->packets_resent;
-                conn->packets_resent = 0;
+                conn->packets_resent    = 0;
 
                 /* conjestion control
                     calculate a new value of conn->packet_send_rate based on some data
                  */
 
-                unsigned int pos = conn->last_sendqueue_counter % CONGESTION_QUEUE_ARRAY_SIZE;
+                unsigned int pos               = conn->last_sendqueue_counter % CONGESTION_QUEUE_ARRAY_SIZE;
                 conn->last_sendqueue_size[pos] = num_packets_array(&conn->send_array);
                 ++conn->last_sendqueue_counter;
 
-                unsigned int j;
+                unsigned int    j;
                 long signed int sum = 0;
-                sum = (long signed int)conn->last_sendqueue_size[(pos) % CONGESTION_QUEUE_ARRAY_SIZE] -
-                      (long signed int)conn->last_sendqueue_size[(pos - (CONGESTION_QUEUE_ARRAY_SIZE - 1)) % CONGESTION_QUEUE_ARRAY_SIZE];
+                sum                 = (long signed int)conn->last_sendqueue_size[(pos) % CONGESTION_QUEUE_ARRAY_SIZE]
+                      - (long signed int)conn->last_sendqueue_size[(pos - (CONGESTION_QUEUE_ARRAY_SIZE - 1))
+                                                                   % CONGESTION_QUEUE_ARRAY_SIZE];
 
-                unsigned int n_p_pos = conn->last_sendqueue_counter % CONGESTION_LAST_SENT_ARRAY_SIZE;
-                conn->last_num_packets_sent[n_p_pos] = packets_sent;
+                unsigned int n_p_pos                   = conn->last_sendqueue_counter % CONGESTION_LAST_SENT_ARRAY_SIZE;
+                conn->last_num_packets_sent[n_p_pos]   = packets_sent;
                 conn->last_num_packets_resent[n_p_pos] = packets_resent;
 
                 bool direct_connected = 0;
                 crypto_connection_status(c, i, &direct_connected, NULL);
 
                 if (direct_connected && conn->last_tcp_sent + CONGESTION_EVENT_TIMEOUT > temp_time) {
-                    /* When switching from TCP to UDP, don't change the packet send rate for CONGESTION_EVENT_TIMEOUT ms. */
+                    /* When switching from TCP to UDP, don't change the packet send rate for
+                     * CONGESTION_EVENT_TIMEOUT ms. */
                 } else {
                     long signed int total_sent = 0, total_resent = 0;
 
                     // TODO(irungentoo): use real delay
                     unsigned int delay = (unsigned int)((conn->rtt_time / PACKET_COUNTER_AVERAGE_INTERVAL) + 0.5);
-                    unsigned int packets_set_rem_array = (CONGESTION_LAST_SENT_ARRAY_SIZE - CONGESTION_QUEUE_ARRAY_SIZE);
+                    unsigned int packets_set_rem_array =
+                        (CONGESTION_LAST_SENT_ARRAY_SIZE - CONGESTION_QUEUE_ARRAY_SIZE);
 
                     if (delay > packets_set_rem_array) {
                         delay = packets_set_rem_array;
                     }
 
                     for (j = 0; j < CONGESTION_QUEUE_ARRAY_SIZE; ++j) {
-                        unsigned int ind = (j + (packets_set_rem_array  - delay) + n_p_pos) % CONGESTION_LAST_SENT_ARRAY_SIZE;
+                        unsigned int ind =
+                            (j + (packets_set_rem_array - delay) + n_p_pos) % CONGESTION_LAST_SENT_ARRAY_SIZE;
                         total_sent += conn->last_num_packets_sent[ind];
                         total_resent += conn->last_num_packets_resent[ind];
                     }
@@ -2413,11 +2439,13 @@ static void send_crypto_packets(Net_Crypto *c)
 
                     /* if queue is too big only allow resending packets. */
                     uint32_t npackets = num_packets_array(&conn->send_array);
-                    double min_speed = 1000.0 * (((double)(total_sent)) / ((double)(CONGESTION_QUEUE_ARRAY_SIZE) *
-                                                 PACKET_COUNTER_AVERAGE_INTERVAL));
+                    double   min_speed =
+                        1000.0 * (((double)(total_sent))
+                                  / ((double)(CONGESTION_QUEUE_ARRAY_SIZE)*PACKET_COUNTER_AVERAGE_INTERVAL));
 
-                    double min_speed_request = 1000.0 * (((double)(total_sent + total_resent)) / ((double)(
-                            CONGESTION_QUEUE_ARRAY_SIZE) * PACKET_COUNTER_AVERAGE_INTERVAL));
+                    double min_speed_request =
+                        1000.0 * (((double)(total_sent + total_resent))
+                                  / ((double)(CONGESTION_QUEUE_ARRAY_SIZE)*PACKET_COUNTER_AVERAGE_INTERVAL));
 
                     if (min_speed < CRYPTO_PACKET_MIN_RATE) {
                         min_speed = CRYPTO_PACKET_MIN_RATE;
@@ -2451,11 +2479,12 @@ static void send_crypto_packets(Net_Crypto *c)
                 conn->packets_left_requested = conn->packets_left = CRYPTO_MIN_QUEUE_LENGTH;
             } else {
                 if (((uint64_t)((1000.0 / conn->packet_send_rate) + 0.5) + conn->last_packets_left_set) <= temp_time) {
-                    double n_packets = conn->packet_send_rate * (((double)(temp_time - conn->last_packets_left_set)) / 1000.0);
+                    double n_packets =
+                        conn->packet_send_rate * (((double)(temp_time - conn->last_packets_left_set)) / 1000.0);
                     n_packets += conn->last_packets_left_rem;
 
                     uint32_t num_packets = n_packets;
-                    double rem = n_packets - (double)num_packets;
+                    double   rem         = n_packets - (double)num_packets;
 
                     if (conn->packets_left > num_packets * 4 + CRYPTO_MIN_QUEUE_LENGTH) {
                         conn->packets_left = num_packets * 4 + CRYPTO_MIN_QUEUE_LENGTH;
@@ -2467,14 +2496,15 @@ static void send_crypto_packets(Net_Crypto *c)
                     conn->last_packets_left_rem = rem;
                 }
 
-                if (((uint64_t)((1000.0 / conn->packet_send_rate_requested) + 0.5) + conn->last_packets_left_requested_set) <=
-                        temp_time) {
-                    double n_packets = conn->packet_send_rate_requested * (((double)(temp_time - conn->last_packets_left_requested_set)) /
-                                       1000.0);
+                if (((uint64_t)((1000.0 / conn->packet_send_rate_requested) + 0.5)
+                     + conn->last_packets_left_requested_set)
+                    <= temp_time) {
+                    double n_packets = conn->packet_send_rate_requested
+                                       * (((double)(temp_time - conn->last_packets_left_requested_set)) / 1000.0);
                     n_packets += conn->last_packets_left_requested_rem;
 
-                    uint32_t num_packets = n_packets;
-                    double rem = n_packets - (double)num_packets;
+                    uint32_t num_packets         = n_packets;
+                    double   rem                 = n_packets - (double)num_packets;
                     conn->packets_left_requested = num_packets;
 
                     conn->last_packets_left_requested_set = temp_time;
@@ -2496,7 +2526,7 @@ static void send_crypto_packets(Net_Crypto *c)
                     conn->packets_left -= ret;
                 } else {
                     conn->last_congestion_event = temp_time;
-                    conn->packets_left = 0;
+                    conn->packets_left          = 0;
                 }
             }
 
@@ -2507,7 +2537,7 @@ static void send_crypto_packets(Net_Crypto *c)
     }
 
     c->current_sleep_time = ~0;
-    uint32_t sleep_time = peak_request_packet_interval;
+    uint32_t sleep_time   = peak_request_packet_interval;
 
     if (c->current_sleep_time > sleep_time) {
         c->current_sleep_time = sleep_time;
@@ -2528,7 +2558,8 @@ static void send_crypto_packets(Net_Crypto *c)
     }
 }
 
-/* Return 1 if max speed was reached for this connection (no more data can be physically through the pipe).
+/* Return 1 if max speed was reached for this connection (no more data can be physically through the
+ * pipe).
  * Return 0 if it wasn't reached.
  */
 bool max_speed_reached(Net_Crypto *c, int crypt_connection_id)
@@ -2622,7 +2653,7 @@ int cryptpacket_received(Net_Crypto *c, int crypt_connection_id, uint32_t packet
         return -1;
     }
 
-    uint32_t num = conn->send_array.buffer_end - conn->send_array.buffer_start;
+    uint32_t num  = conn->send_array.buffer_end - conn->send_array.buffer_start;
     uint32_t num1 = packet_number - conn->send_array.buffer_start;
 
     if (num < num1) {
@@ -2662,7 +2693,7 @@ int send_lossy_cryptpacket(Net_Crypto *c, int crypt_connection_id, const uint8_t
     if (conn) {
         pthread_mutex_lock(&conn->mutex);
         uint32_t buffer_start = conn->recv_array.buffer_start;
-        uint32_t buffer_end = conn->send_array.buffer_end;
+        uint32_t buffer_end   = conn->send_array.buffer_end;
         pthread_mutex_unlock(&conn->mutex);
         ret = send_data_packet_helper(c, crypt_connection_id, buffer_start, buffer_end, data, length);
     }
@@ -2752,10 +2783,7 @@ unsigned int crypto_connection_status(const Net_Crypto *c, int crypt_connection_
     return conn->status;
 }
 
-void new_keys(Net_Crypto *c)
-{
-    crypto_box_keypair(c->self_public_key, c->self_secret_key);
-}
+void new_keys(Net_Crypto *c) { crypto_box_keypair(c->self_public_key, c->self_secret_key); }
 
 /* Save the public and private keys to the keys array.
  * Length must be crypto_box_PUBLICKEYBYTES + crypto_box_SECRETKEYBYTES.
@@ -2806,8 +2834,7 @@ Net_Crypto *new_net_crypto(Logger *log, DHT *dht, TCP_Proxy_Info *proxy_info)
     set_packet_tcp_connection_callback(temp->tcp_c, &tcp_data_callback, temp);
     set_oob_packet_tcp_connection_callback(temp->tcp_c, &tcp_oob_callback, temp);
 
-    if (create_recursive_mutex(&temp->tcp_mutex) != 0 ||
-            pthread_mutex_init(&temp->connections_mutex, NULL) != 0) {
+    if (create_recursive_mutex(&temp->tcp_mutex) != 0 || pthread_mutex_init(&temp->connections_mutex, NULL) != 0) {
         kill_tcp_connections(temp->tcp_c);
         free(temp);
         return NULL;
@@ -2833,7 +2860,7 @@ Net_Crypto *new_net_crypto(Logger *log, DHT *dht, TCP_Proxy_Info *proxy_info)
 static void kill_timedout(Net_Crypto *c, void *userdata)
 {
     uint32_t i;
-    //uint64_t temp_time = current_time_monotonic();
+    // uint64_t temp_time = current_time_monotonic();
 
     for (i = 0; i < c->crypto_connections_length; ++i) {
         Crypto_Connection *conn = get_crypto_connection(c, i);
@@ -2847,7 +2874,7 @@ static void kill_timedout(Net_Crypto *c, void *userdata)
         }
 
         if (conn->status == CRYPTO_CONN_COOKIE_REQUESTING || conn->status == CRYPTO_CONN_HANDSHAKE_SENT
-                || conn->status == CRYPTO_CONN_NOT_CONFIRMED) {
+            || conn->status == CRYPTO_CONN_NOT_CONFIRMED) {
             if (conn->temp_packet_num_sent < MAX_NUM_SENDPACKET_TRIES) {
                 continue;
             }
@@ -2867,10 +2894,7 @@ static void kill_timedout(Net_Crypto *c, void *userdata)
 
 /* return the optimal interval in ms for running do_net_crypto.
  */
-uint32_t crypto_run_interval(const Net_Crypto *c)
-{
-    return c->current_sleep_time;
-}
+uint32_t crypto_run_interval(const Net_Crypto *c) { return c->current_sleep_time; }
 
 /* Main loop. */
 void do_net_crypto(Net_Crypto *c, void *userdata)
