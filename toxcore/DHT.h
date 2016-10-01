@@ -239,7 +239,7 @@ typedef struct {
 #endif
     uint64_t       last_run;
 
-    Cryptopacket_Handles cryptopackethandlers[UINT8_MAX];
+    Cryptopacket_Handles cryptopackethandlers[UINT8_MAX + 1];
 
     Node_format to_bootstrap[MAX_CLOSE_TO_BOOTSTRAP_NODES];
     unsigned int num_to_bootstrap;
