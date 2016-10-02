@@ -134,7 +134,8 @@ add_module(toxdht
   toxcore/LAN_discovery.c
   toxcore/assoc.c
   toxcore/ping.c
-  toxcore/ping_array.c)
+  toxcore/ping_array.c
+  toxcore/query.c)
 target_link_modules(toxdht toxnetwork)
 
 # LAYER 4: Onion routing, TCP connections, crypto connections
