@@ -32,10 +32,13 @@
 #ifdef ENABLE_ASSOC_DHT
 #include "assoc.h"
 #endif
+
+#include "group_announce.h"
 #include "LAN_discovery.h"
 #include "logger.h"
 #include "misc_tools.h"
 #include "network.h"
+#include "ping.h"
 #include "ping.h"
 #include "util.h"
 
@@ -233,7 +236,7 @@ int packed_node_size(uint8_t ip_family)
  * Returns size of packed IP_Port data on success
  * Return -1 on failure.
  */
-static int pack_ip_port(uint8_t *data, uint16_t length, const IP_Port *ip_port)
+int pack_ip_port(uint8_t *data, uint16_t length, const IP_Port *ip_port)
 {
     if (data == NULL) {
         return -1;
@@ -293,7 +296,7 @@ static int pack_ip_port(uint8_t *data, uint16_t length, const IP_Port *ip_port)
  * Return size of unpacked ip_port on success.
  * Return -1 on failure.
  */
-static int unpack_ip_port(IP_Port *ip_port, const uint8_t *data, uint16_t length, uint8_t tcp_enabled)
+int unpack_ip_port(IP_Port *ip_port, const uint8_t *data, uint16_t length, uint8_t tcp_enabled)
 {
     if (data == NULL) {
         return -1;
@@ -426,8 +429,6 @@ int unpack_nodes(Node_format *nodes, uint16_t max_num_nodes, uint16_t *processed
 
     return num;
 }
-
-
 
 /* Check if client with public_key is already in list of length length.
  * If it is then set its corresponding timestamp to current time.
@@ -2871,11 +2872,11 @@ int DHT_load(DHT *dht, const uint8_t *data, uint32_t length)
 }
 
 /*  return 0 if we are not connected to the DHT.
- *  return 1 if we are.
+ *  return number of connected nodes if we are.
  */
 int DHT_isconnected(const DHT *dht)
 {
-    uint32_t i;
+    uint32_t i, count = 0;
     unix_time_update();
 
     for (i = 0; i < LCLIENT_LIST; ++i) {
@@ -2883,11 +2884,11 @@ int DHT_isconnected(const DHT *dht)
 
         if (!is_timeout(client->assoc4.timestamp, BAD_NODE_TIMEOUT) ||
                 !is_timeout(client->assoc6.timestamp, BAD_NODE_TIMEOUT)) {
-            return 1;
+            count++;
         }
     }
 
-    return 0;
+    return count;
 }
 
 /*  return 0 if we are not connected or only connected to lan peers with the DHT.

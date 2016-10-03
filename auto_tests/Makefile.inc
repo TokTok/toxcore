@@ -1,7 +1,7 @@
 if BUILD_TESTS
 
-TESTS = encryptsave_test messenger_autotest crypto_test network_test assoc_test onion_test TCP_test tox_test dht_autotest
-check_PROGRAMS = encryptsave_test messenger_autotest crypto_test network_test assoc_test onion_test TCP_test tox_test dht_autotest
+TESTS = groupchat_test encryptsave_test messenger_autotest crypto_test network_test assoc_test onion_test TCP_test tox_test dht_autotest
+check_PROGRAMS = groupchat_test encryptsave_test messenger_autotest crypto_test network_test assoc_test onion_test TCP_test tox_test dht_autotest
 
 AUTOTEST_CFLAGS = \
                          $(LIBSODIUM_CFLAGS) \
@@ -105,6 +105,13 @@ encryptsave_test_SOURCES = ../auto_tests/encryptsave_test.c
 encryptsave_test_CFLAGS = $(AUTOTEST_CFLAGS)
 
 encryptsave_test_LDADD = $(AUTOTEST_LDADD)
+
+
+groupchat_test_SOURCES = ../auto_tests/groupchat_test.c
+
+groupchat_test_CFLAGS = $(AUTOTEST_CFLAGS)
+
+groupchat_test_LDADD = $(AUTOTEST_LDADD)
 
 
 EXTRA_DIST += $(top_srcdir)/auto_tests/helpers.h

@@ -28,6 +28,8 @@
 
 #include "friend_connection.h"
 #include "friend_requests.h"
+#include "group_chats.h"
+#include "group_announce.h"
 #include "logger.h"
 
 #define MAX_NAME_LENGTH 128
@@ -59,7 +61,8 @@ enum {
 #define PACKET_ID_FILE_SENDREQUEST 80
 #define PACKET_ID_FILE_CONTROL 81
 #define PACKET_ID_FILE_DATA 82
-#define PACKET_ID_INVITE_GROUPCHAT 96
+#define PACKET_ID_INVITE_GROUPCHAT 95
+#define PACKET_ID_INVITE_CONVERSATION 96
 #define PACKET_ID_ONLINE_PACKET 97
 #define PACKET_ID_DIRECT_GROUPCHAT 98
 #define PACKET_ID_MESSAGE_GROUPCHAT 99
@@ -235,6 +238,9 @@ struct Messenger {
     Friend *friendlist;
     uint32_t numfriends;
 
+    GC_Session *group_handler;
+    GC_Announce *group_announce;
+
     uint8_t has_added_relays; // If the first connection has occurred in do_messenger
     Node_format loaded_relays[NUM_SAVED_TCP_RELAYS]; // Relays loaded from config
 
@@ -249,7 +255,10 @@ struct Messenger {
     void *friend_connectionstatuschange_internal_userdata;
 
     void *group_chat_object; /* Set by new_groupchats()*/
-    void (*group_invite)(struct Messenger *m, uint32_t, const uint8_t *, uint16_t, void *);
+    void (*conversation_invite)(struct Messenger *m, uint32_t, const uint8_t *, uint16_t, void *);
+
+    void (*group_invite)(struct Messenger *m, uint32_t, const uint8_t *, size_t, void *);
+    void *group_invite_userdata;
 
     void (*file_sendrequest)(struct Messenger *m, uint32_t, uint32_t, uint32_t, uint64_t, const uint8_t *, size_t,
                              void *);
@@ -268,6 +277,13 @@ struct Messenger {
 
     Messenger_Options options;
 };
+
+/* determines if the friendnumber passed is valid in the Messenger object.
+ *
+ * Returns 1 if friendnumber does not designate a valid friend.
+ * Returns 0 otherwise.
+ */
+uint8_t friend_not_valid(const Messenger *m, int32_t friendnumber);
 
 /* Format: [real_pk (32 bytes)][nospam number (4 bytes)][checksum (2 bytes)]
  *
@@ -537,14 +553,23 @@ void m_callback_core_connection(Messenger *m, void (*function)(Messenger *m, uns
  *
  *  Function(Messenger *m, uint32_t friendnumber, uint8_t *data, uint16_t length, void *userdata)
  */
-void m_callback_group_invite(Messenger *m, void (*function)(Messenger *m, uint32_t, const uint8_t *, uint16_t, void *));
+void m_callback_conversation_invite(Messenger *m, void (*function)(Messenger *m, uint32_t, const uint8_t *, uint16_t,
+                                    void *));
+
+/* Set the callback for group invites.
+ *
+ *  Function(Messenger *m, uint32_t friendnumber, const uint8_t *data, size_t length, void *userdata)
+ */
+void m_callback_group_invite(Messenger *m, void (*function)(Messenger *m, uint32_t, const uint8_t *, size_t, void *),
+                             void *userdata);
 
 /* Send a group invite packet.
  *
- *  return 1 on success
- *  return 0 on failure
+ *  return 0 on success
+ *  return -1 on failure
  */
-int send_group_invite_packet(const Messenger *m, int32_t friendnumber, const uint8_t *data, uint16_t length);
+int send_group_invite_packet(const Messenger *m, uint32_t friendnumber, const uint8_t *data, size_t length);
+
 
 /****************FILE SENDING*****************/
 
