@@ -1012,6 +1012,14 @@ static unsigned int ping_node_from_getnodes_ok(DHT *dht, const uint8_t *public_k
     return ret;
 }
 
+static int DHT_send_packet(const DHT *dht, IP_Port ip_port, const uint8_t *packet, uint16_t length)
+{
+	if (dht == NULL) {
+		return -1;
+	}
+	return sendpacket(dht->net, ip_port, packet, length);
+}
+
 /* Attempt to add client with ip_port and public_key to the friends client list
  * and close_clientlist.
  *
@@ -1217,7 +1225,7 @@ static int getnodes(DHT *dht, IP_Port ip_port, const uint8_t *public_key, const 
     memcpy(data + 1 + crypto_box_PUBLICKEYBYTES, nonce, crypto_box_NONCEBYTES);
     memcpy(data + 1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES, encrypt, len);
 
-    return sendpacket(dht->net, ip_port, data, sizeof(data));
+    return DHT_send_packet(dht, ip_port, data, sizeof(data));
 }
 
 /* Send a send nodes response: message for IPv6 nodes */
@@ -1272,7 +1280,7 @@ static int sendnodes_ipv6(const DHT *dht, IP_Port ip_port, const uint8_t *public
     memcpy(data + 1 + crypto_box_PUBLICKEYBYTES, nonce, crypto_box_NONCEBYTES);
     memcpy(data + 1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES, encrypt, len);
 
-    return sendpacket(dht->net, ip_port, data, 1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES + len);
+    return DHT_send_packet(dht, ip_port, data, 1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES + len);
 }
 
 static int handle_getnodes(void *object, IP_Port source, const uint8_t *packet, uint16_t length, void *userdata)
@@ -1763,11 +1771,11 @@ int route_packet(const DHT *dht, const uint8_t *public_key, const uint8_t *packe
             const Client_data *client = &dht->close_clientlist[i];
 
             if (ip_isset(&client->assoc6.ip_port.ip)) {
-                return sendpacket(dht->net, client->assoc6.ip_port, packet, length);
+                return DHT_send_packet(dht, client->assoc6.ip_port, packet, length);
             }
 
             if (ip_isset(&client->assoc4.ip_port.ip)) {
-                return sendpacket(dht->net, client->assoc4.ip_port, packet, length);
+                return DHT_send_packet(dht, client->assoc4.ip_port, packet, length);
             }
 
             break;
@@ -1901,7 +1909,7 @@ int route_tofriend(const DHT *dht, const uint8_t *friend_id, const uint8_t *pack
             /* If ip is not zero and node is good. */
             if (ip_isset(&assoc->ret_ip_port.ip) &&
                     !is_timeout(assoc->ret_timestamp, BAD_NODE_TIMEOUT)) {
-                int retval = sendpacket(dht->net, assoc->ip_port, packet, length);
+                int retval = DHT_send_packet(dht, assoc->ip_port, packet, length);
 
                 if ((unsigned int)retval == length) {
                     ++sent;
@@ -1960,7 +1968,7 @@ static int routeone_tofriend(DHT *dht, const uint8_t *friend_id, const uint8_t *
         return 0;
     }
 
-    int retval = sendpacket(dht->net, ip_list[rand() % n], packet, length);
+    int retval = DHT_send_packet(dht, ip_list[rand() % n], packet, length);
 
     if ((unsigned int)retval == length) {
         return 1;
@@ -2214,7 +2222,7 @@ static int send_hardening_req(DHT *dht, Node_format *sendto, uint8_t type, uint8
         return -1;
     }
 
-    return sendpacket(dht->net, sendto->ip_port, packet, len);
+    return DHT_send_packet(dht, sendto->ip_port, packet, len);
 }
 
 /* Send a get node hardening request */
@@ -2247,7 +2255,7 @@ static int send_hardening_getnode_res(const DHT *dht, const Node_format *sendto,
         return -1;
     }
 
-    return sendpacket(dht->net, sendto->ip_port, packet, len);
+    return DHT_send_packet(dht, sendto->ip_port, packet, len);
 }
 
 /* TODO(irungentoo): improve */
