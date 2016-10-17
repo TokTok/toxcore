@@ -126,7 +126,7 @@ static P_QUERY make(IP_Port ipp, const uint8_t key[TOX_PUBLIC_KEY_SIZE], const u
  *
  */
 int query_send_request(Tox *tox, const uint8_t *address, uint16_t port, const uint8_t *key,
-                       const uint8_t *name, size_t length)
+                       const char *name, size_t length)
 {
     Messenger *m = tox;
 
