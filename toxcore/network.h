@@ -115,6 +115,8 @@ typedef enum NET_PACKET_TYPE {
     NET_PACKET_CRYPTO           = 32,  /* Encrypted data packet ID. */
     NET_PACKET_LAN_DISCOVERY    = 33,  /* LAN discovery packet ID. */
 
+    NET_PACKET_DATA_REQUEST     = 50,
+
     /* See:  docs/Prevent_Tracking.txt and onion.{c, h} */
     NET_PACKET_ONION_SEND_INITIAL   = 128,
     NET_PACKET_ONION_SEND_1         = 129,

@@ -452,8 +452,8 @@ bool tox_add_tcp_relay(Tox *tox, const char *address, uint16_t port, const uint8
  * param public_key the long term public key for the name server.
  * @return true on success.
  */
-bool tox_query_request(Tox *tox, const char *address, uint16_t port, const uint8_t *public_key,
-                       const uint8_t *name, size_t length, TOX_ERR_QUERY_REQUEST *error)
+bool tox_query_request(Tox *tox, const char *address, uint16_t port, const uint8_t *public_key, const uint8_t *name,
+                       size_t length, TOX_ERR_QUERY_REQUEST *error)
 {
     if (!address || !name || !length) {
         SET_ERROR_PARAMETER(error, TOX_ERR_QUERY_REQUEST_NULL);
@@ -470,23 +470,26 @@ bool tox_query_request(Tox *tox, const char *address, uint16_t port, const uint8
             SET_ERROR_PARAMETER(error, TOX_ERR_QUERY_REQUEST_OK);
             return true;
         }
+
         case -1: {
             SET_ERROR_PARAMETER(error, TOX_ERR_QUERY_REQUEST_BAD_HOST);
-            return false;            
+            return false;
         }
+
         case -2: {
             SET_ERROR_PARAMETER(error, TOX_ERR_QUERY_REQUEST_PENDING);
-            return false;            
+            return false;
         }
+
         case -3: {
             SET_ERROR_PARAMETER(error, TOX_ERR_QUERY_REQUEST_UNKNOWN);
-            return false;            
+            return false;
         }
-    } 
+    }
 
 
     SET_ERROR_PARAMETER(error, TOX_ERR_QUERY_REQUEST_UNKNOWN);
-    return false;            
+    return false;
 }
 
 /**

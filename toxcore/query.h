@@ -37,9 +37,9 @@ typedef struct {
  *
  *
  */
-int query_send_request(Tox *tox, const uint8_t *address, uint16_t port, const uint8_t *key,
-                       const char *name, size_t length);
+int query_send_request(Tox *tox, const char *address, uint16_t port, const uint8_t *key,
+                       const uint8_t *name, size_t length);
 
-PENDING_QUERIES* query_new(void);
+PENDING_QUERIES *query_new(void);
 
 #endif

@@ -26,9 +26,11 @@ static bool grow(PENDING_QUERIES *queries)
 {
     size_t size  = queries->count * 2;
     P_QUERY *new = realloc(queries->query_list, size * sizeof(P_QUERY));
+
     if (!new) {
         return false;
     }
+
     queries->size  = size;
     queries->query_list = new;
 
@@ -46,21 +48,25 @@ static bool shrink(PENDING_QUERIES *queries)
  *
  * checks for a response in the pending queries list.
  */
-static bool q_check(PENDING_QUERIES *queries, P_QUERY pend) {
+static bool q_check(PENDING_QUERIES *queries, P_QUERY pend)
+{
     unsigned i;
+
     for (i = 0; i < queries->count; ++i) {
         P_QUERY test = queries->query_list[i];
+
         if (memcmp(&test.ipp, &pend.ipp, sizeof(IP_Port)) != 0) { /* TODO(grayhatter) will this work? */
             continue;
         } else if (!id_equal(test.key, pend.key)) {
             continue;
-        } else if (test.length != pend.length ) {
+        } else if (test.length != pend.length) {
             continue;
         } else if (memcmp(test.name, pend.name, test.length) != 0) {
             continue;
         } else if (test.query_nonce != pend.query_nonce) {
             continue;
         }
+
         return true;
     }
 
@@ -98,9 +104,49 @@ static bool q_check_and_drop(PENDING_QUERIES *queries, IP_Port ipp,
     return 0;
 }
 
-static int q_send(P_QUERY send) {
+#define QUERY_PKT_ENCRYPTED_SIZE(payload_size) ( 1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES + payload_size )
 
-    return true;
+static size_t q_build_pkt(const uint8_t *public_key, const uint8_t *secret_key, const uint8_t *data, size_t length,
+                          uint8_t *encrypted)
+{
+    size_t size = 0;
+    uint8_t pkt[QUERY_PKT_ENCRYPTED_SIZE(length)];
+
+    pkt[0] = NET_PACKET_DATA_REQUEST;
+    size += 1;
+
+    uint8_t nonce[crypto_box_NONCEBYTES];
+    new_nonce(nonce);
+
+    memcpy(pkt + size, nonce, crypto_box_NONCEBYTES);
+    size += crypto_box_NONCEBYTES;
+
+    memcpy(pkt + size, data, length);
+    size += length;
+
+
+    int status = encrypt_data(public_key, secret_key, nonce, pkt, size, encrypted);
+
+    if (status != 0) {
+        return size;
+    }
+
+    return -1;
+}
+
+static int q_send(DHT *dht, P_QUERY send)
+{
+
+    uint8_t encrypted[QUERY_PKT_ENCRYPTED_SIZE(send.length)];
+
+    size_t written_size = q_build_pkt(send.key, dht->self_secret_key, send.name, send.length, encrypted);
+    // TODO(grayhatter) add tox_assert(written_size == QUERY_PKT_ENCRYPTED_SIZE(send.length));
+
+    if (written_size != -1) {
+        return sendpacket(dht->net, send.ipp, encrypted, written_size);
+    }
+
+    return -1;
 }
 
 static P_QUERY make(IP_Port ipp, const uint8_t key[TOX_PUBLIC_KEY_SIZE], const uint8_t *name, size_t length)
@@ -125,13 +171,14 @@ static P_QUERY make(IP_Port ipp, const uint8_t key[TOX_PUBLIC_KEY_SIZE], const u
  *
  *
  */
-int query_send_request(Tox *tox, const uint8_t *address, uint16_t port, const uint8_t *key,
-                       const char *name, size_t length)
+int query_send_request(Tox *tox, const char *address, uint16_t port, const uint8_t *key,
+                       const uint8_t *name, size_t length)
 {
-    Messenger *m = tox;
+    Messenger *m = (Messenger *)tox;
 
     struct addrinfo *info, *root;
-    if (getaddrinfo(address, NULL, NULL, &root) != 0) {
+
+    if (getaddrinfo((char *)address, NULL, NULL, &root) != 0) {
         return -1;
     }
 
@@ -139,12 +186,14 @@ int query_send_request(Tox *tox, const uint8_t *address, uint16_t port, const ui
     ipp.port = htons(port);
 
     info = root;
+
     do {
         if (info->ai_socktype && info->ai_socktype != SOCK_DGRAM) {
             continue;
         }
 
         ipp.ip.family = info->ai_family;
+
         if (info->ai_family == AF_INET) {
             ipp.ip.ip4.in_addr = ((struct sockaddr_in *)info->ai_addr)->sin_addr;
             break;
@@ -156,6 +205,7 @@ int query_send_request(Tox *tox, const uint8_t *address, uint16_t port, const ui
         }
 
     } while ((info = info->ai_next));
+
     freeaddrinfo(root);
 
     if (info == NULL) {
@@ -170,17 +220,19 @@ int query_send_request(Tox *tox, const uint8_t *address, uint16_t port, const ui
     }
 
     // Send request
-    if (q_send(new) == 0) {
+    if (q_send(m->dht, new) == 0) {
         if (q_add(m->queries, new)) {
             return 0;
         }
     }
+
     return -3;
 }
 
-PENDING_QUERIES* query_new(void)
+PENDING_QUERIES *query_new(void)
 {
     PENDING_QUERIES *new = calloc(1, sizeof(PENDING_QUERIES));
+
     if (!new) {
         return NULL;
     }
