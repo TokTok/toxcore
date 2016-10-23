@@ -74,7 +74,7 @@ static int query_handle_toxid_request(void *object, IP_Port source, const uint8_
     return sendpacket(m->dht->net, source, encrypted, QUERY_PKT_ENCRYPTED_SIZE(TOX_ADDRESS_SIZE));
 }
 
-START_TEST(test_query)
+START_TEST(test_query_ip4)
 {
     time_t start_time = time(NULL);
 
@@ -94,6 +94,41 @@ START_TEST(test_query)
 
     TOX_ERR_QUERY_REQUEST r_error = 0;
     tox_query_request(client, "127.0.0.1", server_port, ((Messenger *)server)->dht->self_public_key,
+                      name, name_length, &r_error);
+    ck_assert_msg(r_error == TOX_ERR_QUERY_REQUEST_OK, "Error Sending Query Packet %i", r_error);
+
+    while (!done) {
+        tox_iterate(server, NULL);
+        tox_iterate(client, &response_cookie);
+
+        c_sleep(20);
+    }
+
+    tox_kill(client);
+    tox_kill(server);
+}
+END_TEST
+
+START_TEST(test_query_ip6)
+{
+    time_t start_time = time(NULL);
+
+    TOX_ERR_NEW error = 0;
+    Tox *server = tox_new(NULL, &error);
+    ck_assert_msg(error == TOX_ERR_NEW_OK, "Unable to create server");
+    Tox *client = tox_new(NULL, &error);
+    ck_assert_msg(error == TOX_ERR_NEW_OK, "Unable to create client");
+
+    // Build server
+    networking_registerhandler(((Messenger *)server)->dht->net, NET_PACKET_DATA_REQUEST, &query_handle_toxid_request, server);
+
+    // Build client
+    tox_callback_query_response(client, tox_query_response);
+
+    uint16_t server_port = tox_self_get_udp_port(server, NULL);
+
+    TOX_ERR_QUERY_REQUEST r_error = 0;
+    tox_query_request(client, "::1", server_port, ((Messenger *)server)->dht->self_public_key,
                       name, name_length, &r_error);
     ck_assert_msg(r_error == TOX_ERR_QUERY_REQUEST_OK, "Error Sending Query Packet %i", r_error);
 
@@ -242,7 +277,8 @@ static Suite *tox_named_s(void)
 {
     Suite *s = suite_create("tox_named");
 
-    DEFTESTCASE_SLOW(query, 10);
+    DEFTESTCASE_SLOW(query_ip4, 10);
+    DEFTESTCASE_SLOW(query_ip6, 10);
     DEFTESTCASE_SLOW(query_store, 10);
     DEFTESTCASE_SLOW(query_host, 20);
     DEFTESTCASE_SLOW(query_null, 10);
