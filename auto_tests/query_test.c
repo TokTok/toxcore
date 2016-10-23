@@ -33,7 +33,6 @@ static bool done = false;
 static void tox_query_response(Tox *tox, const uint8_t *request, size_t length, const uint8_t *tox_id,
                                    void *user_data)
 {
-    printf("Got the reply callback\n");
     ck_assert_msg(user_data == &response_cookie, "Invalid Cookie in response callback");
     ck_assert_msg(memcmp(tox_id, toxid, TOX_ADDRESS_SIZE) == 0, "Unexpected ToxID from callback");
     done = true;

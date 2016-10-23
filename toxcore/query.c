@@ -110,8 +110,6 @@ static bool q_add(PENDING_QUERIES *queries, P_QUERY pend)
         }
     }
 
-    printf("added to loc %lu\n", queries->count);
-
     queries->query_list[queries->count] = pend;
     ++queries->count;
 
