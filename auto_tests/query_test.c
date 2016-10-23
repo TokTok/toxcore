@@ -291,6 +291,66 @@ START_TEST(test_query_null)
 }
 END_TEST
 
+START_TEST(test_query_functions)
+{
+
+    // testing q_grow
+        PENDING_QUERIES testing_MAIN = {0};
+        P_QUERY         testing_SINGEL;
+
+        memset(&testing_MAIN, 0, sizeof(PENDING_QUERIES));
+        memset(&testing_SINGEL, 0, sizeof(P_QUERY));
+
+
+        testing_MAIN.count = 1;
+        ck_assert_msg(q_grow(&testing_MAIN) == true, "Unable to realloc in grow() small");
+        ck_assert_msg(testing_MAIN.query_list != NULL, "query_list is NULL");
+        ck_assert_msg(testing_MAIN.size == 1 + 2, "query_list unexpected size");
+
+        free(testing_MAIN.query_list);
+        testing_MAIN.query_list = NULL;
+        memset(&testing_MAIN, 0, sizeof(PENDING_QUERIES));
+
+        testing_MAIN.count = 100;
+        ck_assert_msg(q_grow(&testing_MAIN) == true, "Unable to realloc in grow() med");
+        ck_assert_msg(testing_MAIN.query_list != NULL, "query_list is NULL");
+        ck_assert_msg(testing_MAIN.size == 100 + 2, "query_list unexpected size");
+
+        free(testing_MAIN.query_list);
+        testing_MAIN.query_list = NULL;
+        memset(&testing_MAIN, 0, sizeof(PENDING_QUERIES));
+
+        testing_MAIN.count = 1000;
+        ck_assert_msg(q_grow(&testing_MAIN) == true, "Unable to realloc in grow() huge");
+        ck_assert_msg(testing_MAIN.query_list != NULL, "query_list is NULL");
+        ck_assert_msg(testing_MAIN.size == 1000 + 2, "query_list unexpected size");
+
+        free(testing_MAIN.query_list);
+        testing_MAIN.query_list = NULL;
+        memset(&testing_MAIN, 0, sizeof(PENDING_QUERIES));
+
+        testing_MAIN.count = -3;
+        ck_assert_msg(q_grow(&testing_MAIN) == false, "ABLE to realloc in grow() UNREASONABLE");
+        ck_assert_msg(testing_MAIN.query_list == NULL, "query_list is NOT_NULL");
+        ck_assert_msg(testing_MAIN.size == 0, "query_list unexpected size");
+
+    // testing q_verify_server(IP_Port existing, IP_Port pending)
+
+    // testing  int q_check(PENDING_QUERIES *queries, P_QUERY pend, bool outgoing)
+    // testing  bool q_add(PENDING_QUERIES *queries, P_QUERY pend)
+    // testing  bool q_drop(PENDING_QUERIES *queries, size_t loc)
+    // testing  size_t q_build_pkt(const uint8_t *their_public_key, const uint8_t *our_public_key, const uint8_t *our_secret_key,
+    //                             uint8_t type, const uint8_t *data, size_t length, uint8_t *built)
+    // testing int q_send(DHT *dht, P_QUERY send)
+    // testing  P_QUERY q_make(IP_Port ipp, const uint8_t key[TOX_PUBLIC_KEY_SIZE], const uint8_t *name, size_t length)
+    // testing  query_send_request(Tox *tox, const char *address, uint16_t port, const uint8_t *key,
+    //                             const uint8_t *name, size_t length)
+    // testing int query_handle_toxid_response(void *object, IP_Port source, const uint8_t *pkt, uint16_t length, void *userdata)
+    // testing PENDING_QUERIES *query_new(Networking_Core *net)
+    // testing void query_iterate(void *object)
+}
+END_TEST
+
 
 static Suite *tox_named_s(void)
 {
@@ -303,6 +363,8 @@ static Suite *tox_named_s(void)
     DEFTESTCASE_SLOW(query_store, 10);
     DEFTESTCASE_SLOW(query_host, 20);
     DEFTESTCASE_SLOW(query_null, 10);
+
+    DEFTESTCASE_SLOW(query_functions, 2);
     return s;
 }
 
