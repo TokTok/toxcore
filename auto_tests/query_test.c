@@ -26,12 +26,13 @@ static size_t name_length = strlen("requested_user.this_domain.tld") - 1;
 static uint8_t toxid[TOX_ADDRESS_SIZE] = {0xDD, 0x2A, 0x13, 0x40, 0xFE, 0xCE, 0x44, 0x12, 0x06, 0xB5, 0xF3,
                                           0xD2, 0x02, 0xE6, 0x14, 0x6E, 0x76, 0x61, 0x72, 0x70, 0x21, 0x44,
                                           0x99, 0xB7, 0x2C, 0x55, 0x11, 0xFC, 0xE8, 0x39, 0xF8, 0x5B, 0x28,
-                                          0xD7, 0xEA, 0xCB, 0xC4, 0x6C};
+                                          0xD7, 0xEA, 0xCB, 0xC4, 0x6C
+                                         };
 
 static bool done = false;
 
 static void tox_query_response(Tox *tox, const uint8_t *request, size_t length, const uint8_t *tox_id,
-                                   void *user_data)
+                               void *user_data)
 {
     ck_assert_msg(user_data == &response_cookie, "Invalid Cookie in response callback");
     ck_assert_msg(memcmp(tox_id, toxid, TOX_ADDRESS_SIZE) == 0, "Unexpected ToxID from callback");
@@ -45,8 +46,10 @@ static int query_handle_toxid_request(void *object, IP_Port source, const uint8_
     Messenger *m = (Messenger *)object;
 
     if (pkt[0] != NET_PACKET_DATA_REQUEST) {
-        ck_assert_msg(pkt[0] == NET_PACKET_DATA_REQUEST, "Bad incoming query request -- Packet = %u && length %u", pkt[0], length);
+        ck_assert_msg(pkt[0] == NET_PACKET_DATA_REQUEST, "Bad incoming query request -- Packet = %u && length %u", pkt[0],
+                      length);
     }
+
     length -= 1;
     ck_assert_msg(length > crypto_box_PUBLICKEYBYTES, "Bad length after 1 %u", length);
 
@@ -58,17 +61,20 @@ static int query_handle_toxid_request(void *object, IP_Port source, const uint8_
     uint8_t nonce[crypto_box_NONCEBYTES];
     memcpy(nonce, pkt + 1 + crypto_box_PUBLICKEYBYTES, crypto_box_NONCEBYTES);
     length -= crypto_box_NONCEBYTES;
-    ck_assert_msg(length == name_length + crypto_box_MACBYTES , "Bad length after nonce, %u instead of %u", length, name_length + crypto_box_MACBYTES);
+    ck_assert_msg(length == name_length + crypto_box_MACBYTES , "Bad length after nonce, %u instead of %u", length,
+                  name_length + crypto_box_MACBYTES);
 
     uint8_t clear[length];
 
-    decrypt_data(sender_key, m->dht->self_secret_key, nonce, pkt + 1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES, length, clear);
+    decrypt_data(sender_key, m->dht->self_secret_key, nonce, pkt + 1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES,
+                 length, clear);
 
     ck_assert_msg(memcmp(clear, name, name_length) == 0, "Incoming packet is NOT the name");
 
     uint8_t encrypted[QUERY_PKT_ENCRYPTED_SIZE(TOX_ADDRESS_SIZE)];
 
-    q_build_pkt(sender_key, m->dht->self_public_key, m->dht->self_secret_key, NET_PACKET_DATA_RESPONSE, toxid, TOX_ADDRESS_SIZE, encrypted);
+    q_build_pkt(sender_key, m->dht->self_public_key, m->dht->self_secret_key, NET_PACKET_DATA_RESPONSE, toxid,
+                TOX_ADDRESS_SIZE, encrypted);
 
     return sendpacket(m->dht->net, source, encrypted, QUERY_PKT_ENCRYPTED_SIZE(TOX_ADDRESS_SIZE));
 }
@@ -84,7 +90,8 @@ START_TEST(test_query_ip4)
     ck_assert_msg(error == TOX_ERR_NEW_OK, "Unable to create client");
 
     // Build server
-    networking_registerhandler(((Messenger *)server)->dht->net, NET_PACKET_DATA_REQUEST, &query_handle_toxid_request, server);
+    networking_registerhandler(((Messenger *)server)->dht->net, NET_PACKET_DATA_REQUEST, &query_handle_toxid_request,
+                               server);
 
     // Build client
     tox_callback_query_response(client, tox_query_response);
@@ -108,6 +115,7 @@ START_TEST(test_query_ip4)
 }
 END_TEST
 
+#ifndef TRAVIS_ENV
 START_TEST(test_query_ip6)
 {
     time_t start_time = time(NULL);
@@ -119,7 +127,8 @@ START_TEST(test_query_ip6)
     ck_assert_msg(error == TOX_ERR_NEW_OK, "Unable to create client");
 
     // Build server
-    networking_registerhandler(((Messenger *)server)->dht->net, NET_PACKET_DATA_REQUEST, &query_handle_toxid_request, server);
+    networking_registerhandler(((Messenger *)server)->dht->net, NET_PACKET_DATA_REQUEST, &query_handle_toxid_request,
+                               server);
 
     // Build client
     tox_callback_query_response(client, tox_query_response);
@@ -142,6 +151,7 @@ START_TEST(test_query_ip6)
     tox_kill(server);
 }
 END_TEST
+#endif
 
 START_TEST(test_query_store)
 {
@@ -161,10 +171,12 @@ START_TEST(test_query_store)
 
 
     int i = 3;
+
     while (i--) {
         tox_iterate(client, NULL);
         c_sleep(20);
     }
+
     tox_query_request(client, "127.0.0.1", 33445, ((Messenger *)client)->dht->self_public_key,
                       name, name_length, &r_error);
     ck_assert_msg(r_error == TOX_ERR_QUERY_REQUEST_PENDING, "Existing Query didn't pend! %i", r_error);
@@ -188,6 +200,7 @@ START_TEST(test_query_host)
     ck_assert_msg(r_error == TOX_ERR_QUERY_REQUEST_BAD_HOST, "BAD_HOST WAS ACCEPTED %i", r_error);
 
     int i = 3;
+
     while (i--) {
         tox_iterate(client, NULL);
         c_sleep(20);
@@ -207,6 +220,7 @@ START_TEST(test_query_host)
     ck_assert_msg(r_error == TOX_ERR_QUERY_REQUEST_BAD_PORT, "BAD_PORT WAS ACCEPTED %i", r_error);
 
     i = 3;
+
     while (i--) {
         tox_iterate(client, NULL);
         c_sleep(20);
@@ -229,10 +243,12 @@ START_TEST(test_query_null)
     ck_assert_msg(r_error == TOX_ERR_QUERY_REQUEST_NULL, "BAD ADDRESS WAS ACCEPTED %i", r_error);
 
     int i = 3;
+
     while (i--) {
         tox_iterate(client, NULL);
         c_sleep(20);
     }
+
     tox_kill(client);
 
 
@@ -246,10 +262,12 @@ START_TEST(test_query_null)
     ck_assert_msg(r_error == TOX_ERR_QUERY_REQUEST_NULL, "BAD NAME WAS ACCEPTED %i", r_error);
 
     i = 3;
+
     while (i--) {
         tox_iterate(client, NULL);
         c_sleep(20);
     }
+
     tox_kill(client);
 
 
@@ -263,10 +281,12 @@ START_TEST(test_query_null)
     ck_assert_msg(r_error == TOX_ERR_QUERY_REQUEST_NULL, "BAD NAME_LENGTH WAS ACCEPTED %i", r_error);
 
     i = 3;
+
     while (i--) {
         tox_iterate(client, NULL);
         c_sleep(20);
     }
+
     tox_kill(client);
 }
 END_TEST
@@ -277,7 +297,9 @@ static Suite *tox_named_s(void)
     Suite *s = suite_create("tox_named");
 
     DEFTESTCASE_SLOW(query_ip4, 10);
+#ifndef TRAVIS_ENV
     DEFTESTCASE_SLOW(query_ip6, 10);
+#endif
     DEFTESTCASE_SLOW(query_store, 10);
     DEFTESTCASE_SLOW(query_host, 20);
     DEFTESTCASE_SLOW(query_null, 10);
