@@ -62,7 +62,8 @@ static bool q_verify_server(IP_Port existing, IP_Port pending)
 
 /** q_check
  *
- * checks for a response in the pending queries list.
+ * Checks for an existing entry in the pending queries list. Returns the positon of the P_QUERY on
+ * success, and -1 if the given query isn't found.
  */
 static int q_check(PENDING_QUERIES *queries, P_QUERY pend, bool outgoing)
 {
@@ -71,7 +72,7 @@ static int q_check(PENDING_QUERIES *queries, P_QUERY pend, bool outgoing)
     for (i = 0; i < queries->count; ++i) {
         P_QUERY test = queries->query_list[i];
 
-        if (!q_verify_server(test.ipp, pend.ipp)) { /* TODO(grayhatter) will this work? */
+        if (!q_verify_server(test.ipp, pend.ipp)) {
             continue;
         }
 

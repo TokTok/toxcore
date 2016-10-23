@@ -321,11 +321,11 @@ uint32_t tox_file_id_length(void);
 uint32_t tox_max_filename_length(void);
 
 /**
- * Max legnth of names queried by toxcore
+ * Max size (in bytes) of names queried by toxcore
  */
-#define TOX_MAX_QUERY_NAME_LENGTH      255
+#define TOX_MAX_QUERY_NAME_SIZE        255
 
-uint32_t tox_max_query_name_length(void);
+uint32_t tox_max_query_name_size(void);
 
 
 /*******************************************************************************
@@ -955,7 +955,7 @@ typedef enum TOX_ERR_QUERY_REQUEST {
     TOX_ERR_QUERY_REQUEST_MALLOC,
 
     /**
-     * Unknown error of some kind, this feature is likely incomplete.
+     * Unknown error of some kind this indicates an error in toxcore.
      */
     TOX_ERR_QUERY_REQUEST_UNKNOWN,
 
@@ -965,7 +965,7 @@ typedef enum TOX_ERR_QUERY_REQUEST {
 /**
  * Queries the server at IP port, with PUBKEY, for the TOXID at <unresolved>
  *
- * TODO(grayhatter) add a bool to send request from a one time use keypair.
+ * TODO(grayhatter) add a bool to send request from a one time use keypair. (Needs net_crypto/dht refactor)
  * NOTE(requires net_crypto.c support)
  *
  * param address the IPv4, or IPv6 Address for the server.
@@ -977,8 +977,8 @@ bool tox_query_request(Tox *tox, const char *address, uint16_t port, const uint8
                        size_t length, TOX_ERR_QUERY_REQUEST *error);
 
 /**
- * this is the comments for this callback
- * TODO(grayhatter) finish this...
+ * This callback will be invoked by toxcore when a response from a pending query was recived.
+ * Once this callback is recived, the query will have already been removed.
  */
 typedef void tox_query_response_cb(Tox *tox, const uint8_t *request, size_t length, const uint8_t *tox_id,
                                    void *user_data);
