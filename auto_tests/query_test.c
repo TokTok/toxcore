@@ -295,44 +295,44 @@ START_TEST(test_query_functions)
 {
 
     // testing q_grow
-        PENDING_QUERIES testing_MAIN = {0};
-        P_QUERY         testing_SINGEL;
+    PENDING_QUERIES testing_MAIN = {0};
+    P_QUERY         testing_SINGEL;
 
-        memset(&testing_MAIN, 0, sizeof(PENDING_QUERIES));
-        memset(&testing_SINGEL, 0, sizeof(P_QUERY));
+    memset(&testing_MAIN, 0, sizeof(PENDING_QUERIES));
+    memset(&testing_SINGEL, 0, sizeof(P_QUERY));
 
 
-        testing_MAIN.count = 1;
-        ck_assert_msg(q_grow(&testing_MAIN) == true, "Unable to realloc in grow() small");
-        ck_assert_msg(testing_MAIN.query_list != NULL, "query_list is NULL");
-        ck_assert_msg(testing_MAIN.size == 1 + 2, "query_list unexpected size");
+    testing_MAIN.count = 1;
+    ck_assert_msg(q_grow(&testing_MAIN) == true, "Unable to realloc in grow() small");
+    ck_assert_msg(testing_MAIN.query_list != NULL, "query_list is NULL");
+    ck_assert_msg(testing_MAIN.size == 1 + 2, "query_list unexpected size");
 
-        free(testing_MAIN.query_list);
-        testing_MAIN.query_list = NULL;
-        memset(&testing_MAIN, 0, sizeof(PENDING_QUERIES));
+    free(testing_MAIN.query_list);
+    testing_MAIN.query_list = NULL;
+    memset(&testing_MAIN, 0, sizeof(PENDING_QUERIES));
 
-        testing_MAIN.count = 100;
-        ck_assert_msg(q_grow(&testing_MAIN) == true, "Unable to realloc in grow() med");
-        ck_assert_msg(testing_MAIN.query_list != NULL, "query_list is NULL");
-        ck_assert_msg(testing_MAIN.size == 100 + 2, "query_list unexpected size");
+    testing_MAIN.count = 100;
+    ck_assert_msg(q_grow(&testing_MAIN) == true, "Unable to realloc in grow() med");
+    ck_assert_msg(testing_MAIN.query_list != NULL, "query_list is NULL");
+    ck_assert_msg(testing_MAIN.size == 100 + 2, "query_list unexpected size");
 
-        free(testing_MAIN.query_list);
-        testing_MAIN.query_list = NULL;
-        memset(&testing_MAIN, 0, sizeof(PENDING_QUERIES));
+    free(testing_MAIN.query_list);
+    testing_MAIN.query_list = NULL;
+    memset(&testing_MAIN, 0, sizeof(PENDING_QUERIES));
 
-        testing_MAIN.count = 1000;
-        ck_assert_msg(q_grow(&testing_MAIN) == true, "Unable to realloc in grow() huge");
-        ck_assert_msg(testing_MAIN.query_list != NULL, "query_list is NULL");
-        ck_assert_msg(testing_MAIN.size == 1000 + 2, "query_list unexpected size");
+    testing_MAIN.count = 1000;
+    ck_assert_msg(q_grow(&testing_MAIN) == true, "Unable to realloc in grow() huge");
+    ck_assert_msg(testing_MAIN.query_list != NULL, "query_list is NULL");
+    ck_assert_msg(testing_MAIN.size == 1000 + 2, "query_list unexpected size");
 
-        free(testing_MAIN.query_list);
-        testing_MAIN.query_list = NULL;
-        memset(&testing_MAIN, 0, sizeof(PENDING_QUERIES));
+    free(testing_MAIN.query_list);
+    testing_MAIN.query_list = NULL;
+    memset(&testing_MAIN, 0, sizeof(PENDING_QUERIES));
 
-        testing_MAIN.count = -3;
-        ck_assert_msg(q_grow(&testing_MAIN) == false, "ABLE to realloc in grow() UNREASONABLE");
-        ck_assert_msg(testing_MAIN.query_list == NULL, "query_list is NOT_NULL");
-        ck_assert_msg(testing_MAIN.size == 0, "query_list unexpected size");
+    testing_MAIN.count = -3;
+    ck_assert_msg(q_grow(&testing_MAIN) == false, "ABLE to realloc in grow() UNREASONABLE");
+    ck_assert_msg(testing_MAIN.query_list == NULL, "query_list is NOT_NULL");
+    ck_assert_msg(testing_MAIN.size == 0, "query_list unexpected size");
 
     // testing q_verify_server(IP_Port existing, IP_Port pending)
 

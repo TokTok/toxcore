@@ -287,9 +287,9 @@ const FILE_ID_LENGTH              = 32;
 const MAX_FILENAME_LENGTH         = 255;
 
 /**
- * Max legnth of names queried by toxcore
+ * Max size (in bytes) of names queried by toxcore
  */
-const MAX_QUERY_NAME_LENGTH       = 255;
+const MAX_QUERY_NAME_SIZE       = 255;
 /*******************************************************************************
  *
  * :: Global enumerations
@@ -750,7 +750,7 @@ namespace query {
   /**
    * Queries the server at IP port, with PUBKEY, for the TOXID at $name
    *
-   * TODO(grayhatter) add a bool to send request from a one time use keypair.
+   * TODO(grayhatter) add a bool to send request from a one time use keypair. (Needs net_crypto/dht refactor)
    * NOTE(requires net_crypto.c support)
    *
    * param address the IPv4, or IPv6 Address for the server.
@@ -759,7 +759,7 @@ namespace query {
    * @return true on success.
    */
   bool request(string address, uint16_t port, const uint8_t[PUBLIC_KEY_SIZE] public_key,
-    const uint8_t[length <= MAX_QUERY_NAME_LENGTH] name) {
+    const uint8_t[length <= MAX_QUERY_NAME_SIZE] name) {
     NULL,
     /**
      * The address could not be resolved to an IP address, or the IP address
@@ -779,17 +779,17 @@ namespace query {
      */
     MALLOC,
     /**
-     * Unknown error of some kind, this feature is likely incomplete.
+     * Unknown error of some kind this indicates an error in toxcore.
      */
     UNKNOWN,
   }
 
   event response const {
     /**
-     * this is the comments for this callback
-     * TODO(grayhatter) finish this...
+     * This callback will be invoked by toxcore when a response from a pending query was recived.
+     * Once this callback is recived, the query will have already been removed.
      */
-    typedef void(const uint8_t[length <= MAX_QUERY_NAME_LENGTH] request, const uint8_t[ADDRESS_SIZE] tox_id);
+    typedef void(const uint8_t[length <= MAX_QUERY_NAME_SIZE] request, const uint8_t[ADDRESS_SIZE] tox_id);
   }
 }
 
