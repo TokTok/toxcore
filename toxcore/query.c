@@ -1,9 +1,6 @@
 /** query.c
  *
- * Makes requests for information using the DHT or Onion as approitate.
- *
- * This file should include a licence, but if you're reading this, it doesn't yet so everything in
- * this file is donated to both tox, toktok, and you under a BSD or MIT licence at any option.
+ * Makes requests for information using the DHT or Onion as appropriate.
  */
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -25,9 +22,9 @@
 /**
  * Will realloc *queries to double the size of the current count.
  */
-static bool grow(PENDING_QUERIES *queries)
+static bool q_grow(PENDING_QUERIES *queries)
 {
-    size_t size = queries->count  + 2;
+    size_t size = queries->count + 2;
     P_QUERY *new = realloc(queries->query_list, size * sizeof(P_QUERY));
 
     if (!new) {
@@ -105,7 +102,7 @@ static int q_check(PENDING_QUERIES *queries, P_QUERY pend, bool outgoing)
 static bool q_add(PENDING_QUERIES *queries, P_QUERY pend)
 {
     if (queries->count >= queries->size) {
-        if (grow(queries) != true) {
+        if (q_grow(queries) != true) {
             return false;
         }
     }
