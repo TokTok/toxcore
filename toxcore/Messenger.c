@@ -1937,8 +1937,6 @@ Messenger *new_messenger(Logger *log, Messenger_Options *options, unsigned int *
         return NULL;
     }
 
-    m->queries = query_new();
-
     m->onion = new_onion(m->dht);
     m->onion_a = new_onion_announce(m->dht);
     m->onion_c =  new_onion_client(m->net_crypto);

@@ -914,6 +914,11 @@ typedef enum TOX_ERR_QUERY_REQUEST {
     TOX_ERR_QUERY_REQUEST_PENDING,
 
     /**
+     * Unable to malloc and save this query.
+     */
+    TOX_ERR_QUERY_REQUEST_MALLOC,
+
+    /**
      * Unknown error of some kind, this feature is likely incomplete.
      */
     TOX_ERR_QUERY_REQUEST_UNKNOWN,

@@ -749,16 +749,16 @@ namespace query {
 
   /**
    * Queries the server at IP port, with PUBKEY, for the TOXID at $name
-   * 
-   * TODO(grayhatter) add a bool to send request from a one time use keypair. 
+   *
+   * TODO(grayhatter) add a bool to send request from a one time use keypair.
    * NOTE(requires net_crypto.c support)
-   * 
+   *
    * param address the IPv4, or IPv6 Address for the server.
    * param port the port the server is listening on.
    * param public_key the long term public key for the name server.
    * @return true on success.
    */
-  bool request(string address, uint16_t port, const uint8_t[PUBLIC_KEY_SIZE] public_key, 
+  bool request(string address, uint16_t port, const uint8_t[PUBLIC_KEY_SIZE] public_key,
     const uint8_t[length <= MAX_QUERY_NAME_LENGTH] name) {
     NULL,
     /**
@@ -774,6 +774,10 @@ namespace query {
      * There is an existing request at this address with this name.
      */
     PENDING,
+    /**
+     * Unable to malloc and save this query.
+     */
+    MALLOC,
     /**
      * Unknown error of some kind, this feature is likely incomplete.
      */

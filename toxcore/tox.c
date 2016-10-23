@@ -482,6 +482,11 @@ bool tox_query_request(Tox *tox, const char *address, uint16_t port, const uint8
         }
 
         case -3: {
+            SET_ERROR_PARAMETER(error, TOX_ERR_QUERY_REQUEST_MALLOC);
+            return false;
+        }
+
+        case -4: {
             SET_ERROR_PARAMETER(error, TOX_ERR_QUERY_REQUEST_UNKNOWN);
             return false;
         }
@@ -498,7 +503,10 @@ bool tox_query_request(Tox *tox, const char *address, uint16_t port, const uint8
  */
 void tox_callback_query_response(Tox *tox, tox_query_response_cb *callback)
 {
+    Messenger *m = (Messenger *)tox;
 
+    m->dht->queries->query_response = callback;
+    m->dht->queries->query_response_object = tox;
 }
 
 TOX_CONNECTION tox_self_get_connection_status(const Tox *tox)

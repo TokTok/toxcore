@@ -29,7 +29,6 @@
 #include "friend_connection.h"
 #include "friend_requests.h"
 #include "logger.h"
-#include "query.h"
 
 #define MAX_NAME_LENGTH 128
 /* TODO(irungentoo): this must depend on other variable. */
@@ -216,8 +215,6 @@ struct Messenger {
     Networking_Core *net;
     Net_Crypto *net_crypto;
     DHT *dht;
-
-    PENDING_QUERIES *queries;
 
     Onion *onion;
     Onion_Announce *onion_a;

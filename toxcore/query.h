@@ -12,7 +12,6 @@
 #include "network.h"
 #include "tox.h"
 
-
 #define QUERY_TIMEOUT 500
 
 typedef struct {
@@ -31,6 +30,10 @@ typedef struct {
     size_t size;
     size_t count;
     P_QUERY *query_list;
+
+    tox_query_response_cb *query_response;
+    void *query_response_object;
+
 } PENDING_QUERIES;
 
 /** query_send_request
@@ -40,6 +43,16 @@ typedef struct {
 int query_send_request(Tox *tox, const char *address, uint16_t port, const uint8_t *key,
                        const uint8_t *name, size_t length);
 
-PENDING_QUERIES *query_new(void);
+int query_handle_toxid_response(void *object, IP_Port source, const uint8_t *pkt, uint16_t length, void *userdata);
+
+/**
+ * Generate a new query object
+ */
+PENDING_QUERIES *query_new(Networking_Core *net);
+
+/**
+ * Process/iterate pending queries.
+ */
+void query_iterate(void *object);
 
 #endif
