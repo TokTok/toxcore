@@ -289,7 +289,7 @@ const MAX_FILENAME_LENGTH         = 255;
 /**
  * Max size (in bytes) of names queried by toxcore
  */
-const MAX_QUERY_NAME_SIZE       = 255;
+const QUERY_MAX_NAME_SIZE       = 255;
 /*******************************************************************************
  *
  * :: Global enumerations

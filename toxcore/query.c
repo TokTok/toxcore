@@ -17,10 +17,10 @@
 
 // #include <assert.h>
 
-#define QUERY_PKT_ENCRYPTED_SIZE(payload_size) ( 1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES + payload_size + crypto_box_MACBYTES)
+#define QUERY_PKT_ENCRYPTED_SIZE(payload) (1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES + payload + crypto_box_MACBYTES)
 
 /**
- * Will realloc *queries to double the size of the current count.
+ * Increases the size of the query_list to count + 2.
  */
 static bool q_grow(PENDING_QUERIES *queries)
 {
@@ -37,22 +37,23 @@ static bool q_grow(PENDING_QUERIES *queries)
     return true;
 }
 
-static bool q_verify_server(IP_Port existing, IP_Port pending)
+/** returns true if existing and pending resolve to the same server address and port. */
+static bool q_verify_server(const IP_Port *existing, const IP_Port *pending)
 {
-    if (existing.port != pending.port) {
+    if (existing->port != pending->port) {
         return false;
     }
 
-    if (existing.ip.family != pending.ip.family) {
+    if (existing->ip.family != pending->ip.family) {
         return false;
     }
 
-    if (existing.ip.family == AF_INET) {
-        if (memcmp((uint8_t *)&existing.ip.ip4.in_addr, (uint8_t *)&pending.ip.ip4.in_addr, sizeof(struct in_addr)) != 0) {
+    if (existing->ip.family == AF_INET) {
+        if (memcmp(&existing->ip.ip4.in_addr, &pending->ip.ip4.in_addr, sizeof(struct in_addr)) != 0) {
             return false;
         }
     } else {
-        if (memcmp((uint8_t *)&existing.ip.ip6.in6_addr, (uint8_t *)&pending.ip.ip6.in6_addr, sizeof(struct in6_addr)) != 0) {
+        if (memcmp(&existing->ip.ip6.in6_addr, &pending->ip.ip6.in6_addr, sizeof(struct in6_addr)) != 0) {
             return false;
         }
     }
@@ -65,27 +66,27 @@ static bool q_verify_server(IP_Port existing, IP_Port pending)
  * Checks for an existing entry in the pending queries list. Returns the positon of the P_QUERY on
  * success, and -1 if the given query isn't found.
  */
-static int q_check(PENDING_QUERIES *queries, P_QUERY pend, bool outgoing)
+static int q_check(const PENDING_QUERIES *queries, const P_QUERY *pend, bool outgoing)
 {
     unsigned i;
 
     for (i = 0; i < queries->count; ++i) {
-        P_QUERY test = queries->query_list[i];
+        P_QUERY *test = &queries->query_list[i];
 
-        if (!q_verify_server(test.ipp, pend.ipp)) {
+        if (!q_verify_server(&test->ipp, &pend->ipp)) {
             continue;
         }
 
-        if (!id_equal(test.key, pend.key)) {
+        if (!id_equal(test->key, pend->key)) {
             continue;
         }
 
         if (outgoing) {
-            if (test.length != pend.length) {
+            if (test->length != pend->length) {
                 continue;
             }
 
-            if (memcmp(test.name, pend.name, test.length) != 0) {
+            if (memcmp(&test->name, &pend->name, test->length) != 0) {
                 continue;
             }
         }
@@ -100,7 +101,8 @@ static int q_check(PENDING_QUERIES *queries, P_QUERY pend, bool outgoing)
     return -1;
 }
 
-static bool q_add(PENDING_QUERIES *queries, P_QUERY pend)
+/** Adds pend to the query_list. */
+static bool q_add(PENDING_QUERIES *queries, const P_QUERY *pend)
 {
     if (queries->count >= queries->size) {
         if (q_grow(queries) != true) {
@@ -108,35 +110,23 @@ static bool q_add(PENDING_QUERIES *queries, P_QUERY pend)
         }
     }
 
-    queries->query_list[queries->count] = pend;
+    memcpy(&queries->query_list[queries->count], pend, sizeof(*pend));
     ++queries->count;
 
     return true;
 }
 
-/** q_find_and_drop
- *
- * checks for a response in the pending queries list, if it exists, it'll drop it from the list.
- */
-static bool q_drop(PENDING_QUERIES *queries, size_t loc)
+/** Drops the query at position loc from the list. */
+static void q_drop(PENDING_QUERIES *queries, size_t loc)
 {
-    if (loc == -1) {
-        return false;
+    if (loc && queries->count > loc + 1) {
+        memmove(&queries->query_list[loc], &queries->query_list[loc + 1], sizeof(P_QUERY));
     }
-
-    free(queries->query_list[loc].name);
     --queries->count;
-
-    if (loc == queries->count) {
-        return true;
-    }
-
-    memmove(&queries->query_list[loc], &queries->query_list[loc + 1], sizeof(P_QUERY));
-    return true;
 }
 
 static size_t q_build_pkt(const uint8_t *their_public_key, const uint8_t *our_public_key, const uint8_t *our_secret_key,
-                          uint8_t type, const uint8_t *data, size_t length, uint8_t *built)
+                          const uint8_t type, const uint8_t *data, const size_t length, uint8_t *built)
 {
     // Encrypt the outgoing data
     uint8_t nonce[crypto_box_NONCEBYTES];
@@ -165,31 +155,30 @@ static size_t q_build_pkt(const uint8_t *their_public_key, const uint8_t *our_pu
     return 1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES + status;
 }
 
-static int q_send(DHT *dht, P_QUERY send)
+static int q_send(const DHT *dht, const P_QUERY *send)
 {
-    uint8_t packet[QUERY_PKT_ENCRYPTED_SIZE(send.length)];
+    uint8_t packet[QUERY_PKT_ENCRYPTED_SIZE(send->length)];
 
-    size_t written_size = q_build_pkt(send.key, dht->self_public_key, dht->self_secret_key, NET_PACKET_DATA_REQUEST,
-                                      send.name, send.length, packet);
-    // TODO(grayhatter) add tox_assert(written_size == QUERY_PKT_ENCRYPTED_SIZE(send.length));
+    size_t written_size = q_build_pkt(send->key, dht->self_public_key, dht->self_secret_key, NET_PACKET_DATA_REQUEST,
+                                      send->name, send->length, packet);
+    // TODO(grayhatter) add tox_assert(written_size == QUERY_PKT_ENCRYPTED_SIZE(send->length));
 
     if (written_size != -1) {
-        return sendpacket(dht->net, send.ipp, packet, written_size) != written_size;
+        return sendpacket(dht->net, send->ipp, packet, written_size) != written_size;
     }
 
     return -1;
 }
 
-static P_QUERY q_make(IP_Port ipp, const uint8_t key[TOX_PUBLIC_KEY_SIZE], const uint8_t *name, size_t length)
+static P_QUERY q_make(IP_Port *ipp, const uint8_t key[TOX_PUBLIC_KEY_SIZE], const uint8_t *name, const size_t length)
 {
     P_QUERY new;
     memset(&new, 0, sizeof(P_QUERY));
 
-    new.ipp = ipp;
+    memcpy(&new.ipp, ipp, sizeof(IP_Port));
     id_copy(new.key, key);
-    new.name = calloc(1, length);
-    memcpy(new.name, name, length);
-    new.length = length;
+    memcpy(new.name, name, length < TOX_QUERY_MAX_NAME_SIZE ? length : TOX_QUERY_MAX_NAME_SIZE );
+    new.length = length < TOX_QUERY_MAX_NAME_SIZE ? length : TOX_QUERY_MAX_NAME_SIZE;
 
     // new.query_nonce = random_64b(); // TODO(grayhatter) readd nonce
 
@@ -243,16 +232,16 @@ int query_send_request(Tox *tox, const char *address, uint16_t port, const uint8
         return -1; // No host found
     }
 
-    P_QUERY new = q_make(ipp, key, name, length);
+    P_QUERY new = q_make(&ipp, key, name, length);
 
     // Verify name isn't currently pending response
-    if (q_check(m->dht->queries, new, 1) != -1) {
+    if (q_check(m->dht->queries, &new, 1) != -1) {
         return -2;
     }
 
     // Send request
-    if (q_send(m->dht, new) == 0) {
-        if (q_add(m->dht->queries, new)) {
+    if (q_send(m->dht, &new) == 0) {
+        if (q_add(m->dht->queries, &new)) {
             return 0;
         }
 
@@ -266,7 +255,7 @@ int query_handle_toxid_response(void *object, IP_Port source, const uint8_t *pkt
 {
     DHT *dht = (DHT *)object;
 
-    if (*pkt != NET_PACKET_DATA_RESPONSE) {
+    if (pkt[0] != NET_PACKET_DATA_RESPONSE) {
         return -1;
     }
 
@@ -278,10 +267,11 @@ int query_handle_toxid_response(void *object, IP_Port source, const uint8_t *pkt
     unsigned int i;
 
     for (i = 0; i < dht->queries->count; ++i) {
-        if (q_verify_server(source, dht->queries->query_list[i].ipp)) {
+        if (q_verify_server(&source, &dht->queries->query_list[i].ipp)) {
             break;
         }
     }
+
 
     length -= 1;
 
@@ -302,9 +292,9 @@ int query_handle_toxid_response(void *object, IP_Port source, const uint8_t *pkt
         return -1;
     }
 
-    P_QUERY test = q_make(source, sender_key, clear, length - crypto_box_MACBYTES);
+    P_QUERY test = q_make(&source, sender_key, clear, length - crypto_box_MACBYTES);
 
-    int loc = q_check(dht->queries, test, 0);
+    int loc = q_check(dht->queries, &test, 0);
 
     if (loc != -1) {
         if (dht->queries->query_response) {
@@ -328,6 +318,11 @@ PENDING_QUERIES *query_new(Networking_Core *net)
     }
 
     new->query_list = calloc(1, sizeof(P_QUERY));
+
+    if (new->query_list == NULL) {
+        return NULL;
+    }
+
     return new;
 }
 
@@ -339,7 +334,7 @@ void query_iterate(void *object)
         unsigned int i;
 
         for (i = 0; i < dht->queries->count; ++i) {
-            q_send(dht, dht->queries->query_list[i]);
+            q_send(dht, &dht->queries->query_list[i]);
         }
     }
 
