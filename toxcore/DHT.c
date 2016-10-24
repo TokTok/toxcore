@@ -2608,7 +2608,13 @@ DHT *new_DHT(Logger *log, Networking_Core *net, bool holepunching_enabled)
         return NULL;
     }
 
+
     dht->queries = query_new(dht->net);
+
+    if (dht->queries == NULL) {
+        kill_DHT(dht);
+        return NULL;
+    }
     networking_registerhandler(dht->net, NET_PACKET_DATA_RESPONSE, &query_handle_toxid_response, dht);
 
     networking_registerhandler(dht->net, NET_PACKET_GET_NODES, &handle_getnodes, dht);

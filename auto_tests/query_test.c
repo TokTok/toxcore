@@ -34,6 +34,7 @@ static bool done = false;
 static void tox_query_response(Tox *tox, const uint8_t *request, size_t length, const uint8_t *tox_id,
                                void *user_data)
 {
+    ck_assert_msg(1, "query callback");
     ck_assert_msg(user_data == &response_cookie, "Invalid Cookie in response callback");
     ck_assert_msg(memcmp(tox_id, toxid, TOX_ADDRESS_SIZE) == 0, "Unexpected ToxID from callback");
     done = true;
@@ -73,15 +74,17 @@ static int query_handle_toxid_request(void *object, IP_Port source, const uint8_
 
     uint8_t encrypted[QUERY_PKT_ENCRYPTED_SIZE(TOX_ADDRESS_SIZE)];
 
-    q_build_pkt(sender_key, m->dht->self_public_key, m->dht->self_secret_key, NET_PACKET_DATA_RESPONSE, toxid,
-                TOX_ADDRESS_SIZE, encrypted);
+    size_t pkt_size = q_build_pkt(sender_key, m->dht->self_public_key, m->dht->self_secret_key, NET_PACKET_DATA_RESPONSE, toxid,
+                                  TOX_ADDRESS_SIZE, encrypted);
+    ck_assert_msg(pkt_size == QUERY_PKT_ENCRYPTED_SIZE(TOX_ADDRESS_SIZE), "Build packet callback broken size!");
 
-    return sendpacket(m->dht->net, source, encrypted, QUERY_PKT_ENCRYPTED_SIZE(TOX_ADDRESS_SIZE));
+    int send_res = sendpacket(m->dht->net, source, encrypted, pkt_size);
+    ck_assert_msg(send_res != -1, "unbale to send packet");
+    return send_res;
 }
 
 START_TEST(test_query_ip4)
 {
-    time_t start_time = time(NULL);
 
     TOX_ERR_NEW error = 0;
     Tox *server = tox_new(NULL, &error);
@@ -118,8 +121,6 @@ END_TEST
 #ifndef TRAVIS_ENV
 START_TEST(test_query_ip6)
 {
-    time_t start_time = time(NULL);
-
     TOX_ERR_NEW error = 0;
     Tox *server = tox_new(NULL, &error);
     ck_assert_msg(error == TOX_ERR_NEW_OK, "Unable to create server");
@@ -341,6 +342,16 @@ START_TEST(test_query_functions)
     // testing  bool q_drop(PENDING_QUERIES *queries, size_t loc)
     // testing  size_t q_build_pkt(const uint8_t *their_public_key, const uint8_t *our_public_key, const uint8_t *our_secret_key,
     //                             uint8_t type, const uint8_t *data, size_t length, uint8_t *built)
+    uint8_t key[crypto_box_KEYBYTES];
+    new_symmetric_key(key);
+    uint8_t build_pkt[QUERY_PKT_ENCRYPTED_SIZE(name_length)];
+    size_t build_size = q_build_pkt(key, key, key, NET_PACKET_DATA_REQUEST, name, name_length, build_pkt);
+    ck_assert_msg(build_pkt[0] == NET_PACKET_DATA_REQUEST, "q_build_pkt malformed packet");
+    ck_assert_msg(memcmp(build_pkt + 1, key, crypto_box_KEYBYTES) == 0, "q_build_pkt malformed packet");
+    ck_assert_msg(memcmp(build_pkt + 1, key, crypto_box_KEYBYTES) == 0, "q_build_pkt malformed packet");
+    ck_assert_msg(build_size == QUERY_PKT_ENCRYPTED_SIZE(name_length), "q_build_pkt, invalid returned size");
+
+
     // testing int q_send(DHT *dht, P_QUERY send)
     // testing  P_QUERY q_make(IP_Port ipp, const uint8_t key[TOX_PUBLIC_KEY_SIZE], const uint8_t *name, size_t length)
     // testing  query_send_request(Tox *tox, const char *address, uint16_t port, const uint8_t *key,

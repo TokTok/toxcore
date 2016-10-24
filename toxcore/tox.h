@@ -323,9 +323,9 @@ uint32_t tox_max_filename_length(void);
 /**
  * Max size (in bytes) of names queried by toxcore
  */
-#define TOX_MAX_QUERY_NAME_SIZE        255
+#define TOX_QUERY_MAX_NAME_SIZE        255
 
-uint32_t tox_max_query_name_size(void);
+uint32_t tox_query_max_name_size(void);
 
 
 /*******************************************************************************
