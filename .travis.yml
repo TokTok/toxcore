@@ -35,6 +35,8 @@ addons:
       - opam                  # For apidsl and Frama-C.
       - portaudio19-dev       # For av_test.
       - texinfo               # For libconfig.
+      - libminiupnpc-dev      # For UPnP.
+      - libnatpmp-dev         # For NAT-PMP.
 
 cache:
   directories:

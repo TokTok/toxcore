@@ -80,7 +80,7 @@ You should get and install [libsodium](https://github.com/jedisct1/libsodium). I
 ```bash
 git clone https://github.com/jedisct1/libsodium.git
 cd libsodium
-git checkout tags/1.0.3
+git checkout tags/1.0.11
 ./autogen.sh
 ./configure && make check
 sudo checkinstall --install --pkgname libsodium --pkgversion 1.0.0 --nodoc
@@ -496,6 +496,8 @@ While [Toxic](https://github.com/tox/toxic) is no longer in core, a list of Tox 
   - --disable-silent-rules verbose build output (undo: "make V=0")
   - --disable-tests build unit tests (default: auto)
   - --disable-av disable A/V support (default: auto) see: [libtoxav](#libtoxav)
+  - --disable-miniupnp disable UPnP port forwarding support (default: auto) see: [NAT traversal](#nat-traversal)
+  - --disable-natpmp disable NAT-PMP port forwarding support (default: auto) see: [NAT traversal](#nat-traversal)
   - --enable-ntox build nTox client (default: no) see: [nTox](#ntox)
   - --enable-daemon build DHT bootstrap daemon (default=no) see: [Bootstrap daemon](#bootstrapd)
   - --enable-shared[=PKGS]  build shared libraries [default=yes]
@@ -550,6 +552,63 @@ cd opus-1.0.3
 make -j3
 sudo make install
 cd ..
+```
+
+<a name="nat-traversal" />
+###NAT traversal:
+
+Some home-routers support UPnP and/or NAT-PMP to simplify port forwarding, hence toxcore can be compiled with support for those protocols.
+
+<a name="upnp" />
+####UPnP:
+
+Required dependency: [miniupnpc](https://github.com/miniupnp/miniupnp).
+
+Install on Ubuntu / Debian:
+```bash
+sudo apt-get install libminiupnpc-dev
+```
+
+Install on Fedora:
+```bash
+yum install miniupnpc
+```
+
+Install from source (example for most unix-like OS's):
+```bash
+git clone https://github.com/miniupnp/miniupnp.git
+cd miniupnp/miniupnpc
+mkdir build
+cd build
+cmake ..
+make
+sudo make install
+```
+
+<a name="natpmp" />
+####NAT-PMP:
+
+Required dependency: [libnatpmp](https://github.com/miniupnp/libnatpmp).
+
+Install on Ubuntu / Debian:
+```bash
+sudo apt-get install libnatpmp-dev
+```
+
+Install on Fedora:
+```bash
+yum install libnatpmp
+```
+
+Install from source (example for most unix-like OS's):
+```bash
+git clone https://github.com/miniupnp/libnatpmp.git
+cd libnatpmp
+mkdir build
+cd build
+cmake ..
+make
+sudo make install
 ```
 
 <a name="bootstrapd" />
