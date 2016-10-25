@@ -24,8 +24,8 @@
 #ifndef ONION_CLIENT_H
 #define ONION_CLIENT_H
 
-#include "onion_announce.h"
 #include "net_crypto.h"
+#include "onion_announce.h"
 #include "ping_array.h"
 
 #define MAX_ONION_CLIENTS 8
@@ -114,7 +114,7 @@ typedef struct {
     void *tcp_relay_node_callback_object;
     uint32_t tcp_relay_node_callback_number;
 
-    void (*dht_pk_callback)(void *data, int32_t number, const uint8_t *dht_public_key);
+    void (*dht_pk_callback)(void *data, int32_t number, const uint8_t *dht_public_key, void *userdata);
     void *dht_pk_callback_object;
     uint32_t dht_pk_callback_number;
 
@@ -122,7 +122,7 @@ typedef struct {
 } Onion_Friend;
 
 typedef int (*oniondata_handler_callback)(void *object, const uint8_t *source_pubkey, const uint8_t *data,
-        uint16_t len);
+        uint16_t len, void *userdata);
 
 typedef struct {
     DHT     *dht;
@@ -160,7 +160,7 @@ typedef struct {
     uint64_t last_packet_recv;
 
     unsigned int onion_connected;
-    _Bool UDP_connected;
+    bool UDP_connected;
 } Onion_Client;
 
 
@@ -239,7 +239,7 @@ int recv_tcp_relay_handler(Onion_Client *onion_c, int friend_num, int (*tcp_rela
  * return 0 on success.
  */
 int onion_dht_pk_callback(Onion_Client *onion_c, int friend_num, void (*function)(void *data, int32_t number,
-                          const uint8_t *dht_public_key), void *object, uint32_t number);
+                          const uint8_t *dht_public_key, void *userdata), void *object, uint32_t number);
 
 /* Set a friends DHT public key.
  * timestamp is the time (current_time_monotonic()) at which the key was last confirmed belonging to

@@ -7,9 +7,9 @@
 #include "../toxcore/assoc.h"
 #include "../toxcore/util.h"
 
-#include <sys/types.h>
 #include <stdint.h>
 #include <string.h>
+#include <sys/types.h>
 
 #include <check.h>
 
@@ -17,13 +17,13 @@
 
 START_TEST(test_basics)
 {
-    /* TODO: real test */
-    uint8_t id[crypto_box_PUBLICKEYBYTES];
-    Assoc *assoc = new_Assoc_default(id);
+    /* TODO(irungentoo): real test */
+    uint8_t id[crypto_box_PUBLICKEYBYTES] = {1};
+    Assoc *assoc = new_Assoc_default(NULL, id);
     ck_assert_msg(assoc != NULL, "failed to create default assoc");
 
     kill_Assoc(assoc);
-    assoc = new_Assoc(17, 4, id); /* results in an assoc of 16/3 */
+    assoc = new_Assoc(NULL, 17, 4, id); /* results in an assoc of 16/3 */
     ck_assert_msg(assoc != NULL, "failed to create customized assoc");
 
     IP_Port ipp;
@@ -61,7 +61,7 @@ END_TEST
 
 START_TEST(test_fillup)
 {
-    /* TODO: real test */
+    /* TODO(irungentoo): real test */
     int i, j;
     uint8_t id[crypto_box_PUBLICKEYBYTES];
     //uint32_t a = current_time();
@@ -72,14 +72,13 @@ START_TEST(test_fillup)
         id[i] = rand();
     }
 
-    Assoc *assoc = new_Assoc(6, 15, id);
+    Assoc *assoc = new_Assoc(NULL, 6, 15, id);
     ck_assert_msg(assoc != NULL, "failed to create default assoc");
     struct entry {
         uint8_t id[crypto_box_PUBLICKEYBYTES];
         IPPTs ippts_send;
         IP_Port ipp_recv;
     };
-    unsigned int fail = 0;
     struct entry entries[128];
     struct entry closest[8];
 
@@ -102,7 +101,6 @@ START_TEST(test_fillup)
         if (j % 16 == 0) {
             memcpy(entries[j].id, id, crypto_box_PUBLICKEYBYTES - 30);
             memcpy(&closest[j / 16], &entries[j], sizeof(struct entry));
-
         }
 
         uint8_t res = Assoc_add_entry(assoc, entries[j].id, &entries[j].ippts_send, &entries[j].ipp_recv, 1);
@@ -124,8 +122,9 @@ START_TEST(test_fillup)
 
     for (i = 0; i < 8; ++i) {
         for (j = 0; j < 8; ++j) {
-            if (id_equal(entri[j]->public_key, closest[i].id))
+            if (id_equal(entri[j]->public_key, closest[i].id)) {
                 ++good;
+            }
         }
     }
 
@@ -135,7 +134,7 @@ START_TEST(test_fillup)
 }
 END_TEST
 
-Suite *Assoc_suite(void)
+static Suite *Assoc_suite(void)
 {
     Suite *s = suite_create("Assoc");
 

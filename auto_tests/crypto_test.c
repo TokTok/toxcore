@@ -3,16 +3,16 @@
 #endif
 
 #include "../toxcore/net_crypto.h"
-#include <sys/types.h>
-#include <stdint.h>
-#include <string.h>
 #include <check.h>
+#include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
 #include <time.h>
 
 #include "helpers.h"
 
-void rand_bytes(uint8_t *b, size_t blen)
+static void rand_bytes(uint8_t *b, size_t blen)
 {
     size_t i;
 
@@ -23,27 +23,27 @@ void rand_bytes(uint8_t *b, size_t blen)
 
 // These test vectors are from libsodium's test suite
 
-unsigned char alicesk[32] = {
+static const unsigned char alicesk[32] = {
     0x77, 0x07, 0x6d, 0x0a, 0x73, 0x18, 0xa5, 0x7d,
     0x3c, 0x16, 0xc1, 0x72, 0x51, 0xb2, 0x66, 0x45,
     0xdf, 0x4c, 0x2f, 0x87, 0xeb, 0xc0, 0x99, 0x2a,
     0xb1, 0x77, 0xfb, 0xa5, 0x1d, 0xb9, 0x2c, 0x2a
 };
 
-unsigned char bobpk[32] = {
+static const unsigned char bobpk[32] = {
     0xde, 0x9e, 0xdb, 0x7d, 0x7b, 0x7d, 0xc1, 0xb4,
     0xd3, 0x5b, 0x61, 0xc2, 0xec, 0xe4, 0x35, 0x37,
     0x3f, 0x83, 0x43, 0xc8, 0x5b, 0x78, 0x67, 0x4d,
     0xad, 0xfc, 0x7e, 0x14, 0x6f, 0x88, 0x2b, 0x4f
 };
 
-unsigned char nonce[24] = {
+static const unsigned char test_nonce[24] = {
     0x69, 0x69, 0x6e, 0xe9, 0x55, 0xb6, 0x2b, 0x73,
     0xcd, 0x62, 0xbd, 0xa8, 0x75, 0xfc, 0x73, 0xd6,
     0x82, 0x19, 0xe0, 0x03, 0x6b, 0x7a, 0x0b, 0x37
 };
 
-unsigned char test_m[131] = {
+static const unsigned char test_m[131] = {
     0xbe, 0x07, 0x5f, 0xc5, 0x3c, 0x81, 0xf2, 0xd5,
     0xcf, 0x14, 0x13, 0x16, 0xeb, 0xeb, 0x0c, 0x7b,
     0x52, 0x28, 0xc5, 0x2a, 0x4c, 0x62, 0xcb, 0xd4,
@@ -63,7 +63,7 @@ unsigned char test_m[131] = {
     0x5e, 0x07, 0x05
 };
 
-unsigned char test_c[147] = {
+static const unsigned char test_c[147] = {
     0xf3, 0xff, 0xc7, 0x70, 0x3f, 0x94, 0x00, 0xe5,
     0x2a, 0x7d, 0xfb, 0x4b, 0x3d, 0x33, 0x05, 0xd9,
     0x8e, 0x99, 0x3b, 0x9f, 0x48, 0x68, 0x12, 0x73,
@@ -96,12 +96,12 @@ START_TEST(test_known)
     ck_assert_msg(sizeof(test_c) == sizeof(c), "sanity check failed");
     ck_assert_msg(sizeof(test_m) == sizeof(m), "sanity check failed");
 
-    clen = encrypt_data(bobpk, alicesk, nonce, test_m, sizeof(test_m) / sizeof(unsigned char), c);
+    clen = encrypt_data(bobpk, alicesk, test_nonce, test_m, sizeof(test_m) / sizeof(unsigned char), c);
 
     ck_assert_msg(memcmp(test_c, c, sizeof(c)) == 0, "cyphertext doesn't match test vector");
     ck_assert_msg(clen == sizeof(c) / sizeof(unsigned char), "wrong ciphertext length");
 
-    mlen = decrypt_data(bobpk, alicesk, nonce, test_c, sizeof(test_c) / sizeof(unsigned char), m);
+    mlen = decrypt_data(bobpk, alicesk, test_nonce, test_c, sizeof(test_c) / sizeof(unsigned char), m);
 
     ck_assert_msg(memcmp(test_m, m, sizeof(m)) == 0, "decrypted text doesn't match test vector");
     ck_assert_msg(mlen == sizeof(m) / sizeof(unsigned char), "wrong plaintext length");
@@ -122,16 +122,15 @@ START_TEST(test_fast_known)
     ck_assert_msg(sizeof(test_c) == sizeof(c), "sanity check failed");
     ck_assert_msg(sizeof(test_m) == sizeof(m), "sanity check failed");
 
-    clen = encrypt_data_symmetric(k, nonce, test_m, sizeof(test_m) / sizeof(unsigned char), c);
+    clen = encrypt_data_symmetric(k, test_nonce, test_m, sizeof(test_m) / sizeof(unsigned char), c);
 
     ck_assert_msg(memcmp(test_c, c, sizeof(c)) == 0, "cyphertext doesn't match test vector");
     ck_assert_msg(clen == sizeof(c) / sizeof(unsigned char), "wrong ciphertext length");
 
-    mlen = decrypt_data_symmetric(k, nonce, test_c, sizeof(test_c) / sizeof(unsigned char), m);
+    mlen = decrypt_data_symmetric(k, test_nonce, test_c, sizeof(test_c) / sizeof(unsigned char), m);
 
     ck_assert_msg(memcmp(test_m, m, sizeof(m)) == 0, "decrypted text doesn't match test vector");
     ck_assert_msg(mlen == sizeof(m) / sizeof(unsigned char), "wrong plaintext length");
-
 }
 END_TEST
 
@@ -272,7 +271,7 @@ START_TEST(test_large_data_symmetric)
 }
 END_TEST
 
-void increment_nonce_number_cmp(uint8_t *nonce, uint32_t num)
+static void increment_nonce_number_cmp(uint8_t *nonce, uint32_t num)
 {
     uint32_t num1, num2;
     memcpy(&num1, nonce + (crypto_box_NONCEBYTES - sizeof(num1)), sizeof(num1));
@@ -285,8 +284,9 @@ void increment_nonce_number_cmp(uint8_t *nonce, uint32_t num)
         for (i = crypto_box_NONCEBYTES - sizeof(num1); i != 0; --i) {
             ++nonce[i - 1];
 
-            if (nonce[i - 1] != 0)
+            if (nonce[i - 1] != 0) {
                 break;
+            }
         }
     }
 
@@ -300,8 +300,9 @@ START_TEST(test_increment_nonce)
 
     uint8_t n[crypto_box_NONCEBYTES];
 
-    for (i = 0; i < crypto_box_NONCEBYTES; ++i)
+    for (i = 0; i < crypto_box_NONCEBYTES; ++i) {
         n[i] = rand();
+    }
 
     uint8_t n1[crypto_box_NONCEBYTES];
 
@@ -322,7 +323,7 @@ START_TEST(test_increment_nonce)
 }
 END_TEST
 
-Suite *crypto_suite(void)
+static Suite *crypto_suite(void)
 {
     Suite *s = suite_create("Crypto");
 

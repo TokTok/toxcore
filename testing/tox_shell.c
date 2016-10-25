@@ -40,21 +40,22 @@
 #else
 #include <pty.h>
 #endif
-#include <unistd.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 #define c_sleep(x) usleep(1000*x)
 
-void print_online(Tox *tox, uint32_t friendnumber, TOX_CONNECTION status, void *userdata)
+static void print_online(Tox *tox, uint32_t friendnumber, TOX_CONNECTION status, void *userdata)
 {
-    if (status)
+    if (status) {
         printf("\nOther went online.\n");
-    else
+    } else {
         printf("\nOther went offline.\n");
+    }
 }
 
-void print_message(Tox *tox, uint32_t friendnumber, TOX_MESSAGE_TYPE type, const uint8_t *string, size_t length,
-                   void *userdata)
+static void print_message(Tox *tox, uint32_t friendnumber, TOX_MESSAGE_TYPE type, const uint8_t *string, size_t length,
+                          void *userdata)
 {
     int master = *((int *)userdata);
     write(master, string, length);
@@ -66,8 +67,9 @@ int main(int argc, char *argv[])
     uint8_t ipv6enabled = 1; /* x */
     int argvoffset = cmdline_parsefor_ipv46(argc, argv, &ipv6enabled);
 
-    if (argvoffset < 0)
+    if (argvoffset < 0) {
         exit(1);
+    }
 
     /* with optional --ipvx, now it can be 1-4 arguments... */
     if ((argc != argvoffset + 2) && (argc != argvoffset + 4)) {
@@ -75,11 +77,12 @@ int main(int argc, char *argv[])
         exit(0);
     }
 
-    int *master = malloc(sizeof(int));
+    int *master = (int *)malloc(sizeof(int));
     int ret = forkpty(master, NULL, NULL, NULL);
 
     if (ret == -1) {
         printf("fork failed\n");
+        free(master);
         return 1;
     }
 
@@ -96,8 +99,8 @@ int main(int argc, char *argv[])
     }
 
     Tox *tox = tox_new(0, 0);
-    tox_callback_friend_connection_status(tox, print_online, NULL);
-    tox_callback_friend_message(tox, print_message, master);
+    tox_callback_friend_connection_status(tox, print_online);
+    tox_callback_friend_message(tox, print_message);
 
 
     uint16_t port = atoi(argv[argvoffset + 2]);
@@ -126,7 +129,7 @@ int main(int argc, char *argv[])
     }
 
     uint8_t *bin_id = hex_string_to_bin(temp_id);
-    uint32_t num = tox_friend_add(tox, bin_id, (uint8_t *)"Install Gentoo", sizeof("Install Gentoo"), 0);
+    uint32_t num = tox_friend_add(tox, bin_id, (const uint8_t *)"Install Gentoo", sizeof("Install Gentoo"), 0);
     free(bin_id);
 
     if (num == UINT32_MAX) {
@@ -146,15 +149,14 @@ int main(int argc, char *argv[])
             uint8_t buf[TOX_MAX_MESSAGE_LENGTH];
             ret = read(*master, buf, sizeof(buf));
 
-            if (ret <= 0)
+            if (ret <= 0) {
                 break;
+            }
 
             tox_friend_send_message(tox, num, TOX_MESSAGE_TYPE_NORMAL, buf, ret, 0);
         }
 
-        tox_iterate(tox);
+        tox_iterate(tox, master);
         c_sleep(1);
     }
-
-    return 0;
 }

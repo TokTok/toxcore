@@ -22,18 +22,18 @@
  *  along with Tox.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __UTIL_H__
-#define __UTIL_H__
+#ifndef UTIL_H
+#define UTIL_H
 
+#include <pthread.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <pthread.h>
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define PAIR(TYPE1__, TYPE2__) struct { TYPE1__ first; TYPE2__ second; }
 
-void unix_time_update();
-uint64_t unix_time();
+void unix_time_update(void);
+uint64_t unix_time(void);
 int is_timeout(uint64_t timestamp, uint64_t timeout);
 
 
@@ -58,15 +58,4 @@ int load_state(load_state_callback_func load_state_callback, void *outer,
 /* Returns -1 if failed or 0 if success */
 int create_recursive_mutex(pthread_mutex_t *mutex);
 
-/* Ring buffer */
-typedef struct RingBuffer RingBuffer;
-bool rb_full(const RingBuffer *b);
-bool rb_empty(const RingBuffer *b);
-void *rb_write(RingBuffer *b, void *p);
-bool rb_read(RingBuffer *b, void **p);
-RingBuffer *rb_new(int size);
-void rb_kill(RingBuffer *b);
-uint16_t rb_size(const RingBuffer *b);
-uint16_t rb_data(const RingBuffer *b, void **dest);
-
-#endif /* __UTIL_H__ */
+#endif /* UTIL_H */

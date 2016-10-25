@@ -25,8 +25,11 @@
 #define DHT_H
 
 #include "crypto_core.h"
+#include "logger.h"
 #include "network.h"
 #include "ping_array.h"
+
+#include <stdbool.h>
 
 /* Maximum number of clients stored per friend. */
 #define MAX_FRIEND_CLIENTS 8
@@ -197,7 +200,7 @@ typedef struct {
 /*----------------------------------------------------------------------------------*/
 
 typedef int (*cryptopacket_handler_callback)(void *object, IP_Port ip_port, const uint8_t *source_pubkey,
-        const uint8_t *data, uint16_t len);
+        const uint8_t *data, uint16_t len, void *userdata);
 
 typedef struct {
     cryptopacket_handler_callback function;
@@ -205,6 +208,7 @@ typedef struct {
 } Cryptopacket_Handles;
 
 typedef struct {
+    Logger *log;
     Networking_Core *net;
 
     Client_data    close_clientlist[LCLIENT_LIST];
@@ -309,19 +313,19 @@ int id_closest(const uint8_t *pk, const uint8_t *pk1, const uint8_t *pk2);
 
 /* Add node to the node list making sure only the nodes closest to cmp_pk are in the list.
  */
-_Bool add_to_list(Node_format *nodes_list, unsigned int length, const uint8_t *pk, IP_Port ip_port,
-                  const uint8_t *cmp_pk);
+bool add_to_list(Node_format *nodes_list, unsigned int length, const uint8_t *pk, IP_Port ip_port,
+                 const uint8_t *cmp_pk);
 
 /* Return 1 if node can be added to close list, 0 if it can't.
  */
-_Bool node_addable_to_close_list(DHT *dht, const uint8_t *public_key, IP_Port ip_port);
+bool node_addable_to_close_list(DHT *dht, const uint8_t *public_key, IP_Port ip_port);
 
 /* Get the (maximum MAX_SENT_NODES) closest nodes to public_key we know
  * and put them in nodes_list (must be MAX_SENT_NODES big).
  *
  * sa_family = family (IPv4 or IPv6) (0 if we don't care)?
  * is_LAN = return some LAN ips (true or false)
- * want_good = do we want tested nodes or not? (TODO)
+ * want_good = do we want tested nodes or not? (TODO(irungentoo))
  *
  * return the number of nodes returned.
  *
@@ -407,7 +411,7 @@ void DHT_save(DHT *dht, uint8_t *data);
 int DHT_load(DHT *dht, const uint8_t *data, uint32_t length);
 
 /* Initialize DHT. */
-DHT *new_DHT(Networking_Core *net);
+DHT *new_DHT(Logger *log, Networking_Core *net);
 
 void kill_DHT(DHT *dht);
 

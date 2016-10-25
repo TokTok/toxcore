@@ -1,12 +1,57 @@
-![Project Tox](https://raw.github.com/irungentoo/toxcore/master/other/tox.png "Project Tox")
+![Project Tox](https://raw.github.com/TokTok/toxcore/master/other/tox.png "Project Tox")
 ***
 
-With the rise of government surveillance programs, Tox, a FOSS initiative, aims to be an easy to use, all-in-one communication platform that ensures full privacy and secure message delivery.<br /> <br />
+**Current build status:** [![Build Status](https://travis-ci.org/TokTok/c-toxcore.svg?branch=master)](https://travis-ci.org/TokTok/c-toxcore)
+**Current Coverage:** [![Coverage Status](https://coveralls.io/repos/github/TokTok/toxcore/badge.svg?branch=master)](https://coveralls.io/github/TokTok/toxcore?branch=master)
 
 [**Website**](https://tox.chat) **|** [**Wiki**](https://wiki.tox.chat/) **|** [**Blog**](https://blog.tox.chat/) **|** [**FAQ**](https://wiki.tox.chat/doku.php?id=users:faq) **|** [**Binaries/Downloads**](https://wiki.tox.chat/Binaries) **|** [**Clients**](https://wiki.tox.chat/doku.php?id=clients) **|** [**Compiling**](/INSTALL.md)
 
-**IRC Channels:** [#tox@freenode](https://webchat.freenode.net/?channels=tox), [#tox-dev@freenode](https://webchat.freenode.net/?channels=tox-dev)
+**IRC Channels:** Users: [#tox@freenode](https://webchat.freenode.net/?channels=tox), Developers: [#toktok@freenode](https://webchat.freenode.net/?channels=toktok)
 
+## Toxcore Development Roadmap
+This Roadmap is somewhat tentative, but should give you a good idea of where
+we're going, and where we've been.
+
+Currently unsorted, the following is intended to function as a discussion guide
+to developers/contributors.
+
+### In Progress
+- [ ] Toxcore
+    - [ ] 100% unit testing
+    - [ ] Make ToxAV stateless
+    - [ ] Allow a single toxcore instance to handle multiple keypairs (or 'clients')
+    - [ ] Consistent naming scheme throughout toxcore
+    - [X] Make toxcore stateless
+- [ ] Messenger
+    - [ ] Improve group chat implementation
+    - [ ] Improve A/V implementation
+    - [ ] Multiple device support
+
+### Done
+- [X] Create Toxcore
+- [X] Create DHT
+- [X] Create Onion
+- [X] Implement Crypto
+- [X] Create Messenger
+
+## Q&A:
+
+### What is Tox?
+
+Tox is a fully encrypted, censor resistant, private, distributed network library with a focus on personal communications.
+
+### No, really, what's Tox?
+
+It's a VERY secure Instant Messenger that supports Text, Audio/Video calls, group chats, audio group chats, and file transfers. There's dozens, but our advantage is we put security first, from day 1. We didn't decide to add it in after.
+
+### What are your goals with Tox?
+
+We want Tox to be as simple as possible while remaining as secure as possible.
+
+## Documentation:
+- [Compiling](/INSTALL.md)
+- [DHT Protocol](/docs/updates/DHT.md)<br />
+- [Crypto](/docs/updates/Crypto.md)<br />
 
 ## The Complex Stuff:
 ### UDP vs. TCP
@@ -16,25 +61,3 @@ However, Tox does use [TCP relays](/docs/TCP_Network.txt) as a fallback if it en
 ### Connecting & Communicating
 Every peer is represented as a [byte string](https://en.wikipedia.org/wiki/String_(computer_science)) (the public key [Tox ID] of the peer). By using torrent-style DHT, peers can find the IP of other peers by using their Tox ID. Once the IP is obtained, peers can initiate a [secure](/docs/updates/Crypto.md) connection with each other. Once the connection is made, peers can exchange messages, send files, start video chats, etc. using encrypted communications.
 
-
-**Current build status:** [![Build Status](https://travis-ci.org/irungentoo/toxcore.png?branch=master)](https://travis-ci.org/irungentoo/toxcore)
-
-
-## Q&A:
-
-### What are your goals with Tox?
-
-We want Tox to be as simple as possible while remaining as secure as possible.
-
-### Why are you doing this? There are already a bunch of free Skype alternatives.
-The goal of this project is to create a configuration-free P2P Skype replacement. “Configuration-free” means that the user will simply have to open the program and will be capable of adding people and communicating with them without having to set up an account. There are many so-called Skype replacements, but all of them are either hard to configure for the normal user or suffer from being way too centralized.
-
-## TODO:
-- [TODO](/docs/TODO.md)
-
-
-## Documentation:
-
-- [Compiling](/INSTALL.md)
-- [DHT Protocol](/docs/updates/DHT.md)<br />
-- [Crypto](/docs/updates/Crypto.md)<br />

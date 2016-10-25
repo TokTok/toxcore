@@ -2,11 +2,11 @@
 #include "config.h"
 #endif
 
-#include <sys/types.h>
-#include <stdint.h>
-#include <string.h>
 #include <check.h>
+#include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
 #include <time.h>
 
 #include "../toxcore/network.h"
@@ -134,7 +134,7 @@ START_TEST(test_ip_equal)
 }
 END_TEST
 
-Suite *network_suite(void)
+static Suite *network_suite(void)
 {
     Suite *s = suite_create("Network");
 
@@ -144,7 +144,7 @@ Suite *network_suite(void)
     return s;
 }
 
-int main()
+int main(void)
 {
     srand((unsigned int) time(NULL));
 

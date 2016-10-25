@@ -1,17 +1,16 @@
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
-#include "logger.h"
-#include "DHT.h"
 #include "assoc.h"
-#include "ping.h"
 
+#include "DHT.h"
 #include "LAN_discovery.h"
+#include "logger.h"
+#include "ping.h"
+#include "util.h"
 
 #include <assert.h>
-#include "util.h"
 
 /*
  *        BASIC OVERVIEW:
@@ -86,6 +85,7 @@ typedef struct candidates_bucket {
 } candidates_bucket;
 
 struct Assoc {
+    Logger                *log;
     hash_t                 self_hash;                          /* hash of self_client_id */
     uint8_t                self_client_id[crypto_box_PUBLICKEYBYTES];     /* don't store entries for this */
 
@@ -123,14 +123,16 @@ static uint64_t id_distance(const Assoc *assoc, void *callback_data, const uint8
 /* qsort() callback for a sorting by id_distance() values */
 static int dist_index_comp(const void *a, const void *b)
 {
-    const uint64_t *_a = a;
-    const uint64_t *_b = b;
+    const uint64_t *_a = (const uint64_t *)a;
+    const uint64_t *_b = (const uint64_t *)b;
 
-    if (*_a < *_b)
+    if (*_a < *_b) {
         return -1;
+    }
 
-    if (*_a > *_b)
+    if (*_a > *_b) {
         return 1;
+    }
 
     return 0;
 }
@@ -138,8 +140,9 @@ static int dist_index_comp(const void *a, const void *b)
 /* get actual entry to a distance_index */
 static Client_entry *dist_index_entry(Assoc *assoc, uint64_t dist_ind)
 {
-    if ((dist_ind & DISTANCE_INDEX_INDEX_MASK) == DISTANCE_INDEX_INDEX_MASK)
+    if ((dist_ind & DISTANCE_INDEX_INDEX_MASK) == DISTANCE_INDEX_INDEX_MASK) {
         return NULL;
+    }
 
     size_t total = assoc->candidates_bucket_count * assoc->candidates_bucket_size;
     uint32_t index = dist_ind & DISTANCE_INDEX_INDEX_MASK;
@@ -150,8 +153,9 @@ static Client_entry *dist_index_entry(Assoc *assoc, uint64_t dist_ind)
         size_t b_ix = index % assoc->candidates_bucket_size;
         Client_entry *entry = &cnd_bckt->list[b_ix];
 
-        if (entry->hash)
+        if (entry->hash) {
             return entry;
+        }
     }
 
     return NULL;
@@ -162,14 +166,15 @@ static uint8_t *dist_index_id(Assoc *assoc, uint64_t dist_ind)
 {
     Client_entry *entry = dist_index_entry(assoc, dist_ind);
 
-    if (entry)
+    if (entry) {
         return entry->client.public_key;
+    }
 
     return NULL;
 }
 
 /* sorts first .. last, i.e. last is included */
-static void dist_index_bubble(Assoc *assoc, uint64_t *dist_list, size_t first, size_t last, uint8_t *id,
+static void dist_index_bubble(Assoc *assoc, uint64_t *dist_list, size_t first, size_t last, const uint8_t *id,
                               void *custom_data, Assoc_distance_relative_callback dist_rel_func)
 {
     size_t i, k;
@@ -180,17 +185,18 @@ static void dist_index_bubble(Assoc *assoc, uint64_t *dist_list, size_t first, s
         for (k = i + 1; k <= last; k++) {
             uint8_t *id2 = dist_index_id(assoc, dist_list[k]);
 
-            if (id1 && id2)
+            if (id1 && id2) {
                 if (dist_rel_func(assoc, custom_data, id, id1, id2) == 2) {
                     uint64_t swap = dist_list[i];
                     dist_list[i] = dist_list[k];
                     dist_list[k] = swap;
                 }
+            }
         }
     }
 }
 
-/* TODO: Check that there isn't a function like this elsewhere hidden.
+/* TODO(irungentoo): Check that there isn't a function like this elsewhere hidden.
  * E.g. the one which creates a handshake_id isn't usable for this, it must
  * always map the same ID to the same hash.
  *
@@ -200,13 +206,15 @@ static hash_t id_hash(const Assoc *assoc, const uint8_t *id)
 {
     uint32_t i, res = 0x19a64e82;
 
-    for (i = 0; i < crypto_box_PUBLICKEYBYTES; i++)
+    for (i = 0; i < crypto_box_PUBLICKEYBYTES; i++) {
         res = ((res << 1) ^ id[i]) + (res >> 31);
+    }
 
     /* can't have zero as hash, a) marks an unused spot,
      * b) collision function is multiplicative */
-    if (!(res % assoc->candidates_bucket_size))
+    if (!(res % assoc->candidates_bucket_size)) {
         res++;
+    }
 
     return res;
 }
@@ -229,9 +237,9 @@ static hash_t hash_collide(const Assoc *assoc, hash_t hash)
      *
      * BUT: because the usage of the word "never" invokes Murphy's law, catch it */
     if (!retval) {
-#ifdef DEBUG
-        fprintf(stderr, "assoc::hash_collide: hash %u, bucket size %u => %u!", hash, (uint)assoc->candidates_bucket_size,
-                retval);
+#ifdef TOX_DEBUG
+        fprintf(stderr, "assoc::hash_collide: hash %u, bucket size %u => %u!", hash,
+                (unsigned int)assoc->candidates_bucket_size, retval);
         assert(retval != 0);
 #endif
         retval = 1;
@@ -243,14 +251,17 @@ static hash_t hash_collide(const Assoc *assoc, hash_t hash)
 /* returns the "seen" assoc related to the ipp */
 static IPPTsPng *entry_assoc(Client_entry *cl_entry, const IP_Port *ipp)
 {
-    if (!cl_entry)
+    if (!cl_entry) {
         return NULL;
+    }
 
-    if (ipp->ip.family == AF_INET)
+    if (ipp->ip.family == AF_INET) {
         return &cl_entry->client.assoc4;
+    }
 
-    if (ipp->ip.family == AF_INET6)
+    if (ipp->ip.family == AF_INET6) {
         return &cl_entry->client.assoc6;
+    }
 
     return NULL;
 }
@@ -258,12 +269,15 @@ static IPPTsPng *entry_assoc(Client_entry *cl_entry, const IP_Port *ipp)
 /* returns the "heard" assoc related to the ipp */
 static IP_Port *entry_heard_get(Client_entry *entry, const IP_Port *ipp)
 {
-    if (ipp->ip.family == AF_INET)
+    if (ipp->ip.family == AF_INET) {
         return &entry->assoc_heard4;
-    else if (ipp->ip.family == AF_INET6)
+    }
+
+    if (ipp->ip.family == AF_INET6) {
         return &entry->assoc_heard6;
-    else
-        return NULL;
+    }
+
+    return NULL;
 }
 
 /* store a "heard" entry
@@ -273,24 +287,28 @@ static IP_Port *entry_heard_get(Client_entry *entry, const IP_Port *ipp)
  * returns 1 if the entry did change */
 static int entry_heard_store(Client_entry *entry, const IPPTs *ippts)
 {
-    if (!entry || !ippts)
+    if (!entry || !ippts) {
         return 0;
+    }
 
-    if (!ipport_isset(&ippts->ip_port))
+    if (!ipport_isset(&ippts->ip_port)) {
         return 0;
+    }
 
     IP_Port  *heard;
     const IP_Port  *ipp = &ippts->ip_port;
 
-    if (ipp->ip.family == AF_INET)
+    if (ipp->ip.family == AF_INET) {
         heard = &entry->assoc_heard4;
-    else if (ipp->ip.family == AF_INET6)
+    } else if (ipp->ip.family == AF_INET6) {
         heard = &entry->assoc_heard6;
-    else
+    } else {
         return 0;
+    }
 
-    if (ipport_equal(ipp, heard))
+    if (ipport_equal(ipp, heard)) {
         return 0;
+    }
 
     if (!ipport_isset(heard)) {
         *heard = *ipp;
@@ -304,8 +322,9 @@ static int entry_heard_store(Client_entry *entry, const IPPTs *ippts)
     uint8_t LAN_ipp = LAN_ip(ipp->ip) == 0;
     uint8_t LAN_entry = LAN_ip(heard->ip) == 0;
 
-    if (LAN_ipp && !LAN_entry && !is_timeout(entry->heard_at, CANDIDATES_HEARD_TIMEOUT))
+    if (LAN_ipp && !LAN_entry && !is_timeout(entry->heard_at, CANDIDATES_HEARD_TIMEOUT)) {
         return 0;
+    }
 
     *heard = *ipp;
     entry->heard_at = ippts->timestamp;
@@ -355,11 +374,12 @@ static uint8_t candidates_search(const Assoc *assoc, const uint8_t *id, hash_t h
     for (coll = 0; coll < HASH_COLLIDE_COUNT; pos = hash_collide(assoc, pos) , coll++) {
         Client_entry *entry = &cnd_bckt->list[pos];
 
-        if (entry->hash == hash)
+        if (entry->hash == hash) {
             if (id_equal(entry->client.public_key, id)) {
                 *entryptr = entry;
                 return 1;
             }
+        }
     }
 
     *entryptr = NULL;
@@ -369,16 +389,19 @@ static uint8_t candidates_search(const Assoc *assoc, const uint8_t *id, hash_t h
 static void candidates_update_assoc(const Assoc *assoc, Client_entry *entry, uint8_t used, const IPPTs *ippts_send,
                                     const IP_Port *ipp_recv)
 {
-    if (!assoc || !entry || !ippts_send)
+    if (!assoc || !entry || !ippts_send) {
         return;
+    }
 
     IPPTsPng *ipptsp = entry_assoc(entry, &ippts_send->ip_port);
 
-    if (!ipptsp)
+    if (!ipptsp) {
         return;
+    }
 
-    if (used)
+    if (used) {
         entry->used_at = unix_time();
+    }
 
     /* do NOT do anything related to wanted, that's handled outside,
      * just update the assoc (in the most sensible way)
@@ -401,8 +424,9 @@ static void candidates_update_assoc(const Assoc *assoc, Client_entry *entry, uin
 static uint8_t candidates_create_internal(const Assoc *assoc, hash_t const hash, const uint8_t *id, uint8_t seen,
         uint8_t used, bucket_t *bucketptr, size_t *posptr)
 {
-    if (!assoc || !id || !bucketptr ||  !posptr)
+    if (!assoc || !id || !bucketptr ||  !posptr) {
         return 0;
+    }
 
     bucket_t bucket = candidates_id_bucket(assoc, id);
     candidates_bucket *cnd_bckt = &assoc->candidates[bucket];
@@ -428,29 +452,32 @@ static uint8_t candidates_create_internal(const Assoc *assoc, hash_t const hash,
          * 2. seen good
          * 3. used */
         // enumerated lists are superior to magic numbers
-        if (!is_timeout(entry->used_at, BAD_NODE_TIMEOUT))
+        if (!is_timeout(entry->used_at, BAD_NODE_TIMEOUT)) {
             check = USED;
-        else if (!is_timeout(entry->seen_at, CANDIDATES_SEEN_TIMEOUT))
+        } else if (!is_timeout(entry->seen_at, CANDIDATES_SEEN_TIMEOUT)) {
             check = SEENG;
-        else if (!is_timeout(entry->heard_at, CANDIDATES_HEARD_TIMEOUT))
+        } else if (!is_timeout(entry->heard_at, CANDIDATES_HEARD_TIMEOUT)) {
             check = SEENB_HEARDG;
-        else
+        } else {
             check = BAD;
+        }
 
-        if (!pos_check[check])
+        if (!pos_check[check]) {
             pos_check[check] = pos + 1;
+        }
     }
 
     /* used > seen > heard > bad */
     size_t i, pos_max = used ? USED : (seen ? SEENG : SEENB_HEARDG);
 
-    for (i = 0; i < pos_max; i++)
+    for (i = 0; i < pos_max; i++) {
         if (pos_check[i]) {
             *bucketptr = bucket;
             *posptr = pos_check[i] - 1;
 
             return 1;
         }
+    }
 
     return 0;
 }
@@ -458,31 +485,36 @@ static uint8_t candidates_create_internal(const Assoc *assoc, hash_t const hash,
 static uint8_t candidates_create_new(const Assoc *assoc, hash_t hash, const uint8_t *id, uint8_t used,
                                      const IPPTs *ippts_send, const IP_Port *ipp_recv)
 {
-    if (!assoc || !id || !ippts_send)
+    if (!assoc || !id || !ippts_send) {
         return 0;
+    }
 
     bucket_t bucket;
     size_t pos;
 
-    if (!candidates_create_internal(assoc, hash, id, ipp_recv != NULL, used, &bucket, &pos))
+    if (!candidates_create_internal(assoc, hash, id, ipp_recv != NULL, used, &bucket, &pos)) {
         return 0;
+    }
 
     candidates_bucket *cnd_bckt = &assoc->candidates[bucket];
     Client_entry *entry = &cnd_bckt->list[pos];
     memset(entry, 0, sizeof(*entry));
     IPPTsPng *ipptsp = entry_assoc(entry, &ippts_send->ip_port);
 
-    if (!ipptsp)
+    if (!ipptsp) {
         return 0;
+    }
 
     entry->hash = hash;
     id_copy(entry->client.public_key, id);
 
-    if (used)
+    if (used) {
         entry->used_at = unix_time();
+    }
 
-    if (ipp_recv && !ipport_isset(ipp_recv))
+    if (ipp_recv && !ipport_isset(ipp_recv)) {
         ipp_recv = NULL;
+    }
 
     if (ipp_recv) {
         entry->seen_at = ippts_send->timestamp;
@@ -510,20 +542,23 @@ static uint8_t candidates_create_new(const Assoc *assoc, hash_t hash, const uint
 
 static void client_id_self_update(Assoc *assoc)
 {
-    if (assoc->self_hash)
+    if (assoc->self_hash) {
         return;
+    }
 
     size_t i, sum = 0;
 
-    for (i = 0; i < crypto_box_PUBLICKEYBYTES; i++)
+    for (i = 0; i < crypto_box_PUBLICKEYBYTES; i++) {
         sum |= assoc->self_client_id[i];
+    }
 
-    if (!sum)
+    if (!sum) {
         return;
+    }
 
     assoc->self_hash = id_hash(assoc, assoc->self_client_id);
 
-    LOGGER_DEBUG("id is now set, purging cache of self-references");
+    LOGGER_DEBUG(assoc->log, "id is now set, purging cache of self-references");
 
     /* if we already added some (or loaded some) entries,
      * look and remove if we find a match
@@ -535,9 +570,11 @@ static void client_id_self_update(Assoc *assoc)
     for (i = 0; i < HASH_COLLIDE_COUNT; pos = hash_collide(assoc, pos), i++) {
         Client_entry *entry = &cnd_bckt->list[pos];
 
-        if (entry->hash == assoc->self_hash)
-            if (id_equal(entry->client.public_key, assoc->self_client_id))
+        if (entry->hash == assoc->self_hash) {
+            if (id_equal(entry->client.public_key, assoc->self_client_id)) {
                 entry->hash = 0;
+            }
+        }
     }
 }
 
@@ -551,27 +588,33 @@ static void client_id_self_update(Assoc *assoc)
  */
 uint8_t Assoc_add_entry(Assoc *assoc, const uint8_t *id, const IPPTs *ippts_send, const IP_Port *ipp_recv, uint8_t used)
 {
-    if (!assoc || !id || !ippts_send)
+    if (!assoc || !id || !ippts_send) {
         return 0;
+    }
 
     if (!assoc->self_hash) {
         client_id_self_update(assoc);
 
-        if (!assoc->self_hash)
+        if (!assoc->self_hash) {
             return 0;
+        }
     }
 
-    if (!ipport_isset(&ippts_send->ip_port))
+    if (!ipport_isset(&ippts_send->ip_port)) {
         return 0;
+    }
 
-    if (ipp_recv && !ipport_isset(ipp_recv))
+    if (ipp_recv && !ipport_isset(ipp_recv)) {
         ipp_recv = NULL;
+    }
 
     hash_t hash = id_hash(assoc, id);
 
-    if (hash == assoc->self_hash)
-        if (id_equal(id, assoc->self_client_id))
+    if (hash == assoc->self_hash) {
+        if (id_equal(id, assoc->self_client_id)) {
             return 0;
+        }
+    }
 
     /* if it's new:
      * callback, if there's desire, add to clients, else to candidates
@@ -585,14 +628,15 @@ uint8_t Assoc_add_entry(Assoc *assoc, const uint8_t *id, const IPPTs *ippts_send
     Client_entry *cnd_entry;
 
     if (!candidates_search(assoc, id, hash, &cnd_entry)) {
-        if (candidates_create_new(assoc, hash, id, used, ippts_send, ipp_recv))
+        if (candidates_create_new(assoc, hash, id, used, ippts_send, ipp_recv)) {
             return 1;
-        else
-            return 0;
-    } else {
-        candidates_update_assoc(assoc, cnd_entry, used, ippts_send, ipp_recv);
-        return 2;
+        }
+
+        return 0;
     }
+
+    candidates_update_assoc(assoc, cnd_entry, used, ippts_send, ipp_recv);
+    return 2;
 }
 
 /*****************************************************************************/
@@ -601,21 +645,25 @@ uint8_t Assoc_add_entry(Assoc *assoc, const uint8_t *id, const IPPTs *ippts_send
 
 uint8_t Assoc_get_close_entries(Assoc *assoc, Assoc_close_entries *state)
 {
-    if (!assoc || !state || !state->wanted_id || !state->result)
+    if (!assoc || !state || !state->wanted_id || !state->result) {
         return 0;
+    }
 
     if (!assoc->self_hash) {
         client_id_self_update(assoc);
 
-        if (!assoc->self_hash)
+        if (!assoc->self_hash) {
             return 0;
+        }
     }
 
-    if (!state->distance_relative_func)
+    if (!state->distance_relative_func) {
         state->distance_relative_func = assoc_id_closest;
+    }
 
-    if (!state->distance_absolute_func)
+    if (!state->distance_absolute_func) {
         state->distance_absolute_func = id_distance;
+    }
 
     size_t dist_list_len = assoc->candidates_bucket_count * assoc->candidates_bucket_size;
     uint64_t dist_list[dist_list_len];
@@ -631,21 +679,27 @@ uint8_t Assoc_get_close_entries(Assoc *assoc, Assoc_close_entries *state)
 
             if (entry->hash) {
                 if (state->flags & ProtoIPv4) {
-                    if (!ipport_isset(&entry->client.assoc4.ip_port))
+                    if (!ipport_isset(&entry->client.assoc4.ip_port)) {
                         continue;
+                    }
 
-                    if (!(state->flags & LANOk))
-                        if (!LAN_ip(entry->client.assoc4.ip_port.ip))
+                    if (!(state->flags & LANOk)) {
+                        if (!LAN_ip(entry->client.assoc4.ip_port.ip)) {
                             continue;
+                        }
+                    }
                 }
 
                 if (state->flags & ProtoIPv6) {
-                    if (!ipport_isset(&entry->client.assoc6.ip_port))
+                    if (!ipport_isset(&entry->client.assoc6.ip_port)) {
                         continue;
+                    }
 
-                    if (!(state->flags & LANOk))
-                        if (!LAN_ip(entry->client.assoc6.ip_port.ip))
+                    if (!(state->flags & LANOk)) {
+                        if (!LAN_ip(entry->client.assoc6.ip_port.ip)) {
                             continue;
+                        }
+                    }
                 }
 
                 uint64_t dist = state->distance_absolute_func(assoc, state->custom_data, state->wanted_id, entry->client.public_key);
@@ -667,17 +721,19 @@ uint8_t Assoc_get_close_entries(Assoc *assoc, Assoc_close_entries *state)
 
     for (ind_curr = 0; ind_curr < dist_list_len; ind_curr++) {
         /* sorted increasingly, so an invalid entry marks the end */
-        if ((dist_list[ind_curr] & DISTANCE_INDEX_INDEX_MASK) == DISTANCE_INDEX_INDEX_MASK)
+        if ((dist_list[ind_curr] & DISTANCE_INDEX_INDEX_MASK) == DISTANCE_INDEX_INDEX_MASK) {
             break;
+        }
 
         uint64_t dist_curr = dist_list[ind_curr] >> DISTANCE_INDEX_INDEX_BITS;
 
-        if (dist_prev == dist_curr)
+        if (dist_prev == dist_curr) {
             len++;
-        else {
-            if (len > 1)
+        } else {
+            if (len > 1) {
                 dist_index_bubble(assoc, dist_list, ind_prev, ind_curr - 1, state->wanted_id, state->custom_data,
                                   state->distance_relative_func);
+            }
 
             dist_prev = dist_curr;
             ind_prev = ind_curr;
@@ -685,9 +741,10 @@ uint8_t Assoc_get_close_entries(Assoc *assoc, Assoc_close_entries *state)
         }
     }
 
-    if (len > 1)
+    if (len > 1) {
         dist_index_bubble(assoc, dist_list, ind_prev, ind_curr - 1, state->wanted_id, state->custom_data,
                           state->distance_relative_func);
+    }
 
     /* ok, now dist_list is a strictly ascending sorted list of nodes
      * a) extract CLOSE_QUOTA_USED clients, not timed out
@@ -700,8 +757,9 @@ uint8_t Assoc_get_close_entries(Assoc *assoc, Assoc_close_entries *state)
 
     for (i = 0; (i < dist_list_len) && (pos < state->count); i++) {
         /* sorted increasingly, so an invalid entry marks the end */
-        if ((dist_list[i] & DISTANCE_INDEX_INDEX_MASK) == DISTANCE_INDEX_INDEX_MASK)
+        if ((dist_list[i] & DISTANCE_INDEX_INDEX_MASK) == DISTANCE_INDEX_INDEX_MASK) {
             break;
+        }
 
         Client_entry *entry = dist_index_entry(assoc, dist_list[i]);
 
@@ -711,13 +769,16 @@ uint8_t Assoc_get_close_entries(Assoc *assoc, Assoc_close_entries *state)
                 taken_last = i;
             } else {
                 if (state->flags & (ProtoIPv4 | ProtoIPv6)) {
-                    if ((state->flags & ProtoIPv4) && is_timeout(entry->client.assoc4.timestamp, BAD_NODE_TIMEOUT))
+                    if ((state->flags & ProtoIPv4) && is_timeout(entry->client.assoc4.timestamp, BAD_NODE_TIMEOUT)) {
                         continue;
+                    }
 
-                    if ((state->flags & ProtoIPv6) && is_timeout(entry->client.assoc6.timestamp, BAD_NODE_TIMEOUT))
+                    if ((state->flags & ProtoIPv6) && is_timeout(entry->client.assoc6.timestamp, BAD_NODE_TIMEOUT)) {
                         continue;
-                } else if (is_timeout(entry->seen_at, BAD_NODE_TIMEOUT))
+                    }
+                } else if (is_timeout(entry->seen_at, BAD_NODE_TIMEOUT)) {
                     continue;
+                }
 
                 state->result[pos++] = &entry->client;
                 client_quota_good++;
@@ -733,13 +794,15 @@ uint8_t Assoc_get_close_entries(Assoc *assoc, Assoc_close_entries *state)
     if (pos < state->count) {
         for (i = taken_last + 1; (i < dist_list_len) && (pos < state->count); i++) {
             /* sorted increasingly, so an invalid entry marks the end */
-            if ((dist_list[i] & DISTANCE_INDEX_INDEX_MASK) == DISTANCE_INDEX_INDEX_MASK)
+            if ((dist_list[i] & DISTANCE_INDEX_INDEX_MASK) == DISTANCE_INDEX_INDEX_MASK) {
                 break;
+            }
 
             Client_entry *entry = dist_index_entry(assoc, dist_list[i]);
 
-            if (entry && entry->hash)
+            if (entry && entry->hash) {
                 state->result[pos++] = &entry->client;
+            }
         }
     }
 
@@ -755,8 +818,9 @@ static uint8_t odd_min9_is_prime(size_t value)
     size_t i = 3;
 
     while (i * i <= value) {
-        if (!(value % i))
+        if (!(value % i)) {
             return 0;
+        }
 
         i += 2;
     }
@@ -769,58 +833,66 @@ static size_t prime_upto_min9(size_t limit)
     /* even => odd */
     limit = limit - (1 - (limit % 2));
 
-    while (!odd_min9_is_prime(limit))
+    while (!odd_min9_is_prime(limit)) {
         limit -= 2;
+    }
 
     return limit;
 }
 
 /* create */
-Assoc *new_Assoc(size_t bits, size_t entries, const uint8_t *public_id)
+Assoc *new_Assoc(Logger *log, size_t bits, size_t entries, const uint8_t *public_id)
 {
-    if (!public_id)
+    if (!public_id) {
         return NULL;
+    }
 
-    Assoc *assoc = calloc(1, sizeof(*assoc));
+    Assoc *assoc = (Assoc *)calloc(1, sizeof(*assoc));
 
-    if (!assoc)
+    if (!assoc) {
         return NULL;
+    }
+
+    assoc->log = log;
 
     /*
      * bits must be in [ 2 .. 15 ]
      * entries must be a prime
      */
-    if (bits < 2)
+    if (bits < 2) {
         bits = 2;
-    else if (bits > 15)
+    } else if (bits > 15) {
         bits = 15;
+    }
 
     assoc->candidates_bucket_bits = bits;
     assoc->candidates_bucket_count = 1U << bits;
 
     if (entries < 25) {
-        if (entries <= 6)
+        if (entries <= 6) {
             entries = 5;
-        else {
+        } else {
             entries = entries - (1 - (entries % 2)); /* even => odd */
 
             /* 7..23: all odds but 9&15 are prime */
-            if (!(entries % 3)) /* 9, 15 */
+            if (!(entries % 3)) { /* 9, 15 */
                 entries -= 2;   /* 7, 13 */
+            }
         }
-    } else if (entries > ((1 << 17) - 1)) /* 130k+ */
+    } else if (entries > ((1 << 17) - 1)) { /* 130k+ */
         entries = (1 << 17) - 1;
-    else {
+    } else {
         /* 9+: test and find a prime less or equal */
         size_t entries_test = prime_upto_min9(entries);
 
-        if (entries_test == HASH_COLLIDE_PRIME) /* disallowed */
+        if (entries_test == HASH_COLLIDE_PRIME) { /* disallowed */
             entries_test = prime_upto_min9(entries_test - 1);
+        }
 
         if (entries_test != entries) {
 
-            LOGGER_DEBUG("trimmed %i to %i.\n", (int)entries, (int)entries_test);
-            entries = (size_t)entries_test;
+            LOGGER_DEBUG(assoc->log, "trimmed %i to %i.\n", (int)entries, (int)entries_test);
+            entries = entries_test;
         }
     }
 
@@ -828,14 +900,15 @@ Assoc *new_Assoc(size_t bits, size_t entries, const uint8_t *public_id)
 
     /* allocation: preferably few blobs */
     size_t bckt, cix;
-    Client_entry *clients = malloc(sizeof(*clients) * assoc->candidates_bucket_count * assoc->candidates_bucket_size);
+    Client_entry *clients = (Client_entry *)malloc(sizeof(*clients) * assoc->candidates_bucket_count *
+                            assoc->candidates_bucket_size);
 
     if (!clients) {
         free(assoc);
         return NULL;
     }
 
-    candidates_bucket *lists = malloc(sizeof(*lists) * assoc->candidates_bucket_count);
+    candidates_bucket *lists = (candidates_bucket *)malloc(sizeof(*lists) * assoc->candidates_bucket_count);
 
     if (!lists) {
         free(assoc);
@@ -848,8 +921,9 @@ Assoc *new_Assoc(size_t bits, size_t entries, const uint8_t *public_id)
 
         list->list = &clients[bckt * assoc->candidates_bucket_size];
 
-        for (cix = 0; cix < assoc->candidates_bucket_size; cix++)
+        for (cix = 0; cix < assoc->candidates_bucket_size; cix++) {
             list->list[cix].hash = 0;
+        }
     }
 
     assoc->candidates = lists;
@@ -861,11 +935,11 @@ Assoc *new_Assoc(size_t bits, size_t entries, const uint8_t *public_id)
     return assoc;
 }
 
-Assoc *new_Assoc_default(const uint8_t *public_id)
+Assoc *new_Assoc_default(Logger *log, const uint8_t *public_id)
 {
     /* original 8, 251 averages to ~32k entries... probably the whole DHT :D
      * 320 entries is fine, hopefully */
-    return new_Assoc(6, 15, public_id);
+    return new_Assoc(log, 6, 15, public_id);
 }
 
 /* own client_id, assocs for this have to be ignored */
@@ -878,9 +952,7 @@ void Assoc_self_client_id_changed(Assoc *assoc, const uint8_t *id)
     }
 }
 
-#ifdef TOX_LOGGER
 static char *idpart2str(uint8_t *id, size_t len);
-#endif /* TOX_LOGGER */
 
 /* refresh buckets */
 void do_Assoc(Assoc *assoc, DHT *dht)
@@ -899,47 +971,57 @@ void do_Assoc(Assoc *assoc, DHT *dht)
         size_t i, k, m;
 
         for (i = 1; i < assoc->candidates_bucket_count; i++) {
-            if (i % 2)
+            if (i % 2) {
                 k = - (i >> 1);
-            else
+            } else {
                 k = i >> 1;
+            }
 
             size_t bckt = (candidate + k) % assoc->candidates_bucket_count;
 
-            for (m = 0; m < assoc->candidates_bucket_size; m++)
+            for (m = 0; m < assoc->candidates_bucket_size; m++) {
                 if (assoc->candidates[bckt].list[m].hash) {
                     Client_entry *entry = &assoc->candidates[bckt].list[m];
 
-                    if (!is_timeout(entry->getnodes, CANDIDATES_SEEN_TIMEOUT))
+                    if (!is_timeout(entry->getnodes, CANDIDATES_SEEN_TIMEOUT)) {
                         continue;
+                    }
 
-                    if (!target_id)
+                    if (!target_id) {
                         target_id = entry->client.public_key;
+                    }
 
                     if (entry->seen_at) {
-                        if (!seen)
-                            if (!is_timeout(entry->seen_at, CANDIDATES_SEEN_TIMEOUT))
+                        if (!seen) {
+                            if (!is_timeout(entry->seen_at, CANDIDATES_SEEN_TIMEOUT)) {
                                 seen = entry;
+                            }
+                        }
                     }
 
                     if (entry->heard_at) {
-                        if (!heard)
-                            if (!is_timeout(entry->heard_at, CANDIDATES_HEARD_TIMEOUT))
+                        if (!heard) {
+                            if (!is_timeout(entry->heard_at, CANDIDATES_HEARD_TIMEOUT)) {
                                 heard = entry;
+                            }
+                        }
                     }
 
-                    if (seen && heard)
+                    if (seen && heard) {
                         break;
+                    }
                 }
+            }
 
-            if (seen && heard)
+            if (seen && heard) {
                 break;
+            }
         }
 
         if (seen) {
             IPPTsPng *ippts = seen->seen_family == AF_INET ? &seen->client.assoc4 : &seen->client.assoc6;
 
-            LOGGER_DEBUG("[%u] => S[%s...] %s:%u", (uint32_t)(candidate % assoc->candidates_bucket_count),
+            LOGGER_DEBUG(assoc->log, "[%u] => S[%s...] %s:%u", (uint32_t)(candidate % assoc->candidates_bucket_count),
                          idpart2str(seen->client.public_key, 8), ip_ntoa(&ippts->ip_port.ip), htons(ippts->ip_port.port));
 
             DHT_getnodes(dht, &ippts->ip_port, seen->client.public_key, target_id);
@@ -949,18 +1031,16 @@ void do_Assoc(Assoc *assoc, DHT *dht)
         if (heard && (heard != seen)) {
             IP_Port *ipp = heard->heard_family == AF_INET ? &heard->assoc_heard4 : &heard->assoc_heard6;
 
-            LOGGER_DEBUG("[%u] => H[%s...] %s:%u", (uint32_t)(candidate % assoc->candidates_bucket_count),
+            LOGGER_DEBUG(assoc->log, "[%u] => H[%s...] %s:%u", (uint32_t)(candidate % assoc->candidates_bucket_count),
                          idpart2str(heard->client.public_key, 8), ip_ntoa(&ipp->ip), htons(ipp->port));
 
             DHT_getnodes(dht, ipp, heard->client.public_key, target_id);
             heard->getnodes = unix_time();
         }
 
-        LOGGER_SCOPE (
-
-            if ( !heard && !seen )
-            LOGGER_DEBUG("[%u] => no nodes to talk to??", (uint32_t)(candidate % assoc->candidates_bucket_count));
-        );
+        if (!heard && !seen) {
+            LOGGER_DEBUG(assoc->log, "[%u] => no nodes to talk to??", (uint32_t)(candidate % assoc->candidates_bucket_count));
+        }
     }
 }
 
@@ -974,31 +1054,31 @@ void kill_Assoc(Assoc *assoc)
     }
 }
 
-#ifdef TOX_LOGGER
-
 static char buffer[crypto_box_PUBLICKEYBYTES * 2 + 1];
 static char *idpart2str(uint8_t *id, size_t len)
 {
-    if (len > crypto_box_PUBLICKEYBYTES)
+    if (len > crypto_box_PUBLICKEYBYTES) {
         len = crypto_box_PUBLICKEYBYTES;
+    }
 
     size_t i;
 
-    for (i = 0; i < len; i++)
+    for (i = 0; i < len; i++) {
         sprintf(buffer + i * 2, "%02hhx", id[i]);
+    }
 
     buffer[len * 2] = 0;
     return buffer;
 }
 
-void Assoc_status(const Assoc *assoc)
+void Assoc_status(Logger *log, const Assoc *assoc)
 {
     if (!assoc) {
-        LOGGER_TRACE("Assoc status: no assoc");
+        LOGGER_TRACE(log, "Assoc status: no assoc");
         return;
     }
 
-    LOGGER_TRACE("[b:p] hash => [id...] used, seen, heard");
+    LOGGER_TRACE(log, "[b:p] hash => [id...] used, seen, heard");
 
     size_t bid, cid, total = 0;
 
@@ -1011,7 +1091,7 @@ void Assoc_status(const Assoc *assoc)
             if (entry->hash) {
                 total++;
 
-                LOGGER_TRACE("[%3i:%3i] %08x => [%s...] %i, %i(%c), %i(%c)\n",
+                LOGGER_TRACE(log, "[%3i:%3i] %08x => [%s...] %i, %i(%c), %i(%c)\n",
                              (int)bid, (int)cid, entry->hash, idpart2str(entry->client.public_key, 8),
                              entry->used_at ? (int)(unix_time() - entry->used_at) : 0,
                              entry->seen_at ? (int)(unix_time() - entry->seen_at) : 0,
@@ -1023,9 +1103,7 @@ void Assoc_status(const Assoc *assoc)
     }
 
     if (total) {
-        LOGGER_TRACE("Total: %i entries, table usage %i%%.\n", (int)total,
+        LOGGER_TRACE(log, "Total: %i entries, table usage %i%%.\n", (int)total,
                      (int)(total * 100 / (assoc->candidates_bucket_count * assoc->candidates_bucket_size)));
     }
 }
-
-#endif /* TOX_LOGGER */

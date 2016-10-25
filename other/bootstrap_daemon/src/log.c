@@ -31,11 +31,12 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-LOG_BACKEND current_backend = -1;
+#define INVALID_BACKEND (LOG_BACKEND)-1u
+static LOG_BACKEND current_backend = INVALID_BACKEND;
 
 bool open_log(LOG_BACKEND backend)
 {
-    if (current_backend != -1) {
+    if (current_backend != INVALID_BACKEND) {
         return false;
     }
 
@@ -48,9 +49,9 @@ bool open_log(LOG_BACKEND backend)
     return true;
 }
 
-bool close_log()
+bool close_log(void)
 {
-    if (current_backend == -1) {
+    if (current_backend == INVALID_BACKEND) {
         return false;
     }
 
@@ -58,12 +59,12 @@ bool close_log()
         closelog();
     }
 
-    current_backend = -1;
+    current_backend = INVALID_BACKEND;
 
     return true;
 }
 
-int level_syslog(LOG_LEVEL level)
+static int level_syslog(LOG_LEVEL level)
 {
     switch (level) {
         case LOG_LEVEL_INFO:
@@ -79,12 +80,12 @@ int level_syslog(LOG_LEVEL level)
     return LOG_INFO;
 }
 
-void log_syslog(LOG_LEVEL level, const char *format, va_list args)
+static void log_syslog(LOG_LEVEL level, const char *format, va_list args)
 {
     vsyslog(level_syslog(level), format, args);
 }
 
-FILE *level_stdout(LOG_LEVEL level)
+static FILE *level_stdout(LOG_LEVEL level)
 {
     switch (level) {
         case LOG_LEVEL_INFO:
@@ -98,7 +99,7 @@ FILE *level_stdout(LOG_LEVEL level)
     return stdout;
 }
 
-void log_stdout(LOG_LEVEL level, const char *format, va_list args)
+static void log_stdout(LOG_LEVEL level, const char *format, va_list args)
 {
     vfprintf(level_stdout(level), format, args);
     fflush(level_stdout(level));
@@ -121,5 +122,5 @@ bool write_log(LOG_LEVEL level, const char *format, ...)
 
     va_end(args);
 
-    return current_backend != -1;
+    return current_backend != INVALID_BACKEND;
 }

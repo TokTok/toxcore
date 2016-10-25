@@ -22,21 +22,24 @@
 #ifndef VIDEO_H
 #define VIDEO_H
 
+#include "toxav.h"
+
+#include "../toxcore/logger.h"
+#include "../toxcore/util.h"
+
 #include <vpx/vpx_decoder.h>
 #include <vpx/vpx_encoder.h>
-#include <vpx/vp8dx.h>
-#include <vpx/vp8cx.h>
 #include <vpx/vpx_image.h>
+
+#include <vpx/vp8cx.h>
+#include <vpx/vp8dx.h>
 #define VIDEO_CODEC_DECODER_INTERFACE (vpx_codec_vp8_dx())
 #define VIDEO_CODEC_ENCODER_INTERFACE (vpx_codec_vp8_cx())
 
 #include <pthread.h>
 
-#include "toxav.h"
-
-#include "../toxcore/util.h"
-
 struct RTPMessage;
+struct RingBuffer;
 
 typedef struct VCSession_s {
     /* encoding */
@@ -45,11 +48,12 @@ typedef struct VCSession_s {
 
     /* decoding */
     vpx_codec_ctx_t decoder[1];
-    void *vbuf_raw; /* Un-decoded data */
+    struct RingBuffer *vbuf_raw; /* Un-decoded data */
 
     uint64_t linfts; /* Last received frame time stamp */
     uint32_t lcfd; /* Last calculated frame duration for incoming video payload */
 
+    Logger *log;
     ToxAV *av;
     uint32_t friend_number;
 
@@ -58,7 +62,7 @@ typedef struct VCSession_s {
     pthread_mutex_t queue_mutex[1];
 } VCSession;
 
-VCSession *vc_new(ToxAV *av, uint32_t friend_number, toxav_video_receive_frame_cb *cb, void *cb_data);
+VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_receive_frame_cb *cb, void *cb_data);
 void vc_kill(VCSession *vc);
 void vc_iterate(VCSession *vc);
 int vc_queue_message(void *vcp, struct RTPMessage *msg);

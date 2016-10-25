@@ -25,14 +25,14 @@
 #include "config.h"
 #endif
 
-#include "toxencryptsave.h"
-#include "defines.h"
 #include "../toxcore/crypto_core.h"
+#include "defines.h"
+#include "toxencryptsave.h"
 #define SET_ERROR_PARAMETER(param, x) {if(param) {*param = x;}}
 
 #ifdef VANILLA_NACL
-#include "crypto_pwhash_scryptsalsa208sha256/crypto_pwhash_scryptsalsa208sha256.h"
 #include <crypto_hash_sha256.h>
+#include "crypto_pwhash_scryptsalsa208sha256/crypto_pwhash_scryptsalsa208sha256.h"
 #endif
 
 #if TOX_PASS_SALT_LENGTH != crypto_pwhash_scryptsalsa208sha256_SALTBYTES
@@ -46,30 +46,6 @@
 #if TOX_PASS_ENCRYPTION_EXTRA_LENGTH != (crypto_box_MACBYTES + crypto_box_NONCEBYTES + crypto_pwhash_scryptsalsa208sha256_SALTBYTES + TOX_ENC_SAVE_MAGIC_LENGTH)
 #error TOX_PASS_ENCRYPTION_EXTRA_LENGTH is assumed to be equal to (crypto_box_MACBYTES + crypto_box_NONCEBYTES + crypto_pwhash_scryptsalsa208sha256_SALTBYTES + TOX_ENC_SAVE_MAGIC_LENGTH)
 #endif
-
-uint32_t toxes_version_major(void)
-{
-    return TOXES_VERSION_MAJOR;
-}
-
-uint32_t toxes_version_minor(void)
-{
-    return TOXES_VERSION_MINOR;
-}
-
-uint32_t toxes_version_patch(void)
-{
-    return TOXES_VERSION_PATCH;
-}
-
-bool toxes_version_is_compatible(uint32_t major, uint32_t minor, uint32_t patch)
-{
-  return (TOXES_VERSION_MAJOR == major && /* Force the major version */
-            (TOXES_VERSION_MINOR > minor || /* Current minor version must be newer than requested  -- or -- */
-                (TOXES_VERSION_MINOR == minor && TOXES_VERSION_PATCH >= patch) /* the patch must be the same or newer */
-            )
-         );
-}
 
 /* Clients should consider alerting their users that, unlike plain data, if even one bit
  * becomes corrupted, the data will be entirely unrecoverable.
@@ -86,8 +62,9 @@ bool toxes_version_is_compatible(uint32_t major, uint32_t minor, uint32_t patch)
  */
 bool tox_get_salt(const uint8_t *data, uint8_t *salt)
 {
-    if (memcmp(data, TOX_ENC_SAVE_MAGIC_NUMBER, TOX_ENC_SAVE_MAGIC_LENGTH) != 0)
+    if (memcmp(data, TOX_ENC_SAVE_MAGIC_NUMBER, TOX_ENC_SAVE_MAGIC_LENGTH) != 0) {
         return 0;
+    }
 
     data += TOX_ENC_SAVE_MAGIC_LENGTH;
     memcpy(salt, data, crypto_pwhash_scryptsalsa208sha256_SALTBYTES);
@@ -312,8 +289,9 @@ bool tox_pass_decrypt(const uint8_t *data, size_t length, const uint8_t *passphr
  */
 bool tox_is_data_encrypted(const uint8_t *data)
 {
-    if (memcmp(data, TOX_ENC_SAVE_MAGIC_NUMBER, TOX_ENC_SAVE_MAGIC_LENGTH) == 0)
+    if (memcmp(data, TOX_ENC_SAVE_MAGIC_NUMBER, TOX_ENC_SAVE_MAGIC_LENGTH) == 0) {
         return 1;
-    else
-        return 0;
+    }
+
+    return 0;
 }

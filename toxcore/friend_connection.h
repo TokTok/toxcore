@@ -25,11 +25,10 @@
 #ifndef FRIEND_CONNECTION_H
 #define FRIEND_CONNECTION_H
 
-#include "net_crypto.h"
 #include "DHT.h"
 #include "LAN_discovery.h"
+#include "net_crypto.h"
 #include "onion_client.h"
-
 
 #define MAX_FRIEND_CONNECTION_CALLBACKS 2
 #define MESSENGER_CALLBACK_INDEX 0
@@ -79,17 +78,12 @@ typedef struct {
     uint64_t share_relays_lastsent;
 
     struct {
-        int (*status_callback)(void *object, int id, uint8_t status);
-        void *status_callback_object;
-        int status_callback_id;
+        int (*status_callback)(void *object, int id, uint8_t status, void *userdata);
+        int (*data_callback)(void *object, int id, const uint8_t *data, uint16_t length, void *userdata);
+        int (*lossy_data_callback)(void *object, int id, const uint8_t *data, uint16_t length, void *userdata);
 
-        int (*data_callback)(void *object, int id, uint8_t *data, uint16_t length);
-        void *data_callback_object;
-        int data_callback_id;
-
-        int (*lossy_data_callback)(void *object, int id, const uint8_t *data, uint16_t length);
-        void *lossy_data_callback_object;
-        int lossy_data_callback_id;
+        void *callback_object;
+        int callback_id;
     } callbacks[MAX_FRIEND_CONNECTION_CALLBACKS];
 
     uint16_t lock_count;
@@ -97,7 +91,7 @@ typedef struct {
     Node_format tcp_relays[FRIEND_MAX_STORED_TCP_RELAYS];
     uint16_t tcp_relay_counter;
 
-    _Bool hosting_tcp_relay;
+    bool hosting_tcp_relay;
 } Friend_Conn;
 
 
@@ -109,7 +103,8 @@ typedef struct {
     Friend_Conn *conns;
     uint32_t num_cons;
 
-    int (*fr_request_callback)(void *object, const uint8_t *source_pubkey, const uint8_t *data, uint16_t len);
+    int (*fr_request_callback)(void *object, const uint8_t *source_pubkey, const uint8_t *data, uint16_t len,
+                               void *userdata);
     void *fr_request_object;
 
     uint64_t last_LANdiscovery;
@@ -142,7 +137,7 @@ int get_friendcon_public_keys(uint8_t *real_pk, uint8_t *dht_temp_pk, Friend_Con
 
 /* Set temp dht key for connection.
  */
-void set_dht_temp_pk(Friend_Connections *fr_c, int friendcon_id, const uint8_t *dht_temp_pk);
+void set_dht_temp_pk(Friend_Connections *fr_c, int friendcon_id, const uint8_t *dht_temp_pk, void *userdata);
 
 /* Add a TCP relay associated to the friend.
  *
@@ -158,9 +153,10 @@ int friend_add_tcp_relay(Friend_Connections *fr_c, int friendcon_id, IP_Port ip_
  * return -1 on failure
  */
 int friend_connection_callbacks(Friend_Connections *fr_c, int friendcon_id, unsigned int index,
-                                int (*status_callback)(void *object, int id, uint8_t status), int (*data_callback)(void *object, int id, uint8_t *data,
-                                        uint16_t length), int (*lossy_data_callback)(void *object, int id, const uint8_t *data, uint16_t length), void *object,
-                                int number);
+                                int (*status_callback)(void *object, int id, uint8_t status, void *userdata),
+                                int (*data_callback)(void *object, int id, const uint8_t *data, uint16_t len, void *userdata),
+                                int (*lossy_data_callback)(void *object, int id, const uint8_t *data, uint16_t length, void *userdata),
+                                void *object, int number);
 
 /* return the crypt_connection_id for the connection.
  *
@@ -198,13 +194,13 @@ int send_friend_request_packet(Friend_Connections *fr_c, int friendcon_id, uint3
  * This function will be called every time a friend request is received.
  */
 void set_friend_request_callback(Friend_Connections *fr_c, int (*fr_request_callback)(void *, const uint8_t *,
-                                 const uint8_t *, uint16_t), void *object);
+                                 const uint8_t *, uint16_t, void *), void *object);
 
 /* Create new friend_connections instance. */
 Friend_Connections *new_friend_connections(Onion_Client *onion_c);
 
 /* main friend_connections loop. */
-void do_friend_connections(Friend_Connections *fr_c);
+void do_friend_connections(Friend_Connections *fr_c, void *userdata);
 
 /* Free everything related with friend_connections. */
 void kill_friend_connections(Friend_Connections *fr_c);

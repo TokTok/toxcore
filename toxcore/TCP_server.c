@@ -26,6 +26,8 @@
 
 #include "TCP_server.h"
 
+#include "util.h"
+
 #if !defined(_WIN32) && !defined(__WIN32__) && !defined (WIN32)
 #include <sys/ioctl.h>
 #endif
@@ -33,6 +35,42 @@
 #include <arpa/inet.h>
 #include "util.h"
 #include "nat_traversal.h"
+
+struct TCP_Server {
+    Onion *onion;
+
+#ifdef TCP_SERVER_USE_EPOLL
+    int efd;
+    uint64_t last_run_pinged;
+#endif
+    sock_t *socks_listening;
+    unsigned int num_listening_socks;
+
+    uint8_t public_key[crypto_box_PUBLICKEYBYTES];
+    uint8_t secret_key[crypto_box_SECRETKEYBYTES];
+    TCP_Secure_Connection incomming_connection_queue[MAX_INCOMMING_CONNECTIONS];
+    uint16_t incomming_connection_queue_index;
+    TCP_Secure_Connection unconfirmed_connection_queue[MAX_INCOMMING_CONNECTIONS];
+    uint16_t unconfirmed_connection_queue_index;
+
+    TCP_Secure_Connection *accepted_connection_array;
+    uint32_t size_accepted_connections;
+    uint32_t num_accepted_connections;
+
+    uint64_t counter;
+
+    BS_LIST accepted_key_list;
+};
+
+const uint8_t *tcp_server_public_key(const TCP_Server *tcp_server)
+{
+    return tcp_server->public_key;
+}
+
+size_t tcp_server_listen_count(const TCP_Server *tcp_server)
+{
+    return tcp_server->num_listening_socks;
+}
 
 /* return 1 on success
  * return 0 on failure
@@ -79,11 +117,13 @@ static int realloc_connection(TCP_Server *TCP_server, uint32_t num)
         return 0;
     }
 
-    TCP_Secure_Connection *new_connections = realloc(TCP_server->accepted_connection_array,
-            num * sizeof(TCP_Secure_Connection));
+    TCP_Secure_Connection *new_connections = (TCP_Secure_Connection *)realloc(
+                TCP_server->accepted_connection_array,
+                num * sizeof(TCP_Secure_Connection));
 
-    if (new_connections == NULL)
+    if (new_connections == NULL) {
         return -1;
+    }
 
     if (num > TCP_server->size_accepted_connections) {
         uint32_t old_size = TCP_server->size_accepted_connections;
@@ -122,8 +162,9 @@ static int add_accepted(TCP_Server *TCP_server, const TCP_Secure_Connection *con
     }
 
     if (TCP_server->size_accepted_connections == TCP_server->num_accepted_connections) {
-        if (realloc_connection(TCP_server, TCP_server->size_accepted_connections + 4) == -1)
+        if (realloc_connection(TCP_server, TCP_server->size_accepted_connections + 4) == -1) {
             return -1;
+        }
 
         index = TCP_server->num_accepted_connections;
     } else {
@@ -142,8 +183,9 @@ static int add_accepted(TCP_Server *TCP_server, const TCP_Secure_Connection *con
         return -1;
     }
 
-    if (!bs_list_add(&TCP_server->accepted_key_list, con->public_key, index))
+    if (!bs_list_add(&TCP_server->accepted_key_list, con->public_key, index)) {
         return -1;
+    }
 
     memcpy(&TCP_server->accepted_connection_array[index], con, sizeof(TCP_Secure_Connection));
     TCP_server->accepted_connection_array[index].status = TCP_STATUS_CONFIRMED;
@@ -162,20 +204,24 @@ static int add_accepted(TCP_Server *TCP_server, const TCP_Secure_Connection *con
  */
 static int del_accepted(TCP_Server *TCP_server, int index)
 {
-    if ((uint32_t)index >= TCP_server->size_accepted_connections)
+    if ((uint32_t)index >= TCP_server->size_accepted_connections) {
         return -1;
+    }
 
-    if (TCP_server->accepted_connection_array[index].status == TCP_STATUS_NO_STATUS)
+    if (TCP_server->accepted_connection_array[index].status == TCP_STATUS_NO_STATUS) {
         return -1;
+    }
 
-    if (!bs_list_remove(&TCP_server->accepted_key_list, TCP_server->accepted_connection_array[index].public_key, index))
+    if (!bs_list_remove(&TCP_server->accepted_key_list, TCP_server->accepted_connection_array[index].public_key, index)) {
         return -1;
+    }
 
     sodium_memzero(&TCP_server->accepted_connection_array[index], sizeof(TCP_Secure_Connection));
     --TCP_server->num_accepted_connections;
 
-    if (TCP_server->num_accepted_connections == 0)
+    if (TCP_server->num_accepted_connections == 0) {
         realloc_connection(TCP_server, 0);
+    }
 
     return 0;
 }
@@ -261,30 +307,35 @@ int read_packet_TCP_secure_connection(sock_t sock, uint16_t *next_packet_length,
     if (*next_packet_length == 0) {
         uint16_t len = read_TCP_length(sock);
 
-        if (len == (uint16_t)~0)
+        if (len == (uint16_t)~0) {
             return -1;
+        }
 
-        if (len == 0)
+        if (len == 0) {
             return 0;
+        }
 
         *next_packet_length = len;
     }
 
-    if (max_len + crypto_box_MACBYTES < *next_packet_length)
+    if (max_len + crypto_box_MACBYTES < *next_packet_length) {
         return -1;
+    }
 
     uint8_t data_encrypted[*next_packet_length];
     int len_packet = read_TCP_packet(sock, data_encrypted, *next_packet_length);
 
-    if (len_packet != *next_packet_length)
+    if (len_packet != *next_packet_length) {
         return 0;
+    }
 
     *next_packet_length = 0;
 
     int len = decrypt_data_symmetric(shared_key, recv_nonce, data_encrypted, len_packet, data);
 
-    if (len + crypto_box_MACBYTES != len_packet)
+    if (len + crypto_box_MACBYTES != len_packet) {
         return -1;
+    }
 
     increment_nonce(recv_nonce);
 
@@ -303,8 +354,9 @@ static int send_pending_data_nonpriority(TCP_Secure_Connection *con)
     uint16_t left = con->last_packet_length - con->last_packet_sent;
     int len = send(con->sock, con->last_packet + con->last_packet_sent, left, MSG_NOSIGNAL);
 
-    if (len <= 0)
+    if (len <= 0) {
         return -1;
+    }
 
     if (len == left) {
         con->last_packet_length = 0;
@@ -314,7 +366,6 @@ static int send_pending_data_nonpriority(TCP_Secure_Connection *con)
 
     con->last_packet_sent += len;
     return -1;
-
 }
 
 /* return 0 if pending data was sent completely
@@ -359,27 +410,27 @@ static int send_pending_data(TCP_Secure_Connection *con)
 /* return 0 on failure (only if malloc fails)
  * return 1 on success
  */
-static _Bool add_priority(TCP_Secure_Connection *con, const uint8_t *packet, uint16_t size, uint16_t sent)
+static bool add_priority(TCP_Secure_Connection *con, const uint8_t *packet, uint16_t size, uint16_t sent)
 {
-    TCP_Priority_List *p = con->priority_queue_end, *new;
-    new = malloc(sizeof(TCP_Priority_List) + size);
+    TCP_Priority_List *p = con->priority_queue_end;
+    TCP_Priority_List *new_list = (TCP_Priority_List *)malloc(sizeof(TCP_Priority_List) + size);
 
-    if (!new) {
+    if (!new_list) {
         return 0;
     }
 
-    new->next = NULL;
-    new->size = size;
-    new->sent = sent;
-    memcpy(new->data, packet, size);
+    new_list->next = NULL;
+    new_list->size = size;
+    new_list->sent = sent;
+    memcpy(new_list->data, packet, size);
 
     if (p) {
-        p->next = new;
+        p->next = new_list;
     } else {
-        con->priority_queue_start = new;
+        con->priority_queue_start = new_list;
     }
 
-    con->priority_queue_end = new;
+    con->priority_queue_end = new_list;
     return 1;
 }
 
@@ -388,12 +439,13 @@ static _Bool add_priority(TCP_Secure_Connection *con, const uint8_t *packet, uin
  * return -1 on failure (connection must be killed).
  */
 static int write_packet_TCP_secure_connection(TCP_Secure_Connection *con, const uint8_t *data, uint16_t length,
-        _Bool priority)
+        bool priority)
 {
-    if (length + crypto_box_MACBYTES > MAX_PACKET_SIZE)
+    if (length + crypto_box_MACBYTES > MAX_PACKET_SIZE) {
         return -1;
+    }
 
-    _Bool sendpriority = 1;
+    bool sendpriority = 1;
 
     if (send_pending_data(con) == -1) {
         if (priority) {
@@ -409,8 +461,9 @@ static int write_packet_TCP_secure_connection(TCP_Secure_Connection *con, const 
     memcpy(packet, &c_length, sizeof(uint16_t));
     int len = encrypt_data_symmetric(con->shared_key, con->sent_nonce, data, length, packet + sizeof(uint16_t));
 
-    if ((unsigned int)len != (sizeof(packet) - sizeof(uint16_t)))
+    if ((unsigned int)len != (sizeof(packet) - sizeof(uint16_t))) {
         return -1;
+    }
 
     if (priority) {
         len = sendpriority ? send(con->sock, packet, sizeof(packet), MSG_NOSIGNAL) : 0;
@@ -430,13 +483,15 @@ static int write_packet_TCP_secure_connection(TCP_Secure_Connection *con, const 
 
     len = send(con->sock, packet, sizeof(packet), MSG_NOSIGNAL);
 
-    if (len <= 0)
+    if (len <= 0) {
         return 0;
+    }
 
     increment_nonce(con->sent_nonce);
 
-    if ((unsigned int)len == sizeof(packet))
+    if ((unsigned int)len == sizeof(packet)) {
         return 1;
+    }
 
     memcpy(con->last_packet, packet, sizeof(packet));
     con->last_packet_length = sizeof(packet);
@@ -461,8 +516,9 @@ static int rm_connection_index(TCP_Server *TCP_server, TCP_Secure_Connection *co
  */
 static int kill_accepted(TCP_Server *TCP_server, int index)
 {
-    if ((uint32_t)index >= TCP_server->size_accepted_connections)
+    if ((uint32_t)index >= TCP_server->size_accepted_connections) {
         return -1;
+    }
 
     uint32_t i;
 
@@ -472,8 +528,9 @@ static int kill_accepted(TCP_Server *TCP_server, int index)
 
     sock_t sock = TCP_server->accepted_connection_array[index].sock;
 
-    if (del_accepted(TCP_server, index) != 0)
+    if (del_accepted(TCP_server, index) != 0) {
         return -1;
+    }
 
     kill_sock(sock);
     return 0;
@@ -485,11 +542,13 @@ static int kill_accepted(TCP_Server *TCP_server, int index)
 static int handle_TCP_handshake(TCP_Secure_Connection *con, const uint8_t *data, uint16_t length,
                                 const uint8_t *self_secret_key)
 {
-    if (length != TCP_CLIENT_HANDSHAKE_SIZE)
+    if (length != TCP_CLIENT_HANDSHAKE_SIZE) {
         return -1;
+    }
 
-    if (con->status != TCP_STATUS_CONNECTED)
+    if (con->status != TCP_STATUS_CONNECTED) {
         return -1;
+    }
 
     uint8_t shared_key[crypto_box_BEFORENMBYTES];
     encrypt_precompute(data, self_secret_key, shared_key);
@@ -497,8 +556,9 @@ static int handle_TCP_handshake(TCP_Secure_Connection *con, const uint8_t *data,
     int len = decrypt_data_symmetric(shared_key, data + crypto_box_PUBLICKEYBYTES,
                                      data + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES, TCP_HANDSHAKE_PLAIN_SIZE + crypto_box_MACBYTES, plain);
 
-    if (len != TCP_HANDSHAKE_PLAIN_SIZE)
+    if (len != TCP_HANDSHAKE_PLAIN_SIZE) {
         return -1;
+    }
 
     memcpy(con->public_key, data, crypto_box_PUBLICKEYBYTES);
     uint8_t temp_secret_key[crypto_box_SECRETKEYBYTES];
@@ -514,11 +574,13 @@ static int handle_TCP_handshake(TCP_Secure_Connection *con, const uint8_t *data,
     len = encrypt_data_symmetric(shared_key, response, resp_plain, TCP_HANDSHAKE_PLAIN_SIZE,
                                  response + crypto_box_NONCEBYTES);
 
-    if (len != TCP_HANDSHAKE_PLAIN_SIZE + crypto_box_MACBYTES)
+    if (len != TCP_HANDSHAKE_PLAIN_SIZE + crypto_box_MACBYTES) {
         return -1;
+    }
 
-    if (TCP_SERVER_HANDSHAKE_SIZE != send(con->sock, response, TCP_SERVER_HANDSHAKE_SIZE, MSG_NOSIGNAL))
+    if (TCP_SERVER_HANDSHAKE_SIZE != send(con->sock, response, TCP_SERVER_HANDSHAKE_SIZE, MSG_NOSIGNAL)) {
         return -1;
+    }
 
     encrypt_precompute(plain, temp_secret_key, con->shared_key);
     con->status = TCP_STATUS_UNCONFIRMED;
@@ -586,8 +648,9 @@ static int handle_TCP_routing_req(TCP_Server *TCP_server, uint32_t con_id, const
 
     /* If person tries to cennect to himself we deny the request*/
     if (public_key_cmp(con->public_key, public_key) == 0) {
-        if (send_routing_response(con, 0, public_key) == -1)
+        if (send_routing_response(con, 0, public_key) == -1) {
             return -1;
+        }
 
         return 0;
     }
@@ -597,9 +660,9 @@ static int handle_TCP_routing_req(TCP_Server *TCP_server, uint32_t con_id, const
             if (public_key_cmp(public_key, con->connections[i].public_key) == 0) {
                 if (send_routing_response(con, i + NUM_RESERVED_PORTS, public_key) == -1) {
                     return -1;
-                } else {
-                    return 0;
                 }
+
+                return 0;
             }
         } else if (index == (uint32_t)~0) {
             index = i;
@@ -607,19 +670,22 @@ static int handle_TCP_routing_req(TCP_Server *TCP_server, uint32_t con_id, const
     }
 
     if (index == (uint32_t)~0) {
-        if (send_routing_response(con, 0, public_key) == -1)
+        if (send_routing_response(con, 0, public_key) == -1) {
             return -1;
+        }
 
         return 0;
     }
 
     int ret = send_routing_response(con, index + NUM_RESERVED_PORTS, public_key);
 
-    if (ret == 0)
+    if (ret == 0) {
         return 0;
+    }
 
-    if (ret == -1)
+    if (ret == -1) {
         return -1;
+    }
 
     con->connections[index].status = 1;
     memcpy(con->connections[index].public_key, public_key, crypto_box_PUBLICKEYBYTES);
@@ -644,7 +710,7 @@ static int handle_TCP_routing_req(TCP_Server *TCP_server, uint32_t con_id, const
             other_conn->connections[other_id].status = 2;
             other_conn->connections[other_id].index = con_id;
             other_conn->connections[other_id].other_id = index;
-            //TODO: return values?
+            // TODO(irungentoo): return values?
             send_connect_notification(con, index);
             send_connect_notification(other_conn, other_id);
         }
@@ -659,8 +725,9 @@ static int handle_TCP_routing_req(TCP_Server *TCP_server, uint32_t con_id, const
 static int handle_TCP_oob_send(TCP_Server *TCP_server, uint32_t con_id, const uint8_t *public_key, const uint8_t *data,
                                uint16_t length)
 {
-    if (length == 0 || length > TCP_MAX_OOB_DATA_LENGTH)
+    if (length == 0 || length > TCP_MAX_OOB_DATA_LENGTH) {
         return -1;
+    }
 
     TCP_Secure_Connection *con = &TCP_server->accepted_connection_array[con_id];
 
@@ -685,8 +752,9 @@ static int handle_TCP_oob_send(TCP_Server *TCP_server, uint32_t con_id, const ui
  */
 static int rm_connection_index(TCP_Server *TCP_server, TCP_Secure_Connection *con, uint8_t con_number)
 {
-    if (con_number >= NUM_CLIENT_CONNECTIONS)
+    if (con_number >= NUM_CLIENT_CONNECTIONS) {
         return -1;
+    }
 
     if (con->connections[con_number].status) {
         uint32_t index = con->connections[con_number].index;
@@ -694,13 +762,14 @@ static int rm_connection_index(TCP_Server *TCP_server, TCP_Secure_Connection *co
 
         if (con->connections[con_number].status == 2) {
 
-            if (index >= TCP_server->size_accepted_connections)
+            if (index >= TCP_server->size_accepted_connections) {
                 return -1;
+            }
 
             TCP_server->accepted_connection_array[index].connections[other_id].other_id = 0;
             TCP_server->accepted_connection_array[index].connections[other_id].index = 0;
             TCP_server->accepted_connection_array[index].connections[other_id].status = 1;
-            //TODO: return values?
+            // TODO(irungentoo): return values?
             send_disconnect_notification(&TCP_server->accepted_connection_array[index], other_id);
         }
 
@@ -708,30 +777,33 @@ static int rm_connection_index(TCP_Server *TCP_server, TCP_Secure_Connection *co
         con->connections[con_number].other_id = 0;
         con->connections[con_number].status = 0;
         return 0;
-    } else {
-        return -1;
     }
+
+    return -1;
 }
 
 static int handle_onion_recv_1(void *object, IP_Port dest, const uint8_t *data, uint16_t length)
 {
-    TCP_Server *TCP_server = object;
+    TCP_Server *TCP_server = (TCP_Server *)object;
     uint32_t index = dest.ip.ip6.uint32[0];
 
-    if (index >= TCP_server->size_accepted_connections)
+    if (index >= TCP_server->size_accepted_connections) {
         return 1;
+    }
 
     TCP_Secure_Connection *con = &TCP_server->accepted_connection_array[index];
 
-    if (con->identifier != dest.ip.ip6.uint64[1])
+    if (con->identifier != dest.ip.ip6.uint64[1]) {
         return 1;
+    }
 
     uint8_t packet[1 + length];
     memcpy(packet + 1, data, length);
     packet[0] = TCP_PACKET_ONION_RESPONSE;
 
-    if (write_packet_TCP_secure_connection(con, packet, sizeof(packet), 0) != 1)
+    if (write_packet_TCP_secure_connection(con, packet, sizeof(packet), 0) != 1) {
         return 1;
+    }
 
     return 0;
 }
@@ -741,36 +813,41 @@ static int handle_onion_recv_1(void *object, IP_Port dest, const uint8_t *data, 
  */
 static int handle_TCP_packet(TCP_Server *TCP_server, uint32_t con_id, const uint8_t *data, uint16_t length)
 {
-    if (length == 0)
+    if (length == 0) {
         return -1;
+    }
 
     TCP_Secure_Connection *con = &TCP_server->accepted_connection_array[con_id];
 
     switch (data[0]) {
         case TCP_PACKET_ROUTING_REQUEST: {
-            if (length != 1 + crypto_box_PUBLICKEYBYTES)
+            if (length != 1 + crypto_box_PUBLICKEYBYTES) {
                 return -1;
+            }
 
             return handle_TCP_routing_req(TCP_server, con_id, data + 1);
         }
 
         case TCP_PACKET_CONNECTION_NOTIFICATION: {
-            if (length != 2)
+            if (length != 2) {
                 return -1;
+            }
 
             break;
         }
 
         case TCP_PACKET_DISCONNECT_NOTIFICATION: {
-            if (length != 2)
+            if (length != 2) {
                 return -1;
+            }
 
             return rm_connection_index(TCP_server, con, data[1] - NUM_RESERVED_PORTS);
         }
 
         case TCP_PACKET_PING: {
-            if (length != 1 + sizeof(uint64_t))
+            if (length != 1 + sizeof(uint64_t)) {
                 return -1;
+            }
 
             uint8_t response[1 + sizeof(uint64_t)];
             response[0] = TCP_PACKET_PONG;
@@ -780,8 +857,9 @@ static int handle_TCP_packet(TCP_Server *TCP_server, uint32_t con_id, const uint
         }
 
         case TCP_PACKET_PONG: {
-            if (length != 1 + sizeof(uint64_t))
+            if (length != 1 + sizeof(uint64_t)) {
                 return -1;
+            }
 
             uint64_t ping_id;
             memcpy(&ping_id, data + 1, sizeof(uint64_t));
@@ -792,14 +870,15 @@ static int handle_TCP_packet(TCP_Server *TCP_server, uint32_t con_id, const uint
                 }
 
                 return 0;
-            } else {
-                return -1;
             }
+
+            return -1;
         }
 
         case TCP_PACKET_OOB_SEND: {
-            if (length <= 1 + crypto_box_PUBLICKEYBYTES)
+            if (length <= 1 + crypto_box_PUBLICKEYBYTES) {
                 return -1;
+            }
 
             return handle_TCP_oob_send(TCP_server, con_id, data + 1, data + 1 + crypto_box_PUBLICKEYBYTES,
                                        length - (1 + crypto_box_PUBLICKEYBYTES));
@@ -807,8 +886,9 @@ static int handle_TCP_packet(TCP_Server *TCP_server, uint32_t con_id, const uint
 
         case TCP_PACKET_ONION_REQUEST: {
             if (TCP_server->onion) {
-                if (length <= 1 + crypto_box_NONCEBYTES + ONION_SEND_BASE * 2)
+                if (length <= 1 + crypto_box_NONCEBYTES + ONION_SEND_BASE * 2) {
                     return -1;
+                }
 
                 IP_Port source;
                 source.port = 0;  // dummy initialise
@@ -828,19 +908,23 @@ static int handle_TCP_packet(TCP_Server *TCP_server, uint32_t con_id, const uint
         }
 
         default: {
-            if (data[0] < NUM_RESERVED_PORTS)
+            if (data[0] < NUM_RESERVED_PORTS) {
                 return -1;
+            }
 
             uint8_t c_id = data[0] - NUM_RESERVED_PORTS;
 
-            if (c_id >= NUM_CLIENT_CONNECTIONS)
+            if (c_id >= NUM_CLIENT_CONNECTIONS) {
                 return -1;
+            }
 
-            if (con->connections[c_id].status == 0)
+            if (con->connections[c_id].status == 0) {
                 return -1;
+            }
 
-            if (con->connections[c_id].status != 2)
+            if (con->connections[c_id].status != 2) {
                 return 0;
+            }
 
             uint32_t index = con->connections[c_id].index;
             uint8_t other_c_id = con->connections[c_id].other_id + NUM_RESERVED_PORTS;
@@ -849,8 +933,9 @@ static int handle_TCP_packet(TCP_Server *TCP_server, uint32_t con_id, const uint
             new_data[0] = other_c_id;
             int ret = write_packet_TCP_secure_connection(&TCP_server->accepted_connection_array[index], new_data, length, 0);
 
-            if (ret == -1)
+            if (ret == -1) {
                 return -1;
+            }
 
             return 0;
         }
@@ -885,8 +970,9 @@ static int confirm_TCP_connection(TCP_Server *TCP_server, TCP_Secure_Connection 
  */
 static int accept_connection(TCP_Server *TCP_server, sock_t sock)
 {
-    if (!sock_valid(sock))
+    if (!sock_valid(sock)) {
         return -1;
+    }
 
     if (!set_socket_nonblock(sock)) {
         kill_sock(sock);
@@ -902,8 +988,9 @@ static int accept_connection(TCP_Server *TCP_server, sock_t sock)
 
     TCP_Secure_Connection *conn = &TCP_server->incomming_connection_queue[index];
 
-    if (conn->status != TCP_STATUS_NO_STATUS)
+    if (conn->status != TCP_STATUS_NO_STATUS) {
         kill_TCP_connection(conn);
+    }
 
     conn->status = TCP_STATUS_CONNECTED;
     conn->sock = sock;
@@ -947,25 +1034,27 @@ static sock_t new_listening_TCP_socket(int family, uint16_t port)
 TCP_Server *new_TCP_server(uint8_t ipv6_enabled, uint16_t num_sockets, const uint16_t *ports, const uint8_t *secret_key,
                            Onion *onion)
 {
-    return new_TCP_server_nat(ipv6_enabled,num_sockets,ports,TOX_TRAVERSAL_TYPE_NONE,secret_key,onion);
+    return new_TCP_server_nat(ipv6_enabled, num_sockets, ports, TOX_TRAVERSAL_TYPE_NONE, secret_key, onion);
 }
 
 TCP_Server *new_TCP_server_nat(uint8_t ipv6_enabled, uint16_t num_sockets, const uint16_t *ports, TOX_TRAVERSAL_TYPE traversal_type,
                            const uint8_t *secret_key, Onion *onion)
 {
-    if (num_sockets == 0 || ports == NULL)
+    if (num_sockets == 0 || ports == NULL) {
         return NULL;
+    }
 
     if (networking_at_startup() != 0) {
         return NULL;
     }
 
-    TCP_Server *temp = calloc(1, sizeof(TCP_Server));
+    TCP_Server *temp = (TCP_Server *)calloc(1, sizeof(TCP_Server));
 
-    if (temp == NULL)
+    if (temp == NULL) {
         return NULL;
+    }
 
-    temp->socks_listening = calloc(num_sockets, sizeof(sock_t));
+    temp->socks_listening = (sock_t *)calloc(num_sockets, sizeof(sock_t));
 
     if (temp->socks_listening == NULL) {
         free(temp);
@@ -1050,7 +1139,7 @@ static void do_TCP_accept_new(TCP_Server *TCP_server)
 
     for (i = 0; i < TCP_server->num_listening_socks; ++i) {
         struct sockaddr_storage addr;
-        unsigned int addrlen = sizeof(addr);
+        socklen_t addrlen = sizeof(addr);
         sock_t sock;
 
         do {
@@ -1061,8 +1150,9 @@ static void do_TCP_accept_new(TCP_Server *TCP_server)
 
 static int do_incoming(TCP_Server *TCP_server, uint32_t i)
 {
-    if (TCP_server->incomming_connection_queue[i].status != TCP_STATUS_CONNECTED)
+    if (TCP_server->incomming_connection_queue[i].status != TCP_STATUS_CONNECTED) {
         return -1;
+    }
 
     int ret = read_connection_handshake(&TCP_server->incomming_connection_queue[i], TCP_server->secret_key);
 
@@ -1073,8 +1163,9 @@ static int do_incoming(TCP_Server *TCP_server, uint32_t i)
         TCP_Secure_Connection *conn_old = &TCP_server->incomming_connection_queue[i];
         TCP_Secure_Connection *conn_new = &TCP_server->unconfirmed_connection_queue[index_new];
 
-        if (conn_new->status != TCP_STATUS_NO_STATUS)
+        if (conn_new->status != TCP_STATUS_NO_STATUS) {
             kill_TCP_connection(conn_new);
+        }
 
         memcpy(conn_new, conn_old, sizeof(TCP_Secure_Connection));
         sodium_memzero(conn_old, sizeof(TCP_Secure_Connection));
@@ -1090,8 +1181,9 @@ static int do_unconfirmed(TCP_Server *TCP_server, uint32_t i)
 {
     TCP_Secure_Connection *conn = &TCP_server->unconfirmed_connection_queue[i];
 
-    if (conn->status != TCP_STATUS_UNCONFIRMED)
+    if (conn->status != TCP_STATUS_UNCONFIRMED) {
         return -1;
+    }
 
     uint8_t packet[MAX_PACKET_SIZE];
     int len = read_packet_TCP_secure_connection(conn->sock, &conn->next_packet_length, conn->shared_key, conn->recv_nonce,
@@ -1099,12 +1191,14 @@ static int do_unconfirmed(TCP_Server *TCP_server, uint32_t i)
 
     if (len == 0) {
         return -1;
-    } else if (len == -1) {
+    }
+
+    if (len == -1) {
         kill_TCP_connection(conn);
         return -1;
-    } else {
-        return confirm_TCP_connection(TCP_server, conn, packet, len);
     }
+
+    return confirm_TCP_connection(TCP_server, conn, packet, len);
 }
 
 static void do_confirmed_recv(TCP_Server *TCP_server, uint32_t i)
@@ -1150,8 +1244,9 @@ static void do_TCP_confirmed(TCP_Server *TCP_server)
 {
 #ifdef TCP_SERVER_USE_EPOLL
 
-    if (TCP_server->last_run_pinged == unix_time())
+    if (TCP_server->last_run_pinged == unix_time()) {
         return;
+    }
 
     TCP_server->last_run_pinged = unix_time();
 #endif
@@ -1160,16 +1255,18 @@ static void do_TCP_confirmed(TCP_Server *TCP_server)
     for (i = 0; i < TCP_server->size_accepted_connections; ++i) {
         TCP_Secure_Connection *conn = &TCP_server->accepted_connection_array[i];
 
-        if (conn->status != TCP_STATUS_CONFIRMED)
+        if (conn->status != TCP_STATUS_CONFIRMED) {
             continue;
+        }
 
         if (is_timeout(conn->last_pinged, TCP_PING_FREQUENCY)) {
             uint8_t ping[1 + sizeof(uint64_t)];
             ping[0] = TCP_PACKET_PING;
             uint64_t ping_id = random_64b();
 
-            if (!ping_id)
+            if (!ping_id) {
                 ++ping_id;
+            }
 
             memcpy(ping + 1, &ping_id, sizeof(uint64_t));
             int ret = write_packet_TCP_secure_connection(conn, ping, sizeof(ping), 1);
@@ -1249,7 +1346,7 @@ static void do_TCP_epoll(TCP_Server *TCP_server)
                 case TCP_SOCKET_LISTENING: {
                     //socket is from socks_listening, accept connection
                     struct sockaddr_storage addr;
-                    unsigned int addrlen = sizeof(addr);
+                    socklen_t addrlen = sizeof(addr);
 
                     while (1) {
                         sock_t sock_new = accept(sock, (struct sockaddr *)&addr, &addrlen);

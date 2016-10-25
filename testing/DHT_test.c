@@ -44,17 +44,17 @@
 #define c_sleep(x) Sleep(1*x)
 
 #else
-#include <unistd.h>
 #include <arpa/inet.h>
+#include <unistd.h>
 #define c_sleep(x) usleep(1000*x)
 
 #endif
 
 #define PORT 33445
 
-uint8_t zeroes_cid[crypto_box_PUBLICKEYBYTES];
+static uint8_t zeroes_cid[crypto_box_PUBLICKEYBYTES];
 
-void print_client_id(uint8_t *public_key)
+static void print_client_id(uint8_t *public_key)
 {
     uint32_t j;
 
@@ -63,7 +63,7 @@ void print_client_id(uint8_t *public_key)
     }
 }
 
-void print_hardening(Hardening *h)
+static void print_hardening(Hardening *h)
 {
     printf("Hardening:\n");
     printf("routes_requests_ok: %hhu\n", h->routes_requests_ok);
@@ -81,7 +81,7 @@ void print_hardening(Hardening *h)
     printf("\n\n");
 }
 
-void print_assoc(IPPTsPng *assoc, uint8_t ours)
+static void print_assoc(IPPTsPng *assoc, uint8_t ours)
 {
     IP_Port *ipp = &assoc->ip_port;
     printf("\nIP: %s Port: %u", ip_ntoa(&ipp->ip), ntohs(ipp->port));
@@ -90,17 +90,17 @@ void print_assoc(IPPTsPng *assoc, uint8_t ours)
 
     ipp = &assoc->ret_ip_port;
 
-    if (ours)
+    if (ours) {
         printf("OUR IP: %s Port: %u\n", ip_ntoa(&ipp->ip), ntohs(ipp->port));
-    else
+    } else {
         printf("RET IP: %s Port: %u\n", ip_ntoa(&ipp->ip), ntohs(ipp->port));
+    }
 
     printf("Timestamp: %llu\n", (long long unsigned int) assoc->ret_timestamp);
     print_hardening(&assoc->hardening);
-
 }
 
-void print_clientlist(DHT *dht)
+static void print_clientlist(DHT *dht)
 {
     uint32_t i;
     printf("___________________CLOSE________________________________\n");
@@ -108,8 +108,9 @@ void print_clientlist(DHT *dht)
     for (i = 0; i < LCLIENT_LIST; i++) {
         Client_data *client = &dht->close_clientlist[i];
 
-        if (public_key_cmp(client->public_key, zeroes_cid) == 0)
+        if (public_key_cmp(client->public_key, zeroes_cid) == 0) {
             continue;
+        }
 
         printf("ClientID: ");
         print_client_id(client->public_key);
@@ -119,7 +120,7 @@ void print_clientlist(DHT *dht)
     }
 }
 
-void print_friendlist(DHT *dht)
+static void print_friendlist(DHT *dht)
 {
     uint32_t i, k;
     IP_Port p_ip;
@@ -139,8 +140,9 @@ void print_friendlist(DHT *dht)
         for (i = 0; i < MAX_FRIEND_CLIENTS; i++) {
             Client_data *client = &dht->friends_list[k].client_list[i];
 
-            if (public_key_cmp(client->public_key, zeroes_cid) == 0)
+            if (public_key_cmp(client->public_key, zeroes_cid) == 0) {
                 continue;
+            }
 
             printf("ClientID: ");
             print_client_id(client->public_key);
@@ -151,21 +153,24 @@ void print_friendlist(DHT *dht)
     }
 }
 
-void printpacket(uint8_t *data, uint32_t length, IP_Port ip_port)
+#if 0 /* TODO(slvr): */
+static void printpacket(uint8_t *data, uint32_t length, IP_Port ip_port)
 {
     uint32_t i;
     printf("UNHANDLED PACKET RECEIVED\nLENGTH:%u\nCONTENTS:\n", length);
     printf("--------------------BEGIN-----------------------------\n");
 
     for (i = 0; i < length; i++) {
-        if (data[i] < 16)
+        if (data[i] < 16) {
             printf("0");
+        }
 
         printf("%hhX", data[i]);
     }
 
     printf("\n--------------------END-----------------------------\n\n\n");
 }
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -178,8 +183,9 @@ int main(int argc, char *argv[])
     uint8_t ipv6enabled = TOX_ENABLE_IPV6_DEFAULT; /* x */
     int argvoffset = cmdline_parsefor_ipv46(argc, argv, &ipv6enabled);
 
-    if (argvoffset < 0)
+    if (argvoffset < 0) {
         exit(1);
+    }
 
     //memcpy(self_client_id, "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq", 32);
     /* initialize networking */
@@ -187,13 +193,14 @@ int main(int argc, char *argv[])
     IP ip;
     ip_init(&ip, ipv6enabled);
 
-    DHT *dht = new_DHT(new_networking(ip, PORT));
+    DHT *dht = new_DHT(NULL, new_networking(NULL, ip, PORT));
     printf("OUR ID: ");
     uint32_t i;
 
     for (i = 0; i < 32; i++) {
-        if (dht->self_public_key[i] < 16)
+        if (dht->self_public_key[i] < 16) {
             printf("0");
+        }
 
         printf("%hhX", dht->self_public_key[i]);
     }
@@ -201,11 +208,13 @@ int main(int argc, char *argv[])
     char temp_id[128];
     printf("\nEnter the public_key of the friend you wish to add (32 bytes HEX format):\n");
 
-    if (!fgets(temp_id, sizeof(temp_id), stdin))
+    if (!fgets(temp_id, sizeof(temp_id), stdin)) {
         exit(0);
+    }
 
-    if ((strlen(temp_id) > 0) && (temp_id[strlen(temp_id) - 1] == '\n'))
+    if ((strlen(temp_id) > 0) && (temp_id[strlen(temp_id) - 1] == '\n')) {
         temp_id[strlen(temp_id) - 1] = '\0';
+    }
 
     uint8_t *bin_id = hex_string_to_bin(temp_id);
     DHT_addfriend(dht, bin_id, 0, 0, 0, 0);
@@ -223,32 +232,31 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    /*
-        IP_Port ip_port;
-        uint8_t data[MAX_UDP_PACKET_SIZE];
-        uint32_t length;
-    */
+#if 0 /* TODO(slvr): */
+    IP_Port ip_port;
+    uint8_t data[MAX_UDP_PACKET_SIZE];
+    uint32_t length;
+#endif
 
     while (1) {
-
         do_DHT(dht);
 
-        /* slvrTODO:
-                while(receivepacket(&ip_port, data, &length) != -1) {
-                    if(DHT_handlepacket(data, length, ip_port) && friendreq_handlepacket(data, length, ip_port)) {
-                        //unhandled packet
-                        printpacket(data, length, ip_port);
-                    } else {
-                        printf("Received handled packet with length: %u\n", length);
-                    }
-                }
-        */
-        networking_poll(dht->net);
+#if 0 /* TODO(slvr): */
+
+        while (receivepacket(&ip_port, data, &length) != -1) {
+            if (DHT_handlepacket(data, length, ip_port) && friendreq_handlepacket(data, length, ip_port)) {
+                //unhandled packet
+                printpacket(data, length, ip_port);
+            } else {
+                printf("Received handled packet with length: %u\n", length);
+            }
+        }
+
+#endif
+        networking_poll(dht->net, NULL);
 
         print_clientlist(dht);
         print_friendlist(dht);
         c_sleep(300);
     }
-
-    return 0;
 }

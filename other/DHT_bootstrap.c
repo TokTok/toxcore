@@ -50,17 +50,17 @@
 #if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
 #define c_sleep(x) Sleep(1*x)
 #else
-#include <unistd.h>
 #include <arpa/inet.h>
+#include <unistd.h>
 #define c_sleep(x) usleep(1000*x)
 #endif
 
 #define PORT 33445
 
 
-void manage_keys(DHT *dht)
+static void manage_keys(DHT *dht)
 {
-    const uint32_t KEYS_SIZE = crypto_box_PUBLICKEYBYTES + crypto_box_SECRETKEYBYTES;
+    enum { KEYS_SIZE = crypto_box_PUBLICKEYBYTES + crypto_box_SECRETKEYBYTES };
     uint8_t keys[KEYS_SIZE];
 
     FILE *keys_file = fopen("key", "r");
@@ -111,15 +111,16 @@ int main(int argc, char *argv[])
     uint8_t ipv6enabled = TOX_ENABLE_IPV6_DEFAULT; /* x */
     int argvoffset = cmdline_parsefor_ipv46(argc, argv, &ipv6enabled);
 
-    if (argvoffset < 0)
+    if (argvoffset < 0) {
         exit(1);
+    }
 
     /* Initialize networking -
        Bind to ip 0.0.0.0 / [::] : PORT */
     IP ip;
     ip_init(&ip, ipv6enabled);
 
-    DHT *dht = new_DHT(new_networking(ip, PORT));
+    DHT *dht = new_DHT(NULL, new_networking(NULL, ip, PORT));
     Onion *onion = new_onion(dht);
     Onion_Announce *onion_a = new_onion_announce(dht);
 
@@ -198,10 +199,8 @@ int main(int argc, char *argv[])
 #ifdef TCP_RELAY_ENABLED
         do_TCP_server(tcp_s);
 #endif
-        networking_poll(dht->net);
+        networking_poll(dht->net, NULL);
 
         c_sleep(1);
     }
-
-    return 0;
 }

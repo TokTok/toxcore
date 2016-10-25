@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.65])
-AC_INIT([tox], [0.0.0])
+AC_INIT([tox], [0.0.1])
 AC_CONFIG_AUX_DIR(configure_aux)
 AC_CONFIG_SRCDIR([toxcore/net_crypto.c])
 AC_CONFIG_HEADERS([config.h])
@@ -13,7 +13,6 @@ AC_CONFIG_MACRO_DIR([m4])
 EXTRA_LT_LDFLAGS=
 
 LIBTOXCORE_LT_VERSION=0:0:0
-LIBTOXAV_LT_VERSION=0:0:0
 dnl
 dnl            current:revision:age
 dnl
@@ -34,6 +33,7 @@ BUILD_AV="yes"
 BUILD_TESTING="yes"
 
 TOX_LOGGER="no"
+TOX_DEBUG="no"
 LOGGING_OUTNAM="libtoxcore.log"
 
 NCURSES_FOUND="no"
@@ -45,7 +45,7 @@ MINIUPNP="yes"
 NATPMP="yes"
 
 TOXCORE_LT_LDFLAGS="-version-info $LIBTOXCORE_LT_VERSION"
-TOXAV_LT_LDFLAGS="-version-info $LIBTOXAV_LT_VERSION"
+TOXAV_LT_LDFLAGS="-version-info $LIBTOXCORE_LT_VERSION"
 
 AC_ARG_ENABLE([soname-versions],
     [AC_HELP_STRING([--enable-soname-versions], [enable soname versions (must be disabled for android) (default: enabled)]) ],
@@ -115,6 +115,17 @@ AC_ARG_ENABLE([logging],
             AC_DEFINE([TOX_LOGGER], [], [If logging enabled])
             AC_DEFINE([LOGGER_LEVEL], [LOG_DEBUG], [LOG_LEVEL value])
             AC_DEFINE_UNQUOTED([LOGGER_OUTPUT_FILE], ["$LOGGING_OUTNAM"], [Output of logger])
+        fi
+    ]
+)
+
+AC_ARG_ENABLE([debug],
+    [AC_HELP_STRING([--enable-debug], [enable debugging (default: disabled)]) ],
+    [
+        if test "x$enableval" = "xyes"; then
+            TOX_DEBUG="yes"
+
+            AC_DEFINE([TOX_DEBUG], [], [If debugging enabled])
         fi
     ]
 )
@@ -391,6 +402,14 @@ AC_SUBST(MATH_LDFLAGS)
 
 # Checks for libraries.
 
+PKG_CHECK_MODULES([LIBSODIUM], [libsodium],
+    [
+        LIBSODIUM_FOUND="yes"
+    ],
+    [
+        LIBSODIUM_FOUND="no"
+    ])
+
 if test "x$WANT_NACL" = "xyes"; then
     NACL_LIBS=
     NACL_LDFLAGS=
@@ -432,7 +451,7 @@ if test "x$WANT_NACL" = "xyes"; then
     AC_SUBST(NACL_LDFLAGS)
     AC_SUBST(NACL_OBJECTS)
     AC_SUBST(NACL_OBJECTS_PKGCONFIG)
-else
+elif test "x$LIBSODIUM_FOUND" = "xno"; then
     LIBSODIUM_LIBS=
     LIBSODIUM_LDFLAGS=
     LDFLAGS_SAVE="$LDFLAGS"
@@ -552,7 +571,7 @@ if test "x$WANT_NACL" = "xyes"; then
     CPPFLAGS="$CPPFLAGS_SAVE"
     AC_SUBST(NACL_CFLAGS)
     AC_DEFINE([VANILLA_NACL], [1], [use nacl instead of libsodium])
-else
+elif test "x$LIBSODIUM_FOUND" = "xno"; then
     LIBSODIUM_CFLAGS=
     CFLAGS_SAVE="$CFLAGS"
     CPPFLAGS_SAVE="$CPPFLAGS"

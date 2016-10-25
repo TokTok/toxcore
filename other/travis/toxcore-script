@@ -1,0 +1,24 @@
+#!/bin/sh
+
+# Enable test coverage recording.
+export CFLAGS="$CFLAGS -fprofile-arcs -ftest-coverage"
+
+# Build toxcore and run tests.
+# TODO(iphydf): Enable ASAN. It currently has some bad interactions with gcov,
+# so it's disabled on Travis.
+RUN $CMAKE                                      \
+  -B$BUILD_DIR                                  \
+  -H.                                           \
+  -DCMAKE_INSTALL_PREFIX:PATH=$CURDIR/_install  \
+  -DASSOC_DHT=ON                                \
+  -DDEBUG=ON                                    \
+  -DSTRICT_ABI=ON                               \
+  -DTEST_TIMEOUT_SECONDS=300                    \
+  -DTRACE=ON                                    \
+  $CMAKE_EXTRA_FLAGS                            \
+  #-DASAN=ON
+
+export CTEST_OUTPUT_ON_FAILURE=1
+
+RUN make -C$BUILD_DIR -j$NPROC -k install
+TESTS make -C$BUILD_DIR -j$NPROC test

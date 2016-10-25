@@ -25,17 +25,17 @@
 #include "config.h"
 #endif
 
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#ifdef DEBUG
+#ifdef TOX_DEBUG
 #include <assert.h>
-#endif // DEBUG
+#endif // TOX_DEBUG
 
 // You are responsible for freeing the return value!
-uint8_t *hex_string_to_bin(char *hex_string)
+uint8_t *hex_string_to_bin(const char *hex_string)
 {
     // byte is represented by exactly 2 hex digits, so lenth of binary string
     // is half of that of the hex one. only hex string with even length
@@ -43,11 +43,12 @@ uint8_t *hex_string_to_bin(char *hex_string)
     // is odd and return error code if it is. we assume strlen is even. if it's not
     // then the last byte just won't be written in 'ret'.
     size_t i, len = strlen(hex_string) / 2;
-    uint8_t *ret = malloc(len);
-    char *pos = hex_string;
+    uint8_t *ret = (uint8_t *)malloc(len);
+    const char *pos = hex_string;
 
-    for (i = 0; i < len; ++i, pos += 2)
+    for (i = 0; i < len; ++i, pos += 2) {
         sscanf(pos, "%2hhx", &ret[i]);
+    }
 
     return ret;
 }
@@ -56,16 +57,16 @@ int cmdline_parsefor_ipv46(int argc, char **argv, uint8_t *ipv6enabled)
 {
     int argvoffset = 0, argi;
 
-    for (argi = 1; argi < argc; argi++)
+    for (argi = 1; argi < argc; argi++) {
         if (!strncasecmp(argv[argi], "--ipv", 5)) {
             if (argv[argi][5] && !argv[argi][6]) {
                 char c = argv[argi][5];
 
-                if (c == '4')
+                if (c == '4') {
                     *ipv6enabled = 0;
-                else if (c == '6')
+                } else if (c == '6') {
                     *ipv6enabled = 1;
-                else {
+                } else {
                     printf("Invalid argument: %s. Try --ipv4 or --ipv6!\n", argv[argi]);
                     return -1;
                 }
@@ -81,6 +82,7 @@ int cmdline_parsefor_ipv46(int argc, char **argv, uint8_t *ipv6enabled)
 
             argvoffset++;
         }
+    }
 
     return argvoffset;
-};
+}

@@ -30,12 +30,12 @@
 #include <sodium.h>
 #else
 #include <crypto_box.h>
-#include <randombytes.h>
 #include <crypto_hash_sha256.h>
 #include <crypto_hash_sha512.h>
+#include <crypto_scalarmult_curve25519.h>
 #include <crypto_verify_16.h>
 #include <crypto_verify_32.h>
-#include <crypto_scalarmult_curve25519.h>
+#include <randombytes.h>
 #define crypto_box_MACBYTES (crypto_box_ZEROBYTES - crypto_box_BOXZEROBYTES)
 /* I know */
 #define sodium_memcmp(a, b, c) memcmp(a, b, c)
@@ -87,7 +87,7 @@ int decrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const uin
 /* Fast encrypt/decrypt operations. Use if this is not a one-time communication.
    encrypt_precompute does the shared-key generation once so it does not have
    to be preformed on every encrypt/decrypt. */
-void encrypt_precompute(const uint8_t *public_key, const uint8_t *secret_key, uint8_t *enc_key);
+int encrypt_precompute(const uint8_t *public_key, const uint8_t *secret_key, uint8_t *enc_key);
 
 /* Encrypts plain of length length to encrypted of length + 16 using a
  * secret key crypto_box_KEYBYTES big and a 24 byte nonce.

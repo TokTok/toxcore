@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# An initial update is required or the cabal cache will be empty and no packages
+# can be installed.
+cabal update
+
+# We need to install happy explicitly, otherwise setup-Simple-Cabal will fail to
+# install.
+cabal install happy
+
+# Fetch hstox and msgpack-c.
+git clone --recursive --depth=1 https://github.com/TokTok/hs-toxcore ../hs-toxcore
+git clone --depth=1 https://github.com/msgpack/msgpack-c testing/hstox/msgpack-c
+
+# Install the hstox test runner.
+(cd ../hs-toxcore && cabal install --disable-library-profiling)
+
+# Install toxcore dependencies.
+. other/travis/toxcore-linux-install

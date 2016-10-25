@@ -1,19 +1,19 @@
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
 
-#include <fcntl.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include <netdb.h>
 #include <unistd.h>
 
 #include <sys/ioctl.h>
@@ -27,12 +27,12 @@
 #define IRC_CHANNEL "#tox-real-ontopic"
 
 //IRC server ip and port.
-uint8_t ip[4] = {127, 0, 0, 1};
-uint16_t port = 6667;
+static uint8_t ip[4] = {127, 0, 0, 1};
+static uint16_t port = 6667;
 
 #define SILENT_TIMEOUT 20
 
-int sock;
+static int sock;
 
 #define SERVER_CONNECT "NICK "IRC_NAME"\nUSER "IRC_NAME" 8 * :"IRC_NAME"\n"
 #define CHANNEL_JOIN "JOIN "IRC_CHANNEL"\n"
@@ -40,16 +40,16 @@ int sock;
 /* In toxcore/network.c */
 uint64_t current_time_monotonic(void);
 
-uint64_t get_monotime_sec(void)
+static uint64_t get_monotime_sec(void)
 {
     return current_time_monotonic() / 1000;
 }
 
-int reconnect(void)
+static int reconnect(void)
 {
-    int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    int new_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
-    if (sock < 0) {
+    if (new_sock < 0) {
         printf("error socket\n");
         return -1;
     }
@@ -68,37 +68,41 @@ int reconnect(void)
 
     addr4->sin_port = htons(port);
 
-    if (connect(sock, (struct sockaddr *)&addr, addrsize) != 0) {
+    if (connect(new_sock, (struct sockaddr *)&addr, addrsize) != 0) {
         printf("error connect\n");
         return -1;
     }
 
-    send(sock, SERVER_CONNECT, sizeof(SERVER_CONNECT) - 1, MSG_NOSIGNAL);
+    send(new_sock, SERVER_CONNECT, sizeof(SERVER_CONNECT) - 1, MSG_NOSIGNAL);
 
-    return sock;
+    return new_sock;
 }
 
 #include "../toxcore/tox.h"
 #include "misc_tools.c"
 
-int current_group = -1;
+static int current_group = -1;
 
-static void callback_group_invite(Tox *tox, int fid, uint8_t type, const uint8_t *data, uint16_t length, void *userdata)
+static void callback_group_invite(Tox *tox, uint32_t fid, TOX_CONFERENCE_TYPE type, const uint8_t *data, size_t length,
+                                  void *userdata)
 {
-    if (current_group == -1)
-        current_group = tox_join_groupchat(tox, fid, data, length);
+    if (current_group == -1) {
+        current_group = tox_conference_join(tox, fid, data, length, NULL);
+    }
 }
 
-void callback_friend_message(Tox *tox, uint32_t fid, TOX_MESSAGE_TYPE type, const uint8_t *message, size_t length,
-                             void *userdata)
+static void callback_friend_message(Tox *tox, uint32_t fid, TOX_MESSAGE_TYPE type, const uint8_t *message,
+                                    size_t length,
+                                    void *userdata)
 {
     if (length == 1 && *message == 'c') {
-        if (tox_del_groupchat(tox, current_group) == 0)
+        if (tox_conference_delete(tox, current_group, NULL) == 0) {
             current_group = -1;
+        }
     }
 
     if (length == 1 && *message == 'i') {
-        tox_invite_friend(tox, fid, current_group);
+        tox_conference_invite(tox, fid, current_group, NULL);
     }
 
     if (length == 1 && *message == 'j' && sock >= 0) {
@@ -106,16 +110,20 @@ void callback_friend_message(Tox *tox, uint32_t fid, TOX_MESSAGE_TYPE type, cons
     }
 }
 
-static void copy_groupmessage(Tox *tox, int groupnumber, int friendgroupnumber, const uint8_t *message, uint16_t length,
+static void copy_groupmessage(Tox *tox, uint32_t groupnumber, uint32_t friendgroupnumber, TOX_MESSAGE_TYPE type,
+                              const uint8_t *message, size_t length,
                               void *userdata)
 {
-    if (tox_group_peernumber_is_ours(tox, groupnumber, friendgroupnumber))
+    if (tox_conference_peer_number_is_ours(tox, groupnumber, friendgroupnumber, NULL)) {
         return;
+    }
 
+    TOX_ERR_CONFERENCE_PEER_QUERY error;
+    size_t namelen = tox_conference_peer_get_name_size(tox, groupnumber, friendgroupnumber, &error);
     uint8_t name[TOX_MAX_NAME_LENGTH];
-    int namelen = tox_group_peername(tox, groupnumber, friendgroupnumber, name);
+    tox_conference_peer_get_name(tox, groupnumber, friendgroupnumber, name, NULL);
 
-    if (namelen == 0 || namelen == -1) {
+    if (namelen == 0 || error != TOX_ERR_CONFERENCE_PEER_QUERY_OK) {
         memcpy(name, "<unknown>", 9);
         namelen = 9;
     }
@@ -136,29 +144,34 @@ static void copy_groupmessage(Tox *tox, int groupnumber, int friendgroupnumber, 
     unsigned int i;
 
     for (i = 0; i < send_len; ++i) {
-        if (sendbuf[i] == '\n')
+        if (sendbuf[i] == '\n') {
             sendbuf[i] = '|';
+        }
 
-        if (sendbuf[i] == 0)
+        if (sendbuf[i] == 0) {
             sendbuf[i] = ' ';
+        }
     }
 
     sendbuf[send_len] = '\n';
     send_len += 1;
 
-    if (sock >= 0)
+    if (sock >= 0) {
         send(sock, sendbuf, send_len, MSG_NOSIGNAL);
+    }
 }
 
-void send_irc_group(Tox *tox, uint8_t *msg, uint16_t len)
+static void send_irc_group(Tox *tox, uint8_t *msg, uint16_t len)
 {
-    if (len > 1350 || len == 0 || len == 1)
+    if (len > 1350 || len == 0 || len == 1) {
         return;
+    }
 
     --len;
 
-    if (*msg != ':')
+    if (*msg != ':') {
         return;
+    }
 
     uint8_t req[len];
     unsigned int i;
@@ -185,10 +198,11 @@ void send_irc_group(Tox *tox, uint8_t *msg, uint16_t len)
 
     uint8_t *pmsg = (uint8_t *)strstr((char *)req, " PRIVMSG");
 
-    if (pmsg == NULL)
+    if (pmsg == NULL) {
         return;
+    }
 
-    uint8_t *dt = req;
+    uint8_t *dt;
 
     for (dt = req, i = 0; dt != pmsg && *dt != '!'; ++dt, ++i) {
         message[i] = *dt;
@@ -200,21 +214,23 @@ void send_irc_group(Tox *tox, uint8_t *msg, uint16_t len)
     message[length] = ' ';
     length += 1;
 
-    if ((req_len + 2) >= len)
+    if ((req_len + 2) >= len) {
         return;
+    }
 
     memcpy(message + length, msg + req_len + 2, len - (req_len + 2));
     length += len - (req_len + 2);
-    tox_group_message_send(tox, current_group, message, length);
+    tox_conference_send_message(tox, current_group, TOX_MESSAGE_TYPE_NORMAL, message, length, NULL);
 }
 
-Tox *init_tox(int argc, char *argv[])
+static Tox *init_tox(int argc, char *argv[])
 {
     uint8_t ipv6enabled = 1; /* x */
     int argvoffset = cmdline_parsefor_ipv46(argc, argv, &ipv6enabled);
 
-    if (argvoffset < 0)
+    if (argvoffset < 0) {
         exit(1);
+    }
 
     /* with optional --ipvx, now it can be 1-4 arguments... */
     if ((argc != argvoffset + 2) && (argc != argvoffset + 4)) {
@@ -224,29 +240,29 @@ Tox *init_tox(int argc, char *argv[])
 
     Tox *tox = tox_new(0, 0);
 
-    if (!tox)
+    if (!tox) {
         exit(1);
+    }
 
-    tox_self_set_name(tox, (uint8_t *)IRC_NAME, sizeof(IRC_NAME) - 1, 0);
-    tox_callback_friend_message(tox, &callback_friend_message, 0);
-    tox_callback_group_invite(tox, &callback_group_invite, 0);
-    tox_callback_group_message(tox, &copy_groupmessage, 0);
-    tox_callback_group_action(tox, &copy_groupmessage, 0);
+    tox_self_set_name(tox, (const uint8_t *)IRC_NAME, sizeof(IRC_NAME) - 1, 0);
+    tox_callback_friend_message(tox, &callback_friend_message);
+    tox_callback_conference_invite(tox, &callback_group_invite);
+    tox_callback_conference_message(tox, &copy_groupmessage);
 
     char temp_id[128];
     printf("\nEnter the address of irc_syncbots master (38 bytes HEX format):\n");
 
     if (scanf("%s", temp_id) != 1) {
-        exit (1);
+        exit(1);
     }
 
-    uint16_t port = atoi(argv[argvoffset + 2]);
+    uint16_t bootstrap_port = atoi(argv[argvoffset + 2]);
     unsigned char *binary_string = hex_string_to_bin(argv[argvoffset + 3]);
-    tox_bootstrap(tox, argv[argvoffset + 1], port, binary_string, 0);
+    tox_bootstrap(tox, argv[argvoffset + 1], bootstrap_port, binary_string, 0);
     free(binary_string);
 
     uint8_t *bin_id = hex_string_to_bin(temp_id);
-    uint32_t num = tox_friend_add(tox, bin_id, (uint8_t *)"Install Gentoo", sizeof("Install Gentoo") - 1, 0);
+    uint32_t num = tox_friend_add(tox, bin_id, (const uint8_t *)"Install Gentoo", sizeof("Install Gentoo") - 1, 0);
     free(bin_id);
 
     if (num == UINT32_MAX) {
@@ -263,8 +279,9 @@ int main(int argc, char *argv[])
 
     sock = reconnect();
 
-    if (sock < 0)
+    if (sock < 0) {
         return 1;
+    }
 
     uint64_t last_get = get_monotime_sec();
     int connected = 0, ping_sent = 0;
@@ -281,8 +298,9 @@ int main(int argc, char *argv[])
             recv(sock, data, count, MSG_NOSIGNAL);
             printf("%s", data);
 
-            if (!connected)
+            if (!connected) {
                 connected = 1;
+            }
 
             if (count > 6 && data[0] == 'P' && data[1] == 'I' && data[2] == 'N' && data[3] == 'G') {
                 data[1] = 'O';
@@ -309,8 +327,9 @@ int main(int argc, char *argv[])
                     break;
                 }
 
-                if (data[i] == ':')
+                if (data[i] == ':') {
                     break;
+                }
             }
 
             for (i = 0; i < count; ++i) {
@@ -329,15 +348,16 @@ int main(int argc, char *argv[])
         if (!ping_sent && last_get + (SILENT_TIMEOUT / 2) < get_monotime_sec()) {
             unsigned int p_s = sizeof("PING :test\n") - 1;
 
-            if (send(sock, "PING :test\n", p_s, MSG_NOSIGNAL) == p_s)
+            if (send(sock, "PING :test\n", p_s, MSG_NOSIGNAL) == p_s) {
                 ping_sent = 1;
+            }
         }
 
         int error = 0;
-        socklen_t len = sizeof (error);
+        socklen_t len = sizeof(error);
 
         if (sock < 0 || last_get + SILENT_TIMEOUT < get_monotime_sec()
-                || getsockopt(sock, SOL_SOCKET, SO_ERROR, &error, &len ) != 0) {
+                || getsockopt(sock, SOL_SOCKET, SO_ERROR, &error, &len) != 0) {
             close(sock);
             printf("reconnect\n");
             sock = reconnect();
@@ -349,9 +369,7 @@ int main(int argc, char *argv[])
             }
         }
 
-        tox_iterate(tox);
+        tox_iterate(tox, NULL);
         usleep(1000 * 50);
     }
-
-    return 0;
 }

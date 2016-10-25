@@ -21,12 +21,13 @@
 
 #ifndef BWCONROLER_H
 #define BWCONROLER_H
+
 #include "../toxcore/Messenger.h"
 
 typedef struct BWController_s BWController;
 
 BWController *bwc_new(Messenger *m, uint32_t friendnumber,
-                      void (*mcb) (BWController *, uint32_t, float, void *),
+                      void (*mcb)(BWController *, uint32_t, float, void *),
                       void *udata);
 void bwc_kill(BWController *bwc);
 

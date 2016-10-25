@@ -16,44 +16,44 @@
 
 #include "../testing/misc_tools.c" // hex_string_to_bin
 #include "../toxcore/Messenger.h"
-#include <sys/types.h>
+#include <check.h>
 #include <stdint.h>
 #include <string.h>
-#include <check.h>
+#include <sys/types.h>
 
 #include "helpers.h"
 
 #define REALLY_BIG_NUMBER ((1) << (sizeof(uint16_t) * 7))
 #define STRINGS_EQUAL(X, Y) (strcmp(X, Y) == 0)
 
-char *friend_id_str = "e4b3d5030bc99494605aecc33ceec8875640c1d74aa32790e821b17e98771c4a00000000f1db";
+static const char *friend_id_str = "e4b3d5030bc99494605aecc33ceec8875640c1d74aa32790e821b17e98771c4a00000000f1db";
 
 /* in case we need more than one ID for a test */
-char *good_id_a_str = "DB9B569D14850ED8364C3744CAC2C8FF78985D213E980C7C508D0E91E8E45441";
-char *good_id_b_str = "d3f14b6d384d8f5f2a66cff637e69f28f539c5de61bc29744785291fa4ef4d64";
+static const char *good_id_a_str = "DB9B569D14850ED8364C3744CAC2C8FF78985D213E980C7C508D0E91E8E45441";
+static const char *good_id_b_str = "d3f14b6d384d8f5f2a66cff637e69f28f539c5de61bc29744785291fa4ef4d64";
 
-char *bad_id_str =    "9B569D14ff637e69f2";
+static const char *bad_id_str =    "9B569D14ff637e69f2";
 
-unsigned char *friend_id = NULL;
-unsigned char *good_id_a = NULL;
-unsigned char *good_id_b = NULL;
-unsigned char *bad_id    = NULL;
+static unsigned char *friend_id = NULL;
+static unsigned char *good_id_a = NULL;
+static unsigned char *good_id_b = NULL;
+static unsigned char *bad_id    = NULL;
 
-int friend_id_num = 0;
+static int friend_id_num = 0;
 
-Messenger *m;
+static Messenger *m;
 
 START_TEST(test_m_sendmesage)
 {
-    char *message = "h-hi :3";
+    const char *message = "h-hi :3";
     int good_len = strlen(message);
     int bad_len = MAX_CRYPTO_PACKET_SIZE;
 
 
-    ck_assert(m_send_message_generic(m, -1, MESSAGE_NORMAL, (uint8_t *)message, good_len, 0) == -1);
-    ck_assert(m_send_message_generic(m, REALLY_BIG_NUMBER, MESSAGE_NORMAL, (uint8_t *)message, good_len, 0) == -1);
-    ck_assert(m_send_message_generic(m, 17, MESSAGE_NORMAL, (uint8_t *)message, good_len, 0) == -1);
-    ck_assert(m_send_message_generic(m, friend_id_num, MESSAGE_NORMAL, (uint8_t *)message, bad_len, 0) == -2);
+    ck_assert(m_send_message_generic(m, -1, MESSAGE_NORMAL, (const uint8_t *)message, good_len, 0) == -1);
+    ck_assert(m_send_message_generic(m, REALLY_BIG_NUMBER, MESSAGE_NORMAL, (const uint8_t *)message, good_len, 0) == -1);
+    ck_assert(m_send_message_generic(m, 17, MESSAGE_NORMAL, (const uint8_t *)message, good_len, 0) == -1);
+    ck_assert(m_send_message_generic(m, friend_id_num, MESSAGE_NORMAL, (const uint8_t *)message, bad_len, 0) == -2);
 }
 END_TEST
 
@@ -77,15 +77,15 @@ END_TEST
 
 START_TEST(test_m_set_userstatus)
 {
-    char *status = "online!";
+    const char *status = "online!";
     uint16_t good_length = strlen(status);
     uint16_t bad_length = REALLY_BIG_NUMBER;
 
-    ck_assert_msg((m_set_statusmessage(m, (uint8_t *)status, bad_length) == -1),
+    ck_assert_msg((m_set_statusmessage(m, (const uint8_t *)status, bad_length) == -1),
                   "m_set_userstatus did NOT catch the following length: %d\n",
                   REALLY_BIG_NUMBER);
 
-    ck_assert_msg((m_set_statusmessage(m, (uint8_t *)status, good_length) == 0),
+    ck_assert_msg((m_set_statusmessage(m, (const uint8_t *)status, good_length) == 0),
                   "m_set_userstatus did NOT return 0 on the following length: %d\n"
                   "MAX_STATUSMESSAGE_LENGTH: %d\n", good_length, MAX_STATUSMESSAGE_LENGTH);
 }
@@ -120,7 +120,8 @@ START_TEST(test_m_delfriend)
                   REALLY_BIG_NUMBER);
 }
 END_TEST
-/*
+
+#if 0
 START_TEST(test_m_addfriend)
 {
     char *good_data = "test";
@@ -129,52 +130,56 @@ START_TEST(test_m_addfriend)
     int good_len = strlen(good_data);
     int bad_len = strlen(bad_data);
     int really_bad_len = (MAX_CRYPTO_PACKET_SIZE - crypto_box_PUBLICKEYBYTES
-                     - crypto_box_NONCEBYTES - crypto_box_BOXZEROBYTES
-                                      + crypto_box_ZEROBYTES + 100); */
-/* TODO: Update this properly to latest master
-    if(m_addfriend(m, (uint8_t *)friend_id, (uint8_t *)good_data, really_bad_len) != FAERR_TOOLONG)
+                          - crypto_box_NONCEBYTES - crypto_box_BOXZEROBYTES
+                          + crypto_box_ZEROBYTES + 100);
+
+    /* TODO(irungentoo): Update this properly to latest master */
+    if (m_addfriend(m, (uint8_t *)friend_id, (uint8_t *)good_data, really_bad_len) != FAERR_TOOLONG) {
         ck_abort_msg("m_addfriend did NOT catch the following length: %d\n", really_bad_len);
-*/
-/* this will return an error if the original m_addfriend_norequest() failed */
-/*    if(m_addfriend(m, (uint8_t *)friend_id, (uint8_t *)good_data, good_len) != FAERR_ALREADYSENT)
+    }
+
+    /* this will return an error if the original m_addfriend_norequest() failed */
+    if (m_addfriend(m, (uint8_t *)friend_id, (uint8_t *)good_data, good_len) != FAERR_ALREADYSENT) {
         ck_abort_msg("m_addfriend did NOT catch adding a friend we already have.\n"
                      "(this can be caused by the error of m_addfriend_norequest in"
                      " the beginning of the suite)\n");
+    }
 
-    if(m_addfriend(m, (uint8_t *)good_id_b, (uint8_t *)bad_data, bad_len) != FAERR_NOMESSAGE)
+    if (m_addfriend(m, (uint8_t *)good_id_b, (uint8_t *)bad_data, bad_len) != FAERR_NOMESSAGE) {
         ck_abort_msg("m_addfriend did NOT catch the following length: %d\n", bad_len);
-*/
-/* this should REALLY return an error */
-/*
- * TODO: validate client_id in m_addfriend?
-if(m_addfriend((uint8_t *)bad_id, (uint8_t *)good_data, good_len) >= 0)
-    ck_abort_msg("The following ID passed through "
-          "m_addfriend without an error:\n'%s'\n", bad_id_str);
+    }
 
+    /* this should REALLY return an error */
+    /* TODO(irungentoo): validate client_id in m_addfriend? */
+    if (m_addfriend((uint8_t *)bad_id, (uint8_t *)good_data, good_len) >= 0) {
+        ck_abort_msg("The following ID passed through "
+                     "m_addfriend without an error:\n'%s'\n", bad_id_str);
+    }
 }
-END_TEST */
+END_TEST
+#endif
 
 START_TEST(test_setname)
 {
-    char *good_name = "consensualCorn";
+    const char *good_name = "consensualCorn";
     int good_length = strlen(good_name);
     int bad_length = REALLY_BIG_NUMBER;
 
-    ck_assert_msg((setname(m, (uint8_t *)good_name, bad_length) == -1),
+    ck_assert_msg((setname(m, (const uint8_t *)good_name, bad_length) == -1),
                   "setname() did NOT error on %d as a length argument!\n", bad_length);
 
-    ck_assert_msg((setname(m, (uint8_t *)good_name, good_length) == 0),
+    ck_assert_msg((setname(m, (const uint8_t *)good_name, good_length) == 0),
                   "setname() did NOT return 0 on good arguments!\n");
 }
 END_TEST
 
 START_TEST(test_getself_name)
 {
-    char *nickname = "testGallop";
+    const char *nickname = "testGallop";
     int len = strlen(nickname);
     char nick_check[len];
 
-    setname(m, (uint8_t *)nickname, len);
+    setname(m, (const uint8_t *)nickname, len);
     getself_name(m, (uint8_t *)nick_check);
 
     ck_assert_msg((memcmp(nickname, nick_check, len) == 0),
@@ -237,9 +242,9 @@ START_TEST(test_dht_state_saveloadsave)
 
     int res = DHT_load(m->dht, buffer + extra, size);
 
-    if (res == -1)
+    if (res == -1) {
         ck_assert_msg(res == 0, "Failed to load back stored buffer: res == -1");
-    else {
+    } else {
         char msg[128];
         size_t offset = res >> 4;
         uint8_t *ptr = buffer + extra + offset;
@@ -279,9 +284,9 @@ START_TEST(test_messenger_state_saveloadsave)
 
     int res = messenger_load(m, buffer + extra, size);
 
-    if (res == -1)
+    if (res == -1) {
         ck_assert_msg(res == 0, "Failed to load back stored buffer: res == -1");
-    else {
+    } else {
         char msg[128];
         size_t offset = res >> 4;
         uint8_t *ptr = buffer + extra + offset;
@@ -300,7 +305,7 @@ START_TEST(test_messenger_state_saveloadsave)
 }
 END_TEST
 
-Suite *messenger_suite(void)
+static Suite *messenger_suite(void)
 {
     Suite *s = suite_create("Messenger");
 
@@ -337,18 +342,20 @@ int main(int argc, char *argv[])
     /* IPv6 status from global define */
     Messenger_Options options = {0};
     options.ipv6enabled = TOX_ENABLE_IPV6_DEFAULT;
-    m = new_messenger(&options, 0);
+    m = new_messenger(NULL, &options, 0);
 
     /* setup a default friend and friendnum */
-    if (m_addfriend_norequest(m, (uint8_t *)friend_id) < 0)
+    if (m_addfriend_norequest(m, (uint8_t *)friend_id) < 0) {
         fputs("m_addfriend_norequest() failed on a valid ID!\n"
               "this was CRITICAL to the test, and the build WILL fail.\n"
               "the tests will continue now...\n\n", stderr);
+    }
 
-    if ((friend_id_num = getfriend_id(m, (uint8_t *)friend_id)) < 0)
+    if ((friend_id_num = getfriend_id(m, (uint8_t *)friend_id)) < 0) {
         fputs("getfriend_id() failed on a valid ID!\n"
               "this was CRITICAL to the test, and the build WILL fail.\n"
               "the tests will continue now...\n\n", stderr);
+    }
 
     srunner_run_all(test_runner, CK_NORMAL);
     number_failed = srunner_ntests_failed(test_runner);

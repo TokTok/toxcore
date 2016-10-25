@@ -23,10 +23,14 @@
 #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include <assert.h>
 #include "bwcontroller.h"
+
+#include "ring_buffer.h"
+
 #include "../toxcore/logger.h"
 #include "../toxcore/util.h"
+
+#include <assert.h>
 
 #define BWC_PACKET_ID 196
 #define BWC_SEND_INTERVAL_MS 1000
@@ -38,7 +42,7 @@
  */
 
 struct BWController_s {
-    void (*mcb) (BWController *, uint32_t, float, void *);
+    void (*mcb)(BWController *, uint32_t, float, void *);
     void *mcb_data;
 
     Messenger *m;
@@ -63,10 +67,10 @@ int bwc_handle_data(Messenger *m, uint32_t friendnumber, const uint8_t *data, ui
 void send_update(BWController *bwc);
 
 BWController *bwc_new(Messenger *m, uint32_t friendnumber,
-                      void (*mcb) (BWController *, uint32_t, float, void *),
+                      void (*mcb)(BWController *, uint32_t, float, void *),
                       void *udata)
 {
-    BWController *retu = calloc(sizeof(struct BWController_s), 1);
+    BWController *retu = (BWController *)calloc(sizeof(struct BWController_s), 1);
 
     retu->mcb = mcb;
     retu->mcb_data = udata;
@@ -78,8 +82,9 @@ BWController *bwc_new(Messenger *m, uint32_t friendnumber,
     /* Fill with zeros */
     int i = 0;
 
-    for (; i < BWC_AVG_PKT_COUNT; i ++)
+    for (; i < BWC_AVG_PKT_COUNT; i ++) {
         rb_write(retu->rcvpkt.rb, retu->rcvpkt.rb_s + i);
+    }
 
     m_callback_rtp_packet(m, friendnumber, BWC_PACKET_ID, bwc_handle_data, retu);
 
@@ -87,8 +92,9 @@ BWController *bwc_new(Messenger *m, uint32_t friendnumber,
 }
 void bwc_kill(BWController *bwc)
 {
-    if (!bwc)
+    if (!bwc) {
         return;
+    }
 
     m_callback_rtp_packet(bwc->m, bwc->friend_number, BWC_PACKET_ID, NULL, NULL);
 
@@ -106,8 +112,9 @@ void bwc_feed_avg(BWController *bwc, uint32_t bytes)
 }
 void bwc_add_lost(BWController *bwc, uint32_t bytes)
 {
-    if (!bwc)
+    if (!bwc) {
         return;
+    }
 
     if (!bytes) {
         uint32_t *t_avg[BWC_AVG_PKT_COUNT], c = 1;
@@ -119,8 +126,9 @@ void bwc_add_lost(BWController *bwc, uint32_t bytes)
         for (; i < BWC_AVG_PKT_COUNT; i ++) {
             bytes += *(t_avg[i]);
 
-            if (*(t_avg[i]))
+            if (*(t_avg[i])) {
                 c++;
+            }
         }
 
         bytes /= c;
@@ -131,8 +139,9 @@ void bwc_add_lost(BWController *bwc, uint32_t bytes)
 }
 void bwc_add_recv(BWController *bwc, uint32_t bytes)
 {
-    if (!bwc || !bytes)
+    if (!bwc || !bytes) {
         return;
+    }
 
     bwc->cycle.recv += bytes;
     send_update(bwc);
@@ -154,8 +163,8 @@ void send_update(BWController *bwc)
     } else if (current_time_monotonic() - bwc->cycle.lsu > BWC_SEND_INTERVAL_MS) {
 
         if (bwc->cycle.lost) {
-            LOGGER_DEBUG ("%p Sent update rcv: %u lost: %u",
-                          bwc, bwc->cycle.recv, bwc->cycle.lost);
+            LOGGER_DEBUG(bwc->m->log, "%p Sent update rcv: %u lost: %u",
+                         bwc, bwc->cycle.recv, bwc->cycle.lost);
 
             uint8_t p_msg[sizeof(struct BWCMessage) + 1];
             struct BWCMessage *b_msg = (struct BWCMessage *)(p_msg + 1);
@@ -164,42 +173,44 @@ void send_update(BWController *bwc)
             b_msg->lost = htonl(bwc->cycle.lost);
             b_msg->recv = htonl(bwc->cycle.recv);
 
-            if (-1 == send_custom_lossy_packet(bwc->m, bwc->friend_number, p_msg, sizeof(p_msg)))
-                LOGGER_WARNING("BWC send failed (len: %d)! std error: %s", sizeof(p_msg), strerror(errno));
+            if (-1 == send_custom_lossy_packet(bwc->m, bwc->friend_number, p_msg, sizeof(p_msg))) {
+                LOGGER_WARNING(bwc->m->log, "BWC send failed (len: %d)! std error: %s", sizeof(p_msg), strerror(errno));
+            }
         }
 
         bwc->cycle.lsu = current_time_monotonic();
     }
 }
-int on_update (BWController *bwc, struct BWCMessage *msg)
+static int on_update(BWController *bwc, const struct BWCMessage *msg)
 {
-    LOGGER_DEBUG ("%p Got update from peer", bwc);
+    LOGGER_DEBUG(bwc->m->log, "%p Got update from peer", bwc);
 
     /* Peer must respect time boundary */
     if (current_time_monotonic() < bwc->cycle.lru + BWC_SEND_INTERVAL_MS) {
-        LOGGER_DEBUG("%p Rejecting extra update", bwc);
+        LOGGER_DEBUG(bwc->m->log, "%p Rejecting extra update", bwc);
         return -1;
     }
 
     bwc->cycle.lru = current_time_monotonic();
 
-    msg->recv = ntohl(msg->recv);
-    msg->lost = ntohl(msg->lost);
+    uint32_t recv = ntohl(msg->recv);
+    uint32_t lost = ntohl(msg->lost);
 
-    LOGGER_DEBUG ("recved: %u lost: %u", msg->recv, msg->lost);
+    LOGGER_DEBUG(bwc->m->log, "recved: %u lost: %u", recv, lost);
 
-    if (msg->lost && bwc->mcb)
+    if (lost && bwc->mcb) {
         bwc->mcb(bwc, bwc->friend_number,
-                 ((float) (msg->lost) / (msg->recv + msg->lost)),
+                 ((float) lost / (recv + lost)),
                  bwc->mcb_data);
+    }
 
     return 0;
 }
 int bwc_handle_data(Messenger *m, uint32_t friendnumber, const uint8_t *data, uint16_t length, void *object)
 {
-    if (length - 1 != sizeof(struct BWCMessage))
+    if (length - 1 != sizeof(struct BWCMessage)) {
         return -1;
+    }
 
-    /* NOTE the data is mutable */
-    return on_update(object, (struct BWCMessage *) (data + 1));
+    return on_update((BWController *)object, (const struct BWCMessage *)(data + 1));
 }

@@ -38,10 +38,10 @@
 #include <unistd.h>
 #define c_sleep(x) usleep(1000*x)
 
-#include <dirent.h>
-#include <stdio.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
+#include <dirent.h>
+#include <netinet/in.h>
+#include <stdio.h>
 
 #define NUM_FILE_SENDERS 256
 typedef struct {
@@ -49,12 +49,13 @@ typedef struct {
     uint32_t friendnum;
     uint32_t filenumber;
 } File_t;
-File_t file_senders[NUM_FILE_SENDERS];
-File_t file_recv[NUM_FILE_SENDERS];
-uint8_t numfilesenders;
+static File_t file_senders[NUM_FILE_SENDERS];
+static File_t file_recv[NUM_FILE_SENDERS];
+static uint8_t numfilesenders;
 
-void tox_file_chunk_request(Tox *tox, uint32_t friend_number, uint32_t file_number, uint64_t position, size_t length,
-                            void *user_data)
+static void tox_file_chunk_request(Tox *tox, uint32_t friend_number, uint32_t file_number, uint64_t position,
+                                   size_t length,
+                                   void *user_data)
 {
     unsigned int i;
 
@@ -78,12 +79,13 @@ void tox_file_chunk_request(Tox *tox, uint32_t friend_number, uint32_t file_numb
 }
 
 
-uint32_t add_filesender(Tox *m, uint16_t friendnum, char *filename)
+static uint32_t add_filesender(Tox *m, uint16_t friendnum, char *filename)
 {
     FILE *tempfile = fopen(filename, "rb");
 
-    if (tempfile == 0)
+    if (tempfile == 0) {
         return -1;
+    }
 
     fseek(tempfile, 0, SEEK_END);
     uint64_t filesize = ftell(tempfile);
@@ -91,8 +93,9 @@ uint32_t add_filesender(Tox *m, uint16_t friendnum, char *filename)
     uint32_t filenum = tox_file_send(m, friendnum, TOX_FILE_KIND_DATA, filesize, 0, (uint8_t *)filename,
                                      strlen(filename), 0);
 
-    if (filenum == -1)
+    if (filenum == -1) {
         return -1;
+    }
 
     file_senders[numfilesenders].file = tempfile;
     file_senders[numfilesenders].friendnum = friendnum;
@@ -101,31 +104,35 @@ uint32_t add_filesender(Tox *m, uint16_t friendnum, char *filename)
     return filenum;
 }
 
-void kill_filesender(Tox *m, uint32_t filenum)
+static void kill_filesender(Tox *m, uint32_t filenum)
 {
     uint32_t i;
 
-    for (i = 0; i < NUM_FILE_SENDERS; ++i)
+    for (i = 0; i < NUM_FILE_SENDERS; ++i) {
         if (file_senders[i].file != 0 && file_senders[i].filenumber == filenum) {
             fclose(file_senders[i].file);
             file_senders[i].file = 0;
         }
+    }
 }
-int not_sending()
+static int not_sending(void)
 {
     uint32_t i;
 
-    for (i = 0; i < NUM_FILE_SENDERS; ++i)
-        if (file_senders[i].file != 0)
+    for (i = 0; i < NUM_FILE_SENDERS; ++i) {
+        if (file_senders[i].file != 0) {
             return 0;
+        }
+    }
 
     return 1;
 }
 
 static char path[1024];
 
-void file_request_accept(Tox *tox, uint32_t friend_number, uint32_t file_number, uint32_t type, uint64_t file_size,
-                         const uint8_t *filename, size_t filename_length, void *user_data)
+static void file_request_accept(Tox *tox, uint32_t friend_number, uint32_t file_number, uint32_t type,
+                                uint64_t file_size,
+                                const uint8_t *filename, size_t filename_length, void *user_data)
 {
     if (type != TOX_FILE_KIND_DATA) {
         printf("Refused invalid file type.");
@@ -137,15 +144,17 @@ void file_request_accept(Tox *tox, uint32_t friend_number, uint32_t file_number,
     uint32_t i;
     uint16_t rm = 0;
 
-    for (i = 0; i < strlen((char *)filename); ++i) {
-        if (filename[i] == '/')
+    for (i = 0; i < strlen((const char *)filename); ++i) {
+        if (filename[i] == '/') {
             rm = i;
+        }
     }
 
-    if (path[strlen(path) - 1] == '/')
+    if (path[strlen(path) - 1] == '/') {
         sprintf(fullpath, "%s%s", path, filename + rm + 1);
-    else
+    } else {
         sprintf(fullpath, "%s/%s", path, filename + rm + 1);
+    }
 
     FILE *tempfile = fopen(fullpath, "rb");
 
@@ -166,11 +175,10 @@ void file_request_accept(Tox *tox, uint32_t friend_number, uint32_t file_number,
     if (tox_file_control(tox, friend_number, file_number, TOX_FILE_CONTROL_RESUME, 0)) {
         printf("Accepted file transfer. (file: %s)\n", fullpath);
     }
-
 }
 
-void file_print_control(Tox *tox, uint32_t friend_number, uint32_t file_number, TOX_FILE_CONTROL control,
-                        void *user_data)
+static void file_print_control(Tox *tox, uint32_t friend_number, uint32_t file_number, TOX_FILE_CONTROL control,
+                               void *user_data)
 {
     if (file_number < (1 << 15) && (control == TOX_FILE_CONTROL_CANCEL)) {
         kill_filesender(tox, file_number);
@@ -186,8 +194,8 @@ void file_print_control(Tox *tox, uint32_t friend_number, uint32_t file_number, 
     }
 }
 
-void write_file(Tox *tox, uint32_t friendnumber, uint32_t filenumber, uint64_t position, const uint8_t *data,
-                size_t length, void *user_data)
+static void write_file(Tox *tox, uint32_t friendnumber, uint32_t filenumber, uint64_t position, const uint8_t *data,
+                       size_t length, void *user_data)
 {
     uint8_t file_index = (filenumber >> 16) - 1;
 
@@ -202,16 +210,17 @@ void write_file(Tox *tox, uint32_t friendnumber, uint32_t filenumber, uint64_t p
     if (file_recv[file_index].file != 0) {
         fseek(file_recv[file_index].file, position, SEEK_SET);
 
-        if (fwrite(data, length, 1, file_recv[file_index].file) != 1)
+        if (fwrite(data, length, 1, file_recv[file_index].file) != 1) {
             printf("Error writing data\n");
+        }
     }
 }
 
-void print_online(Tox *tox, uint32_t friendnumber, TOX_CONNECTION status, void *userdata)
+static void print_online(Tox *tox, uint32_t friendnumber, TOX_CONNECTION status, void *userdata)
 {
-    if (status)
+    if (status) {
         printf("\nOther went online.\n");
-    else {
+    } else {
         printf("\nOther went offline.\n");
         unsigned int i;
 
@@ -234,8 +243,9 @@ int main(int argc, char *argv[])
     uint8_t ipv6enabled = 1; /* x */
     int argvoffset = cmdline_parsefor_ipv46(argc, argv, &ipv6enabled);
 
-    if (argvoffset < 0)
+    if (argvoffset < 0) {
         exit(1);
+    }
 
     /* with optional --ipvx, now it can be 1-4 arguments... */
     if ((argc != argvoffset + 3) && (argc != argvoffset + 5)) {
@@ -244,11 +254,11 @@ int main(int argc, char *argv[])
     }
 
     Tox *tox = tox_new(0, 0);
-    tox_callback_file_recv_chunk(tox, write_file, NULL);
-    tox_callback_file_recv_control(tox, file_print_control, NULL);
-    tox_callback_file_recv(tox, file_request_accept, NULL);
-    tox_callback_file_chunk_request(tox, tox_file_chunk_request, NULL);
-    tox_callback_friend_connection_status(tox, print_online, NULL);
+    tox_callback_file_recv_chunk(tox, write_file);
+    tox_callback_file_recv_control(tox, file_print_control);
+    tox_callback_file_recv(tox, file_request_accept);
+    tox_callback_file_chunk_request(tox, tox_file_chunk_request);
+    tox_callback_friend_connection_status(tox, print_online);
 
     uint16_t port = atoi(argv[argvoffset + 2]);
     unsigned char *binary_string = hex_string_to_bin(argv[argvoffset + 3]);
@@ -276,7 +286,7 @@ int main(int argc, char *argv[])
     }
 
     uint8_t *bin_id = hex_string_to_bin(temp_id);
-    uint32_t num = tox_friend_add(tox, bin_id, (uint8_t *)"Install Gentoo", sizeof("Install Gentoo"), 0);
+    uint32_t num = tox_friend_add(tox, bin_id, (const uint8_t *)"Install Gentoo", sizeof("Install Gentoo"), 0);
     free(bin_id);
 
     if (num == UINT32_MAX) {
@@ -303,26 +313,24 @@ int main(int argc, char *argv[])
                     if (dir->d_type == DT_REG) {
                         char fullpath[1024];
 
-                        if (path[strlen(path) - 1] == '/')
+                        if (path[strlen(path) - 1] == '/') {
                             sprintf(fullpath, "%s%s", path, dir->d_name);
-                        else
+                        } else {
                             sprintf(fullpath, "%s/%s", path, dir->d_name);
+                        }
 
                         add_filesender(tox, num, fullpath);
                     }
                 }
 
                 closedir(d);
-
             } else {
                 printf("\nFailed to open directory.\n");
                 return 1;
             }
         }
 
-        tox_iterate(tox);
+        tox_iterate(tox, NULL);
         c_sleep(1);
     }
-
-    return 0;
 }

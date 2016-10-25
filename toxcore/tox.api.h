@@ -37,8 +37,8 @@ extern "C" {
 
 /*****************************************************************************
  * `tox.h` SHOULD *NOT* BE EDITED MANUALLY – any changes should be made to   *
- * `tox.in.h`, located in `other/apidsl/`. For instructions on how to        *
- * generate `tox.h` from `tox.in.h` please refer to `other/apidsl/README.md` *
+ * `tox.api.h`, located in `toxcore/`. For instructions on how to            *
+ * generate `tox.h` from `tox.api.h` please refer to `docs/apidsl.md`        *
  *****************************************************************************/
 
 
@@ -76,6 +76,9 @@ extern "C" {
  * enumeration value is outside the valid range of the type. If possible, the
  * function will try to use a sane default, but there will be no error code,
  * and one possible action for the function to take is to have no effect.
+ *
+ * Integer constants and the memory layout of publicly exposed structs are not
+ * part of the ABI.
  */
 
 /** \subsection events Events and callbacks
@@ -86,6 +89,19 @@ extern "C" {
  * callback will result in no callback being registered for that event. Only
  * one callback per event can be registered, so if a client needs multiple
  * event listeners, it needs to implement the dispatch functionality itself.
+ *
+ * The last argument to a callback is the user data pointer. It is passed from
+ * ${tox.iterate} to each callback in sequence.
+ *
+ * The user data pointer is never stored or dereferenced by any library code, so
+ * can be any pointer, including NULL. Callbacks must all operate on the same
+ * object type. In the apidsl code (tox.in.h), this is denoted with `any`. The
+ * `any` in ${tox.iterate} must be the same `any` as in all callbacks. In C,
+ * lacking parametric polymorphism, this is a pointer to void.
+ *
+ * Old style callbacks that are registered together with a user data pointer
+ * receive that pointer as argument when they are called. They can each have
+ * their own user data pointer of their own type.
  */
 
 /** \subsection threading Threading implications
@@ -145,19 +161,25 @@ struct this;
 /**
  * The major version number. Incremented when the API or ABI changes in an
  * incompatible way.
+ *
+ * The function variants of these constants return the version number of the
+ * library. They can be used to display the Tox library version or to check
+ * whether the client is compatible with the dynamically linked version of Tox.
  */
-#define TOX_VERSION_MAJOR               0u
+const VERSION_MAJOR                = 0;
+
 /**
  * The minor version number. Incremented when functionality is added without
  * breaking the API or ABI. Set to 0 when the major version number is
  * incremented.
  */
-#define TOX_VERSION_MINOR               0u
+const VERSION_MINOR                = 0;
+
 /**
  * The patch or revision number. Incremented when bugfixes are applied without
  * changing any functionality or API or ABI.
  */
-#define TOX_VERSION_PATCH               0u
+const VERSION_PATCH                = 1;
 
 /**
  * A macro to check at preprocessing time whether the client code is compatible
@@ -179,23 +201,6 @@ struct this;
 static namespace version {
 
   /**
-   * Return the major version number of the library. Can be used to display the
-   * Tox library version or to check whether the client is compatible with the
-   * dynamically linked version of Tox.
-   */
-  uint32_t major();
-
-  /**
-   * Return the minor version number of the library.
-   */
-  uint32_t minor();
-
-  /**
-   * Return the patch number of the library.
-   */
-  uint32_t patch();
-
-  /**
    * Return whether the compiled library version is compatible with the passed
    * version numbers.
    */
@@ -213,6 +218,10 @@ static namespace version {
 /*******************************************************************************
  *
  * :: Numeric constants
+ *
+ * The values of these are not part of the ABI. Prefer to use the function
+ * versions of them for code that should remain compatible with future versions
+ * of toxcore.
  *
  ******************************************************************************/
 
@@ -258,7 +267,7 @@ const MAX_FRIEND_REQUEST_LENGTH   = 1016;
 const MAX_MESSAGE_LENGTH          = 1372;
 
 /**
- * Maximum size of custom packets. TODO: should be LENGTH?
+ * Maximum size of custom packets. TODO(iphydf): should be LENGTH?
  */
 const MAX_CUSTOM_PACKET_SIZE      = 1373;
 
@@ -307,7 +316,7 @@ enum class USER_STATUS {
 
 
 /**
- * Represents message types for ${tox.friend.send.message} and group chat
+ * Represents message types for ${tox.friend.send.message} and conference
  * messages.
  */
 enum class MESSAGE_TYPE {
@@ -379,11 +388,11 @@ enum class SAVEDATA_TYPE {
    */
   NONE,
   /**
-   * Savedata is one that was obtained from ${savedata.get}
+   * Savedata is one that was obtained from ${savedata.get}.
    */
   TOX_SAVE,
   /**
-   * Savedata is a secret key of length ${SECRET_KEY_SIZE}
+   * Savedata is a secret key of length $SECRET_KEY_SIZE.
    */
   SECRET_KEY,
 }
@@ -391,11 +400,20 @@ enum class SAVEDATA_TYPE {
 
 static class options {
   /**
-   * This struct contains all the startup options for Tox. You can either allocate
-   * this object yourself, and pass it to $default, or call
-   * $new to get a new default options object.
+   * This struct contains all the startup options for Tox. You can either
+   * allocate this object yourself, and pass it to $default, or call $new to get
+   * a new default options object.
+   *
+   * If you allocate it yourself, be aware that your binary will rely on the
+   * memory layout of this struct. In particular, if additional fields are added
+   * in future versions of the API, code that allocates it itself will become
+   * incompatible.
+   *
+   * The memory layout of this struct (size, alignment, and field order) is not
+   * part of the ABI. To remain compatible, prefer to use $new to allocate the
+   * object and accessor functions to set the members.
    */
-  struct this {
+  struct this [get, set] {
     /**
      * The type of socket to create.
      *
@@ -433,7 +451,10 @@ static class options {
        * exceed 255 characters, and be in a NUL-terminated C string format
        * (255 chars + 1 NUL byte).
        *
-       * This member is ignored (it can be NULL) if proxy_type is TOX_PROXY_TYPE_NONE.
+       * This member is ignored (it can be NULL) if proxy_type is ${PROXY_TYPE.NONE}.
+       *
+       * The data pointed at by this member is owned by the user, so must
+       * outlive the options object.
        */
       string host;
 
@@ -441,7 +462,7 @@ static class options {
        * The port to use to connect to the proxy server.
        *
        * Ports must be in the range (1, 65535). The value is ignored if
-       * proxy_type is TOX_PROXY_TYPE_NONE.
+       * proxy_type is ${PROXY_TYPE.NONE}.
        */
       uint16_t port;
     }
@@ -486,6 +507,9 @@ static class options {
 
       /**
        * The savedata.
+       *
+       * The data pointed at by this member is owned by the user, so must
+       * outlive the options object.
        */
       const uint8_t[length] data;
 
@@ -623,6 +647,57 @@ static this new(const options_t *options) {
 void kill();
 
 
+/**
+ * Severity level of log messages.
+ */
+enum class LOG_LEVEL {
+  /**
+   * Very detailed traces including all network activity.
+   */
+  LOG_TRACE,
+  /**
+   * Debug messages such as which port we bind to.
+   */
+  LOG_DEBUG,
+  /**
+   * Informational log messages such as video call status changes.
+   */
+  LOG_INFO,
+  /**
+   * Warnings about internal inconsistency or logic errors.
+   */
+  LOG_WARNING,
+  /**
+   * Severe unexpected errors caused by external or internal inconsistency.
+   */
+  LOG_ERROR,
+}
+
+/**
+ * This event is triggered when the toxcore library logs an internal message.
+ * This is mostly useful for debugging. This callback can be called from any
+ * function, not just $iterate. This means the user data lifetime must at
+ * least extend between registering and unregistering it or $kill.
+ *
+ * Other toxcore modules such as toxav may concurrently call this callback at
+ * any time. Thus, user code must make sure it is equipped to handle concurrent
+ * execution, e.g. by employing appropriate mutex locking. The callback
+ * registration function must not be called during execution of any other Tox
+ * library function (toxcore or toxav).
+ */
+event log {
+  /**
+   * @param level The severity of the log message.
+   * @param file The source file from which the message originated.
+   * @param line The source line from which the message originated.
+   * @param func The function from which the message originated.
+   * @param message The log message.
+   */
+  typedef void(LOG_LEVEL level, string file, uint32_t line, string func,
+               string message);
+}
+
+
 uint8_t[size] savedata {
   /**
    * Calculates the number of bytes required to store the tox instance with
@@ -635,8 +710,8 @@ uint8_t[size] savedata {
   /**
    * Store all information associated with the tox instance to a byte array.
    *
-   * @param data A memory region large enough to store the tox instance data.
-   *   Call $size to find the number of bytes required. If this parameter
+   * @param savedata A memory region large enough to store the tox instance
+   *   data. Call $size to find the number of bytes required. If this parameter
    *   is NULL, this function has no effect.
    */
   get();
@@ -738,9 +813,9 @@ inline namespace self {
    * amounts of time. Clients should therefore not immediately bootstrap on
    * receiving a disconnect.
    *
-   * TODO: how long should a client wait before bootstrapping again?
+   * TODO(iphydf): how long should a client wait before bootstrapping again?
    */
-  event connection_status {
+  event connection_status const {
     /**
      * @param connection_status Whether we are connected to the DHT.
      */
@@ -761,7 +836,7 @@ const uint32_t iteration_interval();
  * The main loop that needs to be run in intervals of $iteration_interval()
  * milliseconds.
  */
-void iterate();
+void iterate(any user_data);
 
 
 /*******************************************************************************
@@ -885,7 +960,6 @@ inline namespace self {
      *   If this parameter is NULL, the function has no effect.
      */
     get();
-
   }
 
 
@@ -918,8 +992,8 @@ inline namespace self {
      * Call $size to find out how much memory to allocate for
      * the result.
      *
-     * @param status A valid memory location large enough to hold the status message.
-     *   If this parameter is NULL, the function has no effect.
+     * @param status_message A valid memory location large enough to hold the
+     *   status message. If this parameter is NULL, the function has no effect.
      */
     get();
   }
@@ -929,7 +1003,7 @@ inline namespace self {
     /**
      * Set the client's user status.
      *
-     * @param user_status One of the user statuses listed in the enumeration above.
+     * @param status One of the user statuses listed in the enumeration above.
      */
     set();
 
@@ -1085,7 +1159,6 @@ namespace friend {
    */
   const bool exists(uint32_t friend_number);
 
-
 }
 
 inline namespace self {
@@ -1105,8 +1178,8 @@ inline namespace self {
      *
      * Call $size to determine the number of elements to allocate.
      *
-     * @param list A memory region with enough space to hold the friend list. If
-     *   this parameter is NULL, this function has no effect.
+     * @param friend_list A memory region with enough space to hold the friend
+     *   list. If this parameter is NULL, this function has no effect.
      */
     get();
   }
@@ -1215,7 +1288,7 @@ namespace friend {
   /**
    * This event is triggered when a friend changes their name.
    */
-  event name {
+  event name const {
     /**
      * @param friend_number The friend number of the friend whose name changed.
      * @param name A byte array containing the same data as
@@ -1249,14 +1322,13 @@ namespace friend {
      */
     get(uint32_t friend_number)
         with error for query;
-
   }
 
 
   /**
    * This event is triggered when a friend changes their status message.
    */
-  event status_message {
+  event status_message const {
     /**
      * @param friend_number The friend number of the friend whose status message
      *   changed.
@@ -1285,7 +1357,7 @@ namespace friend {
   /**
    * This event is triggered when a friend changes their user status.
    */
-  event status {
+  event status const {
     /**
      * @param friend_number The friend number of the friend whose user status
      *   changed.
@@ -1320,7 +1392,7 @@ namespace friend {
    * This callback is not called when adding friends. It is assumed that when
    * adding friends, their connection status is initially offline.
    */
-  event connection_status {
+  event connection_status const {
     /**
      * @param friend_number The friend number of the friend whose connection status
      *   changed.
@@ -1349,7 +1421,7 @@ namespace friend {
   /**
    * This event is triggered when a friend starts or stops typing.
    */
-  event typing {
+  event typing const {
     /**
      * @param friend_number The friend number of the friend who started or stopped
      *   typing.
@@ -1420,7 +1492,8 @@ namespace friend {
      *   containing the message text.
      * @param length Length of the message to be sent.
      */
-    uint32_t message(uint32_t friend_number, MESSAGE_TYPE type, const uint8_t[length <= MAX_MESSAGE_LENGTH] message) {
+    uint32_t message(uint32_t friend_number, MESSAGE_TYPE type,
+                     const uint8_t[length <= MAX_MESSAGE_LENGTH] message) {
       NULL,
       /**
        * The friend number did not designate a valid friend.
@@ -1451,7 +1524,7 @@ namespace friend {
    * This event is triggered when the friend receives the message sent with
    * ${send.message} with the corresponding message ID.
    */
-  event read_receipt {
+  event read_receipt const {
     /**
      * @param friend_number The friend number of the friend who received the message.
      * @param message_id The message ID as returned from ${send.message}
@@ -1475,7 +1548,7 @@ namespace friend {
   /**
    * This event is triggered when a friend request is received.
    */
-  event request {
+  event request const {
     /**
      * @param public_key The Public Key of the user who sent the friend request.
      * @param time_delta A delta in seconds between when the message was composed
@@ -1486,16 +1559,16 @@ namespace friend {
      * @param message The message they sent along with the request.
      * @param length The size of the message byte array.
      */
-    typedef void(const uint8_t[PUBLIC_KEY_SIZE] public_key
-        //, uint32_t time_delta
-        , const uint8_t[length <= MAX_MESSAGE_LENGTH] message);
+    typedef void(const uint8_t[PUBLIC_KEY_SIZE] public_key,
+                 // uint32_t time_delta,
+                 const uint8_t[length <= MAX_MESSAGE_LENGTH] message);
   }
 
 
   /**
    * This event is triggered when a message from a friend is received.
    */
-  event message {
+  event message const {
     /**
      * @param friend_number The friend number of the friend who sent the message.
      * @param time_delta Time between composition and sending.
@@ -1504,9 +1577,10 @@ namespace friend {
      *
      * @see ${event request} for more information on time_delta.
      */
-    typedef void(uint32_t friend_number
-        //, uint32_t time_delta
-        , MESSAGE_TYPE type, const uint8_t[length <= MAX_MESSAGE_LENGTH] message);
+    typedef void(uint32_t friend_number,
+                 // uint32_t time_delta,
+                 MESSAGE_TYPE type,
+                 const uint8_t[length <= MAX_MESSAGE_LENGTH] message);
   }
 
 }
@@ -1532,7 +1606,7 @@ namespace friend {
  * This function is a wrapper to internal message-digest functions.
  *
  * @param hash A valid memory location the hash data. It must be at least
- *   TOX_HASH_LENGTH bytes in size.
+ *   $HASH_LENGTH bytes in size.
  * @param data Data to be hashed or NULL.
  * @param length Size of the data array or 0.
  *
@@ -1641,7 +1715,7 @@ namespace file {
    * This event is triggered when a file control command is received from a
    * friend.
    */
-  event recv_control {
+  event recv_control const {
     /**
      * When receiving ${CONTROL.CANCEL}, the client should release the
      * resources associated with the file number and consider the transfer failed.
@@ -1705,19 +1779,21 @@ namespace file {
     NOT_FOUND,
   }
 
-  /**
-   * Copy the file id associated to the file transfer to a byte array.
-   *
-   * @param friend_number The friend number of the friend the file is being
-   *   transferred to or received from.
-   * @param file_number The friend-specific identifier for the file transfer.
-   * @param file_id A memory region of at least $FILE_ID_LENGTH bytes. If
-   *   this parameter is NULL, this function has no effect.
-   *
-   * @return true on success.
-   */
-  const bool get_file_id(uint32_t friend_number, uint32_t file_number, uint8_t[FILE_ID_LENGTH] file_id)
-      with error for get;
+  uint8_t[FILE_ID_LENGTH] file_id {
+    /**
+     * Copy the file id associated to the file transfer to a byte array.
+     *
+     * @param friend_number The friend number of the friend the file is being
+     *   transferred to or received from.
+     * @param file_number The friend-specific identifier for the file transfer.
+     * @param file_id A memory region of at least $FILE_ID_LENGTH bytes. If
+     *   this parameter is NULL, this function has no effect.
+     *
+     * @return true on success.
+     */
+    get(uint32_t friend_number, uint32_t file_number)
+        with error for get;
+  }
 
 }
 
@@ -1780,7 +1856,7 @@ namespace file {
    *   unknown or streaming.
    * @param file_id A file identifier of length $FILE_ID_LENGTH that can be used to
    *   uniquely identify file transfers across core restarts. If NULL, a random one will
-   *   be generated by core. It can then be obtained by using $get_file_id().
+   *   be generated by core. It can then be obtained by using ${file_id.get}().
    * @param filename Name of the file. Does not need to be the actual name. This
    *   name will be sent along with the file send request.
    * @param filename_length Size in bytes of the filename.
@@ -1790,7 +1866,9 @@ namespace file {
    *   On failure, this function returns UINT32_MAX. Any pattern in file numbers
    *   should not be relied on.
    */
-  uint32_t send(uint32_t friend_number, uint32_t kind, uint64_t file_size, const uint8_t[FILE_ID_LENGTH] file_id, const uint8_t[filename_length <= MAX_FILENAME_LENGTH] filename) {
+  uint32_t send(uint32_t friend_number, uint32_t kind, uint64_t file_size,
+                const uint8_t[FILE_ID_LENGTH] file_id,
+                const uint8_t[filename_length <= MAX_FILENAME_LENGTH] filename) {
     NULL,
     /**
      * The friend_number passed did not designate a valid friend.
@@ -1870,7 +1948,7 @@ namespace file {
   /**
    * This event is triggered when Core is ready to send more file data.
    */
-  event chunk_request {
+  event chunk_request const {
     /**
      * If the length parameter is 0, the file transfer is finished, and the client's
      * resources associated with the file number should be released. After a call
@@ -1911,7 +1989,7 @@ namespace file {
   /**
    * This event is triggered when a file transfer request is received.
    */
-  event recv {
+  event recv const {
     /**
      * The client should acquire resources to be associated with the file transfer.
      * Incoming file transfers start in the PAUSED state. After this callback
@@ -1931,7 +2009,7 @@ namespace file {
      * @param filename_length Size in bytes of the filename.
      */
     typedef void(uint32_t friend_number, uint32_t file_number, uint32_t kind,
-        uint64_t file_size, const uint8_t[filename_length <= MAX_FILENAME_LENGTH] filename);
+                 uint64_t file_size, const uint8_t[filename_length <= MAX_FILENAME_LENGTH] filename);
   }
 
 
@@ -1939,7 +2017,7 @@ namespace file {
    * This event is first triggered when a file transfer request is received, and
    * subsequently when a chunk of file data for an accepted request was received.
    */
-  event recv_chunk {
+  event recv_chunk const {
     /**
      * When length is 0, the transfer is finished and the client should release the
      * resources it acquired for the transfer. After a call with length = 0, the
@@ -1957,7 +2035,7 @@ namespace file {
      * @param length The length of the received chunk.
      */
     typedef void(uint32_t friend_number, uint32_t file_number, uint64_t position,
-        const uint8_t[length] data);
+                 const uint8_t[length] data);
   }
 
 }
@@ -1965,16 +2043,380 @@ namespace file {
 
 /*******************************************************************************
  *
- * :: Group chat management
+ * :: Conference management
  *
  ******************************************************************************/
 
+namespace conference {
 
-/******************************************************************************
- *
- * :: Group chat message sending and receiving
- *
- ******************************************************************************/
+  /**
+   * Conference types for the ${event invite} event.
+   */
+  enum class TYPE {
+    /**
+     * Text-only conferences that must be accepted with the $join function.
+     */
+    TEXT,
+    /**
+     * Video conference. The function to accept these is in toxav.
+     */
+    AV,
+  }
+
+
+  /**
+   * This event is triggered when the client is invited to join a conference.
+   */
+  event invite const {
+    /**
+     * The invitation will remain valid until the inviting friend goes offline
+     * or exits the conference.
+     *
+     * @param friend_number The friend who invited us.
+     * @param type The conference type (text only or audio/video).
+     * @param cookie A piece of data of variable length required to join the
+     *   conference.
+     * @param length The length of the cookie.
+     */
+    typedef void(uint32_t friend_number, TYPE type, const uint8_t[length] cookie);
+  }
+
+
+  /**
+   * This event is triggered when the client receives a conference message.
+   */
+  event message const {
+    /**
+     * @param conference_number The conference number of the conference the message is intended for.
+     * @param peer_number The ID of the peer who sent the message.
+     * @param type The type of message (normal, action, ...).
+     * @param message The message data.
+     * @param length The length of the message.
+     */
+    typedef void(uint32_t conference_number, uint32_t peer_number, MESSAGE_TYPE type,
+                 const uint8_t[length] message);
+  }
+
+
+  /**
+   * This event is triggered when a peer changes the conference title.
+   *
+   * If peer_number == UINT32_MAX, then author is unknown (e.g. initial joining the conference).
+   */
+  event title const {
+    /**
+     * @param conference_number The conference number of the conference the title change is intended for.
+     * @param peer_number The ID of the peer who changed the title.
+     * @param title The title data.
+     * @param length The title length.
+     */
+    typedef void(uint32_t conference_number, uint32_t peer_number, const uint8_t[length] title);
+  }
+
+  /**
+   * Peer list state change types.
+   */
+  enum class STATE_CHANGE {
+    /**
+     * A peer has joined the conference.
+     */
+    PEER_JOIN,
+    /**
+     * A peer has exited the conference.
+     */
+    PEER_EXIT,
+    /**
+     * A peer has changed their name.
+     */
+    PEER_NAME_CHANGE,
+  }
+
+  /**
+   * This event is triggered when the peer list changes (name change, peer join, peer exit).
+   */
+  event namelist_change const {
+    /**
+     * @param conference_number The conference number of the conference the title change is intended for.
+     * @param peer_number The ID of the peer who changed the title.
+     * @param change The type of change (one of $STATE_CHANGE).
+     */
+    typedef void(uint32_t conference_number, uint32_t peer_number, STATE_CHANGE change);
+  }
+
+
+  /**
+   * Creates a new conference.
+   *
+   * This function creates a new text conference.
+   *
+   * @return conference number on success, or UINT32_MAX on failure.
+   */
+  uint32_t new() {
+    /**
+     * The conference instance failed to initialize.
+     */
+    INIT,
+  }
+
+  /**
+   * This function deletes a conference.
+   *
+   * @param conference_number The conference number of the conference to be deleted.
+   *
+   * @return true on success.
+   */
+  bool delete(uint32_t conference_number) {
+    /**
+     * The conference number passed did not designate a valid conference.
+     */
+    CONFERENCE_NOT_FOUND,
+  }
+
+
+  namespace peer {
+
+    /**
+     * Error codes for peer info queries.
+     */
+    error for query {
+      /**
+       * The conference number passed did not designate a valid conference.
+       */
+      CONFERENCE_NOT_FOUND,
+      /**
+       * The peer number passed did not designate a valid peer.
+       */
+      PEER_NOT_FOUND,
+      /**
+       * The client is not connected to the conference.
+       */
+      NO_CONNECTION,
+    }
+
+    /**
+     * Return the number of peers in the conference. Return value is unspecified on failure.
+     */
+    const uint32_t count(uint32_t conference_number)
+        with error for query;
+
+    uint8_t[size] name {
+
+      /**
+       * Return the length of the peer's name. Return value is unspecified on failure.
+       */
+      size(uint32_t conference_number, uint32_t peer_number)
+          with error for query;
+
+      /**
+       * Copy the name of peer_number who is in conference_number to name.
+       * name must be at least $MAX_NAME_LENGTH long.
+       *
+       * @return true on success.
+       */
+      get(uint32_t conference_number, uint32_t peer_number)
+          with error for query;
+    }
+
+    /**
+     * Copy the public key of peer_number who is in conference_number to public_key.
+     * public_key must be $PUBLIC_KEY_SIZE long.
+     *
+     * @return true on success.
+     */
+    uint8_t[PUBLIC_KEY_SIZE] public_key {
+      get(uint32_t conference_number, uint32_t peer_number)
+          with error for query;
+    }
+
+    /**
+     * Return true if passed peer_number corresponds to our own.
+     */
+    const bool number_is_ours(uint32_t conference_number, uint32_t peer_number)
+        with error for query;
+
+  }
+
+
+  /**
+   * Invites a friend to a conference.
+   *
+   * @param friend_number The friend number of the friend we want to invite.
+   * @param conference_number The conference number of the conference we want to invite the friend to.
+   *
+   * @return true on success.
+   */
+  bool invite(uint32_t friend_number, uint32_t conference_number) {
+    /**
+     * The conference number passed did not designate a valid conference.
+     */
+    CONFERENCE_NOT_FOUND,
+    /**
+     * The invite packet failed to send.
+     */
+    FAIL_SEND,
+  }
+
+
+  /**
+   * Joins a conference that the client has been invited to.
+   *
+   * @param friend_number The friend number of the friend who sent the invite.
+   * @param cookie Received via the `${event invite}` event.
+   * @param length The size of cookie.
+   *
+   * @return conference number on success, UINT32_MAX on failure.
+   */
+  uint32_t join(uint32_t friend_number, const uint8_t[length] cookie) {
+    /**
+     * The cookie passed has an invalid length.
+     */
+    INVALID_LENGTH,
+    /**
+     * The conference is not the expected type. This indicates an invalid cookie.
+     */
+    WRONG_TYPE,
+    /**
+     * The friend number passed does not designate a valid friend.
+     */
+    FRIEND_NOT_FOUND,
+    /**
+     * Client is already in this conference.
+     */
+    DUPLICATE,
+    /**
+     * Conference instance failed to initialize.
+     */
+    INIT_FAIL,
+    /**
+     * The join packet failed to send.
+     */
+    FAIL_SEND,
+  }
+
+
+  namespace send {
+
+    /**
+     * Send a text chat message to the conference.
+     *
+     * This function creates a conference message packet and pushes it into the send
+     * queue.
+     *
+     * The message length may not exceed $MAX_MESSAGE_LENGTH. Larger messages
+     * must be split by the client and sent as separate messages. Other clients can
+     * then reassemble the fragments.
+     *
+     * @param conference_number The conference number of the conference the message is intended for.
+     * @param type Message type (normal, action, ...).
+     * @param message A non-NULL pointer to the first element of a byte array
+     *   containing the message text.
+     * @param length Length of the message to be sent.
+     *
+     * @return true on success.
+     */
+    bool message(uint32_t conference_number, MESSAGE_TYPE type, const uint8_t[length] message) {
+      /**
+       * The conference number passed did not designate a valid conference.
+       */
+      CONFERENCE_NOT_FOUND,
+      /**
+       * The message is too long.
+       */
+      TOO_LONG,
+      /**
+       * The client is not connected to the conference.
+       */
+      NO_CONNECTION,
+      /**
+       * The message packet failed to send.
+       */
+      FAIL_SEND,
+    }
+  }
+
+  error for title {
+    /**
+     * The conference number passed did not designate a valid conference.
+     */
+    CONFERENCE_NOT_FOUND,
+    /**
+     * The title is too long or empty.
+     */
+    INVALID_LENGTH,
+    /**
+     * The title packet failed to send.
+     */
+    FAIL_SEND,
+  }
+
+  uint8_t[length <= MAX_NAME_LENGTH] title {
+
+    /**
+     * Return the length of the conference title. Return value is unspecified on failure.
+     *
+     * The return value is equal to the `length` argument received by the last
+     * `${event title}` callback.
+     */
+    size(uint32_t conference_number)
+        with error for title;
+
+    /**
+     * Write the title designated by the given conference number to a byte array.
+     *
+     * Call $size to determine the allocation size for the `title` parameter.
+     *
+     * The data written to `title` is equal to the data received by the last
+     * `${event title}` callback.
+     *
+     * @param title A valid memory region large enough to store the title.
+     *   If this parameter is NULL, this function has no effect.
+     *
+     * @return true on success.
+     */
+    get(uint32_t conference_number)
+        with error for title;
+
+    /**
+     * Set the conference title and broadcast it to the rest of the conference.
+     *
+     * Title length cannot be longer than $MAX_NAME_LENGTH.
+     *
+     * @return true on success.
+     */
+    set(uint32_t conference_number)
+        with error for title;
+  }
+
+
+  uint32_t[size] chatlist {
+    /**
+     * Return the number of conferences in the Tox instance.
+     * This should be used to determine how much memory to allocate for `$get`.
+     */
+    size();
+
+    /**
+     * Copy a list of valid conference IDs into the array chatlist. Determine how much space
+     * to allocate for the array with the `$size` function.
+     */
+    get();
+  }
+
+
+  /**
+   * Returns the type of conference ($TYPE) that conference_number is. Return value is
+   * unspecified on failure.
+   */
+  TYPE type {
+    get(uint32_t conference_number) {
+      /**
+       * The conference number passed did not designate a valid conference.
+       */
+      CONFERENCE_NOT_FOUND,
+    }
+  }
+
+}
 
 
 /*******************************************************************************
@@ -2063,7 +2505,7 @@ namespace friend {
   }
 
 
-  event lossy_packet {
+  event lossy_packet const {
     /**
      * @param friend_number The friend number of the friend who sent a lossy packet.
      * @param data A byte array containing the received packet data.
@@ -2073,7 +2515,7 @@ namespace friend {
   }
 
 
-  event lossless_packet {
+  event lossless_packet const {
     /**
      * @param friend_number The friend number of the friend who sent the packet.
      * @param data A byte array containing the received packet data.
@@ -2141,8 +2583,6 @@ inline namespace self {
 } // class tox
 
 %{
-#include "tox_old.h"
-
 #ifdef __cplusplus
 }
 #endif

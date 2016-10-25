@@ -23,17 +23,19 @@
  */
 
 // system provided
+#include <sys/stat.h>
 #include <unistd.h>
 
 // C
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 // toxcore
 #include "../../../toxcore/LAN_discovery.h"
-#include "../../../toxcore/onion_announce.h"
 #include "../../../toxcore/TCP_server.h"
+#include "../../../toxcore/onion_announce.h"
 #include "../../../toxcore/util.h"
 
 // misc
@@ -49,12 +51,12 @@
 
 // Uses the already existing key or creates one if it didn't exist
 //
-// retirns 1 on success
+// returns 1 on success
 //         0 on failure - no keys were read or stored
 
-int manage_keys(DHT *dht, char *keys_file_path)
+static int manage_keys(DHT *dht, char *keys_file_path)
 {
-    const uint32_t KEYS_SIZE = crypto_box_PUBLICKEYBYTES + crypto_box_SECRETKEYBYTES;
+    enum { KEYS_SIZE = crypto_box_PUBLICKEYBYTES + crypto_box_SECRETKEYBYTES };
     uint8_t keys[KEYS_SIZE];
     FILE *keys_file;
 
@@ -78,8 +80,9 @@ int manage_keys(DHT *dht, char *keys_file_path)
 
         keys_file = fopen(keys_file_path, "w");
 
-        if (!keys_file)
+        if (!keys_file) {
             return 0;
+        }
 
         const size_t write_size = fwrite(keys, sizeof(uint8_t), KEYS_SIZE, keys_file);
 
@@ -96,7 +99,7 @@ int manage_keys(DHT *dht, char *keys_file_path)
 
 // Prints public key
 
-void print_public_key(const uint8_t *public_key)
+static void print_public_key(const uint8_t *public_key)
 {
     char buffer[2 * crypto_box_PUBLICKEYBYTES + 1];
     int index = 0;
@@ -108,14 +111,12 @@ void print_public_key(const uint8_t *public_key)
     }
 
     write_log(LOG_LEVEL_INFO, "Public Key: %s\n", buffer);
-
-    return;
 }
 
 // Demonizes the process, appending PID to the PID file and closing file descriptors based on log backend
 // Terminates the application if the daemonization fails.
 
-void daemonize(LOG_BACKEND log_backend, char *pid_file_path)
+static void daemonize(LOG_BACKEND log_backend, char *pid_file_path)
 {
     // Check if the PID file exists
     FILE *pid_file;
@@ -156,8 +157,6 @@ void daemonize(LOG_BACKEND log_backend, char *pid_file_path)
         exit(1);
     }
 
-    // Change the file mode mask
-    umask(0);
 
     // Change the current working directory
     if ((chdir("/")) < 0) {
@@ -175,6 +174,7 @@ void daemonize(LOG_BACKEND log_backend, char *pid_file_path)
 
 int main(int argc, char *argv[])
 {
+    umask(077);
     char *cfg_file_path;
     LOG_BACKEND log_backend;
     bool run_in_foreground;
@@ -224,14 +224,14 @@ int main(int argc, char *argv[])
     IP ip;
     ip_init(&ip, enable_ipv6);
 
-    Networking_Core *net = new_networking(ip, port);
+    Networking_Core *net = new_networking(NULL, ip, port);
 
     if (net == NULL) {
         if (enable_ipv6 && enable_ipv4_fallback) {
             write_log(LOG_LEVEL_WARNING, "Couldn't initialize IPv6 networking. Falling back to using IPv4.\n");
             enable_ipv6 = 0;
             ip_init(&ip, enable_ipv6);
-            net = new_networking(ip, port);
+            net = new_networking(NULL, ip, port);
 
             if (net == NULL) {
                 write_log(LOG_LEVEL_ERROR, "Couldn't fallback to IPv4. Exiting.\n");
@@ -243,7 +243,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    DHT *dht = new_DHT(net);
+    DHT *dht = new_DHT(NULL, net);
 
     if (dht == NULL) {
         write_log(LOG_LEVEL_ERROR, "Couldn't initialize Tox DHT instance. Exiting.\n");
@@ -330,7 +330,7 @@ int main(int argc, char *argv[])
             do_TCP_server(tcp_server);
         }
 
-        networking_poll(dht->net);
+        networking_poll(dht->net, NULL);
 
         if (waiting_for_dht_connection && DHT_isconnected(dht)) {
             write_log(LOG_LEVEL_INFO, "Connected to another bootstrap node successfully.\n");
@@ -339,6 +339,4 @@ int main(int argc, char *argv[])
 
         SLEEP_MILLISECONDS(30);
     }
-
-    return 1;
 }

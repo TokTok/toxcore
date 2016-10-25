@@ -22,11 +22,33 @@
  *   -lopencv_highgui -lopencv_imgproc -lsndfile -pthread -lvpx -lopus -lsodium -lportaudio
  */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+// XXX: Hack because toxav doesn't really expose ring_buffer, but this av test
+// uses it. Not all of these functions are used, but when linking statically,
+// not renaming them will cause multiple definition errors, so we need to rename
+// all of them.
+#define RingBuffer TestRingBuffer
+#define rb_full  test_rb_full
+#define rb_empty test_rb_empty
+#define rb_write test_rb_write
+#define rb_read  test_rb_read
+#define rb_new   test_rb_new
+#define rb_kill  test_rb_kill
+#define rb_size  test_rb_size
+#define rb_data  test_rb_data
+#include "../toxav/ring_buffer.c"
 
 #include "../toxav/toxav.h"
+#include "../toxcore/network.h" /* current_time_monotonic() */
 #include "../toxcore/tox.h"
 #include "../toxcore/util.h"
-#include "../toxcore/network.h" /* current_time_monotonic() */
+
+#ifdef __cplusplus
+}
+#endif
 
 /* Playing audio data */
 #include <portaudio.h>
@@ -35,16 +57,17 @@
 
 /* Reading and Displaying video data */
 #include <opencv/cv.h>
-#include <opencv/highgui.h>
 #include <opencv/cvwimage.h>
+#include <opencv/highgui.h>
 
-#include <sys/stat.h>
 #include <assert.h>
+#include <errno.h>
+#include <sched.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include <string.h>
-#include <errno.h>
+#include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 
 #define c_sleep(x) usleep(1000*x)
@@ -76,7 +99,6 @@ typedef struct {
     uint32_t state;
     pthread_mutex_t arb_mutex[1];
     RingBuffer *arb; /* Audio ring buffer */
-
 } CallControl;
 
 struct toxav_thread_data {
@@ -85,20 +107,20 @@ struct toxav_thread_data {
     int32_t sig;
 };
 
-const char *vdout = "AV Test"; /* Video output */
-PaStream *adout = NULL; /* Audio output */
+static const char *vdout = "AV Test"; /* Video output */
+static PaStream *adout = NULL; /* Audio output */
 
 typedef struct {
     uint16_t size;
     int16_t data[];
 } frame;
 
-void *pa_write_thread (void *d)
+static void *pa_write_thread(void *d)
 {
     /* The purpose of this thread is to make sure Pa_WriteStream will not block
      * toxav_iterate thread
      */
-    CallControl *cc = d;
+    CallControl *cc = (CallControl *)d;
 
     while (Pa_IsStreamActive(adout)) {
         frame *f;
@@ -113,32 +135,34 @@ void *pa_write_thread (void *d)
             c_sleep(10);
         }
     }
+
+    return NULL;
 }
 
 /**
  * Callbacks
  */
-void t_toxav_call_cb(ToxAV *av, uint32_t friend_number, bool audio_enabled, bool video_enabled, void *user_data)
+static void t_toxav_call_cb(ToxAV *av, uint32_t friend_number, bool audio_enabled, bool video_enabled, void *user_data)
 {
     printf("Handling CALL callback\n");
     ((CallControl *)user_data)->incoming = true;
 }
-void t_toxav_call_state_cb(ToxAV *av, uint32_t friend_number, uint32_t state, void *user_data)
+static void t_toxav_call_state_cb(ToxAV *av, uint32_t friend_number, uint32_t state, void *user_data)
 {
     printf("Handling CALL STATE callback: %d\n", state);
     ((CallControl *)user_data)->state = state;
 }
-void t_toxav_receive_video_frame_cb(ToxAV *av, uint32_t friend_number,
-                                    uint16_t width, uint16_t height,
-                                    uint8_t const *y, uint8_t const *u, uint8_t const *v,
-                                    int32_t ystride, int32_t ustride, int32_t vstride,
-                                    void *user_data)
+static void t_toxav_receive_video_frame_cb(ToxAV *av, uint32_t friend_number,
+        uint16_t width, uint16_t height,
+        uint8_t const *y, uint8_t const *u, uint8_t const *v,
+        int32_t ystride, int32_t ustride, int32_t vstride,
+        void *user_data)
 {
     ystride = abs(ystride);
     ustride = abs(ustride);
     vstride = abs(vstride);
 
-    uint16_t *img_data = malloc(height * width * 6);
+    uint16_t *img_data = (uint16_t *)malloc(height * width * 6);
 
     unsigned long int i, j;
 
@@ -158,22 +182,24 @@ void t_toxav_receive_video_frame_cb(ToxAV *av, uint32_t friend_number,
 
     CvMat mat = cvMat(height, width, CV_8UC3, img_data);
 
-    CvSize sz = {.height = height, .width = width};
+    CvSize sz;
+    sz.height = height;
+    sz.width = width;
 
     IplImage *header = cvCreateImageHeader(sz, 1, 3);
     IplImage *img = cvGetImage(&mat, header);
     cvShowImage(vdout, img);
     free(img_data);
 }
-void t_toxav_receive_audio_frame_cb(ToxAV *av, uint32_t friend_number,
-                                    int16_t const *pcm,
-                                    size_t sample_count,
-                                    uint8_t channels,
-                                    uint32_t sampling_rate,
-                                    void *user_data)
+static void t_toxav_receive_audio_frame_cb(ToxAV *av, uint32_t friend_number,
+        int16_t const *pcm,
+        size_t sample_count,
+        uint8_t channels,
+        uint32_t sampling_rate,
+        void *user_data)
 {
-    CallControl *cc = user_data;
-    frame *f = malloc(sizeof(uint16_t) + sample_count * sizeof(int16_t) * channels);
+    CallControl *cc = (CallControl *)user_data;
+    frame *f = (frame *)malloc(sizeof(uint16_t) + sample_count * sizeof(int16_t) * channels);
     memcpy(f->data, pcm, sample_count * sizeof(int16_t) * channels);
     f->size = sample_count;
 
@@ -181,13 +207,14 @@ void t_toxav_receive_audio_frame_cb(ToxAV *av, uint32_t friend_number,
     free(rb_write(cc->arb, f));
     pthread_mutex_unlock(cc->arb_mutex);
 }
-void t_toxav_bit_rate_status_cb(ToxAV *av, uint32_t friend_number,
-                                uint32_t audio_bit_rate, uint32_t video_bit_rate,
-                                void *user_data)
+static void t_toxav_bit_rate_status_cb(ToxAV *av, uint32_t friend_number,
+                                       uint32_t audio_bit_rate, uint32_t video_bit_rate,
+                                       void *user_data)
 {
-    printf ("Suggested bit rates: audio: %d video: %d\n", audio_bit_rate, video_bit_rate);
+    printf("Suggested bit rates: audio: %d video: %d\n", audio_bit_rate, video_bit_rate);
 }
-void t_accept_friend_request_cb(Tox *m, const uint8_t *public_key, const uint8_t *data, size_t length, void *userdata)
+static void t_accept_friend_request_cb(Tox *m, const uint8_t *public_key, const uint8_t *data, size_t length,
+                                       void *userdata)
 {
     if (length == 7 && memcmp("gentoo", data, 7) == 0) {
         assert(tox_friend_add_norequest(m, public_key, NULL) != (uint32_t) ~0);
@@ -196,7 +223,7 @@ void t_accept_friend_request_cb(Tox *m, const uint8_t *public_key, const uint8_t
 
 /**
  */
-void initialize_tox(Tox **bootstrap, ToxAV **AliceAV, CallControl *AliceCC, ToxAV **BobAV, CallControl *BobCC)
+static void initialize_tox(Tox **bootstrap, ToxAV **AliceAV, CallControl *AliceCC, ToxAV **BobAV, CallControl *BobCC)
 {
     Tox *Alice;
     Tox *Bob;
@@ -230,18 +257,18 @@ void initialize_tox(Tox **bootstrap, ToxAV **AliceAV, CallControl *AliceCC, ToxA
     uint32_t to_compare = 974536;
     uint8_t address[TOX_ADDRESS_SIZE];
 
-    tox_callback_friend_request(Alice, t_accept_friend_request_cb, &to_compare);
+    tox_callback_friend_request(Alice, t_accept_friend_request_cb);
     tox_self_get_address(Alice, address);
 
 
-    assert(tox_friend_add(Bob, address, (uint8_t *)"gentoo", 7, NULL) != (uint32_t) ~0);
+    assert(tox_friend_add(Bob, address, (const uint8_t *)"gentoo", 7, NULL) != (uint32_t) ~0);
 
     uint8_t off = 1;
 
     while (1) {
-        tox_iterate(*bootstrap);
-        tox_iterate(Alice);
-        tox_iterate(Bob);
+        tox_iterate(*bootstrap, &to_compare);
+        tox_iterate(Alice, &to_compare);
+        tox_iterate(Bob, &to_compare);
 
         if (tox_self_get_connection_status(*bootstrap) &&
                 tox_self_get_connection_status(Alice) &&
@@ -251,8 +278,9 @@ void initialize_tox(Tox **bootstrap, ToxAV **AliceAV, CallControl *AliceCC, ToxA
         }
 
         if (tox_friend_get_connection_status(Alice, 0, NULL) == TOX_CONNECTION_UDP &&
-                tox_friend_get_connection_status(Bob, 0, NULL) == TOX_CONNECTION_UDP)
+                tox_friend_get_connection_status(Bob, 0, NULL) == TOX_CONNECTION_UDP) {
             break;
+        }
 
         c_sleep(20);
     }
@@ -284,17 +312,17 @@ void initialize_tox(Tox **bootstrap, ToxAV **AliceAV, CallControl *AliceCC, ToxA
     printf("Created 2 instances of ToxAV\n");
     printf("All set after %llu seconds!\n", time(NULL) - cur_time);
 }
-int iterate_tox(Tox *bootstrap, ToxAV *AliceAV, ToxAV *BobAV)
+static int iterate_tox(Tox *bootstrap, ToxAV *AliceAV, ToxAV *BobAV, void *userdata)
 {
-    tox_iterate(bootstrap);
-    tox_iterate(toxav_get_tox(AliceAV));
-    tox_iterate(toxav_get_tox(BobAV));
+    tox_iterate(bootstrap, userdata);
+    tox_iterate(toxav_get_tox(AliceAV), userdata);
+    tox_iterate(toxav_get_tox(BobAV), userdata);
 
     return MIN(tox_iteration_interval(toxav_get_tox(AliceAV)), tox_iteration_interval(toxav_get_tox(BobAV)));
 }
-void *iterate_toxav (void *data)
+static void *iterate_toxav(void *data)
 {
-    struct toxav_thread_data *data_cast = data;
+    struct toxav_thread_data *data_cast = (struct toxav_thread_data *)data;
 #if defined TEST_TRANSFER_V && TEST_TRANSFER_V == 1
     cvNamedWindow(vdout, CV_WINDOW_AUTOSIZE);
 #endif
@@ -309,8 +337,9 @@ void *iterate_toxav (void *data)
 
 #if defined TEST_TRANSFER_V && TEST_TRANSFER_V == 1
 
-        if (!rc)
+        if (!rc) {
             rc = 1;
+        }
 
         cvWaitKey(rc);
 #else
@@ -327,13 +356,13 @@ void *iterate_toxav (void *data)
     pthread_exit(NULL);
 }
 
-int send_opencv_img(ToxAV *av, uint32_t friend_number, const IplImage *img)
+static int send_opencv_img(ToxAV *av, uint32_t friend_number, const IplImage *img)
 {
     int32_t strides[3] = { 1280, 640, 640 };
     uint8_t *planes[3] = {
-        malloc(img->height * img->width),
-        malloc(img->height * img->width / 4),
-        malloc(img->height * img->width / 4),
+        (uint8_t *)malloc(img->height * img->width),
+        (uint8_t *)malloc(img->height * img->width / 4),
+        (uint8_t *)malloc(img->height * img->width / 4),
     };
 
     int x_chroma_shift = 1;
@@ -365,20 +394,21 @@ int send_opencv_img(ToxAV *av, uint32_t friend_number, const IplImage *img)
     free(planes[2]);
     return rc;
 }
-int print_audio_devices()
+static int print_audio_devices(void)
 {
     int i = 0;
 
     for (i = 0; i < Pa_GetDeviceCount(); ++i) {
         const PaDeviceInfo *info = Pa_GetDeviceInfo(i);
 
-        if (info)
+        if (info) {
             printf("%d) %s\n", i, info->name);
+        }
     }
 
     return 0;
 }
-int print_help (const char *name)
+static int print_help(const char *name)
 {
     printf("Usage: %s -[a:v:o:dh]\n"
            "-a <path> audio input file\n"
@@ -392,7 +422,7 @@ int print_help (const char *name)
     return 0;
 }
 
-int main (int argc, char **argv)
+int main(int argc, char **argv)
 {
     freopen("/dev/zero", "w", stderr);
     Pa_Initialize();
@@ -405,6 +435,7 @@ int main (int argc, char **argv)
     long audio_out_dev_idx = -1;
 
     int32_t audio_frame_duration = 20;
+    // TODO(mannol): Put this to use.
     int32_t video_frame_duration = 10;
 
     /* Parse settings */
@@ -491,8 +522,9 @@ CHECK_ARG:
         }
     }
 
-    if (audio_out_dev_idx < 0)
+    if (audio_out_dev_idx < 0) {
         audio_out_dev_idx = Pa_GetDefaultOutputDevice();
+    }
 
     const PaDeviceInfo *audio_dev = Pa_GetDeviceInfo(audio_out_dev_idx);
 
@@ -541,8 +573,9 @@ CHECK_ARG:
             }
         }
 
-        while (!BobCC.incoming)
-            iterate_tox(bootstrap, AliceAV, BobAV);
+        while (!BobCC.incoming) {
+            iterate_tox(bootstrap, AliceAV, BobAV, NULL);
+        }
 
         { /* Answer */
             TOXAV_ERR_ANSWER rc;
@@ -554,8 +587,9 @@ CHECK_ARG:
             }
         }
 
-        while (AliceCC.state == 0)
-            iterate_tox(bootstrap, AliceAV, BobAV);
+        while (AliceCC.state == 0) {
+            iterate_tox(bootstrap, AliceAV, BobAV, NULL);
+        }
 
         /* Open audio file */
         af_handle = sf_open(af_name, SFM_READ, &af_info);
@@ -573,9 +607,9 @@ CHECK_ARG:
 
         /* Start decode thread */
         struct toxav_thread_data data = {
-            .AliceAV = AliceAV,
-            .BobAV = BobAV,
-            .sig = 0
+            AliceAV,
+            BobAV,
+            0,
         };
 
         pthread_t dect;
@@ -606,7 +640,7 @@ CHECK_ARG:
 
         printf("Sample rate %d\n", af_info.samplerate);
 
-        while (start_time + expected_time > time(NULL) ) {
+        while (start_time + expected_time > time(NULL)) {
             uint64_t enc_start_time = current_time_monotonic();
             int64_t count = sf_read_short(af_handle, PCM, frame_size);
 
@@ -615,12 +649,12 @@ CHECK_ARG:
 
                 if (toxav_audio_send_frame(AliceAV, 0, PCM, count / af_info.channels, af_info.channels, af_info.samplerate,
                                            &rc) == false) {
-                    printf("Error sending frame of size %ld: %d\n", count, rc);
+                    printf("Error sending frame of size %ld: %d\n", (long)count, rc);
                 }
             }
 
-            iterate_tox(bootstrap, AliceAV, BobAV);
-            c_sleep(abs(audio_frame_duration - (current_time_monotonic() - enc_start_time) - 1));
+            iterate_tox(bootstrap, AliceAV, BobAV, NULL);
+            c_sleep((audio_frame_duration - (current_time_monotonic() - enc_start_time) - 1));
         }
 
         printf("Played file in: %lu; stopping stream...\n", time(NULL) - start_time);
@@ -638,25 +672,28 @@ CHECK_ARG:
             }
         }
 
-        iterate_tox(bootstrap, AliceAV, BobAV);
+        iterate_tox(bootstrap, AliceAV, BobAV, NULL);
         assert(BobCC.state == TOXAV_FRIEND_CALL_STATE_FINISHED);
 
         /* Stop decode thread */
         data.sig = -1;
 
-        while (data.sig != 1)
-            pthread_yield();
+        while (data.sig != 1) {
+            sched_yield();
+        }
 
         pthread_mutex_destroy(AliceCC.arb_mutex);
         pthread_mutex_destroy(BobCC.arb_mutex);
 
         void *f = NULL;
 
-        while (rb_read(AliceCC.arb, &f))
+        while (rb_read(AliceCC.arb, &f)) {
             free(f);
+        }
 
-        while (rb_read(BobCC.arb, &f))
+        while (rb_read(BobCC.arb, &f)) {
             free(f);
+        }
 
         printf("Success!");
     }
@@ -677,8 +714,9 @@ CHECK_ARG:
             }
         }
 
-        while (!BobCC.incoming)
-            iterate_tox(bootstrap, AliceAV, BobAV);
+        while (!BobCC.incoming) {
+            iterate_tox(bootstrap, AliceAV, BobAV, NULL);
+        }
 
         { /* Answer */
             TOXAV_ERR_ANSWER rc;
@@ -690,13 +728,13 @@ CHECK_ARG:
             }
         }
 
-        iterate_tox(bootstrap, AliceAV, BobAV);
+        iterate_tox(bootstrap, AliceAV, BobAV, NULL);
 
         /* Start decode thread */
         struct toxav_thread_data data = {
-            .AliceAV = AliceAV,
-            .BobAV = BobAV,
-            .sig = 0
+            AliceAV,
+            BobAV,
+            0,
         };
 
         pthread_t dect;
@@ -710,18 +748,21 @@ CHECK_ARG:
             exit(1);
         }
 
-//         toxav_video_bit_rate_set(AliceAV, 0, 5000, false, NULL);
+#if 0
+        toxav_video_bit_rate_set(AliceAV, 0, 5000, false, NULL);
+#endif
 
         time_t start_time = time(NULL);
 
         while (start_time + 90 > time(NULL)) {
-            IplImage *frame = cvQueryFrame(capture );
+            IplImage *frame = cvQueryFrame(capture);
 
-            if (!frame)
+            if (!frame) {
                 break;
+            }
 
             send_opencv_img(AliceAV, 0, frame);
-            iterate_tox(bootstrap, AliceAV, BobAV);
+            iterate_tox(bootstrap, AliceAV, BobAV, NULL);
             c_sleep(10);
         }
 
@@ -737,15 +778,16 @@ CHECK_ARG:
             }
         }
 
-        iterate_tox(bootstrap, AliceAV, BobAV);
+        iterate_tox(bootstrap, AliceAV, BobAV, NULL);
         assert(BobCC.state == TOXAV_FRIEND_CALL_STATE_FINISHED);
 
         /* Stop decode thread */
         printf("Stopping decode thread\n");
         data.sig = -1;
 
-        while (data.sig != 1)
-            pthread_yield();
+        while (data.sig != 1) {
+            sched_yield();
+        }
 
         printf("Success!");
     }
