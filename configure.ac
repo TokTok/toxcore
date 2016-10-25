@@ -41,8 +41,8 @@ LIBCONFIG_FOUND="no"
 LIBCHECK_FOUND="no"
 WANT_NACL="no"
 ADD_NACL_OBJECTS_TO_PKGCONFIG="yes"
-MINIUPNP="yes"
-NATPMP="yes"
+MINIUPNP="auto"
+NATPMP="auto"
 
 TOXCORE_LT_LDFLAGS="-version-info $LIBTOXCORE_LT_VERSION"
 TOXAV_LT_LDFLAGS="-version-info $LIBTOXCORE_LT_VERSION"
@@ -480,7 +480,7 @@ elif test "x$LIBSODIUM_FOUND" = "xno"; then
     AC_SUBST(LIBSODIUM_LDFLAGS)
 fi
 
-if test "x$MINIUPNP" = "xyes"; then
+if test "x$MINIUPNP" = "xyes" -o "x$MINIUPNP" = "xauto"; then
     MINIUPNP_LIBS=
     MINIUPNP_LDFLAGS=
     LDFLAGS_SAVE="$LDFLAGS"
@@ -489,28 +489,43 @@ if test "x$MINIUPNP" = "xyes"; then
         LDFLAGS="-L$MINIUPNP_SEARCH_LIBS $LDFLAGS"
         AC_CHECK_LIB(miniupnpc, upnpDiscover,
             [
+                MINIUPNP="yes"
                 MINIUPNP_LDFLAGS="-L$MINIUPNP_SEARCH_LIBS"
                 MINIUPNP_LIBS="-lminiupnpc"
             ],
             [
-                AC_MSG_ERROR([required library libminiupnpc was not found in requested location $MINIUPNP_SEARCH_LIBS])
+                if test "x$MINIUPNP" = "xyes"; then
+                    AC_MSG_ERROR([required library libminiupnpc was not found in requested location $MINIUPNP_SEARCH_LIBS])
+                elif test "x$MINIUPNP" = "xauto"; then
+                    AC_MSG_WARN([disabling upnp port forwarding support])
+                    MINIUPNP="no"
+                fi
             ]
         )
     else
         AC_CHECK_LIB(miniupnpc, upnpDiscover,
-            [],
             [
-                AC_MSG_ERROR([required library libminiupnpc was not found on your system, please check http://miniupnp.free.fr/])
+                MINIUPNP="yes"
+            ],
+            [
+                if test "x$MINIUPNP" = "xyes"; then
+                    AC_MSG_ERROR([required library libminiupnpc was not found in requested location $MINIUPNP_SEARCH_LIBS])
+                elif test "x$MINIUPNP" = "xauto"; then
+                    AC_MSG_WARN([disabling upnp port forwarding support])
+                    MINIUPNP="no"
+                fi
             ]
         )
     fi
 
-    LDFLAGS="$LDFLAGS_SAVE"
-    AC_SUBST(MINIUPNP_LIBS)
-    AC_SUBST(MINIUPNP_LDFLAGS)
+    if test "x$MINIUPNP" = "xyes"; then
+        LDFLAGS="$LDFLAGS_SAVE"
+        AC_SUBST(MINIUPNP_LIBS)
+        AC_SUBST(MINIUPNP_LDFLAGS)
+    fi
 fi
 
-if test "x$NATPMP" = "xyes"; then
+if test "x$NATPMP" = "xyes" -o "x$NATPMP" = "xauto"; then
     NATPMP_LIBS=
     NATPMP_LDFLAGS=
     LDFLAGS_SAVE="$LDFLAGS"
@@ -519,25 +534,40 @@ if test "x$NATPMP" = "xyes"; then
         LDFLAGS="-L$NATPMP_SEARCH_LIBS $LDFLAGS"
         AC_CHECK_LIB(natpmp, initnatpmp
             [
+                NATPMP="yes"
                 NATPMP_LDFLAGS="-L$NATPMP_SEARCH_LIBS"
                 NATPMP_LIBS="-lnatpmp"
             ],
             [
-                AC_MSG_ERROR([required library libnatpmp was not found in requested location $NATPMP_SEARCH_LIBS])
+                if test "x$NATPMP" = "xyes"; then
+                    AC_MSG_ERROR([required library libnatpmp was not found in requested location $NATPMP_SEARCH_LIBS])
+                elif test "x$NATPMP" = "xauto"; then
+                    AC_MSG_WARN([disabling nat-pmp port forwarding support])
+                    NATPMP="no"
+                fi
             ]
         )
     else
         AC_CHECK_LIB(natpmp, initnatpmp,
-            [],
             [
-                AC_MSG_ERROR([required library libnatpmp was not found on your system, please check http://miniupnp.free.fr/])
+                NATPMP="yes"
+            ],
+            [
+                if test "x$NATPMP" = "xyes"; then
+                    AC_MSG_ERROR([required library libnatpmp was not found in requested location $NATPMP_SEARCH_LIBS])
+                elif test "x$NATPMP" = "xauto"; then
+                    AC_MSG_WARN([disabling nat-pmp port forwarding support])
+                    NATPMP="no"
+                fi
             ]
         )
     fi
 
-    LDFLAGS="$LDFLAGS_SAVE"
-    AC_SUBST(NATPMP_LIBS)
-    AC_SUBST(NATPMP_LDFLAGS)
+    if test "x$NATPMP" = "xyes"; then
+        LDFLAGS="$LDFLAGS_SAVE"
+        AC_SUBST(NATPMP_LIBS)
+        AC_SUBST(NATPMP_LDFLAGS)
+    fi
 fi
 
 # Checks for header files.
