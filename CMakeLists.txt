@@ -172,10 +172,28 @@ pkg_use_module(OPENCV               opencv        )
 pkg_use_module(PORTAUDIO            portaudio-2.0 )
 pkg_use_module(SNDFILE              sndfile       )
 
+# For UPnP
+pkg_use_module(MINIUPNP             miniupnpc     )
+
+# For NAT-PMP
+pkg_use_module(NATPMP               natpmp        )
+
 if(OPUS_FOUND AND VPX_FOUND)
   set(BUILD_TOXAV TRUE)
 else()
   set(BUILD_TOXAV FALSE)
+endif()
+
+if(MINIUPNP_FOUND)
+  set(BUILD_MINIUPNP TRUE)
+else()
+  set(BUILD_MINIUPNP FALSE)
+endif()
+
+if(NATPMP_FOUND)
+  set(BUILD_NATPMP TRUE)
+else()
+  set(BUILD_NATPMP FALSE)
 endif()
 
 ################################################################################
@@ -327,6 +345,19 @@ if(BUILD_TOXAV)
     toxav/video.c
     toxav/video.h)
   target_link_modules(toxav toxcore ${OPUS_LIBRARIES} ${VPX_LIBRARIES})
+endif()
+
+################################################################################
+#
+# :: NAT traversal libraries
+#
+################################################################################
+
+if(BUILD_MINIUPNP OR BUILD_NATPMP)
+  add_module(nat_traversal
+    toxcore/nat_traversal.c
+    toxcore/nat_traversal.h)
+  target_link_modules(nat_traversal toxcore ${MINIUPNP_LIBRARIES} ${NATPMP_LIBRARIES})
 endif()
 
 ################################################################################
