@@ -296,11 +296,11 @@ START_TEST(test_query_functions)
 {
 
     // testing q_grow
-    PENDING_QUERIES testing_MAIN = {0};
-    P_QUERY         testing_SINGEL;
+    Pending_Queries testing_MAIN = {0};
+    Query         testing_SINGEL;
 
-    memset(&testing_MAIN, 0, sizeof(PENDING_QUERIES));
-    memset(&testing_SINGEL, 0, sizeof(P_QUERY));
+    memset(&testing_MAIN, 0, sizeof(Pending_Queries));
+    memset(&testing_SINGEL, 0, sizeof(Query));
 
 
     testing_MAIN.count = 1;
@@ -310,7 +310,7 @@ START_TEST(test_query_functions)
 
     free(testing_MAIN.query_list);
     testing_MAIN.query_list = NULL;
-    memset(&testing_MAIN, 0, sizeof(PENDING_QUERIES));
+    memset(&testing_MAIN, 0, sizeof(Pending_Queries));
 
     testing_MAIN.count = 100;
     ck_assert_msg(q_grow(&testing_MAIN) == true, "Unable to realloc in grow() med");
@@ -319,7 +319,7 @@ START_TEST(test_query_functions)
 
     free(testing_MAIN.query_list);
     testing_MAIN.query_list = NULL;
-    memset(&testing_MAIN, 0, sizeof(PENDING_QUERIES));
+    memset(&testing_MAIN, 0, sizeof(Pending_Queries));
 
     testing_MAIN.count = 1000;
     ck_assert_msg(q_grow(&testing_MAIN) == true, "Unable to realloc in grow() huge");
@@ -328,7 +328,7 @@ START_TEST(test_query_functions)
 
     free(testing_MAIN.query_list);
     testing_MAIN.query_list = NULL;
-    memset(&testing_MAIN, 0, sizeof(PENDING_QUERIES));
+    memset(&testing_MAIN, 0, sizeof(Pending_Queries));
 
     testing_MAIN.count = -3;
     ck_assert_msg(q_grow(&testing_MAIN) == false, "ABLE to realloc in grow() UNREASONABLE");
@@ -337,9 +337,9 @@ START_TEST(test_query_functions)
 
     // testing q_verify_server(IP_Port existing, IP_Port pending)
 
-    // testing  int q_check(PENDING_QUERIES *queries, P_QUERY pend, bool outgoing)
-    // testing  bool q_add(PENDING_QUERIES *queries, P_QUERY pend)
-    // testing  bool q_drop(PENDING_QUERIES *queries, size_t loc)
+    // testing  int q_check(Pending_Queries *queries, Query pend, bool outgoing)
+    // testing  bool q_add(Pending_Queries *queries, Query pend)
+    // testing  bool q_drop(Pending_Queries *queries, size_t loc)
     // testing  size_t q_build_pkt(const uint8_t *their_public_key, const uint8_t *our_public_key, const uint8_t *our_secret_key,
     //                             uint8_t type, const uint8_t *data, size_t length, uint8_t *built)
     uint8_t key[crypto_box_KEYBYTES];
@@ -352,12 +352,12 @@ START_TEST(test_query_functions)
     ck_assert_msg(build_size == QUERY_PKT_ENCRYPTED_SIZE(name_length), "q_build_pkt, invalid returned size");
 
 
-    // testing int q_send(DHT *dht, P_QUERY send)
-    // testing  P_QUERY q_make(IP_Port ipp, const uint8_t key[TOX_PUBLIC_KEY_SIZE], const uint8_t *name, size_t length)
+    // testing int q_send(DHT *dht, Query send)
+    // testing  Query q_make(IP_Port ipp, const uint8_t key[TOX_PUBLIC_KEY_SIZE], const uint8_t *name, size_t length)
     // testing  query_send_request(Tox *tox, const char *address, uint16_t port, const uint8_t *key,
     //                             const uint8_t *name, size_t length)
     // testing int query_handle_toxid_response(void *object, IP_Port source, const uint8_t *pkt, uint16_t length, void *userdata)
-    // testing PENDING_QUERIES *query_new(Networking_Core *net)
+    // testing Pending_Queries *query_new(Networking_Core *net)
     // testing void query_iterate(void *object)
 }
 END_TEST

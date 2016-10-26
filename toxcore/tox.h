@@ -950,12 +950,12 @@ typedef enum TOX_ERR_QUERY_REQUEST {
     TOX_ERR_QUERY_REQUEST_PENDING,
 
     /**
-     * Unable to malloc and save this query.
+     * Unable to allocate the needed memory for this query.
      */
     TOX_ERR_QUERY_REQUEST_MALLOC,
 
     /**
-     * Unknown error of some kind this indicates an error in toxcore.
+     * Unknown error of some kind; this indicates an error in toxcore. Please report this bug!
      */
     TOX_ERR_QUERY_REQUEST_UNKNOWN,
 
@@ -963,22 +963,24 @@ typedef enum TOX_ERR_QUERY_REQUEST {
 
 
 /**
- * Queries the server at IP port, with PUBKEY, for the TOXID at <unresolved>
+ * Queries the server at given address, port, public key, for the ToxID associated with supplied name.
  *
  * TODO(grayhatter) add a bool to send request from a one time use keypair. (Needs net_crypto/dht refactor)
  * NOTE(requires net_crypto.c support)
  *
- * param address the IPv4, or IPv6 Address for the server.
- * param port the port the server is listening on.
- * param public_key the long term public key for the name server.
+ * @param address the IPv4 or IPv6 address for the server. Will attempt to resolve DNS addresses.
+ * @param port the port the server is listening on.
+ * @param public_key the long term public key for the name server.
+ * @param name the string (name) you want to give to the server to request the assoiated ToxID.
+ *
  * @return true on success.
  */
 bool tox_query_request(Tox *tox, const char *address, uint16_t port, const uint8_t *public_key, const uint8_t *name,
                        size_t length, TOX_ERR_QUERY_REQUEST *error);
 
 /**
- * This callback will be invoked by toxcore when a response from a pending query was recived.
- * Once this callback is recived, the query will have already been removed.
+ * This callback will be invoked when a response from a pending query was received.
+ * Once this callback is received, the query will have already been removed.
  */
 typedef void tox_query_response_cb(Tox *tox, const uint8_t *request, size_t length, const uint8_t *tox_id,
                                    void *user_data);

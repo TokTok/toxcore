@@ -271,7 +271,7 @@ typedef struct {
     Node_format to_bootstrap[MAX_CLOSE_TO_BOOTSTRAP_NODES];
     unsigned int num_to_bootstrap;
 
-    PENDING_QUERIES *queries;
+    Pending_Queries *queries;
 
 } DHT;
 /*----------------------------------------------------------------------------------*/
