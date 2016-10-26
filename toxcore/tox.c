@@ -111,6 +111,7 @@ CONST_FUNCTION(max_custom_packet_size, MAX_CUSTOM_PACKET_SIZE)
 CONST_FUNCTION(hash_length, HASH_LENGTH)
 CONST_FUNCTION(file_id_length, FILE_ID_LENGTH)
 CONST_FUNCTION(max_filename_length, MAX_FILENAME_LENGTH)
+CONST_FUNCTION(query_max_name_size, QUERY_MAX_NAME_SIZE)
 
 
 #define ACCESSORS(type, ns, name) \
