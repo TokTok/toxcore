@@ -286,7 +286,7 @@ int main(int argc, char *argv[])
             return 1;
         }
 
-        tcp_server = new_TCP_server(enable_ipv6, tcp_relay_port_count, tcp_relay_ports, dht->self_secret_key, onion);
+        tcp_server = new_TCP_server(NULL, enable_ipv6, tcp_relay_port_count, tcp_relay_ports, dht->self_secret_key, onion);
 
         // tcp_relay_port_count != 0 at this point
         free(tcp_relay_ports);

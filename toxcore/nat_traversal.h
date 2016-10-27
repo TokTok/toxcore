@@ -27,11 +27,13 @@
 
 #include <stdint.h>
 
+#include "logger.h"
+#include "tox.h"
+
 
 /**
  * The protocol that will be used by the nat traversal.
  */
-#if defined(HAVE_LIBMINIUPNPC) || defined(HAVE_LIBNATPMP)
 typedef enum NAT_TRAVERSAL_PROTO {
 
     NAT_TRAVERSAL_UDP,
@@ -39,17 +41,9 @@ typedef enum NAT_TRAVERSAL_PROTO {
     NAT_TRAVERSAL_TCP,
 
 } NAT_TRAVERSAL_PROTO;
-#endif
 
 
-#ifdef HAVE_LIBMINIUPNPC
-/* Setup port forwarding using UPnP */
-void upnp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port);
-#endif
-
-#ifdef HAVE_LIBNATPMP
-/* Setup port forwarding using NAT-PMP */
-void natpmp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port);
-#endif
+/* Setup port forwarding */
+void nat_map_port(Logger *log, TOX_TRAVERSAL_TYPE traversal_type, NAT_TRAVERSAL_PROTO proto, uint16_t port);
 
 #endif
