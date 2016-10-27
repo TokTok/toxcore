@@ -1,6 +1,6 @@
 /* nat_traversal.h -- Functions to traverse a NAT (UPnP, NAT-PMP).
  *
- *  Copyright (C) 2014 Tox project All Rights Reserved.
+ *  Copyright (C) 2016 Tox project All Rights Reserved.
  *
  *  This file is part of Tox.
  *  Tox is free software: you can redistribute it and/or modify
@@ -34,10 +34,8 @@
 #if defined(HAVE_LIBMINIUPNPC) || defined(HAVE_LIBNATPMP)
 typedef enum NAT_TRAVERSAL_PROTO {
 
-    /* UDP */
     NAT_TRAVERSAL_UDP,
 
-    /* TCP */
     NAT_TRAVERSAL_TCP,
 
 } NAT_TRAVERSAL_PROTO;
@@ -46,12 +44,12 @@ typedef enum NAT_TRAVERSAL_PROTO {
 
 #ifdef HAVE_LIBMINIUPNPC
 /* Setup port forwarding using UPnP */
-void upnp_map_port(NAT_TRAVERSAL_PROTO proto, uint16_t port);
+void upnp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port);
 #endif
 
 #ifdef HAVE_LIBNATPMP
 /* Setup port forwarding using NAT-PMP */
-void natpmp_map_port(NAT_TRAVERSAL_PROTO proto, uint16_t port);
+void natpmp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port);
 #endif
 
 #endif
