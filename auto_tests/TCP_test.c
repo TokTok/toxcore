@@ -32,7 +32,7 @@ START_TEST(test_basic)
     uint8_t self_public_key[crypto_box_PUBLICKEYBYTES];
     uint8_t self_secret_key[crypto_box_SECRETKEYBYTES];
     crypto_box_keypair(self_public_key, self_secret_key);
-    TCP_Server *tcp_s = new_TCP_server(1, NUM_PORTS, ports, self_secret_key, NULL);
+    TCP_Server *tcp_s = new_TCP_server(NULL, 1, NUM_PORTS, ports, self_secret_key, NULL);
     ck_assert_msg(tcp_s != NULL, "Failed to create TCP relay server");
     ck_assert_msg(tcp_server_listen_count(tcp_s) == NUM_PORTS, "Failed to bind to all ports");
 
@@ -215,7 +215,7 @@ START_TEST(test_some)
     uint8_t self_public_key[crypto_box_PUBLICKEYBYTES];
     uint8_t self_secret_key[crypto_box_SECRETKEYBYTES];
     crypto_box_keypair(self_public_key, self_secret_key);
-    TCP_Server *tcp_s = new_TCP_server(1, NUM_PORTS, ports, self_secret_key, NULL);
+    TCP_Server *tcp_s = new_TCP_server(NULL, 1, NUM_PORTS, ports, self_secret_key, NULL);
     ck_assert_msg(tcp_s != NULL, "Failed to create TCP relay server");
     ck_assert_msg(tcp_server_listen_count(tcp_s) == NUM_PORTS, "Failed to bind to all ports");
 
@@ -392,7 +392,7 @@ START_TEST(test_client)
     uint8_t self_public_key[crypto_box_PUBLICKEYBYTES];
     uint8_t self_secret_key[crypto_box_SECRETKEYBYTES];
     crypto_box_keypair(self_public_key, self_secret_key);
-    TCP_Server *tcp_s = new_TCP_server(1, NUM_PORTS, ports, self_secret_key, NULL);
+    TCP_Server *tcp_s = new_TCP_server(NULL, 1, NUM_PORTS, ports, self_secret_key, NULL);
     ck_assert_msg(tcp_s != NULL, "Failed to create TCP relay server");
     ck_assert_msg(tcp_server_listen_count(tcp_s) == NUM_PORTS, "Failed to bind to all ports");
 
@@ -553,7 +553,7 @@ START_TEST(test_tcp_connection)
     uint8_t self_public_key[crypto_box_PUBLICKEYBYTES];
     uint8_t self_secret_key[crypto_box_SECRETKEYBYTES];
     crypto_box_keypair(self_public_key, self_secret_key);
-    TCP_Server *tcp_s = new_TCP_server(1, NUM_PORTS, ports, self_secret_key, NULL);
+    TCP_Server *tcp_s = new_TCP_server(NULL, 1, NUM_PORTS, ports, self_secret_key, NULL);
     ck_assert_msg(public_key_cmp(tcp_server_public_key(tcp_s), self_public_key) == 0, "Wrong public key");
 
     TCP_Proxy_Info proxy_info;
@@ -662,7 +662,7 @@ START_TEST(test_tcp_connection2)
     uint8_t self_public_key[crypto_box_PUBLICKEYBYTES];
     uint8_t self_secret_key[crypto_box_SECRETKEYBYTES];
     crypto_box_keypair(self_public_key, self_secret_key);
-    TCP_Server *tcp_s = new_TCP_server(1, NUM_PORTS, ports, self_secret_key, NULL);
+    TCP_Server *tcp_s = new_TCP_server(NULL, 1, NUM_PORTS, ports, self_secret_key, NULL);
     ck_assert_msg(public_key_cmp(tcp_server_public_key(tcp_s), self_public_key) == 0, "Wrong public key");
 
     TCP_Proxy_Info proxy_info;

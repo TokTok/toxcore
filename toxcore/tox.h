@@ -585,6 +585,10 @@ bool tox_options_get_udp_enabled(const struct Tox_Options *options);
 
 void tox_options_set_udp_enabled(struct Tox_Options *options, bool udp_enabled);
 
+TOX_TRAVERSAL_TYPE tox_options_get_traversal_type(const struct Tox_Options *options);
+
+void tox_options_set_traversal_type(struct Tox_Options *options, TOX_TRAVERSAL_TYPE traversal_type);
+
 TOX_PROXY_TYPE tox_options_get_proxy_type(const struct Tox_Options *options);
 
 void tox_options_set_proxy_type(struct Tox_Options *options, TOX_PROXY_TYPE type);

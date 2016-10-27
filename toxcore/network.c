@@ -43,9 +43,9 @@
 #include <mach/mach.h>
 #endif
 
+#include "nat_traversal.h"
 #include "network.h"
 #include "util.h"
-#include "nat_traversal.h"
 
 #if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
 
@@ -534,7 +534,8 @@ Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint1
  *
  * If error is non NULL it is set to 0 if no issues, 1 if socket related error, 2 if other.
  */
-Networking_Core *new_networking_nat(Logger *log, IP ip, uint16_t port_from, uint16_t port_to, TOX_TRAVERSAL_TYPE traversal_type, unsigned int *error)
+Networking_Core *new_networking_nat(Logger *log, IP ip, uint16_t port_from, uint16_t port_to,
+                                    TOX_TRAVERSAL_TYPE traversal_type, unsigned int *error)
 {
     /* If both from and to are 0, use default port range
      * If one is 0 and the other is non-0, use the non-0 value as only port
@@ -716,15 +717,7 @@ Networking_Core *new_networking_nat(Logger *log, IP ip, uint16_t port_from, uint
                 *error = 0;
             }
 
-#ifdef HAVE_LIBMINIUPNPC
-            if ((traversal_type == TOX_TRAVERSAL_TYPE_UPNP) || (traversal_type == TOX_TRAVERSAL_TYPE_ALL))
-                upnp_map_port(log, NAT_TRAVERSAL_UDP,ntohs(temp->port));
-#endif
-
-#ifdef HAVE_LIBNATPMP
-            if ((traversal_type == TOX_TRAVERSAL_TYPE_NATPMP) || (traversal_type == TOX_TRAVERSAL_TYPE_ALL))
-                natpmp_map_port(log, NAT_TRAVERSAL_UDP,ntohs(temp->port));
-#endif
+            nat_map_port(log, traversal_type, NAT_TRAVERSAL_UDP, ntohs(temp->port));
 
             return temp;
         }
