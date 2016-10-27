@@ -2,6 +2,8 @@ option(ENABLE_SHARED "Build shared (dynamic) libraries for all modules" ON)
 option(ENABLE_STATIC "Build static libraries for all modules" ON)
 option(COMPILE_AS_CXX "Compile all C code as C++ code" OFF)
 
+include(FindPackageHandleStandardArgs)
+
 find_package(PkgConfig REQUIRED)
 
 function(set_source_language)
@@ -26,6 +28,25 @@ function(pkg_use_module mod)
     link_directories(${${mod}_LIBRARY_DIRS})
     include_directories(${${mod}_INCLUDE_DIRS})
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${${mod}_CFLAGS_OTHER}")
+  else()
+    set(${mod}_DEFINITIONS ${${mod}_CFLAGS_OTHER})
+    find_path(${mod}_INCLUDE_DIR ${ARGN}.h
+      HINTS ${${mod}_INCLUDEDIR} ${${mod}_INCLUDE_DIRS}
+      PATH_SUFFIXES ${ARGN})
+    find_library(${mod}_LIBRARY NAMES ${ARGN} lib${ARGN}
+      HINTS ${${mod}_LIBDIR} ${${mod}_LIBRARY_DIRS})
+    find_package_handle_standard_args(${mod} DEFAULT_MSG
+      ${mod}_LIBRARY ${mod}_INCLUDE_DIR)
+
+    if(${mod}_FOUND)
+      mark_as_advanced(${mod}_INCLUDE_DIR ${mod}_LIBRARY)
+      set(${mod}_LIBRARIES ${${mod}_LIBRARY} PARENT_SCOPE)
+      set(${mod}_INCLUDE_DIRS ${${mod}_INCLUDE_DIR} PARENT_SCOPE)
+      set(${mod}_FOUND TRUE PARENT_SCOPE)
+      link_directories(${${mod}_LIBRARY_DIRS})
+      include_directories(${${mod}_INCLUDE_DIRS})
+      set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${${mod}_CFLAGS_OTHER}")
+    endif()
   endif()
 endfunction()
 
