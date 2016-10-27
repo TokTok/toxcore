@@ -388,9 +388,10 @@ void networking_poll(Networking_Core *net, void *userdata);
  *
  * If error is non NULL it is set to 0 if no issues, 1 if socket related error, 2 if other.
  */
-Networking_Core *new_networking(IP ip, uint16_t port);
-Networking_Core *new_networking_ex(IP ip, uint16_t port_from, uint16_t port_to, unsigned int *error);
-Networking_Core *new_networking_nat(IP ip, uint16_t port_from, uint16_t port_to, TOX_TRAVERSAL_TYPE traversal_type, unsigned int *error);
+Networking_Core *new_networking(Logger *log, IP ip, uint16_t port);
+Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint16_t port_to, unsigned int *error);
+Networking_Core *new_networking_nat(Logger *log, IP ip, uint16_t port_from, uint16_t port_to,
+                                    TOX_TRAVERSAL_TYPE traversal_type, unsigned int *error);
 
 /* Function to cleanup networking stuff (doesn't do much right now). */
 void kill_networking(Networking_Core *net);
