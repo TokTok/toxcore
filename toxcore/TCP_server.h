@@ -23,10 +23,11 @@
 #ifndef TCP_SERVER_H
 #define TCP_SERVER_H
 
-#include "tox.h"
 #include "crypto_core.h"
 #include "list.h"
+#include "logger.h"
 #include "onion.h"
+#include "tox.h"
 
 #ifdef TCP_SERVER_USE_EPOLL
 #include <sys/epoll.h>
@@ -124,13 +125,15 @@ size_t tcp_server_listen_count(const TCP_Server *tcp_server);
 /* Create new TCP server instance.
  * Added for reverse compatibility with old new_TCP_server calls.
  */
-TCP_Server *new_TCP_server(uint8_t ipv6_enabled, uint16_t num_sockets, const uint16_t *ports, const uint8_t *secret_key,
+TCP_Server *new_TCP_server(Logger *log, uint8_t ipv6_enabled, uint16_t num_sockets, const uint16_t *ports,
+                           const uint8_t *secret_key,
                            Onion *onion);
 
 /* Create new TCP server instance.
  */
-TCP_Server *new_TCP_server_nat(uint8_t ipv6_enabled, uint16_t num_sockets, const uint16_t *ports, TOX_TRAVERSAL_TYPE traversal_type,
-                           const uint8_t *secret_key, Onion *onion);
+TCP_Server *new_TCP_server_nat(Logger *log, uint8_t ipv6_enabled, uint16_t num_sockets, const uint16_t *ports,
+                               TOX_TRAVERSAL_TYPE traversal_type,
+                               const uint8_t *secret_key, Onion *onion);
 
 /* Run the TCP_server
  */
