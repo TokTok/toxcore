@@ -25,7 +25,7 @@
 #endif
 
 #include "TCP_server.h"
-
+#include "nat_traversal.h"
 #include "util.h"
 
 #if !defined(_WIN32) && !defined(__WIN32__) && !defined (WIN32)
@@ -34,9 +34,6 @@
 #else
 #include <winsock2.h>
 #endif
-
-#include "util.h"
-#include "nat_traversal.h"
 
 struct TCP_Server {
     Onion *onion;
@@ -1103,12 +1100,12 @@ TCP_Server *new_TCP_server_nat(uint8_t ipv6_enabled, uint16_t num_sockets, const
 
 #ifdef HAVE_LIBMINIUPNPC
             if ((traversal_type == TOX_TRAVERSAL_TYPE_UPNP) || (traversal_type == TOX_TRAVERSAL_TYPE_ALL))
-                upnp_map_port(NAT_TRAVERSAL_TCP,ntohs(ports[i]));
+                upnp_map_port(NULL, NAT_TRAVERSAL_TCP, ntohs(ports[i]));
 #endif
 
 #ifdef HAVE_LIBNATPMP
             if ((traversal_type == TOX_TRAVERSAL_TYPE_NATPMP) || (traversal_type == TOX_TRAVERSAL_TYPE_ALL))
-                natpmp_map_port(NAT_TRAVERSAL_TCP,ntohs(ports[i]));
+                natpmp_map_port(NULL, NAT_TRAVERSAL_TCP, ntohs(ports[i]));
 #endif
 
             temp->socks_listening[temp->num_listening_socks] = sock;

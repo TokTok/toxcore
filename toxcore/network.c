@@ -718,12 +718,12 @@ Networking_Core *new_networking_nat(Logger *log, IP ip, uint16_t port_from, uint
 
 #ifdef HAVE_LIBMINIUPNPC
             if ((traversal_type == TOX_TRAVERSAL_TYPE_UPNP) || (traversal_type == TOX_TRAVERSAL_TYPE_ALL))
-                upnp_map_port(NAT_TRAVERSAL_UDP,ntohs(temp->port));
+                upnp_map_port(log, NAT_TRAVERSAL_UDP,ntohs(temp->port));
 #endif
 
 #ifdef HAVE_LIBNATPMP
             if ((traversal_type == TOX_TRAVERSAL_TYPE_NATPMP) || (traversal_type == TOX_TRAVERSAL_TYPE_ALL))
-                natpmp_map_port(NAT_TRAVERSAL_UDP,ntohs(temp->port));
+                natpmp_map_port(log, NAT_TRAVERSAL_UDP,ntohs(temp->port));
 #endif
 
             return temp;
