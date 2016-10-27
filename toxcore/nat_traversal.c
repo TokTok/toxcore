@@ -1,6 +1,6 @@
 /* nat_traversal.c -- Functions to traverse a NAT (UPnP, NAT-PMP).
  *
- *  Copyright (C) 2014 Tox project All Rights Reserved.
+ *  Copyright (C) 2016 Tox project All Rights Reserved.
  *
  *  This file is part of Tox.
  *  Tox is free software: you can redistribute it and/or modify
@@ -40,12 +40,18 @@
 
 #ifdef HAVE_LIBMINIUPNPC
 /* Setup port forwarding using UPnP */
-void upnp_map_port(NAT_TRAVERSAL_PROTO proto, uint16_t port)
+void upnp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port)
 {
-    LOGGER_DEBUG("Attempting to set up UPnP port forwarding");
-
-    int error = 0;
+    int error;
+    bool local_logger = false;
     struct UPNPDev *devlist = NULL;
+
+    if (log == NULL) {
+        log = logger_new();
+        local_logger = true;
+    }
+
+    LOGGER_DEBUG(log, "Attempting to set up UPnP port forwarding");
 
 #if MINIUPNPC_API_VERSION < 14
     devlist = upnpDiscover(1000, NULL, NULL, 0, 0, &error);
@@ -54,7 +60,7 @@ void upnp_map_port(NAT_TRAVERSAL_PROTO proto, uint16_t port)
 #endif
 
     if (error) {
-        LOGGER_WARNING("UPnP discovery failed (error = %d)", error);
+        LOGGER_WARNING(log, "UPnP discovery failed (%s)", strupnperror(error));
         return;
     }
 
@@ -64,51 +70,71 @@ void upnp_map_port(NAT_TRAVERSAL_PROTO proto, uint16_t port)
 
     error = UPNP_GetValidIGD(devlist, &urls, &data, lanaddr, sizeof(lanaddr));
     freeUPNPDevlist(devlist);
-    if (error) {
-        if (error == 1) {
-            LOGGER_INFO("A valid IGD has been found.");
+    switch (error) {
+        case 0:
+            LOGGER_WARNING(log, "No IGD was found.");
+            break;
+        case 1:
+            LOGGER_INFO(log, "A valid IGD has been found.");
 
             char portstr[10];
             snprintf(portstr, sizeof(portstr), "%d", port);
 
-            if (proto == NAT_TRAVERSAL_UDP)
-                error = UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, portstr, portstr, lanaddr, "Tox", "UDP", 0, "0");
-            else if (proto == NAT_TRAVERSAL_TCP)
-                error = UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, portstr, portstr, lanaddr, "Tox", "TCP", 0, "0");
-            else
-                LOGGER_WARNING("UPnP port mapping failed (unknown NAT_TRAVERSAL_PROTO)");
+            switch (proto) {
+                case NAT_TRAVERSAL_UDP:
+                    error = UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, portstr, portstr, lanaddr, "Tox", "UDP", 0, "0");
+                    break;
+                case NAT_TRAVERSAL_TCP:
+                    error = UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, portstr, portstr, lanaddr, "Tox", "TCP", 0, "0");
+                    break;
+                default:
+                    LOGGER_WARNING(log, "UPnP port mapping failed (unknown NAT_TRAVERSAL_PROTO)");
+                    break;
+            }
 
             if (error)
-                LOGGER_WARNING("UPnP port mapping failed (error = %d)", error);
+                LOGGER_WARNING(log, "UPnP port mapping failed (%s)", strupnperror(error));
             else
-                LOGGER_INFO("UPnP mapped port %d", port);
-        } else if (error == 2)
-            LOGGER_WARNING("IGD was found but reported as not connected.");
-        else if (error == 3)
-            LOGGER_WARNING("UPnP device was found but not recoginzed as IGD.");
-        else
-            LOGGER_WARNING("Unknown error finding IGD: %d", error);
+                LOGGER_INFO(log, "UPnP mapped port %d", port);
+            break;
+        case 2:
+            LOGGER_WARNING(log, "IGD was found but reported as not connected.");
+            break;
+        case 3:
+            LOGGER_WARNING(log, "UPnP device was found but not recoginzed as IGD.");
+            break;
+        default:
+            LOGGER_WARNING(log, "Unknown error finding IGD (%s)", strupnperror(error));
+            break;
+    }
 
-        FreeUPNPUrls(&urls);
-    } else
-        LOGGER_WARNING("No IGD was found.");
+    FreeUPNPUrls(&urls);
+
+    if (local_logger)
+        logger_kill(log);
 }
 #endif
 
 
 #ifdef HAVE_LIBNATPMP
 /* Setup port forwarding using NAT-PMP */
-void natpmp_map_port(NAT_TRAVERSAL_PROTO proto, uint16_t port)
+void natpmp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port)
 {
-    LOGGER_DEBUG("Attempting to set up NAT-PMP port forwarding");
-
     int error;
+    bool local_logger = false;
     natpmp_t natpmp;
     natpmpresp_t resp;
 
+    if (log == NULL) {
+        log = logger_new();
+        local_logger = true;
+    }
+
+    LOGGER_DEBUG(log, "Attempting to set up NAT-PMP port forwarding");
+
     error = initnatpmp(&natpmp, 0, 0);
     if (error) {
-        LOGGER_WARNING("NAT-PMP initialization failed (error = %d)", error);
+        LOGGER_WARNING(log, "NAT-PMP initialization failed (error = %d)", error);
         return;
     }
 
@@ -117,13 +143,14 @@ void natpmp_map_port(NAT_TRAVERSAL_PROTO proto, uint16_t port)
     else if (proto == NAT_TRAVERSAL_TCP)
         error = sendnewportmappingrequest(&natpmp, NATPMP_PROTOCOL_TCP, port, port, 3600);
     else {
-        LOGGER_WARNING("NAT-PMP port mapping failed (unknown NAT_TRAVERSAL_PROTO)");
+        LOGGER_WARNING(log, "NAT-PMP port mapping failed (unknown NAT_TRAVERSAL_PROTO)");
         closenatpmp(&natpmp);
         return;
     }
 
+    // From line 171 of natpmp.h: "12 = OK (size of the request)"
     if (error != 12) {
-        LOGGER_WARNING("NAT-PMP send request failed (error = %d)", error);
+        LOGGER_WARNING(log, "NAT-PMP send request failed (error = %d)", error);
         closenatpmp(&natpmp);
         return;
     }
@@ -133,10 +160,13 @@ void natpmp_map_port(NAT_TRAVERSAL_PROTO proto, uint16_t port)
         sleep(1);
 
     if (error)
-        LOGGER_WARNING("NAT-PMP port mapping failed (error = %d)", error);
+        LOGGER_WARNING(log, "NAT-PMP port mapping failed (error = %d)", error);
     else
-        LOGGER_INFO("NAT-PMP mapped port %d", port);
+        LOGGER_INFO(log, "NAT-PMP mapped port %d", port);
 
     closenatpmp(&natpmp);
+
+    if (local_logger)
+        logger_kill(log);
 }
 #endif
