@@ -189,15 +189,11 @@ else()
 endif()
 
 if(MINIUPNP_FOUND)
-  set(BUILD_MINIUPNP TRUE)
-else()
-  set(BUILD_MINIUPNP FALSE)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_LIBMINIUPNPC")
 endif()
 
 if(NATPMP_FOUND)
-  set(BUILD_NATPMP TRUE)
-else()
-  set(BUILD_NATPMP FALSE)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_LIBNATPMP")
 endif()
 
 ################################################################################
@@ -233,11 +229,13 @@ endif()
 add_module(toxnetwork
   toxcore/logger.c
   toxcore/logger.h
+  toxcore/nat_traversal.c
+  toxcore/nat_traversal.h
   toxcore/network.c
   toxcore/network.h
   toxcore/util.c
   toxcore/util.h)
-target_link_modules(toxnetwork toxcrypto)
+target_link_modules(toxnetwork toxcrypto ${MINIUPNP_LIBRARIES} ${NATPMP_LIBRARIES})
 
 if(CMAKE_THREAD_LIBS_INIT)
   target_link_modules(toxnetwork ${CMAKE_THREAD_LIBS_INIT})
@@ -349,19 +347,6 @@ if(BUILD_TOXAV)
     toxav/video.c
     toxav/video.h)
   target_link_modules(toxav toxcore ${OPUS_LIBRARIES} ${VPX_LIBRARIES})
-endif()
-
-################################################################################
-#
-# :: NAT traversal libraries
-#
-################################################################################
-
-if(BUILD_MINIUPNP OR BUILD_NATPMP)
-  add_module(nat_traversal
-    toxcore/nat_traversal.c
-    toxcore/nat_traversal.h)
-  target_link_modules(nat_traversal toxcore ${MINIUPNP_LIBRARIES} ${NATPMP_LIBRARIES})
 endif()
 
 ################################################################################
