@@ -172,12 +172,10 @@ pkg_use_module(PORTAUDIO            portaudio-2.0 )
 pkg_use_module(SNDFILE              sndfile       )
 
 # For UPnP
-#pkg_use_module(MINIUPNP             miniupnpc     )
-find_package(MiniUPnP)
+pkg_use_module(MINIUPNP             miniupnpc     )
 
 # For NAT-PMP
-#pkg_use_module(NATPMP               natpmp        )
-find_package(NatPMP)
+pkg_use_module(NATPMP               natpmp        )
 
 if(OPUS_FOUND AND VPX_FOUND)
   set(BUILD_TOXAV TRUE)
