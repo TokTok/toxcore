@@ -305,6 +305,7 @@ static void test_addto_lists_good(DHT            *dht,
 
 static void test_addto_lists(IP ip)
 {
+    // TODO(#219)
     Networking_Core *net = new_networking(NULL, ip, TOX_PORT_DEFAULT);
     ck_assert_msg(net != 0, "Failed to create Networking_Core");
 
@@ -590,6 +591,7 @@ START_TEST(test_DHT_test)
         IP ip;
         ip_init(&ip, 1);
 
+        // TODO(#219)
         dhts[i] = new_DHT(NULL, new_networking(NULL, ip, DHT_DEFAULT_PORT + i), true);
         ck_assert_msg(dhts[i] != 0, "Failed to create dht instances %u", i);
         ck_assert_msg(dhts[i]->net->port != DHT_DEFAULT_PORT + i, "Bound to wrong port");
