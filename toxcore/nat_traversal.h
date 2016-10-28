@@ -42,8 +42,63 @@ typedef enum NAT_TRAVERSAL_PROTO {
 
 } NAT_TRAVERSAL_PROTO;
 
+/**
+ * Possible status values.
+ */
+typedef enum NAT_TRAVERSAL_STATUS {
+
+    /* Port mapped successfully */
+    NAT_TRAVERSAL_OK,
+
+    /* UPnP/NAT-PMP not compiled */
+    NAT_TRAVERSAL_ERR_DISABLED,
+
+    /* Unknown error */
+    NAT_TRAVERSAL_ERR_UNKNOWN,
+
+    /* Unknown nat traversal type specified by user */
+    NAT_TRAVERSAL_ERR_UNKNOWN_TYPE,
+
+    /* Unknown protocol specified by user */
+    NAT_TRAVERSAL_ERR_UNKNOWN_PROTO,
+
+    /* UPnP/NAT-PMP port mapping failed */
+    NAT_TRAVERSAL_ERR_MAPPING_FAIL,
+
+    /* UPnP discovery failed */
+    NAT_TRAVERSAL_ERR_DISCOVERY_FAIL,
+
+    /* UPnP no IGD found */
+    NAT_TRAVERSAL_ERR_NO_IGD_FOUND,
+
+    /* UPnP IGD found, but not connected */
+    NAT_TRAVERSAL_ERR_IGD_NO_CONN,
+
+    /* UPnP device found, but not IGD */
+    NAT_TRAVERSAL_ERR_NOT_IGD,
+
+    /* NAT-PMP initialization failed */
+    NAT_TRAVERSAL_ERR_INIT_FAIL,
+
+    /* NAT-PMP send request failed */
+    NAT_TRAVERSAL_ERR_SEND_REQ_FAIL,
+
+} NAT_TRAVERSAL_STATUS;
+
+/**
+ * Struct to report nat traversal success/fail.
+ */
+typedef struct nat_traversal_status_t {
+
+    NAT_TRAVERSAL_STATUS upnp;
+
+    NAT_TRAVERSAL_STATUS natpmp;
+
+} nat_traversal_status_t;
+
 
 /* Setup port forwarding */
-void nat_map_port(Logger *log, TOX_TRAVERSAL_TYPE traversal_type, NAT_TRAVERSAL_PROTO proto, uint16_t port);
+void nat_map_port(Logger *log, TOX_TRAVERSAL_TYPE traversal_type, NAT_TRAVERSAL_PROTO proto, uint16_t port,
+                  nat_traversal_status_t *status);
 
 #endif

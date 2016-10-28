@@ -121,6 +121,7 @@ int main(int argc, char *argv[])
     IP ip;
     ip_init(&ip, ipv6enabled);
 
+    // TODO(#219)
     DHT *dht = new_DHT(NULL, new_networking(NULL, ip, PORT), true);
     Onion *onion = new_onion(dht);
     Onion_Announce *onion_a = new_onion_announce(dht);
@@ -143,6 +144,7 @@ int main(int argc, char *argv[])
 #ifdef TCP_RELAY_ENABLED
 #define NUM_PORTS 3
     uint16_t ports[NUM_PORTS] = {443, 3389, PORT};
+    // TODO(#219)
     TCP_Server *tcp_s = new_TCP_server(NULL, ipv6enabled, NUM_PORTS, ports, dht->self_secret_key, onion);
 
     if (tcp_s == NULL) {
