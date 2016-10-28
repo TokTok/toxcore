@@ -1031,6 +1031,7 @@ static sock_t new_listening_TCP_socket(int family, uint16_t port)
 /**
  * Added for reverse compatibility with old new_TCP_server calls.
  */
+// TODO(#219)
 TCP_Server *new_TCP_server(Logger *log, uint8_t ipv6_enabled, uint16_t num_sockets, const uint16_t *ports,
                            const uint8_t *secret_key,
                            Onion *onion)
@@ -1038,6 +1039,7 @@ TCP_Server *new_TCP_server(Logger *log, uint8_t ipv6_enabled, uint16_t num_socke
     return new_TCP_server_nat(log, ipv6_enabled, num_sockets, ports, TOX_TRAVERSAL_TYPE_NONE, secret_key, onion);
 }
 
+// TODO(#219)
 TCP_Server *new_TCP_server_nat(Logger *log, uint8_t ipv6_enabled, uint16_t num_sockets, const uint16_t *ports,
                                TOX_TRAVERSAL_TYPE traversal_type,
                                const uint8_t *secret_key, Onion *onion)
@@ -1101,7 +1103,7 @@ TCP_Server *new_TCP_server_nat(Logger *log, uint8_t ipv6_enabled, uint16_t num_s
 
 #endif
 
-            nat_map_port(log, traversal_type, NAT_TRAVERSAL_TCP, ntohs(ports[i]));
+            nat_map_port(log, traversal_type, NAT_TRAVERSAL_TCP, ntohs(ports[i]), NULL);
 
             temp->socks_listening[temp->num_listening_socks] = sock;
             ++temp->num_listening_socks;
