@@ -511,6 +511,7 @@ static void at_shutdown(void)
 /* Initialize networking.
  * Added for reverse compatibility with old new_networking calls.
  */
+// TODO(#219)
 Networking_Core *new_networking(Logger *log, IP ip, uint16_t port)
 {
     return new_networking_nat(ip, port, port + (TOX_PORTRANGE_TO - TOX_PORTRANGE_FROM), TOX_TRAVERSAL_TYPE_NONE, 0);
@@ -519,7 +520,8 @@ Networking_Core *new_networking(Logger *log, IP ip, uint16_t port)
 /* Initialize networking.
  * Added for reverse compatibility with old new_networking_ex calls.
  */
-Networking_Core *new_networking_ex(IP ip, uint16_t port_from, uint16_t port_to, unsigned int *error)
+// TODO(#219)
+Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint16_t port_to, unsigned int *error)
 {
     return new_networking_nat(ip, port_from, port_to, TOX_TRAVERSAL_TYPE_NONE, 0);
 }
@@ -534,6 +536,7 @@ Networking_Core *new_networking_ex(IP ip, uint16_t port_from, uint16_t port_to, 
  *
  * If error is non NULL it is set to 0 if no issues, 1 if socket related error, 2 if other.
  */
+// TODO(#219)
 Networking_Core *new_networking_nat(Logger *log, IP ip, uint16_t port_from, uint16_t port_to,
                                     TOX_TRAVERSAL_TYPE traversal_type, unsigned int *error)
 {
@@ -717,7 +720,7 @@ Networking_Core *new_networking_nat(Logger *log, IP ip, uint16_t port_from, uint
                 *error = 0;
             }
 
-            nat_map_port(log, traversal_type, NAT_TRAVERSAL_UDP, ntohs(temp->port));
+            nat_map_port(log, traversal_type, NAT_TRAVERSAL_UDP, ntohs(temp->port), NULL);
 
             return temp;
         }
