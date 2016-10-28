@@ -31,6 +31,7 @@
 #endif
 
 #include "logger.h"
+#include "tox.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -38,7 +39,6 @@
 #include <stdbool.h>
 #include <string.h>
 #include <time.h>
-#include "tox.h"
 
 #if defined(_WIN32) || defined(__WIN32__) || defined (WIN32) /* Put win32 includes here */
 #ifndef WINVER
@@ -388,8 +388,11 @@ void networking_poll(Networking_Core *net, void *userdata);
  *
  * If error is non NULL it is set to 0 if no issues, 1 if socket related error, 2 if other.
  */
+// TODO(#219)
 Networking_Core *new_networking(Logger *log, IP ip, uint16_t port);
+// TODO(#219)
 Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint16_t port_to, unsigned int *error);
+// TODO(#219)
 Networking_Core *new_networking_nat(Logger *log, IP ip, uint16_t port_from, uint16_t port_to,
                                     TOX_TRAVERSAL_TYPE traversal_type, unsigned int *error);
 
