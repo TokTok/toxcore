@@ -101,4 +101,7 @@ typedef struct nat_traversal_status_t {
 void nat_map_port(Logger *log, TOX_TRAVERSAL_TYPE traversal_type, NAT_TRAVERSAL_PROTO proto, uint16_t port,
                   nat_traversal_status_t *status);
 
+/* Return error string from status */
+const char *str_nat_traversal_error(NAT_TRAVERSAL_STATUS status);
+
 #endif
