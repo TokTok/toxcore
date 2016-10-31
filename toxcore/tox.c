@@ -115,7 +115,6 @@ Tox *tox_new(const struct Tox_Options *options, TOX_ERR_NEW *error)
 
         m_options.ipv6enabled = tox_options_get_ipv6_enabled(options);
         m_options.udp_disabled = !tox_options_get_udp_enabled(options);
-        m_options.traversal_type = tox_options_get_traversal_type(options);
         m_options.port_range[0] = tox_options_get_start_port(options);
         m_options.port_range[1] = tox_options_get_end_port(options);
         m_options.tcp_server_port = tox_options_get_tcp_port(options);
@@ -124,6 +123,19 @@ Tox *tox_new(const struct Tox_Options *options, TOX_ERR_NEW *error)
 
         m_options.log_callback = (logger_cb *)tox_options_get_log_callback(options);
         m_options.log_user_data = tox_options_get_log_user_data(options);
+
+        switch (tox_options_get_traversal_type(options)) {
+            case TOX_TRAVERSAL_TYPE_NONE:
+            case TOX_TRAVERSAL_TYPE_UPNP:
+            case TOX_TRAVERSAL_TYPE_NATPMP:
+            case TOX_TRAVERSAL_TYPE_ALL:
+                m_options.traversal_type = tox_options_get_traversal_type(options);
+                break;
+
+            default:
+                SET_ERROR_PARAMETER(error, TOX_ERR_NEW_TRAVERSAL_BAD_TYPE);
+                return NULL;
+        }
 
         switch (tox_options_get_proxy_type(options)) {
             case TOX_PROXY_TYPE_HTTP:
