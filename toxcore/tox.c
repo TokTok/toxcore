@@ -216,10 +216,22 @@ Tox *tox_new(const struct Tox_Options *options, TOX_ERR_NEW *error)
 
         m_options.ipv6enabled = options->ipv6_enabled;
         m_options.udp_disabled = !options->udp_enabled;
-        m_options.traversal_type = options->traversal_type;
         m_options.port_range[0] = options->start_port;
         m_options.port_range[1] = options->end_port;
         m_options.tcp_server_port = options->tcp_port;
+
+        switch (options->traversal_type) {
+            case TOX_TRAVERSAL_TYPE_NONE:
+            case TOX_TRAVERSAL_TYPE_UPNP:
+            case TOX_TRAVERSAL_TYPE_NATPMP:
+            case TOX_TRAVERSAL_TYPE_ALL:
+                m_options.traversal_type = options->traversal_type;
+                break;
+
+            default:
+                SET_ERROR_PARAMETER(error, TOX_ERR_NEW_TRAVERSAL_BAD_TYPE);
+                return NULL;
+        }
 
         switch (options->proxy_type) {
             case TOX_PROXY_TYPE_HTTP:
