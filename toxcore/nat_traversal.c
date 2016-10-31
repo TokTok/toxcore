@@ -41,17 +41,16 @@
 #include <unistd.h>
 #endif
 
-#define MAX_ERR_LENGTH 50
 #define UNUSED(x) (void)(x)
 
 #ifdef HAVE_LIBMINIUPNPC
 /* Setup port forwarding using UPnP */
-static NAT_TRAVERSAL_STATUS upnp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port)
+static bool upnp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port, NAT_TRAVERSAL_STATUS *status)
 {
     LOGGER_DEBUG(log, "Attempting to set up UPnP port forwarding");
 
+    bool ret = false;
     int error;
-    NAT_TRAVERSAL_STATUS status;
 
 #if MINIUPNPC_API_VERSION < 14
     struct UPNPDev *devlist = upnpDiscover(1000, NULL, NULL, 0, 0, &error);
@@ -60,8 +59,9 @@ static NAT_TRAVERSAL_STATUS upnp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto
 #endif
 
     if (error) {
-        LOGGER_WARNING(log, "UPnP: %s (%s)", str_nat_traversal_error(NAT_TRAVERSAL_ERR_DISCOVERY_FAIL), strupnperror(error));
-        return NAT_TRAVERSAL_ERR_DISCOVERY_FAIL;
+        *status = NAT_TRAVERSAL_ERR_DISCOVERY_FAIL;
+        LOGGER_WARNING(log, "UPnP: %s (%s)", str_nat_traversal_error(*status), strupnperror(error));
+        return false;
     }
 
     struct UPNPUrls urls;
@@ -76,8 +76,8 @@ static NAT_TRAVERSAL_STATUS upnp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto
 
     switch (error) {
         case 0:
-            status = NAT_TRAVERSAL_ERR_NO_IGD_FOUND;
-            LOGGER_WARNING(log, "UPnP: %s ", str_nat_traversal_error(status));
+            *status = NAT_TRAVERSAL_ERR_NO_IGD_FOUND;
+            LOGGER_WARNING(log, "UPnP: %s ", str_nat_traversal_error(*status));
             break;
 
         case 1:
@@ -96,47 +96,49 @@ static NAT_TRAVERSAL_STATUS upnp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto
                     break;
 
                 default:
-                    LOGGER_WARNING(log, "UPnP: %s", str_nat_traversal_error(NAT_TRAVERSAL_ERR_UNKNOWN_PROTO));
+                    *status = NAT_TRAVERSAL_ERR_UNKNOWN_PROTO;
+                    LOGGER_WARNING(log, "UPnP: %s", str_nat_traversal_error(*status));
                     FreeUPNPUrls(&urls);
-                    return NAT_TRAVERSAL_ERR_UNKNOWN_PROTO;
+                    return false;
             }
 
             if (error) {
-                status = NAT_TRAVERSAL_ERR_MAPPING_FAIL;
-                LOGGER_WARNING(log, "UPnP: %s (%s)", str_nat_traversal_error(status), strupnperror(error));
+                *status = NAT_TRAVERSAL_ERR_MAPPING_FAIL;
+                LOGGER_WARNING(log, "UPnP: %s (%s)", str_nat_traversal_error(*status), strupnperror(error));
             } else {
-                status = NAT_TRAVERSAL_OK;
-                LOGGER_INFO(log, "UPnP: %s (port %d)", str_nat_traversal_error(status), port);
+                *status = NAT_TRAVERSAL_OK;
+                LOGGER_INFO(log, "UPnP: %s (port %d)", str_nat_traversal_error(*status), port);
+                ret = true;
             }
 
             break;
 
         case 2:
-            status = NAT_TRAVERSAL_ERR_IGD_NO_CONN;
-            LOGGER_WARNING(log, "UPnP: %s", str_nat_traversal_error(status));
+            *status = NAT_TRAVERSAL_ERR_IGD_NO_CONN;
+            LOGGER_WARNING(log, "UPnP: %s", str_nat_traversal_error(*status));
             break;
 
         case 3:
-            status = NAT_TRAVERSAL_ERR_NOT_IGD;
-            LOGGER_WARNING(log, "UPnP: %s", str_nat_traversal_error(status));
+            *status = NAT_TRAVERSAL_ERR_NOT_IGD;
+            LOGGER_WARNING(log, "UPnP: %s", str_nat_traversal_error(*status));
             break;
 
         default:
-            status = NAT_TRAVERSAL_ERR_UNKNOWN;
-            LOGGER_WARNING(log, "UPnP: %s (%s)", str_nat_traversal_error(status), strupnperror(error));
+            *status = NAT_TRAVERSAL_ERR_UNKNOWN;
+            LOGGER_WARNING(log, "UPnP: %s (%s)", str_nat_traversal_error(*status), strupnperror(error));
             break;
     }
 
     FreeUPNPUrls(&urls);
 
-    return status;
+    return ret;
 }
-#endif
+#endif /* HAVE_LIBMINIUPNPC */
 
 
 #ifdef HAVE_LIBNATPMP
 /* Setup port forwarding using NAT-PMP */
-static NAT_TRAVERSAL_STATUS natpmp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port)
+static bool natpmp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port, NAT_TRAVERSAL_STATUS *status)
 {
     LOGGER_DEBUG(log, "Attempting to set up NAT-PMP port forwarding");
 
@@ -144,8 +146,9 @@ static NAT_TRAVERSAL_STATUS natpmp_map_port(Logger *log, NAT_TRAVERSAL_PROTO pro
     int error = initnatpmp(&natpmp, 0, 0);
 
     if (error) {
-        LOGGER_WARNING(log, "NAT-PMP: %s (%s)", str_nat_traversal_error(NAT_TRAVERSAL_ERR_INIT_FAIL), strnatpmperr(error));
-        return NAT_TRAVERSAL_ERR_INIT_FAIL;
+        *status = NAT_TRAVERSAL_ERR_INIT_FAIL;
+        LOGGER_WARNING(log, "NAT-PMP: %s (%s)", str_nat_traversal_error(*status), strnatpmperr(error));
+        return false;
     }
 
     switch (proto) {
@@ -158,16 +161,18 @@ static NAT_TRAVERSAL_STATUS natpmp_map_port(Logger *log, NAT_TRAVERSAL_PROTO pro
             break;
 
         default:
-            LOGGER_WARNING(log, "NAT-PMP: %s", str_nat_traversal_error(NAT_TRAVERSAL_ERR_UNKNOWN_PROTO));
+            *status = NAT_TRAVERSAL_ERR_UNKNOWN_PROTO;
+            LOGGER_WARNING(log, "NAT-PMP: %s", str_nat_traversal_error(*status));
             closenatpmp(&natpmp);
-            return NAT_TRAVERSAL_ERR_UNKNOWN_PROTO;
+            return false;
     }
 
     // From line 171 of natpmp.h: "12 = OK (size of the request)"
     if (error != 12) {
-        LOGGER_WARNING(log, "NAT-PMP: %s (%s)", str_nat_traversal_error(NAT_TRAVERSAL_ERR_SEND_REQ_FAIL), strnatpmperr(error));
+        *status = NAT_TRAVERSAL_ERR_SEND_REQ_FAIL;
+        LOGGER_WARNING(log, "NAT-PMP: %s (%s)", str_nat_traversal_error(*status), strnatpmperr(error));
         closenatpmp(&natpmp);
-        return NAT_TRAVERSAL_ERR_SEND_REQ_FAIL;
+        return false;
     }
 
     natpmpresp_t resp;
@@ -177,129 +182,124 @@ static NAT_TRAVERSAL_STATUS natpmp_map_port(Logger *log, NAT_TRAVERSAL_PROTO pro
         sleep(1);
     }
 
-    NAT_TRAVERSAL_STATUS status;
+    bool ret;
 
     if (error) {
-        status = NAT_TRAVERSAL_ERR_MAPPING_FAIL;
-        LOGGER_WARNING(log, "NAT-PMP: %s (%s)", str_nat_traversal_error(status), strnatpmperr(error));
+        *status = NAT_TRAVERSAL_ERR_MAPPING_FAIL;
+        LOGGER_WARNING(log, "NAT-PMP: %s (%s)", str_nat_traversal_error(*status), strnatpmperr(error));
+        ret = false;
     } else {
-        status = NAT_TRAVERSAL_OK;
-        LOGGER_INFO(log, "NAT-PMP: %s (port %d)", str_nat_traversal_error(status), port);
+        *status = NAT_TRAVERSAL_OK;
+        LOGGER_INFO(log, "NAT-PMP: %s (port %d)", str_nat_traversal_error(*status), port);
+        ret = true;
     }
 
     closenatpmp(&natpmp);
 
-    return status;
+    return ret;
 }
-#endif
+#endif /* HAVE_LIBNATPMP */
 
 
 /* Setup port forwarding */
-void nat_map_port(Logger *log, TOX_TRAVERSAL_TYPE traversal_type, NAT_TRAVERSAL_PROTO proto, uint16_t port,
+bool nat_map_port(Logger *log, TOX_TRAVERSAL_TYPE traversal_type, NAT_TRAVERSAL_PROTO proto, uint16_t port,
                   nat_traversal_status_t *status)
 {
-    bool use_status = (status != NULL) ? true : false;
-
-    if (use_status) {
+    if (status != NULL) {
         status->upnp = NAT_TRAVERSAL_ERR_DISABLED;
         status->natpmp = NAT_TRAVERSAL_ERR_DISABLED;
     }
 
+#if !defined(HAVE_LIBMNIUPNPC) && !defined(HAVE_LIBNATPMP)
+    // Silence warnings if no libraries are found
+    UNUSED(log);
+    UNUSED(proto);
+    UNUSED(port);
+
+    return false;
+#else
+    bool upnp = true;
+    bool natpmp = true;
+
     if ((traversal_type != TOX_TRAVERSAL_TYPE_NONE) && (traversal_type != TOX_TRAVERSAL_TYPE_UPNP)
             && (traversal_type != TOX_TRAVERSAL_TYPE_NATPMP) && (traversal_type != TOX_TRAVERSAL_TYPE_ALL)) {
-        if (use_status) {
+        if (status != NULL) {
             status->upnp = NAT_TRAVERSAL_ERR_UNKNOWN_TYPE;
             status->natpmp = NAT_TRAVERSAL_ERR_UNKNOWN_TYPE;
         }
 
-        return;
+        return false;
     }
 
 #ifdef HAVE_LIBMINIUPNPC
 
     if ((traversal_type == TOX_TRAVERSAL_TYPE_UPNP) || (traversal_type == TOX_TRAVERSAL_TYPE_ALL)) {
-        if (use_status) {
-            status->upnp = upnp_map_port(log, proto, port);
+        if (status != NULL) {
+            upnp = upnp_map_port(log, proto, port, &status->upnp);
         } else {
-            upnp_map_port(log, proto, port);
+            NAT_TRAVERSAL_STATUS status;
+            upnp = upnp_map_port(log, proto, port, &status);
         }
     }
 
-#endif
+#endif /* HAVE_LIBMINIUPNPC */
 #ifdef HAVE_LIBNATPMP
 
     if ((traversal_type == TOX_TRAVERSAL_TYPE_NATPMP) || (traversal_type == TOX_TRAVERSAL_TYPE_ALL)) {
-        if (use_status) {
-            status->natpmp = natpmp_map_port(log, proto, port);
+        if (status != NULL) {
+            natpmp = natpmp_map_port(log, proto, port, &status->natpmp);
         } else {
-            natpmp_map_port(log, proto, port);
+            NAT_TRAVERSAL_STATUS status;
+            natpmp = natpmp_map_port(log, proto, port, &status);
         }
     }
 
-#endif
+#endif /* HAVE_LIBNATPMP */
 
-    // Silence warnings if no libraries are found
-    UNUSED(log);
-    UNUSED(proto);
-    UNUSED(port);
+    return upnp && natpmp;
+#endif /* !HAVE_LIBMINIUPNPC && !HAVE_LIBNATPMP */
 }
 
 
 /* Return error string from status */
 const char *str_nat_traversal_error(NAT_TRAVERSAL_STATUS status)
 {
-    char *err = calloc(MAX_ERR_LENGTH + 1, sizeof(char));
-
     switch (status) {
         case NAT_TRAVERSAL_OK:
-            strncpy(err, "Port mapped successfully", MAX_ERR_LENGTH);
-            break;
+            return "Port mapped successfully";
 
         case NAT_TRAVERSAL_ERR_DISABLED:
-            strncpy(err, "Feature not available", MAX_ERR_LENGTH);
-            break;
+            return "Feature not available";
 
         case NAT_TRAVERSAL_ERR_UNKNOWN_TYPE:
-            strncpy(err, "Unknown traversal type", MAX_ERR_LENGTH);
-            break;
+            return "Unknown traversal type";
 
         case NAT_TRAVERSAL_ERR_UNKNOWN_PROTO:
-            strncpy(err, "Unknown NAT_TRAVERSAL_PROTO", MAX_ERR_LENGTH);
-            break;
+            return "Unknown NAT_TRAVERSAL_PROTO";
 
         case NAT_TRAVERSAL_ERR_MAPPING_FAIL:
-            strncpy(err, "Port mapping failed", MAX_ERR_LENGTH);
-            break;
+            return "Port mapping failed";
 
         case NAT_TRAVERSAL_ERR_DISCOVERY_FAIL:
-            strncpy(err, "Discovery failed", MAX_ERR_LENGTH);
-            break;
+            return "Discovery failed";
 
         case NAT_TRAVERSAL_ERR_NO_IGD_FOUND:
-            strncpy(err, "No IGD was found", MAX_ERR_LENGTH);
-            break;
+            return "No IGD was found";
 
         case NAT_TRAVERSAL_ERR_IGD_NO_CONN:
-            strncpy(err, "IGD found but reported as not connected", MAX_ERR_LENGTH);
-            break;
+            return "IGD found but reported as not connected";
 
         case NAT_TRAVERSAL_ERR_NOT_IGD:
-            strncpy(err, "Device found but not recognised as IGD", MAX_ERR_LENGTH);
-            break;
+            return "Device found but not recognised as IGD";
 
         case NAT_TRAVERSAL_ERR_INIT_FAIL:
-            strncpy(err, "Initialization failed", MAX_ERR_LENGTH);
-            break;
+            return "Initialization failed";
 
         case NAT_TRAVERSAL_ERR_SEND_REQ_FAIL:
-            strncpy(err, "Send request failed", MAX_ERR_LENGTH);
-            break;
+            return "Send request failed";
 
         case NAT_TRAVERSAL_ERR_UNKNOWN:
         default:
-            strncpy(err, "Unknown error", MAX_ERR_LENGTH);
-            break;
+            return "Unknown error";
     }
-
-    return err;
 }
