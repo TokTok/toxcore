@@ -98,7 +98,7 @@ typedef struct nat_traversal_status_t {
 
 
 /* Setup port forwarding */
-void nat_map_port(Logger *log, TOX_TRAVERSAL_TYPE traversal_type, NAT_TRAVERSAL_PROTO proto, uint16_t port,
+bool nat_map_port(Logger *log, TOX_TRAVERSAL_TYPE traversal_type, NAT_TRAVERSAL_PROTO proto, uint16_t port,
                   nat_traversal_status_t *status);
 
 /* Return error string from status */
