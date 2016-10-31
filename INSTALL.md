@@ -557,7 +557,7 @@ cd ..
 <a name="nat-traversal" />
 ###NAT traversal:
 
-Some home-routers support UPnP and/or NAT-PMP to simplify port forwarding, hence toxcore can be compiled with support for those protocols.
+Some home-routers support UPnP and/or NAT-PMP to simplify port forwarding. Toxcore can be compiled with support for those protocols.
 
 <a name="upnp" />
 ####UPnP:
