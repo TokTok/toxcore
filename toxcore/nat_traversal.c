@@ -213,6 +213,7 @@ bool nat_map_port(Logger *log, TOX_TRAVERSAL_TYPE traversal_type, NAT_TRAVERSAL_
 #if !defined(HAVE_LIBMNIUPNPC) && !defined(HAVE_LIBNATPMP)
     // Silence warnings if no libraries are found
     UNUSED(log);
+    UNUSED(traversal_type);
     UNUSED(proto);
     UNUSED(port);
 
@@ -221,14 +222,15 @@ bool nat_map_port(Logger *log, TOX_TRAVERSAL_TYPE traversal_type, NAT_TRAVERSAL_
     bool upnp = true;
     bool natpmp = true;
 
-    if ((traversal_type != TOX_TRAVERSAL_TYPE_NONE) && (traversal_type != TOX_TRAVERSAL_TYPE_UPNP)
-            && (traversal_type != TOX_TRAVERSAL_TYPE_NATPMP) && (traversal_type != TOX_TRAVERSAL_TYPE_ALL)) {
-        if (status != NULL) {
-            status->upnp = NAT_TRAVERSAL_ERR_UNKNOWN_TYPE;
-            status->natpmp = NAT_TRAVERSAL_ERR_UNKNOWN_TYPE;
-        }
+    switch (traversal_type) {
+        case TOX_TRAVERSAL_TYPE_NONE:
+        case TOX_TRAVERSAL_TYPE_UPNP:
+        case TOX_TRAVERSAL_TYPE_NATPMP:
+        case TOX_TRAVERSAL_TYPE_ALL:
+            break;
 
-        return false;
+        default:
+            return false;
     }
 
 #ifdef HAVE_LIBMINIUPNPC
