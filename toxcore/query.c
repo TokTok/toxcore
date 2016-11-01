@@ -8,8 +8,8 @@
 #include "query.h"
 
 #include "crypto_core.h"
-#include "logger.h"
 #include "DHT.h"
+#include "logger.h"
 #include "Messenger.h"
 #include "network.h"
 #include "util.h"
