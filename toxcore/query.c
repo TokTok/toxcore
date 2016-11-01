@@ -288,17 +288,17 @@ int query_handle_toxid_response(void *object, IP_Port source, const uint8_t *pkt
 
     int loc = q_check(dht->queries, &test, 0);
 
-    if (loc != -1) {
-        if (dht->queries->query_response) {
-            dht->queries->query_response(dht->queries->query_response_object, dht->queries->query_list[loc].name,
-                                         dht->queries->query_list[loc].length, clear, userdata);
-        }
-
-        q_drop(dht->queries, loc);
-        return 0;
+    if (loc == -1) {
+        return -1;
     }
 
-    return -1;
+    if (dht->queries->query_response) {
+        dht->queries->query_response(dht->queries->query_response_object, dht->queries->query_list[loc].name,
+                                     dht->queries->query_list[loc].length, clear, userdata);
+    }
+
+    q_drop(dht->queries, loc);
+    return 0;
 }
 
 Pending_Queries *query_new(Networking_Core *net)
