@@ -5,10 +5,10 @@
 #include <check.h>
 
 #include "../toxcore/DHT.h"
-// #include "../toxcore/DHT.c"
-#include "../toxcore/tox.h"
 #include "../toxcore/Messenger.h"
 #include "../toxcore/query.c"
+#include "../toxcore/tox.h"
+// #include "../toxcore/DHT.c"
 
 #include "helpers.h"
 
@@ -23,11 +23,11 @@
 static unsigned int response_cookie = 348394;
 static uint8_t name[] = "requested_user.this_domain.tld";
 static size_t name_length = strlen("requested_user.this_domain.tld") - 1;
-static uint8_t toxid[TOX_ADDRESS_SIZE] = {0xDD, 0x2A, 0x13, 0x40, 0xFE, 0xCE, 0x44, 0x12, 0x06, 0xB5, 0xF3,
-                                          0xD2, 0x02, 0xE6, 0x14, 0x6E, 0x76, 0x61, 0x72, 0x70, 0x21, 0x44,
-                                          0x99, 0xB7, 0x2C, 0x55, 0x11, 0xFC, 0xE8, 0x39, 0xF8, 0x5B, 0x28,
-                                          0xD7, 0xEA, 0xCB, 0xC4, 0x6C
-                                         };
+static uint8_t toxid[TOX_ADDRESS_SIZE] = {
+    0xDD, 0x2A, 0x13, 0x40, 0xFE, 0xCE, 0x44, 0x12, 0x06, 0xB5, 0xF3, 0xD2, 0x02, 0xE6,
+    0x14, 0x6E, 0x76, 0x61, 0x72, 0x70, 0x21, 0x44, 0x99, 0xB7, 0x2C, 0x55, 0x11, 0xFC,
+    0xE8, 0x39, 0xF8, 0x5B, 0x28, 0xD7, 0xEA, 0xCB, 0xC4, 0x6C
+};
 
 static bool done = false;
 
@@ -70,12 +70,13 @@ static int query_handle_toxid_request(void *object, IP_Port source, const uint8_
     decrypt_data(sender_key, m->dht->self_secret_key, nonce, pkt + 1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES,
                  length, clear);
 
-    ck_assert_msg(memcmp(clear, name, name_length) == 0, "Incoming packet is NOT the name");
+    ck_assert_msg(memcmp(clear, name, name_length) == 0, "Incoming packet is not equal to the name");
 
     uint8_t encrypted[QUERY_PKT_ENCRYPTED_SIZE(TOX_ADDRESS_SIZE)];
 
-    size_t pkt_size = q_build_pkt(sender_key, m->dht->self_public_key, m->dht->self_secret_key, NET_PACKET_DATA_RESPONSE, toxid,
-                                  TOX_ADDRESS_SIZE, encrypted);
+    size_t pkt_size = q_build_packet(sender_key, m->dht->self_public_key, m->dht->self_secret_key, NET_PACKET_DATA_RESPONSE,
+                                     toxid,
+                                     TOX_ADDRESS_SIZE, encrypted);
     ck_assert_msg(pkt_size == QUERY_PKT_ENCRYPTED_SIZE(TOX_ADDRESS_SIZE), "Build packet callback broken size!");
 
     int send_res = sendpacket(m->dht->net, source, encrypted, pkt_size);
@@ -340,16 +341,16 @@ START_TEST(test_query_functions)
     // testing  int q_check(Pending_Queries *queries, Query pend, bool outgoing)
     // testing  bool q_add(Pending_Queries *queries, Query pend)
     // testing  bool q_drop(Pending_Queries *queries, size_t loc)
-    // testing  size_t q_build_pkt(const uint8_t *their_public_key, const uint8_t *our_public_key, const uint8_t *our_secret_key,
+    // testing  size_t q_build_packet(const uint8_t *their_public_key, const uint8_t *our_public_key, const uint8_t *our_secret_key,
     //                             uint8_t type, const uint8_t *data, size_t length, uint8_t *built)
     uint8_t key[crypto_box_KEYBYTES];
     new_symmetric_key(key);
     uint8_t build_pkt[QUERY_PKT_ENCRYPTED_SIZE(name_length)];
-    size_t build_size = q_build_pkt(key, key, key, NET_PACKET_DATA_REQUEST, name, name_length, build_pkt);
-    ck_assert_msg(build_pkt[0] == NET_PACKET_DATA_REQUEST, "q_build_pkt malformed packet");
-    ck_assert_msg(memcmp(build_pkt + 1, key, crypto_box_KEYBYTES) == 0, "q_build_pkt malformed packet");
-    ck_assert_msg(memcmp(build_pkt + 1, key, crypto_box_KEYBYTES) == 0, "q_build_pkt malformed packet");
-    ck_assert_msg(build_size == QUERY_PKT_ENCRYPTED_SIZE(name_length), "q_build_pkt, invalid returned size");
+    size_t build_size = q_build_packet(key, key, key, NET_PACKET_DATA_REQUEST, name, name_length, build_pkt);
+    ck_assert_msg(build_pkt[0] == NET_PACKET_DATA_REQUEST, "q_build_packet malformed packet");
+    ck_assert_msg(memcmp(build_pkt + 1, key, crypto_box_KEYBYTES) == 0, "q_build_packet malformed packet");
+    ck_assert_msg(memcmp(build_pkt + 1, key, crypto_box_KEYBYTES) == 0, "q_build_packet malformed packet");
+    ck_assert_msg(build_size == QUERY_PKT_ENCRYPTED_SIZE(name_length), "q_build_packet, invalid returned size");
 
 
     // testing int q_send(DHT *dht, Query send)

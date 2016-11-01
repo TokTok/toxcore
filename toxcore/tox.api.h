@@ -780,7 +780,7 @@ namespace query {
    * @param address the IPv4 or IPv6 address for the server. Will attempt to resolve DNS addresses.
    * @param port the port the server is listening on.
    * @param public_key the long term public key for the name server.
-   * @param name the string (name) you want to give to the server to request the assoiated ToxID.
+   * @param name the string (name) you want to give to the server to request the associated ToxID.
    *
    * @return true on success.
    */

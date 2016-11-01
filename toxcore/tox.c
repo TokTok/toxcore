@@ -436,9 +436,10 @@ bool tox_add_tcp_relay(Tox *tox, const char *address, uint16_t port, const uint8
 /**
  * Queries the server at IP port, with PUBKEY, for the TOXID at <unresolved>
  *
- * param address the IPv4, or IPv6 Address for the server.
- * param port the port the server is listening on.
- * param public_key the long term public key for the name server.
+ * @param address the IPv4, or IPv6 Address for the server.
+ * @param port the port the server is listening on.
+ * @param public_key the long term public key for the name server.
+
  * @return true on success.
  */
 bool tox_query_request(Tox *tox, const char *address, uint16_t port, const uint8_t *public_key, const uint8_t *name,

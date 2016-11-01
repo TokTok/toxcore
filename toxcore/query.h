@@ -1,15 +1,14 @@
-/** query.h
- *
+/**
  * Makes requests for information using the DHT or Onion as appropriate.
  */
 
 #ifndef QUERY_H
 #define QUERY_H
 
-#include "network.h"
 #include "crypto_core.h"
+#include "network.h"
 
-
+// query timeout in milliseconds
 #define QUERY_TIMEOUT 500
 #define QUERY_MAX_NAME_SIZE 255
 
@@ -31,14 +30,11 @@ typedef struct {
     Query *query_list;
 
     void (*query_response)(void *tox, const uint8_t *request, size_t length, const uint8_t *tox_id,
-                                   void *user_data) ;
+                           void *user_data) ;
     void *query_response_object;
 
 } Pending_Queries;
 
-/** query_send_request
- *
- */
 int query_send_request(void *tox, const char *address, uint16_t port, const uint8_t *key,
                        const uint8_t *name, size_t length);
 
@@ -52,8 +48,8 @@ Pending_Queries *query_new(Networking_Core *net);
 /**
  * Process/iterate pending queries.
  *
- * void *object should always be a DHT *object. but I'm unablet to include DHT.h in this file
- *              because the DHT sturct must contain a Pending_Queries struct.
+ * void *object is expected to always be a DHT *object. That cant be enforced by type here because
+ *      the DHT sturct contains a Pending_Queries struct defined in this file.
  */
 void query_iterate(void *object);
 
