@@ -514,7 +514,7 @@ static void at_shutdown(void)
 // TODO(#219)
 Networking_Core *new_networking(Logger *log, IP ip, uint16_t port)
 {
-    return new_networking_nat(ip, port, port + (TOX_PORTRANGE_TO - TOX_PORTRANGE_FROM), TOX_TRAVERSAL_TYPE_NONE, 0);
+    return new_networking_nat(log, ip, port, port + (TOX_PORTRANGE_TO - TOX_PORTRANGE_FROM), TOX_TRAVERSAL_TYPE_NONE, 0);
 }
 
 /* Initialize networking.
@@ -523,7 +523,7 @@ Networking_Core *new_networking(Logger *log, IP ip, uint16_t port)
 // TODO(#219)
 Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint16_t port_to, unsigned int *error)
 {
-    return new_networking_nat(ip, port_from, port_to, TOX_TRAVERSAL_TYPE_NONE, 0);
+    return new_networking_nat(log, ip, port_from, port_to, TOX_TRAVERSAL_TYPE_NONE, 0);
 }
 
 /* Initialize networking.
