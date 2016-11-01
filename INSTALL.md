@@ -574,6 +574,11 @@ Install on Fedora:
 yum install miniupnpc
 ```
 
+Install on Arch:
+```bash
+pacman -Syu miniupnpc
+```
+
 Install from source (example for most unix-like OS's):
 ```bash
 git clone https://github.com/miniupnp/miniupnp.git
@@ -598,6 +603,11 @@ sudo apt-get install libnatpmp-dev
 Install on Fedora:
 ```bash
 yum install libnatpmp
+```
+
+Install on Arch:
+```bash
+pacman -Syu libnatpmp
 ```
 
 Install from source (example for most unix-like OS's):
