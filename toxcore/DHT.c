@@ -1223,7 +1223,7 @@ static int getnodes(DHT *dht, IP_Port ip_port, const uint8_t *public_key, const 
     uint8_t shared_key[crypto_box_BEFORENMBYTES];
     DHT_get_shared_key_sent(dht, shared_key, public_key);
 
-    ssize_t len = DHT_create_packet(dht->self_public_key, shared_key, NET_PACKET_GET_NODES, plain, sizeof(plain), data);
+    int len = DHT_create_packet(dht->self_public_key, shared_key, NET_PACKET_GET_NODES, plain, sizeof(plain), data);
     if (len == -1) {
         return -1;
     }
@@ -1266,7 +1266,7 @@ static int sendnodes_ipv6(const DHT *dht, IP_Port ip_port, const uint8_t *public
     plain[0] = num_nodes;
     memcpy(plain + 1 + nodes_length, sendback_data, length);
 
-    ssize_t len = DHT_create_packet(dht->self_public_key, shared_encryption_key, NET_PACKET_SEND_NODES_IPV6, plain, sizeof(plain), data);
+    int len = DHT_create_packet(dht->self_public_key, shared_encryption_key, NET_PACKET_SEND_NODES_IPV6, plain, sizeof(plain), data);
     if (len == -1) {
         return -1;
     }
