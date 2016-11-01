@@ -1041,10 +1041,9 @@ TCP_Server *new_TCP_server(Logger *log, uint8_t ipv6_enabled, uint16_t num_socke
 
 // TODO(#219)
 TCP_Server *new_TCP_server_nat(Logger *log, uint8_t ipv6_enabled, uint16_t num_sockets, const uint16_t *ports,
-                               TOX_TRAVERSAL_TYPE traversal_type,
-                               const uint8_t *secret_key, Onion *onion)
+                               TOX_TRAVERSAL_TYPE traversal_type, const uint8_t *secret_key, Onion *onion)
 {
-    if (num_sockets == 0 || ports == NULL)
+    if (num_sockets == 0 || ports == NULL) {
         return NULL;
     }
 
