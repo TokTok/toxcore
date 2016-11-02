@@ -25,11 +25,30 @@
 #include "config.h"
 #endif
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "logger.h"
-#include "tox.h"
 
+
+/**
+ * Allowed traversal types.
+ */
+typedef enum TRAVERSAL_TYPE {
+
+    //TRAVERSAL_TYPE_NONE = 0,
+    TRAVERSAL_TYPE_NONE,
+
+    //TRAVERSAL_TYPE_UPNP = 1 << 0,
+    TRAVERSAL_TYPE_UPNP,
+
+    //TRAVERSAL_TYPE_NATPMP = 1 << 1,
+    TRAVERSAL_TYPE_NATPMP,
+
+    //TRAVERSAL_TYPE_ALL = ~0,
+    TRAVERSAL_TYPE_ALL,
+
+} TRAVERSAL_TYPE;
 
 /**
  * The protocol that will be used by the nat traversal.
@@ -98,7 +117,7 @@ typedef struct nat_traversal_status_t {
 
 
 /* Setup port forwarding */
-bool nat_map_port(Logger *log, TOX_TRAVERSAL_TYPE traversal_type, NAT_TRAVERSAL_PROTO proto, uint16_t port,
+bool nat_map_port(Logger *log, uint8_t traversal_type, NAT_TRAVERSAL_PROTO proto, uint16_t port,
                   nat_traversal_status_t *status);
 
 /* Return error string from status */
