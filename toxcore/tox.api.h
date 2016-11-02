@@ -368,18 +368,22 @@ enum class TRAVERSAL_TYPE {
   /**
    * Don't use any particular technology.
    */
+  //NONE = 0,
   NONE,
   /**
    * Use UPnP technology.
    */
+  //UPNP = 1 << 0,
   UPNP,
   /**
    * Use NAT-PMP technology.
    */
+  //NATPMP = 1 << 1,
   NATPMP,
   /**
    * Use both UPnP and NAT-PMP technologies.
    */
+  //ALL = ~0,
   ALL,
 }
 
