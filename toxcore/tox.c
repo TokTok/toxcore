@@ -125,7 +125,7 @@ void tox_options_set_##ns##name(struct Tox_Options *options, type name) \
 
 ACCESSORS(bool, , ipv6_enabled)
 ACCESSORS(bool, , udp_enabled)
-ACCESSORS(TOX_TRAVERSAL_TYPE, , traversal_type)
+ACCESSORS(uint8_t, , traversal_type)
 ACCESSORS(TOX_PROXY_TYPE, proxy_ , type)
 ACCESSORS(const char *, proxy_ , host)
 ACCESSORS(uint16_t, proxy_ , port)
@@ -220,17 +220,11 @@ Tox *tox_new(const struct Tox_Options *options, TOX_ERR_NEW *error)
         m_options.port_range[1] = options->end_port;
         m_options.tcp_server_port = options->tcp_port;
 
-        switch (options->traversal_type) {
-            case TOX_TRAVERSAL_TYPE_NONE:
-            case TOX_TRAVERSAL_TYPE_UPNP:
-            case TOX_TRAVERSAL_TYPE_NATPMP:
-            case TOX_TRAVERSAL_TYPE_ALL:
-                m_options.traversal_type = options->traversal_type;
-                break;
-
-            default:
-                SET_ERROR_PARAMETER(error, TOX_ERR_NEW_TRAVERSAL_BAD_TYPE);
-                return NULL;
+        if (options->traversal_type & (TOX_TRAVERSAL_TYPE_NONE | TOX_TRAVERSAL_TYPE_UPNP | TOX_TRAVERSAL_TYPE_NATPMP)) {
+            m_options.traversal_type = options->traversal_type;
+	} else {
+            SET_ERROR_PARAMETER(error, TOX_ERR_NEW_TRAVERSAL_BAD_TYPE);
+            return NULL;
         }
 
         switch (options->proxy_type) {

@@ -34,21 +34,15 @@
 /**
  * Allowed traversal types.
  */
-typedef enum TRAVERSAL_TYPE {
+enum TRAVERSAL_TYPE {
 
-    //TRAVERSAL_TYPE_NONE = 0,
-    TRAVERSAL_TYPE_NONE,
+    TRAVERSAL_TYPE_NONE = 1,
 
-    //TRAVERSAL_TYPE_UPNP = 1 << 0,
-    TRAVERSAL_TYPE_UPNP,
+    TRAVERSAL_TYPE_UPNP = 2,
 
-    //TRAVERSAL_TYPE_NATPMP = 1 << 1,
-    TRAVERSAL_TYPE_NATPMP,
+    TRAVERSAL_TYPE_NATPMP = 4,
 
-    //TRAVERSAL_TYPE_ALL = ~0,
-    TRAVERSAL_TYPE_ALL,
-
-} TRAVERSAL_TYPE;
+};
 
 /**
  * The protocol that will be used by the nat traversal.

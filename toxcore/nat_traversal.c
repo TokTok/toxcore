@@ -222,21 +222,13 @@ bool nat_map_port(Logger *log, uint8_t traversal_type, NAT_TRAVERSAL_PROTO proto
     bool upnp = true;
     bool natpmp = true;
 
-    switch (traversal_type) {
-        case TRAVERSAL_TYPE_NONE:
-        case TRAVERSAL_TYPE_UPNP:
-        case TRAVERSAL_TYPE_NATPMP:
-        case TRAVERSAL_TYPE_ALL:
-            break;
-
-        default:
-            return false;
+    if (!(traversal_type & (TRAVERSAL_TYPE_NONE | TRAVERSAL_TYPE_UPNP | TRAVERSAL_TYPE_NATPMP))) {
+        return false;
     }
 
 #ifdef HAVE_LIBMINIUPNPC
 
-    //if (traversal_type & TRAVERSAL_TYPE_UPNP) {
-    if ((traversal_type == TRAVERSAL_TYPE_UPNP) || (traversal_type == TRAVERSAL_TYPE_ALL)) {
+    if (traversal_type & TRAVERSAL_TYPE_UPNP) {
         if (status != NULL) {
             upnp = upnp_map_port(log, proto, port, &status->upnp);
         } else {
@@ -248,8 +240,7 @@ bool nat_map_port(Logger *log, uint8_t traversal_type, NAT_TRAVERSAL_PROTO proto
 #endif /* HAVE_LIBMINIUPNPC */
 #ifdef HAVE_LIBNATPMP
 
-    //if (traversal_type & TRAVERSAL_TYPE_NATPMP) {
-    if ((traversal_type == TRAVERSAL_TYPE_NATPMP) || (traversal_type == TRAVERSAL_TYPE_ALL)) {
+    if (traversal_type & TRAVERSAL_TYPE_NATPMP) {
         if (status != NULL) {
             natpmp = natpmp_map_port(log, proto, port, &status->natpmp);
         } else {
