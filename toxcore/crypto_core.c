@@ -63,13 +63,13 @@ uint64_t random_64b(void)
  * return 0 if it isn't.
  * return 1 if it is.
  */
-int public_key_valid(const uint8_t *public_key)
+bool public_key_valid(const uint8_t *public_key)
 {
     if (public_key[31] >= 128) { /* Last bit of key is always zero. */
-        return 0;
+        return false;
     }
 
-    return 1;
+    return true;
 }
 
 /* Precomputes the shared key from their public_key and our secret_key.

@@ -1,3 +1,4 @@
+%{
 /* crypto_core.h
  *
  * Functions for the core crypto.
@@ -46,6 +47,7 @@
 
 #define crypto_box_KEYBYTES (crypto_box_BEFORENMBYTES)
 
+%}
 
 /**
  * Compare 2 public keys of length crypto_box_PUBLICKEYBYTES, not vulnerable to
@@ -53,7 +55,7 @@
  *
  * @return 0 if both mem locations of length are equal, -1 if they are not.
  */
-int32_t public_key_cmp(const uint8_t *pk1, const uint8_t *pk2);
+static int32_t public_key_cmp(const uint8_t *pk1, const uint8_t *pk2);
 
 /**
  * return a random number.
@@ -61,15 +63,14 @@ int32_t public_key_cmp(const uint8_t *pk1, const uint8_t *pk2);
  * random_int for a 32bin int.
  * random_64b for a 64bit int.
  */
-uint32_t random_int(void);
-
-uint64_t random_64b(void);
+static uint32_t random_int();
+static uint64_t random_64b();
 
 /**
  * Check if a Tox public key crypto_box_PUBLICKEYBYTES is valid or not.
  * This should only be used for input validation.
  */
-bool public_key_valid(const uint8_t *public_key);
+static bool public_key_valid(const uint8_t *public_key);
 
 /**
  * Encrypts plain of length length to encrypted of length + 16 using the
@@ -79,8 +80,9 @@ bool public_key_valid(const uint8_t *public_key);
  * @return -1 if there was a problem, length of encrypted data if everything was
  * fine.
  */
-int32_t encrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const uint8_t *nonce, const uint8_t *plain,
-                     uint32_t length, uint8_t *encrypted);
+static int32_t encrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const uint8_t *nonce,
+                            const uint8_t *plain, uint32_t length, uint8_t *encrypted);
+
 
 /**
  * Decrypts encrypted of length length to plain of length length - 16 using the
@@ -89,15 +91,15 @@ int32_t encrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const
  *  return -1 if there was a problem (decryption failed).
  *  return length of plain data if everything was fine.
  */
-int32_t decrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const uint8_t *nonce,
-                     const uint8_t *encrypted, uint32_t length, uint8_t *plain);
+static int32_t decrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const uint8_t *nonce,
+                            const uint8_t *encrypted, uint32_t length, uint8_t *plain);
 
 /**
  * Fast encrypt/decrypt operations. Use if this is not a one-time communication.
  * encrypt_precompute does the shared-key generation once so it does not have
  * to be preformed on every encrypt/decrypt.
  */
-int32_t encrypt_precompute(const uint8_t *public_key, const uint8_t *secret_key, uint8_t *enc_key);
+static int32_t encrypt_precompute(const uint8_t *public_key, const uint8_t *secret_key, uint8_t *enc_key);
 
 /**
  * Encrypts plain of length length to encrypted of length + 16 using a
@@ -106,8 +108,8 @@ int32_t encrypt_precompute(const uint8_t *public_key, const uint8_t *secret_key,
  *  return -1 if there was a problem.
  *  return length of encrypted data if everything was fine.
  */
-int32_t encrypt_data_symmetric(const uint8_t *secret_key, const uint8_t *nonce, const uint8_t *plain, uint32_t length,
-                               uint8_t *encrypted);
+static int32_t encrypt_data_symmetric(const uint8_t *secret_key, const uint8_t *nonce,
+                                      const uint8_t *plain, uint32_t length, uint8_t *encrypted);
 
 /**
  * Decrypts encrypted of length length to plain of length length - 16 using a
@@ -116,54 +118,43 @@ int32_t encrypt_data_symmetric(const uint8_t *secret_key, const uint8_t *nonce, 
  *  return -1 if there was a problem (decryption failed).
  *  return length of plain data if everything was fine.
  */
-int32_t decrypt_data_symmetric(const uint8_t *secret_key, const uint8_t *nonce, const uint8_t *encrypted,
-                               uint32_t length, uint8_t *plain);
+static int32_t decrypt_data_symmetric(const uint8_t *secret_key, const uint8_t *nonce,
+                                      const uint8_t *encrypted, uint32_t length, uint8_t *plain);
 
 /** Increment the given nonce by 1.
  */
-void increment_nonce(uint8_t *nonce);
+static void increment_nonce(uint8_t *nonce);
 
 /** increment the given nonce by num
  */
-void increment_nonce_number(uint8_t *nonce, uint32_t host_order_num);
+static void increment_nonce_number(uint8_t *nonce, uint32_t host_order_num);
 
 /** Fill the given nonce with random bytes.
  */
-void random_nonce(uint8_t *nonce);
+static void random_nonce(uint8_t *nonce);
 
 /** Fill a key crypto_box_KEYBYTES big with random bytes
  */
-void new_symmetric_key(uint8_t *key);
+static void new_symmetric_key(uint8_t *key);
 
 /** Gives a nonce guaranteed to be different from previous ones.
  */
-void new_nonce(uint8_t *nonce);
+static void new_nonce(uint8_t *nonce);
 
-#define MAX_CRYPTO_REQUEST_SIZE        1024
+const MAX_CRYPTO_REQUEST_SIZE = 1024;
 
-uint32_t max_crypto_request_size(void);
-
-/** Friend request crypto packet ID.
- */
-#define CRYPTO_PACKET_FRIEND_REQ       32
-
-uint32_t crypto_packet_friend_req(void);
-
-/** Hardening crypto packet ID.
- */
-#define CRYPTO_PACKET_HARDENING        48
-
-uint32_t crypto_packet_hardening(void);
-
-#define CRYPTO_PACKET_DHTPK            156
-
-uint32_t crypto_packet_dhtpk(void);
-
-/** NAT ping crypto packet ID.
- */
-#define CRYPTO_PACKET_NAT_PING         254
-
-uint32_t crypto_packet_nat_ping(void);
+namespace crypto_packet {
+  /** Friend request crypto packet ID.
+   */
+  const FRIEND_REQ    = 32;
+  /** Hardening crypto packet ID.
+   */
+  const HARDENING     = 48;
+  const DHTPK         = 156;
+  /** NAT ping crypto packet ID.
+   */
+  const NAT_PING      = 254;
+}
 
 /**
  * Create a request to peer.
@@ -175,8 +166,8 @@ uint32_t crypto_packet_nat_ping(void);
  *
  * @return -1 on failure, the length of the created packet on success.
  */
-int32_t create_request(const uint8_t *send_public_key, const uint8_t *send_secret_key, uint8_t *packet,
-                       const uint8_t *recv_public_key, const uint8_t *data, uint32_t length, uint8_t request_id);
+static int32_t create_request(const uint8_t *send_public_key, const uint8_t *send_secret_key, uint8_t *packet,
+                              const uint8_t *recv_public_key, const uint8_t *data, uint32_t length, uint8_t request_id);
 
 /**
  * puts the senders public key in the request in public_key, the data from the request
@@ -185,7 +176,9 @@ int32_t create_request(const uint8_t *send_public_key, const uint8_t *send_secre
  *
  * @return -1 if not valid request.
  */
-int32_t handle_request(const uint8_t *self_public_key, const uint8_t *self_secret_key, uint8_t *public_key,
-                       uint8_t *data, uint8_t *request_id, const uint8_t *packet, uint16_t length);
+static int32_t handle_request(const uint8_t *self_public_key, const uint8_t *self_secret_key, uint8_t *public_key, uint8_t *data,
+                              uint8_t *request_id, const uint8_t *packet, uint16_t length);
 
+%{
 #endif
+%}
