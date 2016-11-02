@@ -286,6 +286,11 @@ const FILE_ID_LENGTH              = 32;
  */
 const MAX_FILENAME_LENGTH         = 255;
 
+/**
+ * Value to indicate user doesn't want to use nat traversal.
+ */
+const TRAVERSAL_TYPE_NONE         = 0;
+
 
 /*******************************************************************************
  *
@@ -360,27 +365,15 @@ enum class PROXY_TYPE {
 /**
  * Type of technology used to try to traverse a NAT.
  */
-enum class TRAVERSAL_TYPE {
-  /**
-   * Don't use any particular technology.
-   */
-  //NONE = 0,
-  NONE,
+bitmask TRAVERSAL_TYPE {
   /**
    * Use UPnP technology.
    */
-  //UPNP = 1 << 0,
   UPNP,
   /**
    * Use NAT-PMP technology.
    */
-  //NATPMP = 1 << 1,
   NATPMP,
-  /**
-   * Use both UPnP and NAT-PMP technologies.
-   */
-  //ALL = ~0,
-  ALL,
 }
 
 /**
@@ -439,8 +432,10 @@ static class options {
 
     /**
      * Try to traverse a NAT.
+     *
+     * Accepted values are from TOX_TRAVERSAL_TYPE.
      */
-    TRAVERSAL_TYPE traversal_type;
+    uint8_t traversal_type;
 
     namespace proxy {
       /**
