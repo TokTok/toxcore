@@ -447,6 +447,7 @@ static void test_list_main(void)
         IP ip;
         ip_init(&ip, 1);
 
+        // TODO(#219)
         dhts[i] = new_DHT(NULL, new_networking(NULL, ip, DHT_DEFAULT_PORT + i), true);
         ck_assert_msg(dhts[i] != 0, "Failed to create dht instances %u", i);
         ck_assert_msg(dhts[i]->net->port != DHT_DEFAULT_PORT + i, "Bound to wrong port");

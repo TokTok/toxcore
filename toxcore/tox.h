@@ -313,6 +313,13 @@ uint32_t tox_file_id_length(void);
 
 uint32_t tox_max_filename_length(void);
 
+/**
+ * Value to indicate user doesn't want to use nat traversal.
+ */
+#define TOX_TRAVERSAL_TYPE_NONE        0
+
+uint32_t tox_traversal_type_none(void);
+
 
 /*******************************************************************************
  *
@@ -402,29 +409,19 @@ typedef enum TOX_PROXY_TYPE {
 /**
  * Type of technology used to try to traverse a NAT.
  */
-typedef enum TOX_TRAVERSAL_TYPE {
-
-    /**
-     * Don't use any particular technology.
-     */
-    TOX_TRAVERSAL_TYPE_NONE,
+enum TOX_TRAVERSAL_TYPE {
 
     /**
      * Use UPnP technology.
      */
-    TOX_TRAVERSAL_TYPE_UPNP,
+    TOX_TRAVERSAL_TYPE_UPNP = 1,
 
     /**
      * Use NAT-PMP technology.
      */
-    TOX_TRAVERSAL_TYPE_NATPMP,
+    TOX_TRAVERSAL_TYPE_NATPMP = 2,
 
-    /**
-     * Use both UPnP and NAT-PMP technologies.
-     */
-    TOX_TRAVERSAL_TYPE_ALL,
-
-} TOX_TRAVERSAL_TYPE;
+};
 
 
 /**
@@ -550,8 +547,10 @@ struct Tox_Options {
 
     /**
      * Try to traverse a NAT.
+     *
+     * Accepted values are from TOX_TRAVERSAL_TYPE.
      */
-    TOX_TRAVERSAL_TYPE traversal_type;
+    uint8_t traversal_type;
 
 
     /**
@@ -672,9 +671,9 @@ bool tox_options_get_local_discovery_enabled(const struct Tox_Options *options);
 
 void tox_options_set_local_discovery_enabled(struct Tox_Options *options, bool local_discovery_enabled);
 
-TOX_TRAVERSAL_TYPE tox_options_get_traversal_type(const struct Tox_Options *options);
+uint8_t tox_options_get_traversal_type(const struct Tox_Options *options);
 
-void tox_options_set_traversal_type(struct Tox_Options *options, TOX_TRAVERSAL_TYPE traversal_type);
+void tox_options_set_traversal_type(struct Tox_Options *options, uint8_t traversal_type);
 
 TOX_PROXY_TYPE tox_options_get_proxy_type(const struct Tox_Options *options);
 

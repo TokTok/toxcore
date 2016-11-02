@@ -222,21 +222,9 @@ bool nat_map_port(Logger *log, uint8_t traversal_type, NAT_TRAVERSAL_PROTO proto
     bool upnp = true;
     bool natpmp = true;
 
-    switch (traversal_type) {
-        case TRAVERSAL_TYPE_NONE:
-        case TRAVERSAL_TYPE_UPNP:
-        case TRAVERSAL_TYPE_NATPMP:
-        case TRAVERSAL_TYPE_ALL:
-            break;
-
-        default:
-            return false;
-    }
-
 #ifdef HAVE_LIBMINIUPNPC
 
-    //if (traversal_type & TRAVERSAL_TYPE_UPNP) {
-    if ((traversal_type == TRAVERSAL_TYPE_UPNP) || (traversal_type == TRAVERSAL_TYPE_ALL)) {
+    if (traversal_type & TRAVERSAL_TYPE_UPNP) {
         if (status != NULL) {
             upnp = upnp_map_port(log, proto, port, &status->upnp);
         } else {
@@ -248,8 +236,7 @@ bool nat_map_port(Logger *log, uint8_t traversal_type, NAT_TRAVERSAL_PROTO proto
 #endif /* HAVE_LIBMINIUPNPC */
 #ifdef HAVE_LIBNATPMP
 
-    //if (traversal_type & TRAVERSAL_TYPE_NATPMP) {
-    if ((traversal_type == TRAVERSAL_TYPE_NATPMP) || (traversal_type == TRAVERSAL_TYPE_ALL)) {
+    if (traversal_type & TRAVERSAL_TYPE_NATPMP) {
         if (status != NULL) {
             natpmp = natpmp_map_port(log, proto, port, &status->natpmp);
         } else {
@@ -274,9 +261,6 @@ const char *str_nat_traversal_error(NAT_TRAVERSAL_STATUS status)
 
         case NAT_TRAVERSAL_ERR_DISABLED:
             return "Feature not available";
-
-        case NAT_TRAVERSAL_ERR_UNKNOWN_TYPE:
-            return "Unknown traversal type";
 
         case NAT_TRAVERSAL_ERR_UNKNOWN_PROTO:
             return "Unknown NAT_TRAVERSAL_PROTO";

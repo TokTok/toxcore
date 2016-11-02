@@ -128,7 +128,7 @@ Tox *tox_new(const struct Tox_Options *options, TOX_ERR_NEW *error)
             case TOX_TRAVERSAL_TYPE_NONE:
             case TOX_TRAVERSAL_TYPE_UPNP:
             case TOX_TRAVERSAL_TYPE_NATPMP:
-            case TOX_TRAVERSAL_TYPE_ALL:
+            case TOX_TRAVERSAL_TYPE_UPNP | TOX_TRAVERSAL_TYPE_NATPMP:
                 m_options.traversal_type = tox_options_get_traversal_type(options);
                 break;
 
