@@ -29,9 +29,9 @@
 #include "config.h"
 #endif
 
-#include "network.h"
-
 #include "logger.h"
+#include "nat_traversal.h"
+#include "network.h"
 #include "util.h"
 
 #if !defined(_WIN32) && !defined(__WIN32__) && !defined (WIN32)
@@ -42,10 +42,6 @@
 #include <mach/clock.h>
 #include <mach/mach.h>
 #endif
-
-#include "nat_traversal.h"
-#include "network.h"
-#include "util.h"
 
 #if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
 
@@ -514,7 +510,7 @@ static void at_shutdown(void)
 // TODO(#219)
 Networking_Core *new_networking(Logger *log, IP ip, uint16_t port)
 {
-    return new_networking_nat(log, ip, port, port + (TOX_PORTRANGE_TO - TOX_PORTRANGE_FROM), TOX_TRAVERSAL_TYPE_NONE, 0);
+    return new_networking_nat(log, ip, port, port + (TOX_PORTRANGE_TO - TOX_PORTRANGE_FROM), TRAVERSAL_TYPE_NONE, 0);
 }
 
 /* Initialize networking.
@@ -523,7 +519,7 @@ Networking_Core *new_networking(Logger *log, IP ip, uint16_t port)
 // TODO(#219)
 Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint16_t port_to, unsigned int *error)
 {
-    return new_networking_nat(log, ip, port_from, port_to, TOX_TRAVERSAL_TYPE_NONE, 0);
+    return new_networking_nat(log, ip, port_from, port_to, TRAVERSAL_TYPE_NONE, 0);
 }
 
 /* Initialize networking.
@@ -537,8 +533,8 @@ Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint1
  * If error is non NULL it is set to 0 if no issues, 1 if socket related error, 2 if other.
  */
 // TODO(#219)
-Networking_Core *new_networking_nat(Logger *log, IP ip, uint16_t port_from, uint16_t port_to,
-                                    TOX_TRAVERSAL_TYPE traversal_type, unsigned int *error)
+Networking_Core *new_networking_nat(Logger *log, IP ip, uint16_t port_from, uint16_t port_to, uint8_t traversal_type,
+                                    unsigned int *error)
 {
     /* If both from and to are 0, use default port range
      * If one is 0 and the other is non-0, use the non-0 value as only port
