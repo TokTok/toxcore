@@ -224,6 +224,7 @@ int main(int argc, char *argv[])
     IP ip;
     ip_init(&ip, enable_ipv6);
 
+    // TODO(#219)
     Networking_Core *net = new_networking(NULL, ip, port);
 
     if (net == NULL) {
@@ -231,6 +232,7 @@ int main(int argc, char *argv[])
             write_log(LOG_LEVEL_WARNING, "Couldn't initialize IPv6 networking. Falling back to using IPv4.\n");
             enable_ipv6 = 0;
             ip_init(&ip, enable_ipv6);
+            // TODO(#219)
             net = new_networking(NULL, ip, port);
 
             if (net == NULL) {
@@ -286,7 +288,8 @@ int main(int argc, char *argv[])
             return 1;
         }
 
-        tcp_server = new_TCP_server(enable_ipv6, tcp_relay_port_count, tcp_relay_ports, dht->self_secret_key, onion);
+        // TODO(#219)
+        tcp_server = new_TCP_server(NULL, enable_ipv6, tcp_relay_port_count, tcp_relay_ports, dht->self_secret_key, onion);
 
         // tcp_relay_port_count != 0 at this point
         free(tcp_relay_ports);

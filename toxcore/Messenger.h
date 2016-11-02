@@ -29,6 +29,7 @@
 #include "friend_connection.h"
 #include "friend_requests.h"
 #include "logger.h"
+#include "tox.h"
 
 #define MAX_NAME_LENGTH 128
 /* TODO(irungentoo): this must depend on other variable. */
@@ -73,6 +74,7 @@ enum {
 typedef struct {
     uint8_t ipv6enabled;
     uint8_t udp_disabled;
+    TOX_TRAVERSAL_TYPE traversal_type;
     TCP_Proxy_Info proxy_info;
     uint16_t port_range[2];
     uint16_t tcp_server_port;

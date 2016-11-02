@@ -84,10 +84,24 @@ pkg_use_module(OPENCV               opencv        )
 pkg_use_module(PORTAUDIO            portaudio-2.0 )
 pkg_use_module(SNDFILE              sndfile       )
 
+# For UPnP
+pkg_use_module(MINIUPNP             miniupnpc     )
+
+# For NAT-PMP
+pkg_use_module(NATPMP               natpmp        )
+
 if(OPUS_FOUND AND VPX_FOUND)
   set(BUILD_TOXAV TRUE)
 else()
   set(BUILD_TOXAV FALSE)
+endif()
+
+if(MINIUPNP_FOUND)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_LIBMINIUPNPC")
+endif()
+
+if(NATPMP_FOUND)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_LIBNATPMP")
 endif()
 
 ################################################################################
@@ -121,11 +135,13 @@ endif()
 add_module(toxnetwork
   toxcore/logger.c
   toxcore/logger.h
+  toxcore/nat_traversal.c
+  toxcore/nat_traversal.h
   toxcore/network.c
   toxcore/network.h
   toxcore/util.c
   toxcore/util.h)
-target_link_modules(toxnetwork toxcrypto)
+target_link_modules(toxnetwork toxcrypto ${MINIUPNP_LIBRARIES} ${NATPMP_LIBRARIES})
 
 if(CMAKE_THREAD_LIBS_INIT)
   target_link_modules(toxnetwork ${CMAKE_THREAD_LIBS_INIT})

@@ -1908,7 +1908,8 @@ Messenger *new_messenger(Logger *log, Messenger_Options *options, unsigned int *
     } else {
         IP ip;
         ip_init(&ip, options->ipv6enabled);
-        m->net = new_networking_ex(log, ip, options->port_range[0], options->port_range[1], &net_err);
+        // TODO(#219)
+        m->net = new_networking_nat(log, ip, options->port_range[0], options->port_range[1], options->traversal_type, &net_err);
     }
 
     if (m->net == NULL) {
@@ -1956,7 +1957,9 @@ Messenger *new_messenger(Logger *log, Messenger_Options *options, unsigned int *
     }
 
     if (options->tcp_server_port) {
-        m->tcp_server = new_TCP_server(options->ipv6enabled, 1, &options->tcp_server_port, m->dht->self_secret_key, m->onion);
+        // TODO(#219)
+        m->tcp_server = new_TCP_server_nat(log, options->ipv6enabled, 1, &options->tcp_server_port, options->traversal_type,
+                                           m->dht->self_secret_key, m->onion);
 
         if (m->tcp_server == NULL) {
             kill_friend_connections(m->fr_c);
