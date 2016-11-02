@@ -30,25 +30,19 @@
 
 #include "logger.h"
 
+#define TRAVERSAL_TYPE_NONE 0
+
 
 /**
  * Allowed traversal types.
  */
-typedef enum TRAVERSAL_TYPE {
+enum TRAVERSAL_TYPE {
 
-    //TRAVERSAL_TYPE_NONE = 0,
-    TRAVERSAL_TYPE_NONE,
+    TRAVERSAL_TYPE_UPNP = 1,
 
-    //TRAVERSAL_TYPE_UPNP = 1 << 0,
-    TRAVERSAL_TYPE_UPNP,
+    TRAVERSAL_TYPE_NATPMP = 2,
 
-    //TRAVERSAL_TYPE_NATPMP = 1 << 1,
-    TRAVERSAL_TYPE_NATPMP,
-
-    //TRAVERSAL_TYPE_ALL = ~0,
-    TRAVERSAL_TYPE_ALL,
-
-} TRAVERSAL_TYPE;
+};
 
 /**
  * The protocol that will be used by the nat traversal.
@@ -74,9 +68,6 @@ typedef enum NAT_TRAVERSAL_STATUS {
 
     /* Unknown error */
     NAT_TRAVERSAL_ERR_UNKNOWN,
-
-    /* Unknown nat traversal type specified by user */
-    NAT_TRAVERSAL_ERR_UNKNOWN_TYPE,
 
     /* Unknown protocol specified by user */
     NAT_TRAVERSAL_ERR_UNKNOWN_PROTO,
