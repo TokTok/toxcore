@@ -288,6 +288,28 @@ static int pack_ip_port(uint8_t *data, uint16_t length, const IP_Port *ip_port)
     return -1;
 }
 
+static int DHT_create_packet(const uint8_t public_key[crypto_box_PUBLICKEYBYTES],
+                             const uint8_t *shared_key, const uint8_t type, uint8_t *plain, size_t length, uint8_t *packet) {
+    uint8_t encrypt[length + crypto_box_MACBYTES];
+    uint8_t nonce[crypto_box_NONCEBYTES];
+
+    new_nonce(nonce);
+
+    int len = encrypt_data_symmetric(shared_key, nonce,
+                                     plain, length, encrypt);
+
+    if (len == -1) {
+        return -1;
+    }
+
+    packet[0] = type;
+    memcpy(packet + 1, public_key, crypto_box_PUBLICKEYBYTES);
+    memcpy(packet + 1 + crypto_box_PUBLICKEYBYTES, nonce, crypto_box_NONCEBYTES);
+    memcpy(packet + 1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES, encrypt, len);
+
+    return 1 + crypto_box_MACBYTES + crypto_box_NONCEBYTES + len;
+}
+
 /* Unpack IP_Port structure from data of max size length into ip_port.
  *
  * Return size of unpacked ip_port on success.
@@ -1190,8 +1212,7 @@ static int getnodes(DHT *dht, IP_Port ip_port, const uint8_t *public_key, const 
     }
 
     uint8_t plain[crypto_box_PUBLICKEYBYTES + sizeof(ping_id)];
-    uint8_t encrypt[sizeof(plain) + crypto_box_MACBYTES];
-    uint8_t data[1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES + sizeof(encrypt)];
+    uint8_t data[1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES + sizeof(plain) + crypto_box_MACBYTES];
 
     memcpy(plain, client_id, crypto_box_PUBLICKEYBYTES);
     memcpy(plain + crypto_box_PUBLICKEYBYTES, &ping_id, sizeof(ping_id));
@@ -1199,23 +1220,10 @@ static int getnodes(DHT *dht, IP_Port ip_port, const uint8_t *public_key, const 
     uint8_t shared_key[crypto_box_BEFORENMBYTES];
     DHT_get_shared_key_sent(dht, shared_key, public_key);
 
-    uint8_t nonce[crypto_box_NONCEBYTES];
-    new_nonce(nonce);
-
-    int len = encrypt_data_symmetric(shared_key,
-                                     nonce,
-                                     plain,
-                                     sizeof(plain),
-                                     encrypt);
-
-    if (len != sizeof(encrypt)) {
+    int len = DHT_create_packet(dht->self_public_key, shared_key, NET_PACKET_GET_NODES, plain, sizeof(plain), data);
+    if (len == -1) {
         return -1;
     }
-
-    data[0] = NET_PACKET_GET_NODES;
-    memcpy(data + 1, dht->self_public_key, crypto_box_PUBLICKEYBYTES);
-    memcpy(data + 1 + crypto_box_PUBLICKEYBYTES, nonce, crypto_box_NONCEBYTES);
-    memcpy(data + 1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES, encrypt, len);
 
     return sendpacket(dht->net, ip_port, data, sizeof(data));
 }
@@ -1241,9 +1249,6 @@ static int sendnodes_ipv6(const DHT *dht, IP_Port ip_port, const uint8_t *public
     uint32_t num_nodes = get_close_nodes(dht, client_id, nodes_list, 0, LAN_ip(ip_port.ip) == 0, 1);
 
     uint8_t plain[1 + Node_format_size * MAX_SENT_NODES + length];
-    uint8_t encrypt[sizeof(plain) + crypto_box_MACBYTES];
-    uint8_t nonce[crypto_box_NONCEBYTES];
-    new_nonce(nonce);
 
     int nodes_length = 0;
 
@@ -1257,20 +1262,11 @@ static int sendnodes_ipv6(const DHT *dht, IP_Port ip_port, const uint8_t *public
 
     plain[0] = num_nodes;
     memcpy(plain + 1 + nodes_length, sendback_data, length);
-    int len = encrypt_data_symmetric(shared_encryption_key,
-                                     nonce,
-                                     plain,
-                                     1 + nodes_length + length,
-                                     encrypt);
 
-    if (len != 1 + nodes_length + length + crypto_box_MACBYTES) {
+    int len = DHT_create_packet(dht->self_public_key, shared_encryption_key, NET_PACKET_SEND_NODES_IPV6, plain, sizeof(plain), data);
+    if (len == -1) {
         return -1;
     }
-
-    data[0] = NET_PACKET_SEND_NODES_IPV6;
-    memcpy(data + 1, dht->self_public_key, crypto_box_PUBLICKEYBYTES);
-    memcpy(data + 1 + crypto_box_PUBLICKEYBYTES, nonce, crypto_box_NONCEBYTES);
-    memcpy(data + 1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES, encrypt, len);
 
     return sendpacket(dht->net, ip_port, data, 1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES + len);
 }
