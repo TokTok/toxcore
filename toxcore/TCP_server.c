@@ -30,10 +30,7 @@
 #include "util.h"
 
 #if !defined(_WIN32) && !defined(__WIN32__) && !defined (WIN32)
-#include <arpa/inet.h>
 #include <sys/ioctl.h>
-#else
-#include <winsock2.h>
 #endif
 
 struct TCP_Server {
@@ -1101,7 +1098,7 @@ TCP_Server *new_TCP_server_nat(Logger *log, uint8_t ipv6_enabled, uint16_t num_s
 
 #endif
 
-            nat_map_port(log, traversal_type, NAT_TRAVERSAL_TCP, ntohs(ports[i]), NULL);
+            nat_map_port(log, traversal_type, NAT_TRAVERSAL_TCP, ports[i], NULL);
 
             temp->socks_listening[temp->num_listening_socks] = sock;
             ++temp->num_listening_socks;

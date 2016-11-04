@@ -29,9 +29,10 @@
 #include "config.h"
 #endif
 
+#include "network.h"
+
 #include "logger.h"
 #include "nat_traversal.h"
-#include "network.h"
 #include "util.h"
 
 #if !defined(_WIN32) && !defined(__WIN32__) && !defined (WIN32)
@@ -716,7 +717,7 @@ Networking_Core *new_networking_nat(Logger *log, IP ip, uint16_t port_from, uint
                 *error = 0;
             }
 
-            nat_map_port(log, traversal_type, NAT_TRAVERSAL_UDP, ntohs(temp->port), NULL);
+            nat_map_port(log, traversal_type, NAT_TRAVERSAL_UDP, port_to_try, NULL);
 
             return temp;
         }
