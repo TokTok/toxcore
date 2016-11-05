@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Enable address sanitizer.
+export CFLAGS="$CFLAGS -fsanitize=address"
+
 # Build toxcore and run tests.
 ./autogen.sh
 ./configure \
