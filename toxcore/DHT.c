@@ -794,7 +794,7 @@ int get_close_nodes(const DHT *dht, const uint8_t *public_key, Node_format *node
     uint8_t num_found = Assoc_get_close_entries(dht->assoc, &request);
 
     if (!num_found) {
-        LOGGER_DEBUG(dht->log, "get_close_nodes(): Assoc_get_close_entries() returned zero nodes");
+        // LOGGER_DEBUG(dht->log, "get_close_nodes(): Assoc_get_close_entries() returned zero nodes");
         return get_somewhat_close_nodes(dht, public_key, nodes_list, sa_family, is_LAN, want_good);
     }
 
