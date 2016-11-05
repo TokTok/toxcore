@@ -1886,7 +1886,7 @@ static int friend_already_added(const uint8_t *real_pk, void *data)
 }
 
 /* Run this at startup. */
-Messenger *new_messenger(Logger *log, Messenger_Options *options, unsigned int *error)
+Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
 {
     Messenger *m = (Messenger *)calloc(1, sizeof(Messenger));
 
@@ -1894,8 +1894,21 @@ Messenger *new_messenger(Logger *log, Messenger_Options *options, unsigned int *
         *error = MESSENGER_ERROR_OTHER;
     }
 
-    if (! m) {
+    if (!m) {
         return NULL;
+    }
+
+    Logger *log = NULL;
+
+    if (options && options->log_callback) {
+        log = logger_new();
+
+        if (log == NULL) {
+            free(m);
+            return NULL;
+        }
+
+        logger_callback_log(log, options->log_callback, m, options->log_user_data);
     }
 
     m->log = log;
@@ -2013,6 +2026,7 @@ void kill_messenger(Messenger *m)
         clear_receipts(m, i);
     }
 
+    logger_kill(m->log);
     free(m->friendlist);
     free(m);
 }
