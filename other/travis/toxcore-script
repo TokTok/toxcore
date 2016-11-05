@@ -10,7 +10,6 @@ RUN $CMAKE                                      \
   -B$BUILD_DIR                                  \
   -H.                                           \
   -DCMAKE_INSTALL_PREFIX:PATH=$CURDIR/_install  \
-  -DASSOC_DHT=ON                                \
   -DDEBUG=ON                                    \
   -DSTRICT_ABI=ON                               \
   -DTEST_TIMEOUT_SECONDS=300                    \
