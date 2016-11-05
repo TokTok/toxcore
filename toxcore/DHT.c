@@ -369,7 +369,8 @@ static int pack_ip_port(uint8_t *data, uint16_t length, const IP_Port *ip_port)
 }
 
 static int DHT_create_packet(const uint8_t public_key[crypto_box_PUBLICKEYBYTES],
-                             const uint8_t *shared_key, const uint8_t type, uint8_t *plain, size_t length, uint8_t *packet) {
+                             const uint8_t *shared_key, const uint8_t type, uint8_t *plain, size_t length, uint8_t *packet)
+{
     uint8_t encrypt[length + crypto_box_MACBYTES];
     uint8_t nonce[crypto_box_NONCEBYTES];
 
@@ -387,7 +388,7 @@ static int DHT_create_packet(const uint8_t public_key[crypto_box_PUBLICKEYBYTES]
     memcpy(packet + 1 + crypto_box_PUBLICKEYBYTES, nonce, crypto_box_NONCEBYTES);
     memcpy(packet + 1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES, encrypt, len);
 
-    return 1 + crypto_box_MACBYTES + crypto_box_NONCEBYTES + crypto_box_PUBLICKEYBYTES + len;
+    return 1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES + len;
 }
 
 /* Unpack IP_Port structure from data of max size length into ip_port.
@@ -1300,12 +1301,12 @@ static int getnodes(DHT *dht, IP_Port ip_port, const uint8_t *public_key, const 
     uint8_t shared_key[crypto_box_BEFORENMBYTES];
     DHT_get_shared_key_sent(dht, shared_key, public_key);
 
-    int len = DHT_create_packet(dht->self_public_key, shared_key, NET_PACKET_GET_NODES, plain, sizeof(plain), data);
+    int len = DHT_create_packet(dht->self_public_key, shared_key, NET_PACKET_GET_NODES,
+                                plain, sizeof(plain), data);
     if (len == -1) {
         return -1;
     }
-
-    return sendpacket(dht->net, ip_port, data, sizeof(data));
+    return sendpacket(dht->net, ip_port, data, len);
 }
 
 /* Send a send nodes response: message for IPv6 nodes */
@@ -1322,8 +1323,6 @@ static int sendnodes_ipv6(const DHT *dht, IP_Port ip_port, const uint8_t *public
     }
 
     size_t Node_format_size = sizeof(Node_format);
-    uint8_t data[1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES
-                 + Node_format_size * MAX_SENT_NODES + length + crypto_box_MACBYTES];
 
     Node_format nodes_list[MAX_SENT_NODES];
     uint32_t num_nodes = get_close_nodes(dht, client_id, nodes_list, 0, LAN_ip(ip_port.ip) == 0, 1);
@@ -1331,7 +1330,6 @@ static int sendnodes_ipv6(const DHT *dht, IP_Port ip_port, const uint8_t *public
     uint8_t plain[1 + Node_format_size * MAX_SENT_NODES + length];
 
     int nodes_length = 0;
-
     if (num_nodes) {
         nodes_length = pack_nodes(plain + 1, Node_format_size * MAX_SENT_NODES, nodes_list, num_nodes);
 
@@ -1343,12 +1341,16 @@ static int sendnodes_ipv6(const DHT *dht, IP_Port ip_port, const uint8_t *public
     plain[0] = num_nodes;
     memcpy(plain + 1 + nodes_length, sendback_data, length);
 
-    int len = DHT_create_packet(dht->self_public_key, shared_encryption_key, NET_PACKET_SEND_NODES_IPV6, plain, sizeof(plain), data);
+    uint8_t data[1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES
+                 + Node_format_size * MAX_SENT_NODES + length + crypto_box_MACBYTES];
+
+    int len = DHT_create_packet(dht->self_public_key, shared_encryption_key, NET_PACKET_SEND_NODES_IPV6,
+                                plain, 1 + nodes_length + length, data);
     if (len == -1) {
         return -1;
     }
 
-    return sendpacket(dht->net, ip_port, data, 1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES + len);
+    return sendpacket(dht->net, ip_port, data, len);
 }
 
 static int handle_getnodes(void *object, IP_Port source, const uint8_t *packet, uint16_t length, void *userdata)
