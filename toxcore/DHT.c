@@ -2689,6 +2689,15 @@ DHT *new_DHT(Logger *log, Networking_Core *net)
         return NULL;
     }
 
+
+    dht->queries = query_new(dht->net);
+
+    if (dht->queries == NULL) {
+        kill_DHT(dht);
+        return NULL;
+    }
+    networking_registerhandler(dht->net, NET_PACKET_DATA_RESPONSE, &query_handle_toxid_response, dht);
+
     networking_registerhandler(dht->net, NET_PACKET_GET_NODES, &handle_getnodes, dht);
     networking_registerhandler(dht->net, NET_PACKET_SEND_NODES_IPV6, &handle_sendnodes_ipv6, dht);
     networking_registerhandler(dht->net, NET_PACKET_CRYPTO, &cryptopacket_handle, dht);
@@ -2738,6 +2747,9 @@ void do_DHT(DHT *dht)
 #if DHT_HARDENING
     do_hardening(dht);
 #endif
+
+    query_iterate(dht);
+
 #ifdef ENABLE_ASSOC_DHT
 
     if (dht->assoc) {
