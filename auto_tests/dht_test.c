@@ -662,7 +662,8 @@ START_TEST(test_dht_create_packet)
 
     ck_assert_msg(pkt[0] == NET_PACKET_GET_NODES, "Malformed packet.");
     ck_assert_msg(memcmp(pkt + 1, key, crypto_box_KEYBYTES) == 0, "Malformed packet.");
-    ck_assert_msg(length == 1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES + sizeof(plain) + crypto_box_MACBYTES, "Invalid size. Should be %d got %d", sizeof(pkt), length);
+    ck_assert_msg(length == 1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES + sizeof(plain) + crypto_box_MACBYTES,
+                  "Invalid size. Should be %d got %d", sizeof(pkt), length);
 
     printf("Create Packet Successful!\n");
 }
