@@ -236,7 +236,9 @@ add_module(toxdht
   toxcore/ping.c
   toxcore/ping.h
   toxcore/ping_array.c
-  toxcore/ping_array.h)
+  toxcore/ping_array.h
+  toxcore/query.c
+  toxcore/query.h)
 target_link_modules(toxdht toxnetwork)
 
 # LAYER 4: Onion routing, TCP connections, crypto connections
@@ -388,6 +390,7 @@ auto_test(tox)
 auto_test(tox_many)
 auto_test(tox_many_tcp)
 auto_test(tox_one)
+auto_test(query)
 if(BUILD_TOXAV)
   auto_test(toxav_basic)
   auto_test(toxav_many)

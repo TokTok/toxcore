@@ -102,6 +102,7 @@ typedef int sock_t;
 
 #define MAX_UDP_PACKET_SIZE 2048
 
+
 typedef enum NET_PACKET_TYPE {
     NET_PACKET_PING_REQUEST         = 0,   /* Ping request packet ID. */
     NET_PACKET_PING_RESPONSE        = 1,   /* Ping response packet ID. */
@@ -113,6 +114,8 @@ typedef enum NET_PACKET_TYPE {
     NET_PACKET_CRYPTO_DATA          = 27,  /* Crypto data packet */
     NET_PACKET_CRYPTO               = 32,  /* Encrypted data packet ID. */
     NET_PACKET_LAN_DISCOVERY        = 33,  /* LAN discovery packet ID. */
+    NET_PACKET_DATA_REQUEST         = 50,  /* Query request packet ID. */
+    NET_PACKET_DATA_RESPONSE        = 51,  /* Query response packet ID. */
     NET_PACKET_ONION_SEND_INITIAL   = 128,
     NET_PACKET_ONION_SEND_1         = 129,
     NET_PACKET_ONION_SEND_2         = 130,

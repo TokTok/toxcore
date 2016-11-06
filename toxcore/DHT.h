@@ -28,6 +28,7 @@
 #include "logger.h"
 #include "network.h"
 #include "ping_array.h"
+#include "query.h"
 
 #include <stdbool.h>
 
@@ -266,10 +267,13 @@ typedef struct {
 #endif
     uint64_t       last_run;
 
-    Cryptopacket_Handles cryptopackethandlers[256];
+    Cryptopacket_Handles cryptopackethandlers[UINT8_MAX + 1];
 
     Node_format to_bootstrap[MAX_CLOSE_TO_BOOTSTRAP_NODES];
     unsigned int num_to_bootstrap;
+
+    Pending_Queries *queries;
+
 } DHT;
 /*----------------------------------------------------------------------------------*/
 
