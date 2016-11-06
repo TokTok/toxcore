@@ -143,9 +143,9 @@ START_TEST(test_text_all)
 
     ck_assert_msg(error == TOX_ERR_NEW_OK, "tox_new failed to bootstrap: %d\n", error);
 
-    size_t i, count = 0;
+    size_t count = 0;
 
-    for (i = 1; i < NUM_GROUP_TOXES; ++i) {
+    for (size_t i = 1; i < NUM_GROUP_TOXES; ++i) {
         index[i] = i + 1;
         toxes[i] = tox_new_log(&tox_opts, &error, &index[i]);
         ck_assert_msg(error == TOX_ERR_NEW_OK, "tox_new failed: %d\n", error);
@@ -161,13 +161,13 @@ START_TEST(test_text_all)
     }
 
     while (1) {
-        for (i = 0; i < NUM_GROUP_TOXES; ++i) {
+        for (size_t i = 0; i < NUM_GROUP_TOXES; ++i) {
             tox_iterate(toxes[i], nullptr);
         }
 
         count = 0;
 
-        for (i = 0; i < NUM_GROUP_TOXES; ++i) {
+        for (size_t i = 0; i < NUM_GROUP_TOXES; ++i) {
             if (tox_self_get_connection_status(toxes[i])) {
                 ++count;
             }
@@ -184,15 +184,19 @@ START_TEST(test_text_all)
 
     /* Tox1 creates a group and is a founder of a newly created group */
     TOX_ERR_GROUP_NEW new_err;
+    Group_Chat_Self_Peer_Info *self_peer_info = tox_group_self_peer_info_new(nullptr);
+    self_peer_info->nick = "tox1";
+    self_peer_info->nick_length = 4;
     uint32_t groupnum = tox_group_new(toxes[1], TOX_GROUP_PRIVACY_STATE_PUBLIC, (const uint8_t *)GROUP_NAME, GROUP_NAME_LEN,
-                                      &new_err);
+                                      self_peer_info, &new_err);
+    tox_group_self_peer_info_free(self_peer_info);
     ck_assert_msg(new_err == TOX_ERR_GROUP_NEW_OK, "tox_group_new failed: %d", new_err);
 
     /* Set default group state */
     set_group_state(toxes[1], 0, PEER_LIMIT_1, TOX_GROUP_PRIVACY_STATE_PUBLIC, (const uint8_t *)PASSWORD, PASS_LEN,
                     (const uint8_t *)TOPIC1, TOPIC1_LEN);
 
-    for (i = 0; i < NUM_GROUP_TOXES; ++i) {
+    for (size_t i = 0; i < NUM_GROUP_TOXES; ++i) {
         tox_iterate(toxes[i], nullptr);
     }
 
@@ -204,22 +208,28 @@ START_TEST(test_text_all)
     ck_assert_msg(id_err == TOX_ERR_GROUP_STATE_QUERIES_OK, "tox_group_get_chat_id failed %d", id_err);
 
     /* All other peers join the group using the Chat ID and password */
-    for (i = 2; i < NUM_GROUP_TOXES; ++i) {
+    for (size_t i = 2; i < NUM_GROUP_TOXES; ++i) {
         TOX_ERR_GROUP_JOIN join_err;
-        tox_group_join(toxes[i], chat_id, (const uint8_t *)PASSWORD, PASS_LEN, &join_err);
+        Group_Chat_Self_Peer_Info *other_peer_info = tox_group_self_peer_info_new(nullptr);
+        char nick[5];
+        int length = snprintf(nick, sizeof(nick), "tox%u", (unsigned)i);
+        other_peer_info->nick = nick;
+        other_peer_info->nick_length = length;
+        tox_group_join(toxes[i], chat_id, (const uint8_t *)PASSWORD, PASS_LEN, other_peer_info, &join_err);
         ck_assert_msg(join_err == TOX_ERR_GROUP_JOIN_OK, "tox_group_join failed: %d", join_err);
         c_sleep(1000);
+        tox_group_self_peer_info_free(other_peer_info);
     }
 
     /* Keep checking if all instances have connected to the group until test times out */
     while (1) {
-        for (i = 0; i < NUM_GROUP_TOXES; ++i) {
+        for (size_t i = 0; i < NUM_GROUP_TOXES; ++i) {
             tox_iterate(toxes[i], nullptr);
         }
 
         count = 0;
 
-        for (i = 1; i < NUM_GROUP_TOXES; ++i) {
+        for (size_t i = 1; i < NUM_GROUP_TOXES; ++i) {
             if (tox_group_get_peer_limit(toxes[i], 0, nullptr) == PEER_LIMIT_1) {
                 ++count;
             }
@@ -233,7 +243,7 @@ START_TEST(test_text_all)
     }
 
     /* Check that all peers have the correct group state */
-    for (i = 1; i < NUM_GROUP_TOXES; ++i) {
+    for (size_t i = 1; i < NUM_GROUP_TOXES; ++i) {
         tox_iterate(toxes[i], nullptr);
         int ret = check_group_state(toxes[i], 0, PEER_LIMIT_1, TOX_GROUP_PRIVACY_STATE_PUBLIC, (const uint8_t *)PASSWORD,
                                     PASS_LEN, (const uint8_t *)TOPIC1, TOPIC1_LEN);
@@ -248,7 +258,7 @@ START_TEST(test_text_all)
     while (1) {
         count = 0;
 
-        for (i = 1; i < NUM_GROUP_TOXES; ++i) {
+        for (size_t i = 1; i < NUM_GROUP_TOXES; ++i) {
             tox_iterate(toxes[i], nullptr);
 
             if (check_group_state(toxes[i], 0, PEER_LIMIT_2, TOX_GROUP_PRIVACY_STATE_PRIVATE, nullptr, 0,
@@ -264,14 +274,14 @@ START_TEST(test_text_all)
         c_sleep(20);
     }
 
-    for (i = 0; i < NUM_GROUP_TOXES; ++i) {
+    for (size_t i = 0; i < NUM_GROUP_TOXES; ++i) {
         TOX_ERR_GROUP_LEAVE err_exit;
         tox_group_leave(toxes[i], groupnum, nullptr, 0, &err_exit);
         // TODO(JFreegman): Fix?
         // ck_assert(err_exit == TOX_ERR_GROUP_LEAVE_OK);
     }
 
-    for (i = 0; i < NUM_GROUP_TOXES; ++i) {
+    for (size_t i = 0; i < NUM_GROUP_TOXES; ++i) {
         tox_kill(toxes[i]);
     }
 #endif /* VANILLA_NACL */

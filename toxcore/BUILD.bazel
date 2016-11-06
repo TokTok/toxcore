@@ -215,58 +215,43 @@ cc_library(
 
 cc_library(
     name = "onion_announce",
-    srcs = ["onion_announce.c"],
-    hdrs = ["onion_announce.h"],
+    srcs = [
+        "group_announce.c",
+        "onion_announce.c",
+    ],
+    hdrs = [
+        "group_announce.h",
+        "onion_announce.h",
+    ],
     deps = [":onion"],
-)
-
-cc_library(
-    name = "onion_client",
-    srcs = ["onion_client.c"],
-    hdrs = ["onion_client.h"],
-    deps = [
-        ":net_crypto",
-        ":onion_announce",
-    ],
-)
-
-cc_library(
-    name = "friend_connection",
-    srcs = ["friend_connection.c"],
-    hdrs = ["friend_connection.h"],
-    deps = [
-        ":DHT",
-        ":net_crypto",
-        ":onion_client",
-    ],
-)
-
-cc_library(
-    name = "friend_requests",
-    srcs = ["friend_requests.c"],
-    hdrs = ["friend_requests.h"],
-    deps = [":friend_connection"],
 )
 
 cc_library(
     name = "Messenger",
     srcs = [
         "Messenger.c",
+        "friend_connection.c",
+        "friend_requests.c",
         "group_announce.c",
         "group_chats.c",
         "group_connection.c",
         "group_moderation.c",
+        "onion_client.c",
     ],
     hdrs = [
         "Messenger.h",
+        "friend_connection.h",
+        "friend_requests.h",
         "group_announce.h",
         "group_chats.h",
         "group_connection.h",
         "group_moderation.h",
+        "onion_client.h",
     ],
     visibility = ["//c-toxcore/toxav:__pkg__"],
     deps = [
-        ":friend_requests",
+        ":net_crypto",
+        ":onion_announce",
         ":state",
     ],
 )

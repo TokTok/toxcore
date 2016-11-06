@@ -128,6 +128,12 @@ typedef enum Userstatus {
     USERSTATUS_INVALID,
 } Userstatus;
 
+typedef enum {
+    CONTACT_TYPE_FRIEND,
+    CONTACT_TYPE_GC
+}
+CONTACT_TYPE;
+
 #define FILE_ID_LENGTH 32
 
 struct File_Transfers {
@@ -198,7 +204,8 @@ typedef void m_friend_connectionstatuschange_internal_cb(Messenger *m, uint32_t 
         uint8_t connection_status, void *user_data);
 typedef void m_conference_invite_cb(Messenger *m, uint32_t friend_number, const uint8_t *cookie, uint16_t length,
                                     void *user_data);
-typedef void m_group_invite_cb(Messenger *m, uint32_t friendnumber, const uint8_t *data, size_t length, void *userdata);
+typedef void m_group_invite_cb(Messenger *m, uint32_t friendnumber, const uint8_t *data, size_t length,
+                               const uint8_t *group_name, size_t group_name_length, void *userdata);
 typedef void m_msi_packet_cb(Messenger *m, uint32_t friend_number, const uint8_t *data, uint16_t length,
                              void *user_data);
 typedef int m_lossy_rtp_packet_cb(Messenger *m, uint32_t friendnumber, const uint8_t *data, uint16_t len, void *object);
@@ -240,6 +247,8 @@ typedef struct Friend {
 
     struct Receipts *receipts_start;
     struct Receipts *receipts_end;
+
+    CONTACT_TYPE type;
 } Friend;
 
 struct Messenger {
@@ -272,7 +281,7 @@ struct Messenger {
     time_t lastdump;
 
     GC_Session *group_handler;
-    GC_Announce *group_announce;
+    GC_Announces_List *group_announce;
 
     bool has_added_relays; // If the first connection has occurred in do_messenger
 
@@ -353,6 +362,10 @@ int32_t m_addfriend(Messenger *m, const uint8_t *address, const uint8_t *data, u
  *  return -8 if increasing the friend list size fails.
  */
 int32_t m_addfriend_norequest(Messenger *m, const uint8_t *real_pk);
+
+int32_t m_add_friend_gc(Messenger *m, GC_Chat *chat);
+
+int32_t m_remove_friend_gc(Messenger *m, const GC_Chat *chat);
 
 /*  return the friend number associated to that client id.
  *  return -1 if no such friend.
@@ -587,12 +600,15 @@ void m_callback_group_invite(Messenger *m, m_group_invite_cb *function, void *us
 
 /* Send a conference invite packet.
  *
- *  return 0 on success
- *  return -1 on failure
+ *  return 1 on success
+ *  return 0 on failure
  */
 int send_conference_invite_packet(const Messenger *m, int32_t friendnumber, const uint8_t *data, uint16_t length);
 
 /* Send a group invite packet.
+ *
+ *  WARNING: Return-value semantics are different than for
+ *  send_conference_invite_packet().
  *
  *  return 0 on success
  *  return -1 on failure

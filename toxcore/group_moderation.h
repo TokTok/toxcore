@@ -14,22 +14,22 @@
 #define GC_SANCTIONS_CREDENTIALS_SIZE (sizeof(uint32_t) + GC_MODERATION_HASH_SIZE + SIG_PUBLIC_KEY + SIGNATURE_SIZE)
 
 typedef enum Group_Sanction_Type {
-    SA_BAN,
+    SA_BAN_IP_PORT,
+    SA_BAN_PUBLIC_KEY,
+    SA_BAN_NICK,
     SA_OBSERVER,
     SA_INVALID,
 } Group_Sanction_Type;
 
 struct GC_Ban {
-    IP_Port     ip_port;
-    uint8_t     nick[MAX_GC_NICK_SIZE];
-    uint16_t    nick_len;
+    union {
+        IP_Port ip_port;
+        uint8_t pk[ENC_PUBLIC_KEY];
+        uint8_t nick[MAX_GC_NICK_SIZE];
+    } target;
+
     uint32_t    id;
 };
-
-typedef union GC_Sanction_Info {
-    struct GC_Ban ban_info;    /* Used if type is SA_BAN */
-    uint8_t       target_pk[ENC_PUBLIC_KEY];    /* Used if type is SA_OBSERVER */
-} GC_Sanction_Info;
 
 /* Holds data pertaining to a peer who has been banned or demoted to observer. */
 struct GC_Sanction {
@@ -37,11 +37,14 @@ struct GC_Sanction {
     uint64_t    time_set;
 
     uint8_t     type;
-    GC_Sanction_Info info;
+    struct GC_Ban ban_info;
 
     /* Signature of all above packed data signed by the owner of public_sig_key */
     uint8_t     signature[SIGNATURE_SIZE];
 };
+
+typedef struct GC_Ban GC_Ban;
+typedef struct GC_Sanction GC_Sanction;
 
 /* Unpacks data into the moderator list.
  * data should contain num_mods entries of size GC_MOD_LIST_ENTRY_SIZE.
@@ -153,13 +156,13 @@ int sanctions_list_check_integrity(const GC_Chat *chat, struct GC_Sanction_Creds
  */
 int sanctions_list_add_entry(GC_Chat *chat, struct GC_Sanction *sanction, struct GC_Sanction_Creds *creds);
 
-/* Creates a new sanction entry for peernumber where type is one GROUP_SANCTION_TYPE.
+/* Creates a new sanction entry for peer_number where type is one GROUP_SANCTION_TYPE.
  * New entry is signed and placed in the sanctions list.
  *
  * Returns 0 on success.
  * Returns -1 on failure.
  */
-int sanctions_list_make_entry(GC_Chat *chat, uint32_t peernumber, struct GC_Sanction *sanction, uint8_t type);
+int sanctions_list_make_entry(GC_Chat *chat, uint32_t peer_number, struct GC_Sanction *sanction, uint8_t type);
 
 /* Returns true if public key is in the observer list. */
 bool sanctions_list_is_observer(const GC_Chat *chat, const uint8_t *public_key);
@@ -208,8 +211,14 @@ void sanctions_list_cleanup(GC_Chat *chat);
 /* Returns true if the IP address is in the ban list. */
 bool sanctions_list_ip_banned(const GC_Chat *chat, IP_Port *ip_port);
 
+bool sanctions_list_pk_banned(const GC_Chat *chat, const uint8_t *public_key);
+
+bool sanctions_list_nick_banned(const GC_Chat *chat, const uint8_t *nick);
+
 /* Returns the number of sanctions list entries that are of type SA_BAN */
 uint32_t sanctions_list_num_banned(const GC_Chat *chat);
+
+int sanctions_list_get_ban_type(const GC_Chat *chat, uint32_t ban_id);
 
 /* Fills list with all valid ban ID's. */
 void sanctions_list_get_ban_list(const GC_Chat *chat, uint32_t *list);
@@ -217,14 +226,14 @@ void sanctions_list_get_ban_list(const GC_Chat *chat, uint32_t *list);
 /* Returns the nick length of the ban entry associted with ban_id on success.
  * Returns 0 if ban_id does not exist.
  */
-uint16_t sanctions_list_get_ban_nick_length(const GC_Chat *chat, uint32_t ban_id);
+uint16_t sanctions_list_get_ban_target_length(const GC_Chat *chat, uint32_t ban_id);
 
 /* Copies the nick associated with ban_id to nick.
  *
  * Returns 0 on success.
  * Returns -1 if ban_id does not exist.
  */
-int sanctions_list_get_ban_nick(const GC_Chat *chat, uint32_t ban_id, uint8_t *nick);
+bool sanctions_list_get_ban_target(const GC_Chat *chat, uint32_t ban_id, uint8_t *target);
 
 /* Returns a timestamp indicating when the ban designated by ban_id was set.
  * Returns 0 if ban_id does not exist.

@@ -46,31 +46,6 @@
 /* Number of get node requests to send to quickly find close nodes. */
 #define MAX_BOOTSTRAP_TIMES 5
 
-typedef struct DHT_Friend_Callback {
-    dht_ip_cb *ip_callback;
-    void *data;
-    int32_t number;
-} DHT_Friend_Callback;
-
-struct DHT_Friend {
-    uint8_t     public_key[CRYPTO_PUBLIC_KEY_SIZE];
-    Client_data client_list[MAX_FRIEND_CLIENTS];
-
-    /* Time at which the last get_nodes request was sent. */
-    uint64_t    lastgetnode;
-    /* number of times get_node packets were sent. */
-    uint32_t    bootstrap_times;
-
-    /* Symmetric NAT hole punching stuff. */
-    NAT         nat;
-
-    uint16_t lock_count;
-    DHT_Friend_Callback callbacks[DHT_FRIEND_MAX_LOCKS];
-
-    Node_format to_bootstrap[MAX_SENT_NODES];
-    unsigned int num_to_bootstrap;
-};
-
 typedef struct Cryptopacket_Handler {
     cryptopacket_handler_cb *function;
     void *object;
@@ -2991,4 +2966,34 @@ bool dht_non_lan_connected(const DHT *dht)
     }
 
     return false;
+}
+
+/* Copies your own ip_port structure to dest.
+ *
+ * Return 0 on success.
+ * Return -1 on failure.
+ */
+int ipport_self_copy(const DHT *dht, IP_Port *dest)
+{
+    for (size_t i = 0; i < LCLIENT_LIST; i++) {
+        const IP_Port *ip_port4 = &dht_get_close_client(dht, i)->assoc4.ret_ip_port;
+
+        if (ipport_isset(ip_port4)) {
+            ipport_copy(dest, ip_port4);
+            break;
+        }
+
+        const IP_Port *ip_port6 = &dht_get_close_client(dht, i)->assoc6.ret_ip_port;
+
+        if (ipport_isset(ip_port6)) {
+            ipport_copy(dest, ip_port6);
+            break;
+        }
+    }
+
+    if (!ipport_isset(dest)) {
+        return -1;
+    }
+
+    return 0;
 }

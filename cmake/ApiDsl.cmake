@@ -8,7 +8,7 @@ find_program(APIDSL NAMES
   apidsl
   apidsl.native
   apidsl.byte
-  ${CMAKE_SOURCE_DIR}/../apidsl/apigen.native)
+  ${CMAKE_SOURCE_DIR}/../apidsl/apigen.exe)
 find_program(ASTYLE NAMES
   astyle
   $ENV{ASTYLE})

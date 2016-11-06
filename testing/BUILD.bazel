@@ -45,15 +45,6 @@ cc_binary(
 )
 
 cc_binary(
-    name = "group_announce_test",
-    srcs = ["groupchats/group_announce_test.c"],
-    deps = [
-        ":misc_tools",
-        "//c-toxcore/toxcore",
-    ],
-)
-
-cc_binary(
     name = "group_bootstrap_n_chat",
     srcs = ["groupchats/group_bootstrap_n_chat.c"],
     deps = [
