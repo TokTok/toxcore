@@ -5025,7 +5025,7 @@ static bool peer_timed_out(const Mono_Time *mono_time, const GC_Chat *chat, GC_C
 {
     return mono_time_is_timeout(mono_time, gconn->last_rcvd_ping, gconn->confirmed
                                 ? GC_CONFIRMED_PEER_TIMEOUT
-                                : GC_UNCONFRIMED_PEER_TIMEOUT);
+                                : GC_UNCONFIRMED_PEER_TIMEOUT);
 }
 
 static void do_peer_connections(Messenger *m, int groupnumber)
