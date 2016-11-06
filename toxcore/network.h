@@ -102,39 +102,35 @@ typedef int sock_t;
 
 #define MAX_UDP_PACKET_SIZE 2048
 
-/* MUST NEVER EXCEED UINT8_MAX */
+
 typedef enum NET_PACKET_TYPE {
-    NET_PACKET_PING_REQUEST     = 0,   /* Ping request packet ID. */
-    NET_PACKET_PING_RESPONSE    = 1,   /* Ping response packet ID. */
-    NET_PACKET_GET_NODES        = 2,   /* Get nodes request packet ID. */
-    NET_PACKET_SEND_NODES_IPV6  = 4,   /* Send nodes response packet ID for other addresses. */
-    NET_PACKET_COOKIE_REQUEST   = 24,  /* Cookie request packet */
-    NET_PACKET_COOKIE_RESPONSE  = 25,  /* Cookie response packet */
-    NET_PACKET_CRYPTO_HS        = 26,  /* Crypto handshake packet */
-    NET_PACKET_CRYPTO_DATA      = 27,  /* Crypto data packet */
-    NET_PACKET_CRYPTO           = 32,  /* Encrypted data packet ID. */
-    NET_PACKET_LAN_DISCOVERY    = 33,  /* LAN discovery packet ID. */
-
-    NET_PACKET_DATA_REQUEST     = 50,
-    NET_PACKET_DATA_RESPONSE    = 51,
-
-    /* See:  docs/Prevent_Tracking.txt and onion.{c, h} */
+    NET_PACKET_PING_REQUEST         = 0,   /* Ping request packet ID. */
+    NET_PACKET_PING_RESPONSE        = 1,   /* Ping response packet ID. */
+    NET_PACKET_GET_NODES            = 2,   /* Get nodes request packet ID. */
+    NET_PACKET_SEND_NODES_IPV6      = 4,   /* Send nodes response packet ID for other addresses. */
+    NET_PACKET_COOKIE_REQUEST       = 24,  /* Cookie request packet */
+    NET_PACKET_COOKIE_RESPONSE      = 25,  /* Cookie response packet */
+    NET_PACKET_CRYPTO_HS            = 26,  /* Crypto handshake packet */
+    NET_PACKET_CRYPTO_DATA          = 27,  /* Crypto data packet */
+    NET_PACKET_CRYPTO               = 32,  /* Encrypted data packet ID. */
+    NET_PACKET_LAN_DISCOVERY        = 33,  /* LAN discovery packet ID. */
+    NET_PACKET_DATA_REQUEST         = 50,  /* Query request packet ID. */
+    NET_PACKET_DATA_RESPONSE        = 51,  /* Query response packet ID. */
     NET_PACKET_ONION_SEND_INITIAL   = 128,
     NET_PACKET_ONION_SEND_1         = 129,
     NET_PACKET_ONION_SEND_2         = 130,
-
     NET_PACKET_ANNOUNCE_REQUEST     = 131,
     NET_PACKET_ANNOUNCE_RESPONSE    = 132,
     NET_PACKET_ONION_DATA_REQUEST   = 133,
     NET_PACKET_ONION_DATA_RESPONSE  = 134,
+    NET_PACKET_ONION_RECV_3         = 140,
+    NET_PACKET_ONION_RECV_2         = 141,
+    NET_PACKET_ONION_RECV_1         = 142,
+    BOOTSTRAP_INFO_PACKET_ID        = 240, /* Only used for bootstrap nodes */
 
-    NET_PACKET_ONION_RECV_3 = 140,
-    NET_PACKET_ONION_RECV_2 = 141,
-    NET_PACKET_ONION_RECV_1 = 142,
-
-    /* Only used for bootstrap nodes */
-    BOOTSTRAP_INFO_PACKET_ID = 240,
+    NET_PACKET_MAX = 255, /* This type must remain within a single uint8. */
 } NET_PACKET_TYPE;
+
 
 #define TOX_PORTRANGE_FROM 33445
 #define TOX_PORTRANGE_TO   33545

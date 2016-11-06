@@ -6,7 +6,7 @@ include(CTest)
 # versions in a synchronised way.
 set(PROJECT_VERSION_MAJOR "0")
 set(PROJECT_VERSION_MINOR "0")
-set(PROJECT_VERSION_PATCH "1")
+set(PROJECT_VERSION_PATCH "2")
 set(PROJECT_VERSION
   "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
 
@@ -32,6 +32,7 @@ if(DEBUG)
   check_c_compiler_flag("-g3" HAVE_G3)
   if(HAVE_G3)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g3")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g3")
   endif()
 endif()
 
@@ -56,6 +57,7 @@ if(ASAN)
   check_c_compiler_flag("-fsanitize=address" HAVE_ASAN)
   if(HAVE_ASAN)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
   endif()
   set(CMAKE_REQUIRED_LIBRARIES "${SAFE_CMAKE_REQUIRED_LIBRARIES}")
 endif()
@@ -227,8 +229,8 @@ if(BUILD_TOXAV)
     toxav/audio.h
     toxav/bwcontroller.c
     toxav/bwcontroller.h
-    toxav/group.c
-    toxav/group.h
+    toxav/groupav.c
+    toxav/groupav.h
     toxav/msi.c
     toxav/msi.h
     toxav/ring_buffer.c
@@ -265,6 +267,8 @@ target_link_modules(toxencryptsave toxcore)
 
 set(TEST_TIMEOUT_SECONDS "" CACHE STRING "Limit runtime of each test to the number of seconds specified")
 
+option(FORMAT_TEST "Require the format_test to be executed; fail cmake if it can't" OFF)
+
 if(APIDSL AND ASTYLE)
   add_test(
     NAME format_test
@@ -273,6 +277,8 @@ if(APIDSL AND ASTYLE)
       "${APIDSL}"
       "${ASTYLE}")
   set_tests_properties(format_test PROPERTIES TIMEOUT "${TEST_TIMEOUT_SECONDS}")
+elseif(FORMAT_TEST)
+  message(FATAL_ERROR "format_test can not be run, because either APIDSL (${APIDSL}) or ASTYLE (${ASTYLE}) could not be found")
 endif()
 
 function(auto_test target)
