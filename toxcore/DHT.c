@@ -1264,8 +1264,8 @@ static int sendnodes_ipv6(const DHT *dht, IP_Port ip_port, const uint8_t *public
     plain[0] = num_nodes;
     memcpy(plain + 1 + nodes_length, sendback_data, length);
 
-    uint8_t data[1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES
-                 + Node_format_size * MAX_SENT_NODES + length + crypto_box_MACBYTES];
+    uint8_t data[2 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES
+                 + nodes_length + length + crypto_box_MACBYTES];
 
     int len = DHT_create_packet(dht->self_public_key, shared_encryption_key, NET_PACKET_SEND_NODES_IPV6,
                                 plain, 1 + nodes_length + length, data);
