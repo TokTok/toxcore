@@ -33,6 +33,7 @@
 #include <string.h>
 #include <time.h>
 
+#include "DHT.h"
 #include "group_chats.h"
 #include "group_moderation.h"
 #include "logger.h"
