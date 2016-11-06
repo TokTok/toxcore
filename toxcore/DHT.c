@@ -3006,3 +3006,33 @@ bool dht_non_lan_connected(const DHT *dht)
 
     return false;
 }
+
+/* Copies your own ip_port structure to dest.
+ *
+ * Return 0 on succcess.
+ * Return -1 on failure.
+ */
+int ipport_self_copy(const DHT *dht, IP_Port *dest)
+{
+    for (size_t i = 0; i < LCLIENT_LIST; i++) {
+        const IP_Port *ip_port4 = &dht_get_close_client(dht, i)->assoc4.ret_ip_port;
+
+        if (ipport_isset(ip_port4)) {
+            ipport_copy(dest, ip_port4);
+            break;
+        }
+
+        const IP_Port *ip_port6 = &dht_get_close_client(dht, i)->assoc6.ret_ip_port;
+
+        if (ipport_isset(ip_port6)) {
+            ipport_copy(dest, ip_port6);
+            break;
+        }
+    }
+
+    if (!ipport_isset(dest)) {
+        return -1;
+    }
+
+    return 0;
+}
