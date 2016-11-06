@@ -366,26 +366,26 @@ static int pack_ip_port(uint8_t *data, uint16_t length, const IP_Port *ip_port)
 }
 
 static int DHT_create_packet(const uint8_t public_key[crypto_box_PUBLICKEYBYTES],
-                             const uint8_t *shared_key, const uint8_t type, uint8_t *plain, size_t length, uint8_t *packet)
+                             const uint8_t *shared_key, const uint8_t type, uint8_t *plain, size_t plain_length, uint8_t *packet)
 {
-    uint8_t encrypt[length + crypto_box_MACBYTES];
+    uint8_t encrypted[plain_length + crypto_box_MACBYTES];
     uint8_t nonce[crypto_box_NONCEBYTES];
 
     new_nonce(nonce);
 
-    int len = encrypt_data_symmetric(shared_key, nonce,
-                                     plain, length, encrypt);
+    int encrypted_length = encrypt_data_symmetric(shared_key, nonce,
+                                                  plain, plain_length, encrypted);
 
-    if (len == -1) {
+    if (encrypted_length == -1) {
         return -1;
     }
 
     packet[0] = type;
     memcpy(packet + 1, public_key, crypto_box_PUBLICKEYBYTES);
     memcpy(packet + 1 + crypto_box_PUBLICKEYBYTES, nonce, crypto_box_NONCEBYTES);
-    memcpy(packet + 1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES, encrypt, len);
+    memcpy(packet + 1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES, encrypted, encrypted_length);
 
-    return 1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES + len;
+    return 1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES + encrypted_length;
 }
 
 /* Unpack IP_Port structure from data of max size length into ip_port.
@@ -1226,6 +1226,9 @@ static int getnodes(DHT *dht, IP_Port ip_port, const uint8_t *public_key, const 
     if (len == -1) {
         return -1;
     }
+
+    assert(len == sizeof(data));
+
     return sendpacket(dht->net, ip_port, data, len);
 }
 
@@ -1269,6 +1272,8 @@ static int sendnodes_ipv6(const DHT *dht, IP_Port ip_port, const uint8_t *public
     if (len == -1) {
         return -1;
     }
+
+    assert(len == sizeof(data));
 
     return sendpacket(dht->net, ip_port, data, len);
 }
