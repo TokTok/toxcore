@@ -51,36 +51,6 @@ enum {
     MAX_GCA_PACKET_SIZE = 1024,
 };
 
-/* Copies your own ip_port structure to dest. (TODO: This should probably go somewhere else)
- *
- * Return 0 on succcess.
- * Return -1 on failure.
- */
-int ipport_self_copy(const DHT *dht, IP_Port *dest)
-{
-    for (size_t i = 0; i < LCLIENT_LIST; ++i) {
-        const Client_data *const client = dht_get_close_client(dht, i);
-        const IP_Port *const ip_port4 = &client->assoc4.ret_ip_port;
-
-        if (ipport_isset(ip_port4)) {
-            ipport_copy(dest, ip_port4);
-            break;
-        }
-
-        const IP_Port *const ip_port6 = &client->assoc6.ret_ip_port;
-
-        if (ipport_isset(ip_port6)) {
-            ipport_copy(dest, ip_port6);
-            break;
-        }
-    }
-
-    if (!ipport_isset(dest)) {
-        return -1;
-    }
-
-    return 0;
-}
 
 /* Creates a GC_Announce_Node using public_key and your own IP_Port struct
  *
