@@ -1032,7 +1032,7 @@ static sock_t new_listening_TCP_socket(int family, uint16_t port)
 TCP_Server *new_TCP_server(Logger *log, uint8_t ipv6_enabled, uint16_t num_sockets, const uint16_t *ports,
                            const uint8_t *secret_key, Onion *onion)
 {
-    return new_TCP_server_nat(log, ipv6_enabled, num_sockets, ports, TRAVERSAL_TYPE_NONE, secret_key, onion);
+    return new_TCP_server_nat(log, ipv6_enabled, num_sockets, ports, 0, secret_key, onion);
 }
 
 // TODO(#219)
