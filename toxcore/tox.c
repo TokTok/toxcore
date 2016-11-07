@@ -107,7 +107,6 @@ CONST_FUNCTION(max_custom_packet_size, MAX_CUSTOM_PACKET_SIZE)
 CONST_FUNCTION(hash_length, HASH_LENGTH)
 CONST_FUNCTION(file_id_length, FILE_ID_LENGTH)
 CONST_FUNCTION(max_filename_length, MAX_FILENAME_LENGTH)
-CONST_FUNCTION(traversal_type_none, TRAVERSAL_TYPE_NONE)
 
 
 #define ACCESSORS(type, ns, name) \
@@ -154,7 +153,7 @@ void tox_options_default(struct Tox_Options *options)
         memset(options, 0, sizeof(struct Tox_Options));
         options->ipv6_enabled = 1;
         options->udp_enabled = 1;
-        options->traversal_type = TOX_TRAVERSAL_TYPE_NONE;
+        options->traversal_type = 0;
         options->proxy_type = TOX_PROXY_TYPE_NONE;
         options->hole_punching_enabled = true;
         options->local_discovery_enabled = true;
@@ -228,8 +227,7 @@ Tox *tox_new(const struct Tox_Options *options, TOX_ERR_NEW *error)
         m_options.log_callback = (logger_cb *)options->log_callback;
         m_options.log_user_data = options->log_user_data;
 
-        if ((options->traversal_type == TOX_TRAVERSAL_TYPE_NONE)
-                || (options->traversal_type & (TOX_TRAVERSAL_TYPE_UPNP | TOX_TRAVERSAL_TYPE_NATPMP))) {
+        if (options->traversal_type <= (TOX_TRAVERSAL_TYPE_UPNP | TOX_TRAVERSAL_TYPE_NATPMP)) {
             m_options.traversal_type = options->traversal_type;
         } else {
             SET_ERROR_PARAMETER(error, TOX_ERR_NEW_TRAVERSAL_BAD_TYPE);
