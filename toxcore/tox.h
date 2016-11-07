@@ -309,13 +309,6 @@ uint32_t tox_file_id_length(void);
 
 uint32_t tox_max_filename_length(void);
 
-/**
- * Value to indicate user doesn't want to use nat traversal.
- */
-#define TOX_TRAVERSAL_TYPE_NONE        0
-
-uint32_t tox_traversal_type_none(void);
-
 
 /*******************************************************************************
  *
@@ -493,9 +486,8 @@ typedef enum TOX_LOG_LEVEL {
  * @param message The log message.
  * @param user_data The user data pointer passed to tox_new in options.
  */
-typedef void tox_log_cb(Tox *tox, TOX_LOG_LEVEL level, const char *file, uint32_t line, const char *func,
-                        const char *message, void *user_data);
-
+void tox_log_cb(Tox *tox, TOX_LOG_LEVEL level, const char *file, uint32_t line, const char *func, const char *message,
+                void *user_data);
 
 /**
  * This struct contains all the startup options for Tox. You can either
