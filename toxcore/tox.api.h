@@ -290,11 +290,6 @@ const FILE_ID_LENGTH              = 32;
  */
 const MAX_FILENAME_LENGTH         = 255;
 
-/**
- * Value to indicate user doesn't want to use nat traversal.
- */
-const TRAVERSAL_TYPE_NONE         = 0;
-
 
 /*******************************************************************************
  *
@@ -380,6 +375,7 @@ bitmask TRAVERSAL_TYPE {
   NATPMP,
 }
 
+
 /**
  * Type of savedata to create the Tox instance from.
  */
@@ -442,7 +438,7 @@ enum class LOG_LEVEL {
  * @param message The log message.
  * @param user_data The user data pointer passed to $new in options.
  */
-typedef void log_cb(LOG_LEVEL level, string file, uint32_t line, string func, string message, any user_data);
+void log_cb(LOG_LEVEL level, string file, uint32_t line, string func, string message, any user_data);
 
 
 static class options {

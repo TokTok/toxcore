@@ -125,7 +125,6 @@ Tox *tox_new(const struct Tox_Options *options, TOX_ERR_NEW *error)
         m_options.log_user_data = tox_options_get_log_user_data(options);
 
         switch (tox_options_get_traversal_type(options)) {
-            case TOX_TRAVERSAL_TYPE_NONE:
             case TOX_TRAVERSAL_TYPE_UPNP:
             case TOX_TRAVERSAL_TYPE_NATPMP:
             case TOX_TRAVERSAL_TYPE_UPNP | TOX_TRAVERSAL_TYPE_NATPMP:

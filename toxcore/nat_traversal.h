@@ -30,8 +30,6 @@
 
 #include "logger.h"
 
-#define TRAVERSAL_TYPE_NONE 0
-
 
 /**
  * Allowed traversal types.
