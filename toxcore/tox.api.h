@@ -434,7 +434,7 @@ enum class LOG_LEVEL {
  * @param message The log message.
  * @param user_data The user data pointer passed to $new in options.
  */
-void log_cb(LOG_LEVEL level, string file, uint32_t line, string func, string message, any user_data);
+typedef void log_cb(LOG_LEVEL level, string file, uint32_t line, string func, string message, any user_data);
 
 
 static class options {
