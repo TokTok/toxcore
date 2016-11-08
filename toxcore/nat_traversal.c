@@ -37,6 +37,7 @@
 #endif
 
 #ifdef HAVE_LIBNATPMP
+#define ENABLE_STRNATPMPERR
 #include <natpmp.h>
 #include <unistd.h>
 #endif
@@ -210,7 +211,7 @@ bool nat_map_port(Logger *log, uint8_t traversal_type, NAT_TRAVERSAL_PROTO proto
         status->natpmp = NAT_TRAVERSAL_ERR_DISABLED;
     }
 
-#if !defined(HAVE_LIBMNIUPNPC) && !defined(HAVE_LIBNATPMP)
+#if !defined(HAVE_LIBMINIUPNPC) && !defined(HAVE_LIBNATPMP)
     // Silence warnings if no libraries are found
     UNUSED(log);
     UNUSED(traversal_type);

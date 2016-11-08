@@ -493,6 +493,7 @@ typedef enum TOX_LOG_LEVEL {
 typedef void tox_log_cb(Tox *tox, TOX_LOG_LEVEL level, const char *file, uint32_t line, const char *func,
                         const char *message, void *user_data);
 
+
 /**
  * This struct contains all the startup options for Tox. You must tox_options_new to
  * allocate an object of this type.
