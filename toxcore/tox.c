@@ -225,11 +225,11 @@ Tox *tox_new(const struct Tox_Options *options, TOX_ERR_NEW *error)
         m_options.log_callback = (logger_cb *)options->log_callback;
         m_options.log_user_data = options->log_user_data;
 
-        if (options->traversal_type <= (TOX_TRAVERSAL_TYPE_UPNP | TOX_TRAVERSAL_TYPE_NATPMP)) {
-            m_options.traversal_type = options->traversal_type;
-        } else {
+        if (options->traversal_type & ~(TOX_TRAVERSAL_TYPE_UPNP | TOX_TRAVERSAL_TYPE_NATPMP)) {
             SET_ERROR_PARAMETER(error, TOX_ERR_NEW_TRAVERSAL_BAD_TYPE);
             return NULL;
+        } else {
+            m_options.traversal_type = options->traversal_type;
         }
 
         switch (options->proxy_type) {
