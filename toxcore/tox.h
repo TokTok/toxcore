@@ -490,8 +490,8 @@ typedef enum TOX_LOG_LEVEL {
  * @param message The log message.
  * @param user_data The user data pointer passed to tox_new in options.
  */
-void tox_log_cb(Tox *tox, TOX_LOG_LEVEL level, const char *file, uint32_t line, const char *func, const char *message,
-                void *user_data);
+typedef void tox_log_cb(Tox *tox, TOX_LOG_LEVEL level, const char *file, uint32_t line, const char *func,
+                        const char *message, void *user_data);
 
 /**
  * This struct contains all the startup options for Tox. You must tox_options_new to
