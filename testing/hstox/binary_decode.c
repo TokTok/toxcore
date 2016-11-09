@@ -7,15 +7,22 @@
 
 METHOD(bin, Binary_decode, CipherText)
 {
-    uint64_t length;
+    int64_t length;
     uint64_t tmp;
 
     SUCCESS {
         memcpy(&tmp, args.ptr, sizeof(uint64_t));
         length = be64toh(tmp);
 
-        if (args.size >= sizeof(uint64_t) && args.size == length + sizeof(uint64_t))
-        {
+        // TODO(iphydf): Get rid of this case if/when
+        // https://github.com/kolmodin/binary/issues/127 is fixed. This is a
+        // workaround for a Haskell library bug. Our implementation here without
+        // the special case for negative length, and instead interpreting the
+        // length as unsigned integer, was correct.
+        if (length <= 0) {
+            msgpack_pack_bin(res, 0);
+            msgpack_pack_bin_body(res, "", 0);
+        } else if (args.size >= sizeof(uint64_t) && args.size == length + sizeof(uint64_t)) {
             msgpack_pack_bin(res, args.size - sizeof(uint64_t));
             msgpack_pack_bin_body(res, args.ptr + sizeof(uint64_t), args.size - sizeof(uint64_t));
         } else {
@@ -156,7 +163,7 @@ METHOD(bin, Binary_decode, PingPacket)
 
 METHOD(bin, Binary_decode, PlainText)
 {
-    return pending;
+    return Binary_decode_CipherText(args, res);
 }
 
 METHOD(bin, Binary_decode, PortNumber)
