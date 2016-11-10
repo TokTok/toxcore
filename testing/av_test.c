@@ -358,7 +358,7 @@ static void *iterate_toxav(void *data)
 
 static int send_opencv_img(ToxAV *av, uint32_t friend_number, const IplImage *img)
 {
-    int32_t strides[3] = { 1280, 640, 640 };
+    int32_t strides[3] = { img->width, img->width / 2, img->width / 2 };
     uint8_t *planes[3] = {
         (uint8_t *)malloc(img->height * img->width),
         (uint8_t *)malloc(img->height * img->width / 4),
@@ -465,6 +465,8 @@ CHECK_ARG:
         case 'x': {
             char *d;
             video_frame_duration = strtol(optarg, &d, 10);
+            //We need this silenser to pass -Werror
+            (void)video_frame_duration;
 
             if (*d) {
                 printf("Invalid value for argument: 'x'");
@@ -804,5 +806,6 @@ CHECK_ARG:
     printf("\nTest successful!\n");
 
     Pa_Terminate();
+
     return 0;
 }
