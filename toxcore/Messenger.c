@@ -2629,6 +2629,7 @@ void do_messenger(Messenger *m, void *userdata)
 #define MESSENGER_STATE_TYPE_STATUS        6
 #define MESSENGER_STATE_TYPE_TCP_RELAY     10
 #define MESSENGER_STATE_TYPE_PATH_NODE     11
+#define MESSENGER_STATE_TYPE_CONFERENCES   100
 #define MESSENGER_STATE_TYPE_END           255
 
 #define SAVED_FRIEND_REQUEST_SIZE 1024
@@ -2844,6 +2845,11 @@ static int friends_list_load(Messenger *m, const uint8_t *data, uint32_t length)
     return num;
 }
 
+uint32_t saved_conferences_size(const Messenger *m);
+void conferences_save(const Messenger *m, uint8_t *data);
+int conferences_load(Messenger *m, const uint8_t *data, uint32_t length);
+
+
 /*  return size of the messenger data (for saving) */
 uint32_t messenger_size(const Messenger *m)
 {
@@ -2857,6 +2863,7 @@ uint32_t messenger_size(const Messenger *m)
              + sizesubhead + 1                                 // status
              + sizesubhead + NUM_SAVED_TCP_RELAYS * packed_node_size(TCP_INET6) //TCP relays
              + sizesubhead + NUM_SAVED_PATH_NODES * packed_node_size(TCP_INET6) //saved path nodes
+             + sizesubhead + saved_conferences_size(m)           // old group chats
              + sizesubhead;
 }
 
@@ -2950,6 +2957,12 @@ void messenger_save(const Messenger *m, uint8_t *data)
         data += len;
     }
 
+    len = saved_conferences_size(m);
+    type = MESSENGER_STATE_TYPE_CONFERENCES;
+    data = z_state_save_subheader(data, len, type);
+    conferences_save(m, data);
+    data += len;
+
     z_state_save_subheader(data, 0, MESSENGER_STATE_TYPE_END);
 }
 
@@ -3025,6 +3038,15 @@ static int messenger_load_state_callback(void *outer, const uint8_t *data, uint3
                 onion_add_bs_path_node(m->onion_c, nodes[i].ip_port, nodes[i].public_key);
             }
 
+            break;
+        }
+
+        case MESSENGER_STATE_TYPE_CONFERENCES: {
+            /*int err =*/ conferences_load(m, data, length);
+            /* No need to do something special if err < 0
+             * err < 0 just means that conferences data was damaged
+             * and skipped
+             */
             break;
         }
 
