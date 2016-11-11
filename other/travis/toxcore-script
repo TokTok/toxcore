@@ -31,6 +31,9 @@ RUN $CMAKE                                      \
   -DASAN=ON                                     \
   -DDEBUG=ON                                    \
   -DSTRICT_ABI=ON                               \
+  -DBUILD_NTOX=OFF                              \
+  -DENABLE_SHARED=OFF                           \
+  -DENABLE_STATIC=ON                            \
   -DTEST_TIMEOUT_SECONDS=120                    \
   -DTRACE=ON                                    \
   -DUSE_IPV6=$USE_IPV6                          \
