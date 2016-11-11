@@ -2090,6 +2090,10 @@ static void punch_holes(DHT *dht, IP ip, uint16_t *port_list, uint16_t numports,
         return;
     }
 
+    if (!dht->nat_hole_punching_level) {
+        return;
+    }
+
     uint32_t i;
     uint32_t top = dht->friends_list[friend_num].nat.punching_index + MAX_PUNCHING_PORTS;
     uint16_t firstport = port_list[0];
@@ -2575,7 +2579,7 @@ static int cryptopacket_handle(void *object, IP_Port source, const uint8_t *pack
 
 /*----------------------------------------------------------------------------------*/
 
-DHT *new_DHT(Logger *log, Networking_Core *net)
+DHT *new_DHT(Logger *log, Networking_Core *net, uint8_t nat_level)
 {
     /* init time */
     unix_time_update();
@@ -2592,6 +2596,9 @@ DHT *new_DHT(Logger *log, Networking_Core *net)
 
     dht->log = log;
     dht->net = net;
+
+    dht->nat_hole_punching_level = nat_level;
+
     dht->ping = new_ping(dht);
 
     if (dht->ping == NULL) {

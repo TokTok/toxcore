@@ -357,6 +357,30 @@ enum class PROXY_TYPE {
   SOCKS5,
 }
 
+enum class DHT_NAT_LEVEL {
+  /**
+   * Don't try to hole punch through a NAT device at all (Not Recommended).
+   */
+  NONE,
+  /**
+   * Only try small port ranges, and wait a long time between attempts.
+   * (This Level Currently Unsupported; defaults to NORMAL)
+   */
+  POLITE,
+  /**
+   * Try to establing a direct UDP connection through any supported NAT device.
+   * NORMAL is the default setting
+   */
+  NORMAL,
+  /**
+   * Agressivly try to establish a direct connection to all friends.
+   * USE WITH CAUTION, this may interferr with some poorly configured NAT devices
+   * leading to a denial of service effect to all devices behind the NAT.
+   * (This Level Currently Unsupported; defaults to NORMAL)
+   */
+  AGRESSIVE,
+}
+
 /**
  * Type of savedata to create the Tox instance from.
  */
@@ -486,37 +510,51 @@ static class options {
       uint16_t port;
     }
 
-    /**
-     * The start port of the inclusive port range to attempt to use.
-     *
-     * If both start_port and end_port are 0, the default port range will be
-     * used: [33445, 33545].
-     *
-     * If either start_port or end_port is 0 while the other is non-zero, the
-     * non-zero port will be the only port in the range.
-     *
-     * Having start_port > end_port will yield the same behavior as if start_port
-     * and end_port were swapped.
-     */
-    uint16_t start_port;
+    namespace dht {
 
-    /**
-     * The end port of the inclusive port range to attempt to use.
-     */
-    uint16_t end_port;
+      /**
+       * The start port of the inclusive port range to attempt to use.
+       *
+       * If both start_port and end_port are 0, the default port range will be
+       * used: [33445, 33545].
+       *
+       * If either start_port or end_port is 0 while the other is non-zero, the
+       * non-zero port will be the only port in the range.
+       *
+       * Having start_port > end_port will yield the same behavior as if start_port
+       * and end_port were swapped.
+       */
+      uint16_t start_port;
 
-    /**
-     * The port to use for the TCP server (relay). If 0, the TCP server is
-     * disabled.
-     *
-     * Enabling it is not required for Tox to function properly.
-     *
-     * When enabled, your Tox instance can act as a TCP relay for other Tox
-     * instance. This leads to increased traffic, thus when writing a client
-     * it is recommended to enable TCP server only if the user has an option
-     * to disable it.
-     */
-    uint16_t tcp_port;
+      /**
+       * The end port of the inclusive port range to attempt to use.
+       */
+      uint16_t end_port;
+
+      /**
+       * The port to use for the TCP server (relay). If 0, the TCP server is
+       * disabled.
+       *
+       * Enabling it is not required for Tox to function properly.
+       *
+       * When enabled, your Tox instance can act as a TCP relay for other Tox
+       * instance. This leads to increased traffic, thus when writing a client
+       * it is recommended to enable TCP server only if the user has an option
+       * to disable it.
+       */
+      uint16_t tcp_port;
+
+      /**
+       * How agressive toxcore will be when trying to establish a direct UDP
+       * connection with friends through a Network Address Translation device.
+       *
+       * Care must be used when changing this from the default as too low a level
+       * could stop toxcore from creating a direct connection to friends, and too
+       * high a level could cause a DOS effect, and disrupt ALL network traffic for
+       * everyone behind the NAT device.
+       */
+      DHT_NAT_LEVEL nat_level;
+    }
 
     namespace savedata {
       /**
