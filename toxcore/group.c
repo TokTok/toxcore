@@ -548,7 +548,6 @@ static void apply_changes_in_peers(Group_Chats *g_c, aint groupnumber, void *use
         g->closest_peers_entry = 0;
 
         size_t np = g->numpeers;
-        uint64_t comp_d = 0;
 
         for (i = 0; i < np; ++i) {
 
@@ -906,7 +905,6 @@ static int delpeer(Group_Chats *g_c, aint groupnumber, aint peer_index)
 
 int find_peer_index_in_list(const Group_c *g, aint peer_index)
 {
-    aint index = -1;
     size_t i;
 
     for (i = 0; i < g->numpeers_in_list; ++i) {
@@ -2937,7 +2935,7 @@ static void handle_message_packet_group(Group_Chats *g_c, int groupnumber, const
                 g->join_mode = false;
             }
 
-            aint peer_index = addpeer(g, groupnumber, real_pk, temp_pk, new_peer_gid);
+            /*aint peer_index =*/ addpeer(g, groupnumber, real_pk, temp_pk, new_peer_gid);
 
             int self_peer_gid = get_self_peer_gid(g);
 
