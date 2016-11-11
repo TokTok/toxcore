@@ -237,6 +237,11 @@ const PUBLIC_KEY_SIZE              = 32;
 const SECRET_KEY_SIZE              = 32;
 
 /**
+ * The size of a Tox Conference unique id in bytes.
+ */
+const CONFERENCE_UID_SIZE          = 32;
+
+/**
  * The size of a Tox address in bytes. Tox addresses are in the format
  * [Public Key ($PUBLIC_KEY_SIZE bytes)][nospam (4 bytes)][checksum (2 bytes)].
  *
@@ -2042,6 +2047,9 @@ namespace conference {
      * or exits the conference.
      *
      * @param friend_number The friend who invited us.
+     *  if friend_number == UINT32_MAX then autojoin
+     *  if client do not call tox_conference_join or toxav_join_av_groupchat immediately
+     *  conference will be deleted
      * @param type The conference type (text only or audio/video).
      * @param cookie A piece of data of variable length required to join the
      *   conference.
@@ -2087,11 +2095,12 @@ namespace conference {
    */
   enum class STATE_CHANGE {
     /**
-     * A peer has joined the conference.
+     * Some changes to list has occurred. Rebuild of list required.
+     * peer_number is undefined (always 0 for api compatibility)
      */
-    PEER_JOIN,
+    LIST_CHANGED,
     /**
-     * A peer has exited the conference.
+     * Deprecated. Never occurred.
      */
     PEER_EXIT,
     /**
@@ -2141,6 +2150,52 @@ namespace conference {
     CONFERENCE_NOT_FOUND,
   }
 
+  /**
+   * This function starts entering process.
+   *
+   * @param conference_number The conference number of the conference to be entered.
+   * conference_number can be obtained by tox_conference_by_uid
+   * Call this function only if you leave conference using tox_conference_leave.
+   * No need to call this function for just created conferences
+   *
+   * @return true on success.
+   */
+  bool enter(uint32_t conference_number) {
+    /**
+     * Conference already connected or enter process already started
+     */
+    ALREADY,
+    /**
+     * The conference number passed did not designate a valid conference.
+     */
+    NOT_FOUND,
+  }
+
+  /**
+   * This function disconnects conference.
+   * Call this function to disconnect conference without delete.
+   * Even error TOX_ERR_CONFERENCE_LEAVE_ALREADY, new keep_leave flag will be applied to conference
+   *
+   * @param conference_number The conference number of the conference to be disconnected.
+   * conference_number can be obtained by tox_conference_by_uid.
+   *
+   * @param keep_leave Set true to keep in leave state
+   * No one can invite you to this conference after you leave it with keep_leave is true.
+   * Also keep_leave == true means conference will not try to connect to other peers after restart.
+   * Call tox_conference_enter to enable auto connect and invite.
+   *
+   * @return true on success.
+   */
+  bool leave(uint32_t conference_number, bool keep_leave) {
+    /**
+     * Conference already disconnected
+     */
+    ALREADY,
+    /**
+     * The conference number passed did not designate a valid conference.
+     */
+    NOT_FOUND,
+  }
 
   namespace peer {
 
@@ -2383,6 +2438,29 @@ namespace conference {
        */
       CONFERENCE_NOT_FOUND,
     }
+  }
+
+  /**
+   * Get the conference unique ID.
+   *
+   * @param uid A memory region large enough to store TOX_CONFERENCE_UID_SIZE bytes
+   *
+   * @return true on success.
+   */
+  bool get_uid(uint32_t conference_number, uint8_t[CONFERENCE_UID_SIZE] uid);
+
+  /**
+   * Return the conference number associated with that uid.
+   *
+   * @return the conference number on success, UINT32_MAX on failure.
+   * @param uid A byte array containing the conference id (TOX_CONFERENCE_UID_SIZE).
+   */
+  const uint32_t by_uid(const uint8_t[CONFERENCE_UID_SIZE] uid) {
+    NULL,
+    /**
+     * No conference with the given uid exists on the conference list.
+     */
+    NOT_FOUND,
   }
 
 }

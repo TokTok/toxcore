@@ -1237,7 +1237,7 @@ void tox_callback_conference_namelist_change(Tox *tox, tox_conference_namelist_c
 uint32_t tox_conference_new(Tox *tox, TOX_ERR_CONFERENCE_NEW *error)
 {
     Messenger *m = tox;
-    int ret = add_groupchat((Group_Chats *)m->conferences_object, GROUPCHAT_TYPE_TEXT);
+    int ret = add_groupchat((Group_Chats *)m->conferences_object, GROUPCHAT_TYPE_TEXT, NULL);
 
     if (ret == -1) {
         SET_ERROR_PARAMETER(error, TOX_ERR_CONFERENCE_NEW_INIT);
@@ -1259,6 +1259,44 @@ bool tox_conference_delete(Tox *tox, uint32_t conference_number, TOX_ERR_CONFERE
     }
 
     SET_ERROR_PARAMETER(error, TOX_ERR_CONFERENCE_DELETE_OK);
+    return true;
+}
+
+bool tox_conference_enter(Tox *tox, uint32_t conference_number, TOX_ERR_CONFERENCE_ENTER *error)
+{
+    Messenger *m = tox;
+    int ret = enter_conference((Group_Chats *)m->conferences_object, conference_number);
+
+    if (ret == -1) {
+        SET_ERROR_PARAMETER(error, TOX_ERR_CONFERENCE_ENTER_NOT_FOUND);
+        return false;
+    }
+
+    if (ret == -2) {
+        SET_ERROR_PARAMETER(error, TOX_ERR_CONFERENCE_ENTER_ALREADY);
+        return false;
+    }
+
+    SET_ERROR_PARAMETER(error, TOX_ERR_CONFERENCE_ENTER_OK);
+    return true;
+}
+
+bool tox_conference_leave(Tox *tox, uint32_t conference_number, bool keep_leave, TOX_ERR_CONFERENCE_LEAVE *error)
+{
+    Messenger *m = tox;
+    int ret = leave_conference((Group_Chats *)m->conferences_object, conference_number, keep_leave);
+
+    if (ret == -1) {
+        SET_ERROR_PARAMETER(error, TOX_ERR_CONFERENCE_LEAVE_NOT_FOUND);
+        return false;
+    }
+
+    if (ret == -2) {
+        SET_ERROR_PARAMETER(error, TOX_ERR_CONFERENCE_LEAVE_ALREADY);
+        return false;
+    }
+
+    SET_ERROR_PARAMETER(error, TOX_ERR_CONFERENCE_LEAVE_OK);
     return true;
 }
 
@@ -1540,6 +1578,33 @@ TOX_CONFERENCE_TYPE tox_conference_get_type(const Tox *tox, uint32_t conference_
     SET_ERROR_PARAMETER(error, TOX_ERR_CONFERENCE_GET_TYPE_OK);
     return (TOX_CONFERENCE_TYPE)ret;
 }
+
+bool tox_conference_get_uid(Tox *tox, uint32_t conference_number, uint8_t *uid /* TOX_CONFERENCE_ID_SIZE bytes */)
+{
+    const Messenger *m = tox;
+    int ret = conference_get_id((Group_Chats *)m->conferences_object, conference_number, uid);
+    return ret >= 0;
+}
+
+uint32_t tox_conference_by_uid(const Tox *tox, const uint8_t *uid, TOX_ERR_CONFERENCE_BY_UID *error)
+{
+    if (!uid) {
+        SET_ERROR_PARAMETER(error, TOX_ERR_CONFERENCE_BY_UID_NULL);
+        return UINT32_MAX;
+    }
+
+    const Messenger *m = tox;
+    int32_t ret = conference_by_uid((Group_Chats *)m->conferences_object, uid);
+
+    if (ret == -1) {
+        SET_ERROR_PARAMETER(error, TOX_ERR_CONFERENCE_BY_UID_NOT_FOUND);
+        return UINT32_MAX;
+    }
+
+    SET_ERROR_PARAMETER(error, TOX_ERR_CONFERENCE_BY_UID_OK);
+    return ret;
+}
+
 
 static void set_custom_packet_error(int ret, TOX_ERR_FRIEND_CUSTOM_PACKET *error)
 {
