@@ -59,7 +59,7 @@ START_TEST(test_many_clients_tcp)
         tox_options_default(&opts);
 
         if (i == 0) {
-            opts.tcp_port = TCP_RELAY_PORT;
+            opts.dht_tcp_port = TCP_RELAY_PORT;
         } else {
             opts.udp_enabled = 0;
         }
@@ -160,7 +160,7 @@ START_TEST(test_many_clients_tcp_b)
         tox_options_default(&opts);
 
         if (i < NUM_TCP_RELAYS) {
-            opts.tcp_port = TCP_RELAY_PORT + i;
+            opts.dht_tcp_port = TCP_RELAY_PORT + i;
         } else {
             opts.udp_enabled = 0;
         }
