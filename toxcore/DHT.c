@@ -2090,6 +2090,26 @@ static void punch_holes(DHT *dht, IP ip, uint16_t *port_list, uint16_t numports,
         return;
     }
 
+    // TODO(toktok/c-toxcore#214)
+    /* The NAT_LEVEL set here is specified by the user, higher numbers allow toxcore to be
+     * more agressive when it tries to establish a direct UDP connection to friends. Because
+     * DHT is stateless, and some routers are known to hold on to DHT routing rules longer
+     * than needed, being to agressive may exaust all routes the NAT can handle causing a DoS
+     * effect to the whole network. */
+    switch (dht->nat_hole_punching_level) {
+
+        case 0: { // None
+            return;
+        }
+
+        case 1: // Polite
+        case 2: // Normal
+        case 3: { // Aggressive
+            break;
+            // TODO(toktok/c-toxcore#266) enable other levels.
+        }
+    }
+
     uint32_t i;
     uint32_t top = dht->friends_list[friend_num].nat.punching_index + MAX_PUNCHING_PORTS;
     uint16_t firstport = port_list[0];
@@ -2575,7 +2595,7 @@ static int cryptopacket_handle(void *object, IP_Port source, const uint8_t *pack
 
 /*----------------------------------------------------------------------------------*/
 
-DHT *new_DHT(Logger *log, Networking_Core *net)
+DHT *new_DHT(Logger *log, Networking_Core *net, uint8_t nat_level)
 {
     /* init time */
     unix_time_update();
@@ -2592,6 +2612,9 @@ DHT *new_DHT(Logger *log, Networking_Core *net)
 
     dht->log = log;
     dht->net = net;
+
+    dht->nat_hole_punching_level = nat_level;
+
     dht->ping = new_ping(dht);
 
     if (dht->ping == NULL) {

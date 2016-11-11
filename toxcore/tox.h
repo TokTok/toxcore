@@ -395,6 +395,38 @@ typedef enum TOX_PROXY_TYPE {
 } TOX_PROXY_TYPE;
 
 
+typedef enum TOX_DHT_NAT_LEVEL {
+
+    /**
+     * Don't try to hole punch through a NAT device at all (Not Recommended).
+     */
+    TOX_DHT_NAT_LEVEL_NONE,
+
+    /**
+     * Only try small port ranges, and wait a long time between attempts.
+     * (This level currently unsupported and is equivalent to TOX_DHT_NAT_LEVEL_NORMAL)
+     */
+    TOX_DHT_NAT_LEVEL_POLITE,
+
+    /**
+     * Try to establish a direct UDP connection through any supported NAT device,
+     * by "hole punching" or sending outgoing UDP packets to IP and Port we're expecting
+     * to receive data from.
+     * NORMAL is the default setting
+     */
+    TOX_DHT_NAT_LEVEL_NORMAL,
+
+    /**
+     * Aggressively try to establish a direct connection to all friends.
+     * USE WITH CAUTION, this may interfere with some poorly configured NAT devices
+     * leading to a denial of service effect to all devices behind the NAT.
+     * (This level currently unsupported and is equivalent to TOX_DHT_NAT_LEVEL_NORMAL)
+     */
+    TOX_DHT_NAT_LEVEL_AGGRESSIVE,
+
+} TOX_DHT_NAT_LEVEL;
+
+
 /**
  * Type of savedata to create the Tox instance from.
  */
@@ -551,13 +583,13 @@ struct Tox_Options {
      * Having start_port > end_port will yield the same behavior as if start_port
      * and end_port were swapped.
      */
-    uint16_t start_port;
+    uint16_t dht_start_port;
 
 
     /**
      * The end port of the inclusive port range to attempt to use.
      */
-    uint16_t end_port;
+    uint16_t dht_end_port;
 
 
     /**
@@ -571,7 +603,18 @@ struct Tox_Options {
      * it is recommended to enable TCP server only if the user has an option
      * to disable it.
      */
-    uint16_t tcp_port;
+    uint16_t dht_tcp_port;
+
+
+    /**
+     * Sets how aggressive toxcore is allowed to be when trying to establish a direct UDP
+     * connection with friends when either are behind a NAT device.
+     *
+     * Clients should be aware of the implications of changing this from its default.
+     * Setting too low of a level could stop toxcore from creating a direct connections,
+     * and too high could cause a DoS effect for all users, on some networks.
+     */
+    TOX_DHT_NAT_LEVEL dht_nat_level;
 
 
     /**
@@ -629,17 +672,21 @@ uint16_t tox_options_get_proxy_port(const struct Tox_Options *options);
 
 void tox_options_set_proxy_port(struct Tox_Options *options, uint16_t port);
 
-uint16_t tox_options_get_start_port(const struct Tox_Options *options);
+uint16_t tox_options_get_dht_start_port(const struct Tox_Options *options);
 
-void tox_options_set_start_port(struct Tox_Options *options, uint16_t start_port);
+void tox_options_set_dht_start_port(struct Tox_Options *options, uint16_t start_port);
 
-uint16_t tox_options_get_end_port(const struct Tox_Options *options);
+uint16_t tox_options_get_dht_end_port(const struct Tox_Options *options);
 
-void tox_options_set_end_port(struct Tox_Options *options, uint16_t end_port);
+void tox_options_set_dht_end_port(struct Tox_Options *options, uint16_t end_port);
 
-uint16_t tox_options_get_tcp_port(const struct Tox_Options *options);
+uint16_t tox_options_get_dht_tcp_port(const struct Tox_Options *options);
 
-void tox_options_set_tcp_port(struct Tox_Options *options, uint16_t tcp_port);
+void tox_options_set_dht_tcp_port(struct Tox_Options *options, uint16_t tcp_port);
+
+TOX_DHT_NAT_LEVEL tox_options_get_dht_nat_level(const struct Tox_Options *options);
+
+void tox_options_set_dht_nat_level(struct Tox_Options *options, TOX_DHT_NAT_LEVEL nat_level);
 
 TOX_SAVEDATA_TYPE tox_options_get_savedata_type(const struct Tox_Options *options);
 
