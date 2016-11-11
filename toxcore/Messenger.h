@@ -778,4 +778,10 @@ uint32_t count_friendlist(const Messenger *m);
  * of out_list will be truncated to list_size. */
 uint32_t copy_friendlist(const Messenger *m, uint32_t *out_list, uint32_t list_size);
 
+// HACK HACK HACK to make conferences load/save work.
+// TODO(robinlinden): Refactor this.
+extern uint32_t (*saved_conferences_size_ptr)(const Messenger *m);
+extern void (*conferences_save_ptr)(const Messenger *m, uint8_t *data);
+extern int (*conferences_load_ptr)(Messenger *m, const uint8_t *data, uint32_t length);
+
 #endif
