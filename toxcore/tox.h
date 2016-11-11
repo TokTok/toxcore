@@ -575,6 +575,12 @@ struct Tox_Options {
 
 
     /**
+     * Enables or disables UDP hole-punching in toxcore, (Default: enabled).
+     */
+    bool nat_level;
+
+
+    /**
      * The type of savedata to load from.
      */
     TOX_SAVEDATA_TYPE savedata_type;
@@ -640,6 +646,10 @@ void tox_options_set_end_port(struct Tox_Options *options, uint16_t end_port);
 uint16_t tox_options_get_tcp_port(const struct Tox_Options *options);
 
 void tox_options_set_tcp_port(struct Tox_Options *options, uint16_t tcp_port);
+
+bool tox_options_get_nat_level(const struct Tox_Options *options);
+
+void tox_options_set_nat_level(struct Tox_Options *options, bool nat_level);
 
 TOX_SAVEDATA_TYPE tox_options_get_savedata_type(const struct Tox_Options *options);
 
