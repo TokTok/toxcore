@@ -21,7 +21,7 @@
 
 #include "helpers.h"
 
-#define NUM_GROUP_TOX 5
+#define NUM_GROUP_TOX 16
 #define GROUP_MESSAGE "Install Gentoo"
 
 static void handle_self_connection_status(

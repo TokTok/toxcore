@@ -458,7 +458,7 @@ static int groupchat_enable_av(const Logger *log, Group_Chats *g_c, uint32_t gro
 int add_av_groupchat(const Logger *log, Group_Chats *g_c, void (*audio_callback)(Messenger *, uint32_t, uint32_t,
                      const int16_t *, unsigned int, uint8_t, uint32_t, void *), void *userdata)
 {
-    int groupnumber = add_groupchat(g_c, GROUPCHAT_TYPE_AV);
+    int groupnumber = add_groupchat(g_c, GROUPCHAT_TYPE_AV, nullptr);
 
     if (groupnumber == -1) {
         return -1;
@@ -475,7 +475,7 @@ int add_av_groupchat(const Logger *log, Group_Chats *g_c, void (*audio_callback)
 /* Join a AV group (you need to have been invited first.)
  *
  * returns group number on success
- * returns -1 on failure.
+ * returns -1 .. -6 on failure (see join_groupchat)
  */
 int join_av_groupchat(const Logger *log, Group_Chats *g_c, uint32_t friendnumber, const uint8_t *data, uint16_t length,
                       void (*audio_callback)(Messenger *, uint32_t, uint32_t, const int16_t *, unsigned int, uint8_t, uint32_t, void *),
@@ -483,13 +483,13 @@ int join_av_groupchat(const Logger *log, Group_Chats *g_c, uint32_t friendnumber
 {
     int groupnumber = join_groupchat(g_c, friendnumber, GROUPCHAT_TYPE_AV, data, length);
 
-    if (groupnumber == -1) {
-        return -1;
+    if (groupnumber < 0) {
+        return groupnumber;
     }
 
     if (groupchat_enable_av(log, g_c, groupnumber, audio_callback, userdata) == -1) {
         del_groupchat(g_c, groupnumber);
-        return -1;
+        return -5; /* initialization failed */
     }
 
     return groupnumber;
