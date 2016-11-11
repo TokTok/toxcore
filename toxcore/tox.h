@@ -246,6 +246,13 @@ uint32_t tox_public_key_size(void);
 uint32_t tox_secret_key_size(void);
 
 /**
+ * The size of a Tox Conference unique id in bytes.
+ */
+#define TOX_CONFERENCE_UID_SIZE        32
+
+uint32_t tox_conference_uid_size(void);
+
+/**
  * The size of the nospam in bytes when written in a Tox address.
  */
 #define TOX_NOSPAM_SIZE                (sizeof(uint32_t))
@@ -2358,6 +2365,12 @@ typedef enum TOX_CONFERENCE_TYPE {
  * or exits the conference.
  *
  * @param friend_number The friend who invited us.
+ *  if friend_number == UINT32_MAX then conference automatically joined.
+ *  On auto-join client must call tox_conference_join or toxav_join_av_groupchat
+ *  immediately in callback. For api compatibility reason, if client don't
+ *  call one these functions, conference will be deleted and toxcore
+ *  totally forget this conference.
+ *
  * @param type The conference type (text only or audio/video).
  * @param cookie A piece of data of variable length required to join the
  *   conference.
@@ -2490,6 +2503,75 @@ typedef enum TOX_ERR_CONFERENCE_DELETE {
  * @return true on success.
  */
 bool tox_conference_delete(Tox *tox, uint32_t conference_number, TOX_ERR_CONFERENCE_DELETE *error);
+
+typedef enum TOX_ERR_CONFERENCE_ENTER {
+
+    /**
+     * The function returned successfully.
+     */
+    TOX_ERR_CONFERENCE_ENTER_OK,
+
+    /**
+     * Conference already connected or enter process already started
+     */
+    TOX_ERR_CONFERENCE_ENTER_ALREADY,
+
+    /**
+     * The conference number passed did not designate a valid conference.
+     */
+    TOX_ERR_CONFERENCE_ENTER_NOT_FOUND,
+
+} TOX_ERR_CONFERENCE_ENTER;
+
+
+/**
+ * This function starts entering process.
+ * Call this function only if you leave conference using tox_conference_leave.
+ * No need to call this function for just created conferences
+ *
+ * @param conference_number The conference number of the conference to be entered.
+ * conference_number can be obtained by tox_conference_by_uid
+ *
+ * @return true on success.
+ */
+bool tox_conference_enter(Tox *tox, uint32_t conference_number, TOX_ERR_CONFERENCE_ENTER *error);
+
+typedef enum TOX_ERR_CONFERENCE_LEAVE {
+
+    /**
+     * The function returned successfully.
+     */
+    TOX_ERR_CONFERENCE_LEAVE_OK,
+
+    /**
+     * Conference already disconnected
+     */
+    TOX_ERR_CONFERENCE_LEAVE_ALREADY,
+
+    /**
+     * The conference number passed did not designate a valid conference.
+     */
+    TOX_ERR_CONFERENCE_LEAVE_NOT_FOUND,
+
+} TOX_ERR_CONFERENCE_LEAVE;
+
+
+/**
+ * This function disconnects conference.
+ * Call this function to disconnect conference without delete.
+ * Even error TOX_ERR_CONFERENCE_LEAVE_ALREADY, new keep_leave flag will be applied to conference
+ *
+ * @param conference_number The conference number of the conference to be disconnected.
+ * conference_number can be obtained by tox_conference_by_uid.
+ *
+ * @param keep_leave Set true to keep in leave state
+ * No one can invite you to this conference after you leave it with keep_leave is true.
+ * Also keep_leave == true means conference will not try to connect to other peers after restart.
+ * Call tox_conference_enter to enable auto connect and invite.
+ *
+ * @return true on success.
+ */
+bool tox_conference_leave(Tox *tox, uint32_t conference_number, bool keep_leave, TOX_ERR_CONFERENCE_LEAVE *error);
 
 /**
  * Error codes for peer info queries.
@@ -2780,6 +2862,43 @@ typedef enum TOX_ERR_CONFERENCE_GET_TYPE {
 
 TOX_CONFERENCE_TYPE tox_conference_get_type(const Tox *tox, uint32_t conference_number,
         TOX_ERR_CONFERENCE_GET_TYPE *error);
+
+/**
+ * Get the conference unique ID.
+ *
+ * @param uid A memory region large enough to store TOX_CONFERENCE_UID_SIZE bytes
+ *
+ * @return true on success.
+ */
+bool tox_conference_get_uid(const Tox *tox, uint32_t conference_number, uint8_t *uid);
+
+typedef enum TOX_ERR_CONFERENCE_BY_UID {
+
+    /**
+     * The function returned successfully.
+     */
+    TOX_ERR_CONFERENCE_BY_UID_OK,
+
+    /**
+     * One of the arguments to the function was NULL when it was not expected.
+     */
+    TOX_ERR_CONFERENCE_BY_UID_NULL,
+
+    /**
+     * No conference with the given uid exists on the conference list.
+     */
+    TOX_ERR_CONFERENCE_BY_UID_NOT_FOUND,
+
+} TOX_ERR_CONFERENCE_BY_UID;
+
+
+/**
+ * Return the conference number associated with that uid.
+ *
+ * @return the conference number on success, UINT32_MAX on failure.
+ * @param uid A byte array containing the conference id (TOX_CONFERENCE_UID_SIZE).
+ */
+uint32_t tox_conference_by_uid(const Tox *tox, const uint8_t *uid, TOX_ERR_CONFERENCE_BY_UID *error);
 
 
 /*******************************************************************************

@@ -2747,6 +2747,7 @@ void do_messenger(Messenger *m, void *userdata)
 #define MESSENGER_STATE_TYPE_STATUS        6
 #define MESSENGER_STATE_TYPE_TCP_RELAY     10
 #define MESSENGER_STATE_TYPE_PATH_NODE     11
+#define MESSENGER_STATE_TYPE_CONFERENCES   100
 #define MESSENGER_STATE_TYPE_END           255
 
 #define SAVED_FRIEND_REQUEST_SIZE 1024
@@ -2959,6 +2960,26 @@ static int friends_list_load(Messenger *m, const uint8_t *data, uint32_t length)
     return num;
 }
 
+// Empty definitions of the conference load/save functions. These are set if the
+// groups module is loaded. In tox_new, the group module is initialised, so
+// public API users will never see calls to these functions.
+static uint32_t saved_conferences_size_default(const Messenger *m)
+{
+    return 0;
+}
+static void conferences_save_default(const Messenger *m, uint8_t *data)
+{
+}
+static int conferences_load_default(Messenger *m, const uint8_t *data, uint32_t length)
+{
+    return 0;
+}
+
+uint32_t (*saved_conferences_size_ptr)(const Messenger *m) = saved_conferences_size_default;
+void (*conferences_save_ptr)(const Messenger *m, uint8_t *data) = conferences_save_default;
+int (*conferences_load_ptr)(Messenger *m, const uint8_t *data, uint32_t length) = conferences_load_default;
+
+
 /*  return size of the messenger data (for saving) */
 uint32_t messenger_size(const Messenger *m)
 {
@@ -2972,6 +2993,7 @@ uint32_t messenger_size(const Messenger *m)
              + sizesubhead + 1                                 // status
              + sizesubhead + NUM_SAVED_TCP_RELAYS * packed_node_size(net_family_tcp_ipv6) //TCP relays
              + sizesubhead + NUM_SAVED_PATH_NODES * packed_node_size(net_family_tcp_ipv6) //saved path nodes
+             + sizesubhead + saved_conferences_size_ptr(m)     // old group chats
              + sizesubhead;
 }
 
@@ -3063,6 +3085,12 @@ void messenger_save(const Messenger *m, uint8_t *data)
         data += len;
     }
 
+    len = saved_conferences_size_ptr(m);
+    type = MESSENGER_STATE_TYPE_CONFERENCES;
+    data = messenger_save_subheader(data, len, type);
+    conferences_save_ptr(m, data);
+    data += len;
+
     messenger_save_subheader(data, 0, MESSENGER_STATE_TYPE_END);
 }
 
@@ -3141,6 +3169,20 @@ static int messenger_load_state_callback(void *outer, const uint8_t *data, uint3
             break;
         }
 
+        case MESSENGER_STATE_TYPE_CONFERENCES: {
+            int err = conferences_load_ptr(m, data, length);
+
+            /* No need to do something special if err < 0
+             * err < 0 just means that conferences data was damaged
+             * and skipped
+             */
+            if (err < 0) {
+                LOGGER_ERROR(m->log, "conference savedata was corrupted");
+            }
+
+            break;
+        }
+
         case MESSENGER_STATE_TYPE_END: {
             if (length != 0) {
                 return -1;
@@ -3150,7 +3192,7 @@ static int messenger_load_state_callback(void *outer, const uint8_t *data, uint3
         }
 
         default:
-            LOGGER_ERROR(m->log, "Load state: contains unrecognized part (len %u, type %u)\n",
+            LOGGER_ERROR(m->log, "Load state: contains unrecognized part (len %u, type %u)",
                          length, type);
             break;
     }

@@ -226,9 +226,12 @@ int main(int argc, char *argv[])
     // toxcore/friend_requests
     CHECK_SIZE(Friend_Requests, 1080);
     // toxcore/group
-    CHECK_SIZE(Group_c, 728);
-    CHECK_SIZE(Group_Chats, 2120);
-    CHECK_SIZE(Group_Peer, 480);
+    CHECK_SIZE(Group_c, 312);
+    CHECK_SIZE(Group_Chats, 80);
+    CHECK_SIZE(Group_Join_Peer, 48);
+    CHECK_SIZE(Group_Peer, 144);
+    CHECK_SIZE(Group_Peer_Lossy, 260);
+    CHECK_SIZE(jp_iterator, 40);
     // toxcore/list
     CHECK_SIZE(BS_LIST, 32);
     // toxcore/logger
