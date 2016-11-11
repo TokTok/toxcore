@@ -237,15 +237,15 @@ static void initialize_tox(Tox **bootstrap, ToxAV **AliceAV, CallControl *AliceC
     {
         TOX_ERR_NEW error;
 
-        opts.start_port = 33445;
+        opts.dht_start_port = 33445;
         *bootstrap = tox_new(&opts, &error);
         assert(error == TOX_ERR_NEW_OK);
 
-        opts.start_port = 33455;
+        opts.dht_start_port = 33455;
         Alice = tox_new(&opts, &error);
         assert(error == TOX_ERR_NEW_OK);
 
-        opts.start_port = 33465;
+        opts.dht_start_port = 33465;
         Bob = tox_new(&opts, &error);
         assert(error == TOX_ERR_NEW_OK);
     }
