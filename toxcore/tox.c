@@ -78,6 +78,9 @@ typedef struct Messenger Tox;
 #error "TOX_MAX_STATUS_MESSAGE_LENGTH is assumed to be equal to MAX_STATUSMESSAGE_LENGTH"
 #endif
 
+#if TOX_CONFERENCE_UID_SIZE != (GROUP_IDENTIFIER_LENGTH - 1)
+#error "TOX_CONFERENCE_UID_SIZE is assumed to be equal to (GROUP_IDENTIFIER_LENGTH - 1)"
+#endif
 
 bool tox_version_is_compatible(uint32_t major, uint32_t minor, uint32_t patch)
 {
@@ -1153,7 +1156,7 @@ void tox_callback_conference_peer_list_changed(Tox *tox, tox_conference_peer_lis
 uint32_t tox_conference_new(Tox *tox, Tox_Err_Conference_New *error)
 {
     Messenger *m = tox;
-    int ret = add_groupchat((Group_Chats *)m->conferences_object, GROUPCHAT_TYPE_TEXT);
+    int ret = add_groupchat((Group_Chats *)m->conferences_object, GROUPCHAT_TYPE_TEXT, nullptr);
 
     if (ret == -1) {
         SET_ERROR_PARAMETER(error, TOX_ERR_CONFERENCE_NEW_INIT);
@@ -1175,6 +1178,44 @@ bool tox_conference_delete(Tox *tox, uint32_t conference_number, Tox_Err_Confere
     }
 
     SET_ERROR_PARAMETER(error, TOX_ERR_CONFERENCE_DELETE_OK);
+    return true;
+}
+
+bool tox_conference_enter(Tox *tox, uint32_t conference_number, Tox_Err_Conference_Enter *error)
+{
+    Messenger *m = tox;
+    int ret = enter_conference((Group_Chats *)m->conferences_object, conference_number);
+
+    if (ret == -1) {
+        SET_ERROR_PARAMETER(error, TOX_ERR_CONFERENCE_ENTER_NOT_FOUND);
+        return false;
+    }
+
+    if (ret == -2) {
+        SET_ERROR_PARAMETER(error, TOX_ERR_CONFERENCE_ENTER_ALREADY);
+        return false;
+    }
+
+    SET_ERROR_PARAMETER(error, TOX_ERR_CONFERENCE_ENTER_OK);
+    return true;
+}
+
+bool tox_conference_leave(Tox *tox, uint32_t conference_number, bool keep_leave, Tox_Err_Conference_Leave *error)
+{
+    Messenger *m = tox;
+    int ret = leave_conference((Group_Chats *)m->conferences_object, conference_number, keep_leave);
+
+    if (ret == -1) {
+        SET_ERROR_PARAMETER(error, TOX_ERR_CONFERENCE_LEAVE_NOT_FOUND);
+        return false;
+    }
+
+    if (ret == -2) {
+        SET_ERROR_PARAMETER(error, TOX_ERR_CONFERENCE_LEAVE_ALREADY);
+        return false;
+    }
+
+    SET_ERROR_PARAMETER(error, TOX_ERR_CONFERENCE_LEAVE_OK);
     return true;
 }
 
@@ -1256,7 +1297,7 @@ bool tox_conference_peer_number_is_ours(const Tox *tox, uint32_t conference_numb
                                         Tox_Err_Conference_Peer_Query *error)
 {
     const Messenger *m = tox;
-    int ret = group_peernumber_is_ours((Group_Chats *)m->conferences_object, conference_number, peer_number);
+    int ret = group_peer_index_is_ours((Group_Chats *)m->conferences_object, conference_number, peer_number);
 
     switch (ret) {
         case -1:
