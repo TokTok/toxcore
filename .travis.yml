@@ -37,6 +37,7 @@ addons:
       - texinfo               # For libconfig.
 
 cache:
+  apt: true
   directories:
     # Although Travis documentation says not to rely on the value of $HOME, we
     # rely on it here because cabal installs its packages there by default. If
@@ -46,7 +47,7 @@ cache:
     - $HOME/.cabal
     - $HOME/.ghc
     - $HOME/cache
-
+    
 install:       other/travis/phase $JOB $ENV install
 script:        other/travis/phase $JOB $ENV script
 after_script:  other/travis/phase $JOB $ENV after_script
