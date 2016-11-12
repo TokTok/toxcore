@@ -2306,9 +2306,12 @@ typedef enum TOX_CONFERENCE_TYPE {
  * or exits the conference.
  *
  * @param friend_number The friend who invited us.
- *  if friend_number == UINT32_MAX then autojoin
- *  if client do not call tox_conference_join or toxav_join_av_groupchat immediately
- *  conference will be deleted
+ *  if friend_number == UINT32_MAX then conference automatically joined.
+ *  On auto-join client must call tox_conference_join or toxav_join_av_groupchat
+ *  immediately in callback. For api compatibility reason, if client don't
+ *  call one these functions, conference will be deleted and toxcore
+ *  totally forget this conference.
+ *
  * @param type The conference type (text only or audio/video).
  * @param cookie A piece of data of variable length required to join the
  *   conference.
@@ -2472,11 +2475,11 @@ typedef enum TOX_ERR_CONFERENCE_ENTER {
 
 /**
  * This function starts entering process.
+ * Call this function only if you leave conference using tox_conference_leave.
+ * No need to call this function for just created conferences
  *
  * @param conference_number The conference number of the conference to be entered.
  * conference_number can be obtained by tox_conference_by_uid
- * Call this function only if you leave conference using tox_conference_leave.
- * No need to call this function for just created conferences
  *
  * @return true on success.
  */

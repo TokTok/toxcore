@@ -491,7 +491,7 @@ int join_av_groupchat(Logger *log, Group_Chats *g_c, int32_t friendnumber, const
 
     if (groupchat_enable_av(log, g_c, groupnumber, audio_callback, userdata) == -1) {
         del_groupchat(g_c, groupnumber);
-        return -10;
+        return -5; /* initialization failed */
     }
 
     return groupnumber;
@@ -508,10 +508,20 @@ static int send_audio_packet(Group_Chats *g_c, int groupnumber, uint8_t *packet,
         return -1;
     }
 
-    Group_AV *group_av = (Group_AV *)group_get_object(g_c, groupnumber);
-    uint8_t data[MAX_CRYPTO_DATA_SIZE]; // according to caller, length is maximum 1024 bytes (see group_send_audio)
-    data[0] = GROUP_AUDIO_PACKET_ID;
     size_t plen = 1 + sizeof(uint16_t) + length;
+
+    if (plen > MAX_CRYPTO_DATA_SIZE) {
+        return -1;
+    }
+
+    Group_AV *group_av = (Group_AV *)group_get_object(g_c, groupnumber);
+
+    if (!group_av) {
+        return -1;
+    }
+
+    uint8_t data[MAX_CRYPTO_DATA_SIZE];
+    data[0] = GROUP_AUDIO_PACKET_ID;
 
     uint16_t sequnum = htons(group_av->audio_sequnum);
     memcpy(data + 1, &sequnum, sizeof(sequnum));

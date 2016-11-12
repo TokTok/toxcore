@@ -92,6 +92,7 @@ typedef struct {
 
     uint64_t last_sent_ping;
     uint64_t next_join_check_time;
+    uint64_t last_close_check_time;
 
     uint8_t real_pk[crypto_box_PUBLICKEYBYTES];
     uint8_t title[MAX_NAME_LENGTH];
@@ -187,9 +188,9 @@ void g_callback_group_title(Group_Chats *g_c, void (*function)(Messenger *m, uin
  *  Function(Group_Chats *g_c, int groupnumber, int peernumber, TOX_CHAT_CHANGE change, void *userdata)
  */
 enum {
-    CHAT_CHANGE_OCCURRED,
-    __UNUSED__CHAT_CHANGE_PEER_DEL,
-    CHAT_CHANGE_PEER_NAME,
+    CHAT_CHANGE_OCCURRED = 0,
+    /* CHAT_CHANGE_PEER_DEL, */
+    CHAT_CHANGE_PEER_NAME = 2,
 };
 void g_callback_group_namelistchange(Group_Chats *g_c, void (*function)(Messenger *m, int, int, uint8_t, void *));
 

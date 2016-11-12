@@ -69,6 +69,10 @@ typedef struct Messenger Tox;
 #error TOX_MAX_STATUS_MESSAGE_LENGTH is assumed to be equal to MAX_STATUSMESSAGE_LENGTH
 #endif
 
+#if TOX_CONFERENCE_UID_SIZE != (GROUP_IDENTIFIER_LENGTH-1)
+#error TOX_CONFERENCE_UID_SIZE is assumed to be equal to (GROUP_IDENTIFIER_LENGTH-1)
+#endif
+
 uint32_t tox_version_major(void)
 {
     return TOX_VERSION_MAJOR;
