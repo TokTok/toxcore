@@ -125,7 +125,9 @@ static int friendreq_handlepacket(void *object, const uint8_t *source_pubkey, co
         return 1;
     }
 
-    if (memcmp(packet, &fr->nospam, sizeof(fr->nospam)) != 0) {
+    uint32_t reversed_nospam = htonl(fr->nospam);
+    if (memcmp(packet, &fr->nospam, sizeof(fr->nospam)) != 0
+        && memcmp(packet, &reversed_nospam, sizeof(reversed_nospam)) != 0) {
         return 1;
     }
 

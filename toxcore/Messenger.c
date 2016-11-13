@@ -144,7 +144,7 @@ static uint16_t address_checksum(const uint8_t *address, uint32_t len)
 void getaddress(const Messenger *m, uint8_t *address)
 {
     id_copy(address, m->net_crypto->self_public_key);
-    uint32_t nospam = get_nospam(&(m->fr));
+    uint32_t nospam = htonl(get_nospam(&(m->fr)));
     memcpy(address + crypto_box_PUBLICKEYBYTES, &nospam, sizeof(nospam));
     uint16_t checksum = address_checksum(address, FRIEND_ADDRESS_SIZE - sizeof(checksum));
     memcpy(address + crypto_box_PUBLICKEYBYTES + sizeof(nospam), &checksum, sizeof(checksum));
