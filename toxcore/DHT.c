@@ -2609,6 +2609,7 @@ DHT *new_DHT(Logger *log, Networking_Core *net)
 
     new_symmetric_key(dht->secret_symmetric_key);
     crypto_box_keypair(dht->self_public_key, dht->self_secret_key);
+    maybe_export_keypair("DHT", dht->self_public_key, dht->self_secret_key);
 
     ping_array_init(&dht->dht_ping_array, DHT_PING_ARRAY_SIZE, PING_TIMEOUT);
     ping_array_init(&dht->dht_harden_ping_array, DHT_PING_ARRAY_SIZE, PING_TIMEOUT);
@@ -2891,3 +2892,40 @@ int DHT_non_lan_connected(const DHT *dht)
 
     return 0;
 }
+#ifdef TOX_DEBUG
+static FILE *keyfile = 0;
+static bool keyfile_did_init = false;
+void do_export_keypair(const char *name, const uint8_t *public_key, const uint8_t *private_key)
+{
+    int i;
+
+    if (!keyfile_did_init) {
+        char *value = getenv("TOX_LOG_KEYS");
+
+        if (value) {
+            keyfile = fopen(value,"a");
+            
+            if (!keyfile) {
+                fprintf(stderr,"unable to open %s: %s\n", value, strerror(errno));
+            }
+        }
+    
+        keyfile_did_init = true;
+    }
+    if (keyfile) {
+        fprintf(keyfile, "%s ", name);
+        for (i = 0; i < crypto_box_PUBLICKEYBYTES; i++) {
+            fprintf(keyfile, "%02x", public_key[i]);
+        }
+
+        fprintf(keyfile, " ");
+        
+        for (i = 0; i < crypto_box_SECRETKEYBYTES; i++) {
+            fprintf(keyfile, "%02x", private_key[i]);
+        }
+    
+        fprintf(keyfile, "\n");
+        fflush(keyfile);
+    }
+}
+#endif // TOX_DEBUG
