@@ -29,6 +29,9 @@
 
 #include "util.h"
 
+#include <assert.h>
+
+
 /* Set and get the nospam variable used to prevent one type of friend request spam. */
 void set_nospam(Friend_Requests *fr, uint32_t num)
 {
@@ -125,7 +128,10 @@ static int friendreq_handlepacket(void *object, const uint8_t *source_pubkey, co
         return 1;
     }
 
-    if (memcmp(packet, &fr->nospam, sizeof(fr->nospam)) != 0) {
+    uint32_t reversed_nospam = htonl(fr->nospam);
+    assert(sizeof reversed_nospam == sizeof fr->nospam);
+    if (memcmp(packet, &fr->nospam, sizeof(fr->nospam)) != 0
+        && memcmp(packet, &reversed_nospam, sizeof(reversed_nospam)) != 0) {
         return 1;
     }
 
