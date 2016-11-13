@@ -193,3 +193,12 @@ int create_recursive_mutex(pthread_mutex_t *mutex)
 
     return 0;
 }
+
+uint32_t byteswap_u32(uint32_t v)
+{
+    return
+        ((v >> 24) & 0x000000ff) |
+        ((v >>  8) & 0x0000ff00) |
+        ((v <<  8) & 0x00ff0000) |
+        ((v << 24) & 0xff000000) ;
+}
