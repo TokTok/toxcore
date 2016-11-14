@@ -508,7 +508,7 @@ static void at_shutdown(void)
 /* Initialize networking.
  * Added for reverse compatibility with old new_networking calls.
  */
-// TODO(#219)
+// TODO(Ansa89): see https://github.com/TokTok/c-toxcore/issues/219
 Networking_Core *new_networking(Logger *log, IP ip, uint16_t port)
 {
     return new_networking_nat(log, ip, port, port + (TOX_PORTRANGE_TO - TOX_PORTRANGE_FROM), 0, 0);
@@ -517,7 +517,7 @@ Networking_Core *new_networking(Logger *log, IP ip, uint16_t port)
 /* Initialize networking.
  * Added for reverse compatibility with old new_networking_ex calls.
  */
-// TODO(#219)
+// TODO(Ansa89): see https://github.com/TokTok/c-toxcore/issues/219
 Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint16_t port_to, unsigned int *error)
 {
     return new_networking_nat(log, ip, port_from, port_to, 0, 0);
@@ -533,7 +533,7 @@ Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint1
  *
  * If error is non NULL it is set to 0 if no issues, 1 if socket related error, 2 if other.
  */
-// TODO(#219)
+// TODO(Ansa89): see https://github.com/TokTok/c-toxcore/issues/219
 Networking_Core *new_networking_nat(Logger *log, IP ip, uint16_t port_from, uint16_t port_to, uint8_t traversal_type,
                                     unsigned int *error)
 {

@@ -32,7 +32,7 @@ START_TEST(test_basic)
     uint8_t self_public_key[CRYPTO_PUBLIC_KEY_SIZE];
     uint8_t self_secret_key[CRYPTO_SECRET_KEY_SIZE];
     crypto_new_keypair(self_public_key, self_secret_key);
-    // TODO(#219)
+    // TODO(Ansa89): see https://github.com/TokTok/c-toxcore/issues/219
     TCP_Server *tcp_s = new_TCP_server(NULL, 1, NUM_PORTS, ports, self_secret_key, NULL);
     ck_assert_msg(tcp_s != NULL, "Failed to create TCP relay server");
     ck_assert_msg(tcp_server_listen_count(tcp_s) == NUM_PORTS, "Failed to bind to all ports");
@@ -218,7 +218,7 @@ START_TEST(test_some)
     uint8_t self_public_key[CRYPTO_PUBLIC_KEY_SIZE];
     uint8_t self_secret_key[CRYPTO_SECRET_KEY_SIZE];
     crypto_new_keypair(self_public_key, self_secret_key);
-    // TODO(#219)
+    // TODO(Ansa89): see https://github.com/TokTok/c-toxcore/issues/219
     TCP_Server *tcp_s = new_TCP_server(NULL, 1, NUM_PORTS, ports, self_secret_key, NULL);
     ck_assert_msg(tcp_s != NULL, "Failed to create TCP relay server");
     ck_assert_msg(tcp_server_listen_count(tcp_s) == NUM_PORTS, "Failed to bind to all ports");
@@ -397,7 +397,7 @@ START_TEST(test_client)
     uint8_t self_secret_key[CRYPTO_SECRET_KEY_SIZE];
     crypto_new_keypair(self_public_key, self_secret_key);
     crypto_box_keypair(self_public_key, self_secret_key);
-    // TODO(#219)
+    // TODO(Ansa89): see https://github.com/TokTok/c-toxcore/issues/219
     TCP_Server *tcp_s = new_TCP_server(NULL, 1, NUM_PORTS, ports, self_secret_key, NULL);
     ck_assert_msg(tcp_s != NULL, "Failed to create TCP relay server");
     ck_assert_msg(tcp_server_listen_count(tcp_s) == NUM_PORTS, "Failed to bind to all ports");
@@ -559,7 +559,7 @@ START_TEST(test_tcp_connection)
     uint8_t self_public_key[CRYPTO_PUBLIC_KEY_SIZE];
     uint8_t self_secret_key[CRYPTO_SECRET_KEY_SIZE];
     crypto_new_keypair(self_public_key, self_secret_key);
-    // TODO(#219)
+    // TODO(Ansa89): see https://github.com/TokTok/c-toxcore/issues/219
     TCP_Server *tcp_s = new_TCP_server(NULL, 1, NUM_PORTS, ports, self_secret_key, NULL);
     ck_assert_msg(public_key_cmp(tcp_server_public_key(tcp_s), self_public_key) == 0, "Wrong public key");
 
@@ -669,7 +669,7 @@ START_TEST(test_tcp_connection2)
     uint8_t self_public_key[CRYPTO_PUBLIC_KEY_SIZE];
     uint8_t self_secret_key[CRYPTO_SECRET_KEY_SIZE];
     crypto_new_keypair(self_public_key, self_secret_key);
-    // TODO(#219)
+    // TODO(Ansa89): see https://github.com/TokTok/c-toxcore/issues/219
     TCP_Server *tcp_s = new_TCP_server(NULL, 1, NUM_PORTS, ports, self_secret_key, NULL);
     ck_assert_msg(public_key_cmp(tcp_server_public_key(tcp_s), self_public_key) == 0, "Wrong public key");
 
