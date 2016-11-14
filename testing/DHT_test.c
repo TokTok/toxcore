@@ -193,7 +193,7 @@ int main(int argc, char *argv[])
     IP ip;
     ip_init(&ip, ipv6enabled);
 
-    // TODO(#219)
+    // TODO(Ansa89): see https://github.com/TokTok/c-toxcore/issues/219
     DHT *dht = new_DHT(NULL, new_networking(NULL, ip, PORT), true);
     printf("OUR ID: ");
     uint32_t i;

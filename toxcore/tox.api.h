@@ -362,7 +362,7 @@ enum class PROXY_TYPE {
 }
 
 /**
- * Type of technology used to try to traverse a NAT.
+ * Bitmask representing the type of technology used to try to traverse a NAT.
  */
 bitmask TRAVERSAL_TYPE {
   /**
