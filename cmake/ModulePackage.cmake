@@ -42,10 +42,10 @@ function(pkg_use_module mod)
     endforeach()
   else()
     set(${mod}_DEFINITIONS ${${mod}_CFLAGS_OTHER})
-    find_path(${mod}_INCLUDE_DIR ${ARGN}.h
+    find_path(${mod}_INCLUDE_DIR NAMES ${ARGV1}.h
       HINTS ${${mod}_INCLUDEDIR} ${${mod}_INCLUDE_DIRS}
-      PATH_SUFFIXES ${ARGN})
-    find_library(${mod}_LIBRARY NAMES ${ARGN} lib${ARGN}
+      PATH_SUFFIXES ${ARGV1})
+    find_library(${mod}_LIBRARY NAMES ${ARGV1} lib${ARGV1}
       HINTS ${${mod}_LIBDIR} ${${mod}_LIBRARY_DIRS})
     find_package_handle_standard_args(${mod} DEFAULT_MSG
       ${mod}_LIBRARY ${mod}_INCLUDE_DIR)
