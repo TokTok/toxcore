@@ -396,7 +396,7 @@ typedef enum TOX_PROXY_TYPE {
 
 
 /**
- * Type of technology used to try to traverse a NAT.
+ * Bitmask representing the type of technology used to try to traverse a NAT.
  */
 enum TOX_TRAVERSAL_TYPE {
 
@@ -486,8 +486,8 @@ typedef enum TOX_LOG_LEVEL {
  * @param message The log message.
  * @param user_data The user data pointer passed to tox_new in options.
  */
-typedef void tox_log_cb(Tox *tox, TOX_LOG_LEVEL level, const char *file, uint32_t line, const char *func,
-                        const char *message, void *user_data);
+typedef void tox_log_cb(Tox *tox, TOX_LOG_LEVEL level, const char *file, uint32_t line, const char *func, const char *message,
+                void *user_data);
 
 
 /**
