@@ -396,7 +396,7 @@ typedef enum TOX_PROXY_TYPE {
 
 
 /**
- * Type of technology used to try to traverse a NAT.
+ * Bitmask representing the type of technology used to try to traverse a NAT.
  */
 enum TOX_TRAVERSAL_TYPE {
 

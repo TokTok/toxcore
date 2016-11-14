@@ -389,11 +389,11 @@ void networking_poll(Networking_Core *net, void *userdata);
  *
  * If error is non NULL it is set to 0 if no issues, 1 if socket related error, 2 if other.
  */
-// TODO(#219)
+// TODO(Ansa89): see https://github.com/TokTok/c-toxcore/issues/219
 Networking_Core *new_networking(Logger *log, IP ip, uint16_t port);
-// TODO(#219)
+// TODO(Ansa89): see https://github.com/TokTok/c-toxcore/issues/219
 Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint16_t port_to, unsigned int *error);
-// TODO(#219)
+// TODO(Ansa89): see https://github.com/TokTok/c-toxcore/issues/219
 Networking_Core *new_networking_nat(Logger *log, IP ip, uint16_t port_from, uint16_t port_to, uint8_t traversal_type,
                                     unsigned int *error);
 
