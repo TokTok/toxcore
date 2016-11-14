@@ -32,7 +32,7 @@
 
 
 /**
- * Allowed traversal types.
+ * Allowed traversal types (they are bitmasks).
  */
 enum TRAVERSAL_TYPE {
 
