@@ -79,7 +79,7 @@ static bool upnp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port,
         case 0:
             *status = NAT_TRAVERSAL_ERR_NO_IGD_FOUND;
             LOGGER_WARNING(log, "UPnP: %s ", str_nat_traversal_error(*status));
-            break;
+            return false;
 
         case 1:
             LOGGER_INFO(log, "UPnP: A valid IGD has been found");
