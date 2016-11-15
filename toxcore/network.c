@@ -717,7 +717,11 @@ Networking_Core *new_networking_nat(Logger *log, IP ip, uint16_t port_from, uint
                 *error = 0;
             }
 
-            nat_map_port(log, traversal_type, NAT_TRAVERSAL_UDP, port_to_try, NULL);
+            if (ip.family == AF_INET6) {
+                nat_map_port(log, traversal_type, NAT_TRAVERSAL_UDP, port_to_try, true, NULL);
+            }
+
+            nat_map_port(log, traversal_type, NAT_TRAVERSAL_UDP, port_to_try, false, NULL);
 
             return temp;
         }
