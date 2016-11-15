@@ -2633,6 +2633,8 @@ void do_messenger(Messenger *m, void *userdata)
 
 #define SAVED_FRIEND_REQUEST_SIZE 1024
 #define NUM_SAVED_PATH_NODES 8
+
+#pragma pack(push, 8)
 struct SAVED_FRIEND {
     uint8_t status;
     uint8_t real_pk[crypto_box_PUBLICKEYBYTES];
@@ -2646,6 +2648,7 @@ struct SAVED_FRIEND {
     uint32_t friendrequest_nospam;
     uint64_t last_seen_time;
 };
+#pragma pack(pop)
 
 static uint32_t saved_friendslist_size(const Messenger *m)
 {
