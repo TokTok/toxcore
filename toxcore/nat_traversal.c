@@ -46,7 +46,8 @@
 
 #ifdef HAVE_LIBMINIUPNPC
 /* Setup port forwarding using UPnP */
-static bool upnp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port, NAT_TRAVERSAL_STATUS *status)
+static bool upnp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port, bool ipv6_enabled,
+                          NAT_TRAVERSAL_STATUS *status)
 {
     LOGGER_DEBUG(log, "Attempting to set up UPnP port forwarding");
 
@@ -54,9 +55,9 @@ static bool upnp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port,
     int error;
 
 #if MINIUPNPC_API_VERSION < 14
-    struct UPNPDev *devlist = upnpDiscover(1000, NULL, NULL, 0, 0, &error);
+    struct UPNPDev *devlist = upnpDiscover(1000, NULL, NULL, 0, ipv6_enabled, &error);
 #else
-    struct UPNPDev *devlist = upnpDiscover(1000, NULL, NULL, 0, 0, 2, &error);
+    struct UPNPDev *devlist = upnpDiscover(1000, NULL, NULL, 0, ipv6_enabled, 2, &error);
 #endif
 
     if (error) {
@@ -203,7 +204,7 @@ static bool natpmp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t por
 
 
 /* Setup port forwarding */
-bool nat_map_port(Logger *log, uint8_t traversal_type, NAT_TRAVERSAL_PROTO proto, uint16_t port,
+bool nat_map_port(Logger *log, uint8_t traversal_type, NAT_TRAVERSAL_PROTO proto, uint16_t port, bool ipv6_enabled,
                   nat_traversal_status_t *status)
 {
     if (status != NULL) {
@@ -217,6 +218,7 @@ bool nat_map_port(Logger *log, uint8_t traversal_type, NAT_TRAVERSAL_PROTO proto
     UNUSED(traversal_type);
     UNUSED(proto);
     UNUSED(port);
+    UNUSED(ipv6_enabled);
 
     return false;
 #else
@@ -227,10 +229,10 @@ bool nat_map_port(Logger *log, uint8_t traversal_type, NAT_TRAVERSAL_PROTO proto
 
     if (traversal_type & TRAVERSAL_TYPE_UPNP) {
         if (status != NULL) {
-            upnp = upnp_map_port(log, proto, port, &status->upnp);
+            upnp = upnp_map_port(log, proto, port, ipv6_enabled, &status->upnp);
         } else {
             NAT_TRAVERSAL_STATUS status;
-            upnp = upnp_map_port(log, proto, port, &status);
+            upnp = upnp_map_port(log, proto, port, ipv6_enabled, &status);
         }
     }
 

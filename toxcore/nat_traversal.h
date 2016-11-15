@@ -106,7 +106,7 @@ typedef struct nat_traversal_status_t {
 
 
 /* Setup port forwarding */
-bool nat_map_port(Logger *log, uint8_t traversal_type, NAT_TRAVERSAL_PROTO proto, uint16_t port,
+bool nat_map_port(Logger *log, uint8_t traversal_type, NAT_TRAVERSAL_PROTO proto, uint16_t port, bool ipv6_enabled,
                   nat_traversal_status_t *status);
 
 /* Return error string from status */
