@@ -113,7 +113,8 @@ int rtp_stop_receiving(RTPSession *session)
 int rtp_send_data(RTPSession *session, const uint8_t *data, uint16_t length)
 {
     if (!session) {
-        LOGGER_WARNING(session->m->log, "No session!");
+        // TODO(iphy): get the logger for the log message below.
+        // LOGGER_WARNING(session->m->log, "No session!");
         return -1;
     }
 

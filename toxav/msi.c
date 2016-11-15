@@ -137,7 +137,8 @@ MSISession *msi_new(Messenger *m)
 int msi_kill(MSISession *session)
 {
     if (session == NULL) {
-        LOGGER_ERROR(session->messenger->log, "Tried to terminate non-existing session");
+        // TODO(iphy): get the logger for the log message below.
+        // LOGGER_ERROR(session->messenger->log, "Tried to terminate non-existing session");
         return -1;
     }
 
