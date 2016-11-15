@@ -2652,10 +2652,43 @@ static uint32_t saved_friendslist_size(const Messenger *m)
     return count_friendlist(m) * sizeof(struct SAVED_FRIEND);
 }
 
+static uint8_t *friend_save(const struct SAVED_FRIEND *temp, uint8_t *data)
+{
+#define COPY_VALUE(NAME)                            \
+    memcpy(data, &temp->NAME, sizeof(temp->NAME));  \
+    data += sizeof(temp->NAME)
+
+#define COPY_ARRAY(NAME)                            \
+    memcpy(data, temp->NAME, sizeof(temp->NAME));   \
+    data += sizeof(temp->NAME)
+
+    // Exactly the same in friend_load and friend_save:
+    COPY_VALUE(status);
+    COPY_ARRAY(real_pk);
+    COPY_ARRAY(info);
+    data++; // padding
+    COPY_VALUE(info_size);
+    COPY_ARRAY(name);
+    data++; // padding
+    COPY_VALUE(name_length);
+    COPY_ARRAY(statusmessage);
+    COPY_VALUE(statusmessage_length);
+    COPY_VALUE(userstatus);
+    data += 3; // padding
+    COPY_VALUE(friendrequest_nospam);
+    COPY_VALUE(last_seen_time);
+
+#undef COPY_VALUE
+#undef COPY_ARRAY
+
+    return data;
+}
+
 static uint32_t friends_list_save(const Messenger *m, uint8_t *data)
 {
     uint32_t i;
     uint32_t num = 0;
+    uint8_t *cur_data = data;
 
     for (i = 0; i < m->numfriends; i++) {
         if (m->friendlist[i].status > 0) {
@@ -2686,12 +2719,52 @@ static uint32_t friends_list_save(const Messenger *m, uint8_t *data)
                 memcpy(&temp.last_seen_time, last_seen_time, sizeof(uint64_t));
             }
 
-            memcpy(data + num * sizeof(struct SAVED_FRIEND), &temp, sizeof(struct SAVED_FRIEND));
+            uint8_t *next_data = friend_save(&temp, cur_data);
+#ifdef TOX_DEBUG
+            assert(next_data - cur_data == sizeof(struct SAVED_FRIEND));
+            assert(memcmp(cur_data, &temp, sizeof(struct SAVED_FRIEND)) == 0);
+#endif
+            cur_data = next_data;
             num++;
         }
     }
 
-    return num * sizeof(struct SAVED_FRIEND);
+#ifdef TOX_DEBUG
+    assert(cur_data - data == num * sizeof(struct SAVED_FRIEND));
+#endif
+    return cur_data - data;
+}
+
+static const uint8_t *friend_load(struct SAVED_FRIEND *temp, const uint8_t *data)
+{
+#define COPY_VALUE(NAME)                            \
+    memcpy(&temp->NAME, data, sizeof(temp->NAME));  \
+    data += sizeof(temp->NAME)
+
+#define COPY_ARRAY(NAME)                            \
+    memcpy(temp->NAME, data, sizeof(temp->NAME));   \
+    data += sizeof(temp->NAME)
+
+    // Exactly the same in friend_load and friend_save:
+    COPY_VALUE(status);
+    COPY_ARRAY(real_pk);
+    COPY_ARRAY(info);
+    data++; // padding
+    COPY_VALUE(info_size);
+    COPY_ARRAY(name);
+    data++; // padding
+    COPY_VALUE(name_length);
+    COPY_ARRAY(statusmessage);
+    COPY_VALUE(statusmessage_length);
+    COPY_VALUE(userstatus);
+    data += 3; // padding
+    COPY_VALUE(friendrequest_nospam);
+    COPY_VALUE(last_seen_time);
+
+#undef COPY_VALUE
+#undef COPY_ARRAY
+
+    return data;
 }
 
 static int friends_list_load(Messenger *m, const uint8_t *data, uint32_t length)
@@ -2702,10 +2775,16 @@ static int friends_list_load(Messenger *m, const uint8_t *data, uint32_t length)
 
     uint32_t num = length / sizeof(struct SAVED_FRIEND);
     uint32_t i;
+    const uint8_t *cur_data = data;
 
     for (i = 0; i < num; ++i) {
-        struct SAVED_FRIEND temp;
-        memcpy(&temp, data + i * sizeof(struct SAVED_FRIEND), sizeof(struct SAVED_FRIEND));
+        struct SAVED_FRIEND temp = { 0 };
+        const uint8_t *next_data = friend_load(&temp, cur_data);
+#ifdef TOX_DEBUG
+        assert(next_data - cur_data == sizeof(struct SAVED_FRIEND));
+        assert(memcmp(&temp, cur_data, sizeof(struct SAVED_FRIEND)) == 0);
+#endif
+        cur_data = next_data;
 
         if (temp.status >= 3) {
             int fnum = m_addfriend_norequest(m, temp.real_pk);
