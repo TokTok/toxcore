@@ -52,7 +52,7 @@ typedef struct {
 
     uint8_t     *nick;
 
-    uint32_t    last_message_number[8]; /* 8 - number of group messages */
+    uint32_t    last_message_number[9]; /* 9 - number of group messages */
     int         friendcon_id;
 
     signed      gid : 24; /* unique per-conference peer id */
@@ -71,7 +71,6 @@ typedef struct {
     uint64_t    next_try_time;
     uint8_t     real_pk[crypto_box_PUBLICKEYBYTES];
     int8_t      fails;
-    int8_t      joingn;
     unsigned    online : 1;
     unsigned    unsubscribed : 1;
 } Group_Join_Peer;
@@ -188,9 +187,8 @@ void g_callback_group_title(Group_Chats *g_c, void (*function)(Messenger *m, uin
  *  Function(Group_Chats *g_c, int groupnumber, int peernumber, TOX_CHAT_CHANGE change, void *userdata)
  */
 enum {
-    CHAT_CHANGE_OCCURRED = 0,
-    /* CHAT_CHANGE_PEER_DEL, */
-    CHAT_CHANGE_PEER_NAME = 2,
+    CHAT_CHANGE_OCCURRED,
+    CHAT_CHANGE_PEER_NAME,
 };
 void g_callback_group_namelistchange(Group_Chats *g_c, void (*function)(Messenger *m, int, int, uint8_t, void *));
 

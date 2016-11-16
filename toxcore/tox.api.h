@@ -2098,14 +2098,10 @@ namespace conference {
    */
   enum class STATE_CHANGE {
     /**
-     * Some changes to list has occurred. Rebuild of list required.
+     * Some changes to list have occurred. Rebuild of list required.
      * peer_number is undefined (always 0 for api compatibility)
      */
     LIST_CHANGED,
-    /**
-     * Deprecated. Never occurred.
-     */
-    PEER_EXIT,
     /**
      * A peer has changed their name.
      */

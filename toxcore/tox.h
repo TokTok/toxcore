@@ -2377,11 +2377,6 @@ typedef enum TOX_CONFERENCE_STATE_CHANGE {
     TOX_CONFERENCE_STATE_CHANGE_LIST_CHANGED,
 
     /**
-     * Deprecated. Never occurred.
-     */
-    TOX_CONFERENCE_STATE_CHANGE_PEER_EXIT,
-
-    /**
      * A peer has changed their name.
      */
     TOX_CONFERENCE_STATE_CHANGE_PEER_NAME_CHANGE,
