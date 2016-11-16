@@ -2651,13 +2651,10 @@ struct SAVED_FRIEND {
 static uint32_t friend_size()
 {
     uint32_t data = 0;
-    struct SAVED_FRIEND *temp = { 0 };
+    const struct SAVED_FRIEND temp = { 0 };
 
-#define COPY_VALUE(NAME)                            \
-    data += sizeof(temp->NAME)
-
-#define COPY_ARRAY(NAME)                            \
-    data += sizeof(temp->NAME)
+#define COPY_VALUE(NAME) data += sizeof(temp.NAME)
+#define COPY_ARRAY(NAME) data += sizeof(temp.NAME)
 
     // Exactly the same in friend_load, friend_save, and friend_size:
     COPY_VALUE(status);
@@ -2677,7 +2674,7 @@ static uint32_t friend_size()
 
 #undef COPY_VALUE
 #undef COPY_ARRAY
-    
+
     return data;
 }
 
