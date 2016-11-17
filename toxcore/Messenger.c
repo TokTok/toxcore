@@ -2653,27 +2653,27 @@ static uint32_t friend_size()
     uint32_t data = 0;
     const struct SAVED_FRIEND temp = { 0 };
 
-#define COPY_VALUE(NAME) data += sizeof(temp.NAME)
-#define COPY_ARRAY(NAME) data += sizeof(temp.NAME)
+#define VALUE_MEMBER(NAME) data += sizeof(temp.NAME)
+#define ARRAY_MEMBER(NAME) data += sizeof(temp.NAME)
 
     // Exactly the same in friend_load, friend_save, and friend_size:
-    COPY_VALUE(status);
-    COPY_ARRAY(real_pk);
-    COPY_ARRAY(info);
+    VALUE_MEMBER(status);
+    ARRAY_MEMBER(real_pk);
+    ARRAY_MEMBER(info);
     data++; // padding
-    COPY_VALUE(info_size);
-    COPY_ARRAY(name);
+    VALUE_MEMBER(info_size);
+    ARRAY_MEMBER(name);
     data++; // padding
-    COPY_VALUE(name_length);
-    COPY_ARRAY(statusmessage);
-    COPY_VALUE(statusmessage_length);
-    COPY_VALUE(userstatus);
+    VALUE_MEMBER(name_length);
+    ARRAY_MEMBER(statusmessage);
+    VALUE_MEMBER(statusmessage_length);
+    VALUE_MEMBER(userstatus);
     data += 3; // padding
-    COPY_VALUE(friendrequest_nospam);
-    COPY_VALUE(last_seen_time);
+    VALUE_MEMBER(friendrequest_nospam);
+    VALUE_MEMBER(last_seen_time);
 
-#undef COPY_VALUE
-#undef COPY_ARRAY
+#undef VALUE_MEMBER
+#undef ARRAY_MEMBER
 
     return data;
 }
@@ -2799,11 +2799,12 @@ static const uint8_t *friend_load(struct SAVED_FRIEND *temp, const uint8_t *data
 
 static int friends_list_load(Messenger *m, const uint8_t *data, uint32_t length)
 {
-    if (length % friend_size() != 0) {
+    const uint32_t friend_size = friend_size();
+    if (length % friend_size != 0) {
         return -1;
     }
 
-    uint32_t num = length / friend_size();
+    uint32_t num = length / friend_size;
     uint32_t i;
     const uint8_t *cur_data = data;
 
@@ -2811,8 +2812,8 @@ static int friends_list_load(Messenger *m, const uint8_t *data, uint32_t length)
         struct SAVED_FRIEND temp = { 0 };
         const uint8_t *next_data = friend_load(&temp, cur_data);
 #ifdef TOX_DEBUG
-        assert(next_data - cur_data == friend_size());
-        assert(memcmp(&temp, cur_data, friend_size()) == 0);
+        assert(next_data - cur_data == friend_size);
+        assert(memcmp(&temp, cur_data, friend_size) == 0);
 #endif
         cur_data = next_data;
 
