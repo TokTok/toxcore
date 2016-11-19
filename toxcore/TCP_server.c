@@ -635,7 +635,7 @@ static int read_connection_handshake(const Logger *logger, TCP_Secure_Connection
  */
 static int send_routing_response(TCP_Secure_Connection *con, uint8_t rpid, const uint8_t *public_key)
 {
-    uint8_t data[1 + 1 + CRYPTO_PUBLIC_KEY_SIZE];
+    uint8_t data[2 + CRYPTO_PUBLIC_KEY_SIZE];
     data[0] = TCP_PACKET_ROUTING_RESPONSE;
     data[1] = rpid;
     memcpy(data + 2, public_key, CRYPTO_PUBLIC_KEY_SIZE);
