@@ -577,7 +577,7 @@ void oob_data_handler(TCP_Client_Connection *con, tcp_oob_data_cb *oob_data_call
  */
 static int client_send_disconnect_notification(TCP_Client_Connection *con, uint8_t id)
 {
-    uint8_t packet[1 + 1];
+    uint8_t packet[2];
     packet[0] = TCP_PACKET_DISCONNECT_NOTIFICATION;
     packet[1] = id;
     return write_packet_TCP_client_secure_connection(con, packet, sizeof(packet), 1);
@@ -755,7 +755,7 @@ static int handle_TCP_client_packet(TCP_Client_Connection *conn, const uint8_t *
 
     switch (data[0]) {
         case TCP_PACKET_ROUTING_RESPONSE: {
-            if (length != 1 + 1 + CRYPTO_PUBLIC_KEY_SIZE) {
+            if (length != 2 + CRYPTO_PUBLIC_KEY_SIZE) {
                 return -1;
             }
 
@@ -781,7 +781,7 @@ static int handle_TCP_client_packet(TCP_Client_Connection *conn, const uint8_t *
         }
 
         case TCP_PACKET_CONNECTION_NOTIFICATION: {
-            if (length != 1 + 1) {
+            if (length != 2) {
                 return -1;
             }
 
@@ -806,7 +806,7 @@ static int handle_TCP_client_packet(TCP_Client_Connection *conn, const uint8_t *
         }
 
         case TCP_PACKET_DISCONNECT_NOTIFICATION: {
-            if (length != 1 + 1) {
+            if (length != 2) {
                 return -1;
             }
 
