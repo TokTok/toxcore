@@ -1098,11 +1098,7 @@ TCP_Server *new_TCP_server_nat(Logger *log, uint8_t ipv6_enabled, uint16_t num_s
 
 #endif
 
-            if (ipv6_enabled) {
-                nat_map_port(log, traversal_type, NAT_TRAVERSAL_TCP, ports[i], true, NULL);
-            }
-
-            nat_map_port(log, traversal_type, NAT_TRAVERSAL_TCP, ports[i], false, NULL);
+            nat_map_port(log, traversal_type, NAT_TRAVERSAL_TCP, ports[i], ipv6_enabled, NULL);
 
             temp->socks_listening[temp->num_listening_socks] = sock;
             ++temp->num_listening_socks;
