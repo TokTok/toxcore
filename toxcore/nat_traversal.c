@@ -222,17 +222,28 @@ bool nat_map_port(Logger *log, uint8_t traversal_type, NAT_TRAVERSAL_PROTO proto
 
     return false;
 #else
-    bool upnp = true;
+    bool upnp_ipv4 = true;
+    bool upnp_ipv6 = true;
     bool natpmp = true;
 
 #ifdef HAVE_LIBMINIUPNPC
 
     if (traversal_type & TRAVERSAL_TYPE_UPNP) {
         if (status != NULL) {
-            upnp = upnp_map_port(log, proto, port, ipv6_enabled, &status->upnp);
+            upnp_ipv4 = upnp_map_port(log, proto, port, false, &status->upnp_ipv4);
+
+            if (ipv6_enabled) {
+                upnp_ipv6 = upnp_map_port(log, proto, port, true, &status->upnp_ipv6);
+            }
+
         } else {
             NAT_TRAVERSAL_STATUS status;
-            upnp = upnp_map_port(log, proto, port, ipv6_enabled, &status);
+            upnp_ipv4 = upnp_map_port(log, proto, port, false, &status);
+
+            if (ipv6_enabled) {
+                upnp_ipv6 = upnp_map_port(log, proto, port, true, &status);
+            }
+
         }
     }
 
@@ -250,7 +261,7 @@ bool nat_map_port(Logger *log, uint8_t traversal_type, NAT_TRAVERSAL_PROTO proto
 
 #endif /* HAVE_LIBNATPMP */
 
-    return upnp && natpmp;
+    return upnp_ipv4 && upnp_ipv6 && natpmp;
 #endif /* !HAVE_LIBMINIUPNPC && !HAVE_LIBNATPMP */
 }
 
