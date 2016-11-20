@@ -98,7 +98,9 @@ typedef enum NAT_TRAVERSAL_STATUS {
  */
 typedef struct nat_traversal_status_t {
 
-    NAT_TRAVERSAL_STATUS upnp;
+    NAT_TRAVERSAL_STATUS upnp_ipv4;
+
+    NAT_TRAVERSAL_STATUS upnp_ipv6;
 
     NAT_TRAVERSAL_STATUS natpmp;
 
