@@ -401,6 +401,11 @@ typedef enum TOX_PROXY_TYPE {
 enum TOX_TRAVERSAL_TYPE {
 
     /**
+     * The empty bit mask. None of the bits specified below are set.
+     */
+    TOX_TRAVERSAL_TYPE_NONE = 0,
+
+    /**
      * Use UPnP technology.
      */
     TOX_TRAVERSAL_TYPE_UPNP = 1,
