@@ -24,7 +24,8 @@ if BUILD_TESTING
 
 noinst_PROGRAMS +=      DHT_test \
                         Messenger_test \
-                        dns3_test
+                        dns3_test \
+                        traversal_test
 
 DHT_test_SOURCES =      ../testing/DHT_test.c
 
@@ -71,6 +72,30 @@ dns3_test_LDADD = \
                         $(LIBSODIUM_LIBS) \
                         $(NACL_OBJECTS) \
                         $(NACL_LIBS) \
+                        $(WINSOCK2_LIBS)
+
+
+traversal_test_SOURCES = \
+                        ../testing/traversal_test.c
+
+traversal_test_CFLAGS = \
+                        $(LIBSODIUM_CFLAGS) \
+                        $(MINIUPNP_CFLAGS) \
+                        $(NACL_CFLAGS) \
+                        $(NATPMP_CFLAGS)
+
+traversal_test_LDADD = \
+                        $(LIBSODIUM_LDFLAGS) \
+                        $(MINIUPNP_LDFLAGS) \
+                        $(NACL_LDFLAGS) \
+                        $(NATPMP_LDFLAGS) \
+                        libtoxdns.la \
+                        libtoxcore.la \
+                        $(LIBSODIUM_LIBS) \
+                        $(MINIUPNP_LIBS) \
+                        $(NACL_OBJECTS) \
+                        $(NACL_LIBS) \
+                        $(NATPMP_LIBS) \
                         $(WINSOCK2_LIBS)
 
 if !WIN32

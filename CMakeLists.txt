@@ -235,11 +235,21 @@ add_module(toxnetwork
   toxcore/network.h
   toxcore/util.c
   toxcore/util.h)
-target_link_modules(toxnetwork toxcrypto ${MINIUPNP_LIBRARIES} ${NATPMP_LIBRARIES})
+target_link_modules(toxnetwork toxcrypto)
 
 if(CMAKE_THREAD_LIBS_INIT)
   target_link_modules(toxnetwork ${CMAKE_THREAD_LIBS_INIT})
   set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+endif()
+
+if(MINIUPNP_FOUND)
+  target_link_modules(toxnetwork ${MINIUPNP_LIBRARIES})
+  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-lminiupnp")
+endif()
+
+if(NATPMP_FOUND)
+  target_link_modules(toxnetwork ${NATPMP_LIBRARIES})
+  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-lnatpmp")
 endif()
 
 if(RT_LIBRARIES)
@@ -533,6 +543,11 @@ endif()
 if(NOT WIN32)
   add_c_executable(irc_syncbot testing/irc_syncbot.c)
   target_link_modules(irc_syncbot toxcore)
+endif()
+
+if(MINIUPNP_FOUND OR NATPMP_FOUND)
+  add_c_executable(traversal_test testing/traversal_test.c)
+  target_link_modules(traversal_test toxcore)
 endif()
 
 ################################################################################
