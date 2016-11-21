@@ -49,7 +49,7 @@
 static bool upnp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port, bool ipv6_enabled,
                           NAT_TRAVERSAL_STATUS *status)
 {
-    LOGGER_DEBUG(log, "Attempting to set up UPnP port forwarding");
+    LOGGER_INFO(log, "Attempting to set up UPnP port forwarding");
 
     bool ret = false;
     int error;
@@ -142,7 +142,7 @@ static bool upnp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port,
 /* Setup port forwarding using NAT-PMP */
 static bool natpmp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port, NAT_TRAVERSAL_STATUS *status)
 {
-    LOGGER_DEBUG(log, "Attempting to set up NAT-PMP port forwarding");
+    LOGGER_INFO(log, "Attempting to set up NAT-PMP port forwarding");
 
     natpmp_t natpmp;
     int error = initnatpmp(&natpmp, 0, 0);
@@ -208,7 +208,8 @@ bool nat_map_port(Logger *log, uint8_t traversal_type, NAT_TRAVERSAL_PROTO proto
                   nat_traversal_status_t *status)
 {
     if (status != NULL) {
-        status->upnp = NAT_TRAVERSAL_ERR_DISABLED;
+        status->upnp_ipv4 = NAT_TRAVERSAL_ERR_DISABLED;
+        status->upnp_ipv6 = NAT_TRAVERSAL_ERR_DISABLED;
         status->natpmp = NAT_TRAVERSAL_ERR_DISABLED;
     }
 
