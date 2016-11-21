@@ -153,7 +153,7 @@ void tox_options_default(struct Tox_Options *options)
         memset(options, 0, sizeof(struct Tox_Options));
         options->ipv6_enabled = 1;
         options->udp_enabled = 1;
-        options->traversal_type = 0;
+        options->traversal_type = TOX_TRAVERSAL_TYPE_NONE;
         options->proxy_type = TOX_PROXY_TYPE_NONE;
         options->hole_punching_enabled = true;
         options->local_discovery_enabled = true;
