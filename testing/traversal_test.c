@@ -24,7 +24,9 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 #include "../toxcore/tox.h"
 
@@ -43,6 +45,13 @@ typedef enum PROTO {
     PROTO_TCP,
     PROTO_ALL
 } PROTO;
+
+typedef struct my_node_t {
+    char ip[16];
+    uint16_t port;
+    //char key_str[2 * TOX_PUBLIC_KEY_SIZE + 1];
+    char *key;
+} my_node_t;
 
 
 static void log_callback(Tox *tox, TOX_LOG_LEVEL level, const char *path, uint32_t line, const char *func,
@@ -84,26 +93,44 @@ static void log_callback(Tox *tox, TOX_LOG_LEVEL level, const char *path, uint32
     printf("%s:%d   %s(): %s\n", file, line, func, msg);
 }
 
-Tox *tox_traversal_new(TYPE t, PROTO p, uint16_t tcp_port, TOX_ERR_NEW *error)
+static char *str_to_key(const char *str)
 {
-    TOX_ERR_OPTIONS_NEW err;
+    if (strlen(str) != 2 * TOX_PUBLIC_KEY_SIZE) {
+        return NULL;
+    }
 
-    struct Tox_Options *opts = tox_options_new(&err);
+    int i;
+    char *key = calloc(TOX_PUBLIC_KEY_SIZE, sizeof(char));
+
+    if (key == NULL) {
+        return NULL;
+    }
+
+    for (i = 0; i < TOX_PUBLIC_KEY_SIZE; i++) {
+        sscanf(&str[i * 2], "%2hhx", &key[i]);
+    }
+
+    return key;
+}
+
+static Tox *tox_traversal_new(TYPE t, PROTO p, uint16_t tcp_port)
+{
+    struct Tox_Options *opts = tox_options_new(NULL);
 
     // Set log callback
-    opts->log_callback = &log_callback;
+    tox_options_set_log_callback(opts, &log_callback);
 
     switch (t) {
         case TYPE_UPNP:
-            opts->traversal_type = TOX_TRAVERSAL_TYPE_UPNP;
+            tox_options_set_traversal_type(opts, TOX_TRAVERSAL_TYPE_UPNP);
             break;
 
         case TYPE_NATPMP:
-            opts->traversal_type = TOX_TRAVERSAL_TYPE_NATPMP;
+            tox_options_set_traversal_type(opts, TOX_TRAVERSAL_TYPE_NATPMP);
             break;
 
         case TYPE_ALL:
-            opts->traversal_type = TOX_TRAVERSAL_TYPE_UPNP | TOX_TRAVERSAL_TYPE_NATPMP;
+            tox_options_set_traversal_type(opts, TOX_TRAVERSAL_TYPE_UPNP | TOX_TRAVERSAL_TYPE_NATPMP);
             break;
 
         case TYPE_NONE:
@@ -114,20 +141,20 @@ Tox *tox_traversal_new(TYPE t, PROTO p, uint16_t tcp_port, TOX_ERR_NEW *error)
     switch (p) {
         case PROTO_ALL:
             if (tcp_port == 0) {
-                opts->tcp_port = 44300;
+                tox_options_set_tcp_port(opts, 44300);
             } else {
-                opts->tcp_port = tcp_port;
+                tox_options_set_tcp_port(opts, tcp_port);
             }
 
             break;
 
         case PROTO_TCP:
-            opts->udp_enabled = 0;
+            tox_options_set_udp_enabled(opts, 0);
 
             if (tcp_port == 0) {
-                opts->tcp_port = 44300;
+                tox_options_set_tcp_port(opts, 44300);
             } else {
-                opts->tcp_port = tcp_port;
+                tox_options_set_tcp_port(opts, tcp_port);
             }
 
             break;
@@ -137,7 +164,7 @@ Tox *tox_traversal_new(TYPE t, PROTO p, uint16_t tcp_port, TOX_ERR_NEW *error)
             break;
     }
 
-    Tox *tox = tox_new(opts, error);
+    Tox *tox = tox_new(opts, NULL);
     tox_options_free(opts);
 
     return tox;
@@ -145,44 +172,52 @@ Tox *tox_traversal_new(TYPE t, PROTO p, uint16_t tcp_port, TOX_ERR_NEW *error)
 
 int main(int argc, char *argv[])
 {
-    int i;
-    TOX_ERR_NEW err;
-    TOX_ERR_BOOTSTRAP boot_err;
+    int i, j;
 
-    Tox *upnp_udp = tox_traversal_new(TYPE_UPNP, PROTO_UDP, 0, &err);
-    Tox *upnp_tcp = tox_traversal_new(TYPE_UPNP, PROTO_TCP, 0, &err);
-    Tox *natpmp_udp = tox_traversal_new(TYPE_NATPMP, PROTO_UDP, 44300, &err);
-    Tox *natpmp_tcp = tox_traversal_new(TYPE_NATPMP, PROTO_TCP, 44301, &err);
+    Tox *upnp_udp = tox_traversal_new(TYPE_UPNP, PROTO_UDP, 0);
+    Tox *upnp_tcp = tox_traversal_new(TYPE_UPNP, PROTO_TCP, 44300);
+    Tox *natpmp_udp = tox_traversal_new(TYPE_NATPMP, PROTO_UDP, 0);
+    Tox *natpmp_tcp = tox_traversal_new(TYPE_NATPMP, PROTO_TCP, 44301);
 
-    char udp_key_str[] = "04119E835DF3E78BACF0F84235B300546AF8B936F035185E2A8E9E0A67C8924F";
-    char tcp_key_str[] = "CD133B521159541FB1D326DE9850F5E56A6C724B5B8E5EB5CD8D950408E95707";
-    char udp_key[TOX_PUBLIC_KEY_SIZE];
-    char tcp_key[TOX_PUBLIC_KEY_SIZE];
+    my_node_t udp_node[] = {
+        { "144.76.60.215",   33445, str_to_key("04119E835DF3E78BACF0F84235B300546AF8B936F035185E2A8E9E0A67C8924F") },
+        { "195.154.119.113", 33445, str_to_key("E398A69646B8CEACA9F0B84F553726C1C49270558C57DF5F3C368F05A7D71354") },
+        { "46.38.239.179",   33445, str_to_key("F5A1A38EFB6BD3C2C8AF8B10D85F0F89E931704D349F1D0720C3C4059AF2440A") },
+        { "178.62.250.138",  33445, str_to_key("788236D34978D1D5BD822F0A5BEBD2C53C64CC31CD3149350EE27D4D9A2F9B6B") },
+        { "130.133.110.14",  33445, str_to_key("461FA3776EF0FA655F1A05477DF1B3B614F7D6B124F7DB1DD4FE3C08B03B640F") },
+        { "104.167.101.29",  33445, str_to_key("5918AC3C06955962A75AD7DF4F80A5D7C34F7DB9E1498D2E0495DE35B3FE8A57") },
+        { "205.185.116.116", 33445, str_to_key("A179B09749AC826FF01F37A9613F6B57118AE014D4196A0E1105A98F93A54702") },
+        { "198.98.51.198",   33445, str_to_key("1D5A5F2F5D6233058BF0259B09622FB40B482E4FA0931EB8FD3AB8E7BF7DAF6F") },
+        { "80.232.246.79",   33445, str_to_key("CF6CECA0A14A31717CC8501DA51BE27742B70746956E6676FF423A529F91ED5D") },
+        { "108.61.165.198",  33445, str_to_key("8E7D0B859922EF569298B4D261A8CCB5FEA14FB91ED412A7603A585A25698832") }
+    };
+    my_node_t tcp_node[] = {
+        { "46.101.197.175",  443,   str_to_key("CD133B521159541FB1D326DE9850F5E56A6C724B5B8E5EB5CD8D950408E95707") }
+    };
 
-    for (i = 0; i < TOX_PUBLIC_KEY_SIZE; i++) {
-        sscanf(&udp_key_str[i * 2], "%2hhx", &udp_key[i]);
-        sscanf(&tcp_key_str[i * 2], "%2hhx", &tcp_key[i]);
-    }
+    srand(time(NULL));
 
     for (i = 0; i < 100; i++) {
+        j = rand() % 10;
+
         if (tox_self_get_connection_status(upnp_udp) == TOX_CONNECTION_NONE) {
-            tox_bootstrap(upnp_udp, "144.76.60.215", 33445, (uint8_t *) udp_key, &boot_err);
-            tox_add_tcp_relay(upnp_udp, "46.101.197.175", 443, (uint8_t *) tcp_key, &boot_err);
+            tox_bootstrap(upnp_udp, udp_node[j].ip, udp_node[j].port, (uint8_t *) udp_node[j].key, NULL);
+            tox_add_tcp_relay(upnp_udp, tcp_node[0].ip, tcp_node[0].port, (uint8_t *) tcp_node[0].key, NULL);
         }
 
         if (tox_self_get_connection_status(upnp_tcp) == TOX_CONNECTION_NONE) {
-            tox_bootstrap(upnp_tcp, "144.76.60.215", 33445, (uint8_t *) udp_key, &boot_err);
-            tox_add_tcp_relay(upnp_udp, "46.101.197.175", 443, (uint8_t *) tcp_key, &boot_err);
+            tox_bootstrap(upnp_tcp, udp_node[j].ip, udp_node[j].port, (uint8_t *) udp_node[j].key, NULL);
+            tox_add_tcp_relay(upnp_tcp, tcp_node[0].ip, tcp_node[0].port, (uint8_t *) tcp_node[0].key, NULL);
         }
 
         if (tox_self_get_connection_status(natpmp_udp) == TOX_CONNECTION_NONE) {
-            tox_bootstrap(natpmp_udp, "144.76.60.215", 33445, (uint8_t *) udp_key, &boot_err);
-            tox_add_tcp_relay(upnp_udp, "46.101.197.175", 443, (uint8_t *) tcp_key, &boot_err);
+            tox_bootstrap(natpmp_udp, udp_node[j].ip, udp_node[j].port, (uint8_t *) udp_node[j].key, NULL);
+            tox_add_tcp_relay(natpmp_udp, tcp_node[0].ip, tcp_node[0].port, (uint8_t *) tcp_node[0].key, NULL);
         }
 
         if (tox_self_get_connection_status(natpmp_tcp) == TOX_CONNECTION_NONE) {
-            tox_bootstrap(natpmp_tcp, "144.76.60.215", 33445, (uint8_t *) udp_key, &boot_err);
-            tox_add_tcp_relay(upnp_udp, "46.101.197.175", 443, (uint8_t *) tcp_key, &boot_err);
+            tox_bootstrap(natpmp_tcp, udp_node[j].ip, udp_node[j].port, (uint8_t *) udp_node[j].key, NULL);
+            tox_add_tcp_relay(natpmp_tcp, tcp_node[0].ip, tcp_node[0].port, (uint8_t *) tcp_node[j].key, NULL);
         }
 
         tox_iterate(upnp_udp, NULL);
