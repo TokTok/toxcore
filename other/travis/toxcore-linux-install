@@ -51,3 +51,6 @@ pip install --user cpp-coveralls
   make install -j$NPROC
   cd - # popd
 }
+
+# build zetox and its CAPI
+other/travis/zetox

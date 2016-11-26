@@ -1,0 +1,11 @@
+#!/bin/sh
+
+# Install Rust for toxencryptsave
+curl -sSf https://static.rust-lang.org/rustup.sh > rustup.sh
+mkdir ~/rust
+sh rustup.sh --prefix=~/rust --disable-sudo --spec=stable -y >/dev/null
+
+# Clone & compile tox-capi for toxencryptsave
+git clone https://github.com/ze-tox/tox-capi tox-capi
+cd tox-capi/toxencryptsave
+cargo build --release
