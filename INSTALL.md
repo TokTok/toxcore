@@ -46,12 +46,12 @@ Note: package fetching commands may vary by OS.
 On Ubuntu `< 15.04` / Debian `< 8`:
 
 ```bash
-sudo apt-get install build-essential libtool autotools-dev automake checkinstall check git yasm
+sudo apt-get install build-essential libtool autotools-dev automake checkinstall check git yasm libncurses5-dev
 ```
 
 On Ubuntu `>= 15.04` / Debian `>= 8`:
 ```bash
-sudo apt-get install build-essential libtool autotools-dev automake checkinstall check git yasm libsodium13 libsodium-dev
+sudo apt-get install build-essential libtool autotools-dev automake checkinstall check git yasm libncurses5-dev libsodium13 libsodium-dev
 ```
 
 On Fedora:
