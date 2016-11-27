@@ -72,10 +72,13 @@ if(WARNINGS)
   # of having a comma at the end of an enumerator list.
   add_cflag("-pedantic")
 
-  # Set error-on-warn for C compilation. C++ compilation can't use this because
-  # treating 'c' input as 'c++' when in C++ mode is deprecated in clang and
-  # there is no way to turn off that warning.
-  add_cflag("-Werror")
+  option(ERROR_ON_WARNING "Make compilation error on a warning" OFF)
+  if(ERROR_ON_WARNING)
+    # Set error-on-warn for C compilation. C++ compilation can't use this because
+    # treating 'c' input as 'c++' when in C++ mode is deprecated in clang and
+    # there is no way to turn off that warning.
+    add_cflag("-Werror")
+  endif()
 
   # Disable specific warning flags for both C and C++.
   add_flag("-Wno-cast-align")
