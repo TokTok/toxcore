@@ -45,13 +45,13 @@ typedef enum {
 #define GROUP_PING_INTERVAL 20
 
 enum {
-	GROUP_MESSAGE_PING_ID = 0,
-	GROUP_MESSAGE_UNSUBSCRIBE_ID = 1,
-	GROUP_MESSAGE_NICKNAME_ID = 2,
-	GROUP_MESSAGE_NEW_PEER_ID = 16,
-	GROUP_MESSAGE_KILL_PEER_ID = 17,
-	GROUP_MESSAGE_NAME_ID = 48,
-	GROUP_MESSAGE_TITLE_ID = 49
+    GROUP_MESSAGE_PING_ID = 0,
+    GROUP_MESSAGE_UNSUBSCRIBE_ID = 1,
+    GROUP_MESSAGE_NICKNAME_ID = 2,
+    GROUP_MESSAGE_NEW_PEER_ID = 16,
+    GROUP_MESSAGE_KILL_PEER_ID = 17,
+    GROUP_MESSAGE_NAME_ID = 48,
+    GROUP_MESSAGE_TITLE_ID = 49
 };
 
 #define GROUP_MESSAGE_NEW_PEER_LENGTH (sizeof(uint16_t) + crypto_box_PUBLICKEYBYTES * 2)
@@ -60,10 +60,10 @@ enum {
 #define MAX_GROUP_MESSAGE_DATA_LEN (MAX_CRYPTO_DATA_SIZE - (1 + MIN_MESSAGE_PACKET_LEN))
 
 enum {
-	INVITE_ID = 0,
-	INVITE_RESPONSE_ID = 1,
-	INVITE_UNSUBSCRIBE_ID = 2,
-	INVITE_MYGROUP_ID = 3,
+    INVITE_ID = 0,
+    INVITE_RESPONSE_ID = 1,
+    INVITE_UNSUBSCRIBE_ID = 2,
+    INVITE_MYGROUP_ID = 3,
 };
 
 #define INVITE_PACKET_SIZE (1 + sizeof(uint16_t) + GROUP_IDENTIFIER_LENGTH)
@@ -72,11 +72,11 @@ enum {
 #define ONLINE_PACKET_DATA_SIZE (sizeof(uint16_t) + GROUP_IDENTIFIER_LENGTH)
 
 enum {
-	PEER_KILL_ID = 1,
-	PEER_QUERY_ID = 8,
-	PEER_RESPONSE_ID = 9,
-	PEER_TITLE_ID = 10,
-	PEER_GROUP_NUM_ID = 11,
+    PEER_KILL_ID = 1,
+    PEER_QUERY_ID = 8,
+    PEER_RESPONSE_ID = 9,
+    PEER_TITLE_ID = 10,
+    PEER_GROUP_NUM_ID = 11,
 };
 
 #define MIN_MESSAGE_PACKET_LEN (sizeof(uint16_t) * 2 + sizeof(uint32_t) + 1)
@@ -408,7 +408,7 @@ static void apply_changes_in_peers(Group_Chats *g_c, aint groupnumber, void *use
 
         aint new_size_of_list = 0;
 
-		/* Put new peers to just deleted slots */
+        /* Put new peers to just deleted slots */
         for (i = 0; i < g->numpeers; ++i) {
 
             const Group_Peer *peer = g->peers + i;
@@ -449,7 +449,7 @@ static void apply_changes_in_peers(Group_Chats *g_c, aint groupnumber, void *use
             /* all new peers were put into empty slots, so there are no new peers */
             /* just remove empty slots both in peers_list and peers*/
 
-			/* remove empty slots in peers_list */
+            /* remove empty slots in peers_list */
             for (j = 0; j < g->numpeers_in_list;) {
 
                 if (g->peers_list[j] == 0xffff) {
@@ -464,7 +464,7 @@ static void apply_changes_in_peers(Group_Chats *g_c, aint groupnumber, void *use
                 ++j;
             }
 
-			/* remove empty slots in peers */
+            /* remove empty slots in peers */
             for (i = 0; i < g->numpeers;) {
 
                 Group_Peer *peer = g->peers + i;
@@ -473,7 +473,7 @@ static void apply_changes_in_peers(Group_Chats *g_c, aint groupnumber, void *use
                     --g->numpeers;
                     memcpy(peer, g->peers + g->numpeers, sizeof(Group_Peer));
 
-					/* fix index in peers_list */
+                    /* fix index in peers_list */
                     for (j = 0; j < g->numpeers_in_list; ++j) {
                         if (g->peers_list[j] == g->numpeers) {
                             g->peers_list[j] = (uint16_t)i;
@@ -489,7 +489,7 @@ static void apply_changes_in_peers(Group_Chats *g_c, aint groupnumber, void *use
 
         } else if (new_size_of_list > g->numpeers_in_list) {
 
-			/* Expand peers_list and put indexes of new peers into it */
+            /* Expand peers_list and put indexes of new peers into it */
 
             uint16_t *temp = (uint16_t *)realloc(g->peers_list, sizeof(uint16_t) * new_size_of_list);
 
@@ -523,7 +523,7 @@ static void apply_changes_in_peers(Group_Chats *g_c, aint groupnumber, void *use
             }
         }
 
-		/* Now notify client by calling callbacks */
+        /* Now notify client by calling callbacks */
         if (g_c->group_namelistchange) {
             if (some_changes) {
 
@@ -594,7 +594,7 @@ static void apply_changes_in_peers(Group_Chats *g_c, aint groupnumber, void *use
         g->dirty_list = false;
     }
 
-	/* notify client about nick change */
+    /* notify client about nick change */
     if (g->nick_changed && g_c->group_namelistchange) {
 
         size_t i;
@@ -611,7 +611,7 @@ static void apply_changes_in_peers(Group_Chats *g_c, aint groupnumber, void *use
         g->nick_changed = false;
     }
 
-	/* notify client about title change */
+    /* notify client about title change */
     if (g->title_changed && g_c->title_callback) {
         size_t i;
         bool cb = false;
