@@ -511,6 +511,14 @@ struct Tox_Options {
 
 
     /**
+     * Enable finding peers on your local network.
+     *
+     * Disabling this will cause tox to not look for peers on your local network.
+     */
+    bool local_discovery_enabled;
+
+
+    /**
      * Pass communications through a proxy.
      */
     TOX_PROXY_TYPE proxy_type;
@@ -623,6 +631,10 @@ void tox_options_set_ipv6_enabled(struct Tox_Options *options, bool ipv6_enabled
 bool tox_options_get_udp_enabled(const struct Tox_Options *options);
 
 void tox_options_set_udp_enabled(struct Tox_Options *options, bool udp_enabled);
+
+bool tox_options_get_local_discovery_enabled(const struct Tox_Options *options);
+
+void tox_options_set_local_discovery_enabled(struct Tox_Options *options, bool local_discovery_enabled);
 
 TOX_PROXY_TYPE tox_options_get_proxy_type(const struct Tox_Options *options);
 

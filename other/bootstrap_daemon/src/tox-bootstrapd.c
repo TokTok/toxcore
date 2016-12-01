@@ -244,7 +244,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    DHT *dht = new_DHT(NULL, net, true);
+    DHT *dht = new_DHT(NULL, net, true, true);
 
     if (dht == NULL) {
         write_log(LOG_LEVEL_ERROR, "Couldn't initialize Tox DHT instance. Exiting.\n");

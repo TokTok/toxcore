@@ -2581,7 +2581,7 @@ static int cryptopacket_handle(void *object, IP_Port source, const uint8_t *pack
 
 /*----------------------------------------------------------------------------------*/
 
-DHT *new_DHT(Logger *log, Networking_Core *net, bool holepunching_enabled)
+DHT *new_DHT(Logger *log, Networking_Core *net, bool holepunching_enabled, bool local_discovery_enabled)
 {
     /* init time */
     unix_time_update();
@@ -2600,6 +2600,7 @@ DHT *new_DHT(Logger *log, Networking_Core *net, bool holepunching_enabled)
     dht->net = net;
 
     dht->hole_punching_enabled = holepunching_enabled;
+    dht->local_discovery_enabled = local_discovery_enabled;
 
     dht->ping = new_ping(dht);
 
