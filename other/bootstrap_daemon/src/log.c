@@ -80,11 +80,6 @@ static int level_syslog(LOG_LEVEL level)
     return LOG_INFO;
 }
 
-static void log_syslog(LOG_LEVEL level, const char *format, va_list args)
-{
-    vsyslog(level_syslog(level), format, args);
-}
-
 static FILE *level_stdout(LOG_LEVEL level)
 {
     switch (level) {
@@ -99,28 +94,32 @@ static FILE *level_stdout(LOG_LEVEL level)
     return stdout;
 }
 
-static void log_stdout(LOG_LEVEL level, const char *format, va_list args)
-{
-    vfprintf(level_stdout(level), format, args);
-    fflush(level_stdout(level));
-}
-
 bool write_log(LOG_LEVEL level, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
 
+    int size = vsnprintf(NULL, 0, format, args) + 1;
+
+    va_end(args);
+
+    va_start(args, format);
+
+    char buf[size];
+    vsnprintf(buf, size, format, args);
+
+    va_end(args);
+
     switch (current_backend) {
         case LOG_BACKEND_SYSLOG:
-            log_syslog(level, format, args);
+            syslog(level_syslog(level), "%s", buf);
             break;
 
         case LOG_BACKEND_STDOUT:
-            log_stdout(level, format, args);
+            fprintf(level_stdout(level), "%s", buf);
+            fflush(level_stdout(level));
             break;
     }
-
-    va_end(args);
 
     return current_backend != INVALID_BACKEND;
 }
