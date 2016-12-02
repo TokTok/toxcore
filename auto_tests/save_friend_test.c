@@ -1,6 +1,8 @@
 /* Auto Tests: Save and load friends.
  */
 
+#define _XOPEN_SOURCE 600
+
 #include "../toxcore/tox.h"
 
 #include <assert.h>

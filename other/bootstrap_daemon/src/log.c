@@ -82,7 +82,16 @@ static int level_syslog(LOG_LEVEL level)
 
 static void log_syslog(LOG_LEVEL level, const char *format, va_list args)
 {
-    vsyslog(level_syslog(level), format, args);
+    va_list args2;
+
+    va_copy(args2, args);
+    int size = vsnprintf(NULL, 0, format, args2) + 1;
+    va_end(args2);
+
+    char buf[size];
+    vsnprintf(buf, size, format, args);
+
+    syslog(level_syslog(level), "%s", buf);
 }
 
 static FILE *level_stdout(LOG_LEVEL level)
