@@ -56,23 +56,25 @@ macro(add_flag flag)
   add_cflag(${flag})
   add_cxxflag(${flag})
 endmacro()
+  
+# Set standard version for compiler
+add_cflag("-std=c99")
+add_cxxflag("-std=c++98")
+
+# Error on non-ISO C/C++
+add_flag("-pedantic-errors")
+
+# Expose SUSv3 and C99 definitions
+add_definitions(-D_XOPEN_SOURCE=600)
 
 option(WARNINGS "Enable additional compiler warnings" ON)
 if(WARNINGS)
-  # Set standard version for compiler.
-  add_cflag("-std=gnu99")
-  add_cxxflag("-std=c++98")
-
   # Add all warning flags we can.
   add_flag("-Wall")
   add_flag("-Wextra")
   add_flag("-Weverything")
 
-  # -pedantic only for C, because in C++ we want to allow the GNU/C99 extension
-  # of having a comma at the end of an enumerator list.
-  add_cflag("-pedantic")
-
-  # Disable specific warning flags for both C and C++.
+# Disable specific warning flags for both C and C++.
   add_flag("-Wno-cast-align")
   add_flag("-Wno-conversion")
   add_flag("-Wno-covered-switch-default")

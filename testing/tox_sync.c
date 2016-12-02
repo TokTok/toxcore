@@ -42,6 +42,7 @@
 #include <dirent.h>
 #include <netinet/in.h>
 #include <stdio.h>
+#include <sys/stat.h>
 
 #define NUM_FILE_SENDERS 256
 typedef struct {
@@ -297,6 +298,7 @@ int main(int argc, char *argv[])
     memcpy(path, argv[argvoffset + 4], strlen(argv[argvoffset + 4]));
     DIR           *d;
     struct dirent *dir;
+    struct stat statbuf;
     uint8_t notconnected = 1;
 
     while (1) {
@@ -310,7 +312,12 @@ int main(int argc, char *argv[])
 
             if (d) {
                 while ((dir = readdir(d)) != NULL) {
-                    if (dir->d_type == DT_REG) {
+                    char filepath[strlen(path) + strlen(dir->d_name)];
+                    memcpy(filepath, path, strlen(path));
+                    memcpy(filepath + strlen(path), dir->d_name, strlen(dir->d_name) + 1);
+                    stat(filepath, &statbuf);
+
+                    if (S_ISREG(statbuf.st_mode)) {
                         char fullpath[1024];
 
                         if (path[strlen(path) - 1] == '/') {
