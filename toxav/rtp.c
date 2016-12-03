@@ -165,7 +165,7 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint16_t length, Log
             memcpy(rdata + 1 + sizeof(struct RTPHeader), data + sent, piece);
 
             if (-1 == m_send_custom_lossy_packet(session->m, session->friend_number,
-                                               rdata, piece + sizeof(struct RTPHeader) + 1)) {
+                                                 rdata, piece + sizeof(struct RTPHeader) + 1)) {
                 LOGGER_WARNING(session->m->log, "RTP send failed (len: %d)! std error: %s",
                                piece + sizeof(struct RTPHeader) + 1, strerror(errno));
             }
@@ -181,7 +181,7 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint16_t length, Log
             memcpy(rdata + 1 + sizeof(struct RTPHeader), data + sent, piece);
 
             if (-1 == m_send_custom_lossy_packet(session->m, session->friend_number, rdata,
-                                               piece + sizeof(struct RTPHeader) + 1)) {
+                                                 piece + sizeof(struct RTPHeader) + 1)) {
                 LOGGER_WARNING(session->m->log, "RTP send failed (len: %d)! std error: %s",
                                piece + sizeof(struct RTPHeader) + 1, strerror(errno));
             }

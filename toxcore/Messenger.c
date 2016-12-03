@@ -1737,11 +1737,12 @@ static int handle_custom_lossy_packet(void *object, int friend_num, const uint8_
         return 1;
     }
 
-    if (packet[0] < (PACKET_ID_LOSSY_RANGE_START + PACKET_LOSSY_AV_RESERVED)) {
-        if (m->friendlist[friend_num].lossy_rtp_packethandlers[packet[0] % PACKET_LOSSY_AV_RESERVED].function) {
-            return m->friendlist[friend_num].lossy_rtp_packethandlers[packet[0] % PACKET_LOSSY_AV_RESERVED].function(
-                       m, friend_num, packet, length, m->friendlist[friend_num].lossy_rtp_packethandlers[packet[0] %
-                               PACKET_LOSSY_AV_RESERVED].object);
+    if (packet[0] >= PACKET_ID_LOSSY_AV_START && packet[0] <= PACKET_ID_LOSSY_AV_LAST) {
+        uint8_t index = packet[0] % PACKET_AV_BLOCK_SIZE;
+
+        if (m->friendlist[friend_num].lossy_rtp_packethandlers[index].function) {
+            return m->friendlist[friend_num].lossy_rtp_packethandlers[index].function(
+                       m, friend_num, packet, length, m->friendlist[friend_num].lossy_rtp_packethandlers[index].object);
         }
 
         return 1;
@@ -1767,17 +1768,13 @@ int m_callback_rtp_packet(Messenger *m, int32_t friendnumber, uint8_t byte, int 
         return -1;
     }
 
-    if (byte < PACKET_ID_LOSSY_RANGE_START) {
+    if (byte < PACKET_ID_LOSSY_AV_START || byte > PACKET_ID_LOSSY_AV_LAST) {
         return -1;
     }
 
-    if (byte >= (PACKET_ID_LOSSY_RANGE_START + PACKET_LOSSY_AV_RESERVED)) {
-        return -1;
-    }
-
-    m->friendlist[friendnumber].lossy_rtp_packethandlers[byte % PACKET_LOSSY_AV_RESERVED].function =
+    m->friendlist[friendnumber].lossy_rtp_packethandlers[byte % PACKET_AV_BLOCK_SIZE].function =
         packet_handler_callback;
-    m->friendlist[friendnumber].lossy_rtp_packethandlers[byte % PACKET_LOSSY_AV_RESERVED].object = object;
+    m->friendlist[friendnumber].lossy_rtp_packethandlers[byte % PACKET_AV_BLOCK_SIZE].object = object;
     return 0;
 }
 
@@ -1792,11 +1789,7 @@ int m_send_custom_lossy_packet(const Messenger *m, int32_t friendnumber, const u
         return -2;
     }
 
-    if (data[0] < PACKET_ID_LOSSY_RANGE_START) {
-        return -3;
-    }
-
-    if (data[0] >= (PACKET_ID_LOSSY_RANGE_START + PACKET_ID_LOSSY_RANGE_SIZE)) {
+    if (data[0] < PACKET_ID_LOSSY_RANGE_START || data[0] > PACKET_ID_LOSSY_RANGE_LAST) {
         return -3;
     }
 
@@ -1821,11 +1814,7 @@ static int handle_custom_lossless_packet(void *object, int friend_num, const uin
         return -1;
     }
 
-    if (packet[0] < PACKET_ID_LOSSLESS_RANGE_START) {
-        return -1;
-    }
-
-    if (packet[0] >= (PACKET_ID_LOSSLESS_RANGE_START + PACKET_ID_LOSSLESS_RANGE_SIZE)) {
+    if (packet[0] < PACKET_ID_LOSSLESS_RANGE_START || packet[0] > PACKET_ID_LOSSLESS_RANGE_LAST) {
         return -1;
     }
 
@@ -1852,11 +1841,7 @@ int send_custom_lossless_packet(const Messenger *m, int32_t friendnumber, const 
         return -2;
     }
 
-    if (data[0] < PACKET_ID_LOSSLESS_RANGE_START) {
-        return -3;
-    }
-
-    if (data[0] >= (PACKET_ID_LOSSLESS_RANGE_START + PACKET_ID_LOSSLESS_RANGE_SIZE)) {
+    if (data[0] < PACKET_ID_LOSSLESS_RANGE_START || data[0] > PACKET_ID_LOSSLESS_RANGE_LAST) {
         return -3;
     }
 
