@@ -1830,6 +1830,7 @@ int m_callback_rtp_video(Messenger *m, int32_t friendnumber, int (*packet_handle
 
     m->friendlist[friendnumber].rtp_video_function = packet_handler_callback;
     m->friendlist[friendnumber].rtp_video_object = object;
+
     return 0;
 }
 
