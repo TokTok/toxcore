@@ -65,10 +65,9 @@ enum {
 #define PACKET_ID_MESSAGE_CONFERENCE 99
 #define PACKET_ID_LOSSY_CONFERENCE 199
 
-/* All packets starting with a byte in this range can be used for anything. */
-#define PACKET_ID_LOSSLESS_RANGE_START 160
-#define PACKET_ID_LOSSLESS_RANGE_SIZE 32
-#define PACKET_LOSSY_AV_RESERVED 8 /* Number of lossy packet types at start of range reserved for A/V. */
+#define PACKET_ID_LOSSY_AV_START 192 /* Number of lossy packet types at start of range reserved for A/V. */
+#define PACKET_ID_LOSSY_AV_LAST  200
+#define PACKET_AV_BLOCK_SIZE     (PACKET_ID_LOSSY_AV_LAST - PACKET_ID_LOSSY_AV_START)
 
 typedef struct {
     uint8_t ipv6enabled;
@@ -208,7 +207,7 @@ typedef struct {
     struct {
         int (*function)(Messenger *m, uint32_t friendnumber, const uint8_t *data, uint16_t len, void *object);
         void *object;
-    } lossy_rtp_packethandlers[PACKET_LOSSY_AV_RESERVED];
+    } lossy_rtp_packethandlers[PACKET_AV_BLOCK_SIZE];
 
     struct Receipts *receipts_start;
     struct Receipts *receipts_end;

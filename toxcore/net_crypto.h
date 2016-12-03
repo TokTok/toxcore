@@ -68,15 +68,18 @@
 #define PACKET_ID_REQUEST 1 /* Used to request unreceived packets */
 #define PACKET_ID_KILL    2 /* Used to kill connection */
 
-/* Packet ids 0 to CRYPTO_RESERVED_PACKETS - 1 are reserved for use by net_crypto. */
-#define CRYPTO_RESERVED_PACKETS 16
-
 #define MAX_TCP_CONNECTIONS 64
 #define MAX_TCP_RELAYS_PEER 4
 
+/* Packet ids 0 to CRYPTO_RESERVED_PACKETS - 1 are reserved for use by net_crypto. */
+#define CRYPTO_RESERVED_PACKETSS 16
+
+/* All packets starting with a byte in this range are considered lossless packets. */
+#define PACKET_ID_LOSSLESS_RANGE_START   16
+#define PACKET_ID_LOSSLESS_RANGE_LAST   191
 /* All packets starting with a byte in this range are considered lossy packets. */
-#define PACKET_ID_LOSSY_RANGE_START 192
-#define PACKET_ID_LOSSY_RANGE_SIZE 63
+#define PACKET_ID_LOSSY_RANGE_START     192
+#define PACKET_ID_LOSSY_RANGE_LAST      255
 
 #define CRYPTO_MAX_PADDING 8 /* All packets will be padded a number of bytes based on this number. */
 
@@ -320,7 +323,7 @@ bool max_speed_reached(Net_Crypto *c, int crypt_connection_id);
  * return -1 if data could not be put in packet queue.
  * return positive packet number if data was put into the queue.
  *
- * The first byte of data must be in the CRYPTO_RESERVED_PACKETS to PACKET_ID_LOSSY_RANGE_START range.
+ * The first byte of data must be in the PACKET_ID_LOSSLESS_RANGE_START to PACKET_ID_LOSSLESS_RANGE_LAST range.
  *
  * congestion_control: should congestion control apply to this packet?
  */
