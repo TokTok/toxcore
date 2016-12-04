@@ -412,7 +412,7 @@ int m_delfriend(Messenger *m, int32_t friendnumber)
     }
 
     if (m->friend_connectionstatuschange_internal) {
-        m->friend_connectionstatuschange_internal(m, friendnumber, 0, m->friend_connectionstatuschange_internal_userdata);
+        m->friend_connectionstatuschange_internal(m, friendnumber, 0, m->friend_connectionstatuschange_internal_userdata, NULL);
     }
 
     clear_receipts(m, friendnumber);
@@ -884,7 +884,8 @@ void m_callback_core_connection(Messenger *m, void (*function)(Messenger *m, uns
     m->core_connection_change = function;
 }
 
-void m_callback_connectionstatus_internal_av(Messenger *m, void (*function)(Messenger *m, uint32_t, uint8_t, void *),
+void m_callback_connectionstatus_internal_av(Messenger *m, void (*function)(Messenger *m, uint32_t, uint8_t, void *,
+        void *),
         void *userdata)
 {
     m->friend_connectionstatuschange_internal = function;
@@ -945,7 +946,7 @@ static void check_friend_connectionstatus(Messenger *m, int32_t friendnumber, ui
 
         if (m->friend_connectionstatuschange_internal) {
             m->friend_connectionstatuschange_internal(m, friendnumber, is_online,
-                    m->friend_connectionstatuschange_internal_userdata);
+                    m->friend_connectionstatuschange_internal_userdata, userdata);
         }
     }
 }
@@ -1711,14 +1712,14 @@ static int handle_filecontrol(Messenger *m, int32_t friendnumber, uint8_t receiv
  *
  *  Function(Messenger *m, int friendnumber, uint8_t *data, uint16_t length, void *userdata)
  */
-void m_callback_msi_packet(Messenger *m, void (*function)(Messenger *m, uint32_t, const uint8_t *, uint16_t, void *),
-                           void *userdata)
+void m_callback_msi_packet(Messenger *m, void (*function)(Messenger *m, uint32_t, const uint8_t *, uint16_t, void *,
+                           void *), void *object)
 {
     m->msi_packet = function;
-    m->msi_packet_userdata = userdata;
+    m->msi_packet_userdata = object;
 }
 
-/* Send an msi packet.
+/* Send an media session initialization packet.
  *
  *  return 1 on success
  *  return 0 on failure
@@ -1726,6 +1727,36 @@ void m_callback_msi_packet(Messenger *m, void (*function)(Messenger *m, uint32_t
 int m_msi_packet(const Messenger *m, int32_t friendnumber, const uint8_t *data, uint16_t length)
 {
     return write_cryptpacket_id(m, friendnumber, PACKET_ID_MSI, data, length, 0);
+}
+
+
+static int handle_lossy_av_packet(Messenger *m, int friend, const uint8_t *packet, uint16_t length, void *userdata)
+{
+    if (packet[0] == PACKET_ID_AV_NOS) {
+        if (m->friendlist[friend].av_nos_function) {
+            return m->friendlist[friend].av_nos_function(m, friend, packet, length, m->friendlist[friend].av_nos_object, userdata);
+        }
+    }
+
+    if (packet[0] == PACKET_ID_AV_RTP_NOS) {
+        if (m->friendlist[friend].rtp_nos_function) {
+            return m->friendlist[friend].rtp_nos_function(m, friend, packet, length, m->friendlist[friend].rtp_nos_object, userdata);
+        }
+    }
+
+    if (packet[0] == PACKET_ID_AV_RTP_AUDIO) {
+        if (m->friendlist[friend].rtp_audio_function) {
+            return m->friendlist[friend].rtp_audio_function(m, friend, packet, length, m->friendlist[friend].rtp_audio_object, userdata);
+        }
+    }
+
+    if (packet[0] == PACKET_ID_AV_RTP_VIDEO) {
+        if (m->friendlist[friend].rtp_video_function) {
+            return m->friendlist[friend].rtp_video_function(m, friend, packet, length, m->friendlist[friend].rtp_video_object, userdata);
+        }
+    }
+
+    return 1;
 }
 
 static int handle_custom_lossy_packet(void *object, int friend_num, const uint8_t *packet, uint16_t length,
@@ -1737,15 +1768,8 @@ static int handle_custom_lossy_packet(void *object, int friend_num, const uint8_
         return 1;
     }
 
-    if (packet[0] >= PACKET_ID_LOSSY_AV_START && packet[0] <= PACKET_ID_LOSSY_AV_LAST) {
-        uint8_t index = packet[0] % PACKET_AV_BLOCK_SIZE;
-
-        if (m->friendlist[friend_num].lossy_rtp_packethandlers[index].function) {
-            return m->friendlist[friend_num].lossy_rtp_packethandlers[index].function(
-                       m, friend_num, packet, length, m->friendlist[friend_num].lossy_rtp_packethandlers[index].object);
-        }
-
-        return 1;
+    if (packet[0] >= PACKET_ID_AV_NOS && packet[0] <= PACKET_ID_AV_RTP_VIDEO) {
+        return handle_lossy_av_packet(m, friend_num, packet, length, userdata);
     }
 
     if (m->lossy_packethandler) {
@@ -1761,20 +1785,51 @@ void custom_lossy_packet_registerhandler(Messenger *m, void (*packet_handler_cal
     m->lossy_packethandler = packet_handler_callback;
 }
 
-int m_callback_rtp_packet(Messenger *m, int32_t friendnumber, uint8_t byte, int (*packet_handler_callback)(Messenger *m,
-                          uint32_t friendnumber, const uint8_t *data, uint16_t len, void *object), void *object)
+int m_callback_av_nos(Messenger *m, int32_t friendnumber, int (*packet_handler_callback)(Messenger *m,
+                          uint32_t friendnumber, const uint8_t *data, uint16_t len, void *object, void *userdata), void *object)
 {
     if (friend_not_valid(m, friendnumber)) {
         return -1;
     }
 
-    if (byte < PACKET_ID_LOSSY_AV_START || byte > PACKET_ID_LOSSY_AV_LAST) {
+    m->friendlist[friendnumber].av_nos_function = packet_handler_callback;
+    m->friendlist[friendnumber].av_nos_object = object;
+    return 0;
+}
+
+int m_callback_rtp_nos(Messenger *m, int32_t friendnumber, int (*packet_handler_callback)(Messenger *m,
+                          uint32_t friendnumber, const uint8_t *data, uint16_t len, void *object, void *userdata), void *object)
+{
+    if (friend_not_valid(m, friendnumber)) {
         return -1;
     }
 
-    m->friendlist[friendnumber].lossy_rtp_packethandlers[byte % PACKET_AV_BLOCK_SIZE].function =
-        packet_handler_callback;
-    m->friendlist[friendnumber].lossy_rtp_packethandlers[byte % PACKET_AV_BLOCK_SIZE].object = object;
+    m->friendlist[friendnumber].rtp_nos_function = packet_handler_callback;
+    m->friendlist[friendnumber].rtp_nos_object = object;
+    return 0;
+}
+
+int m_callback_rtp_audio(Messenger *m, int32_t friendnumber, int (*packet_handler_callback)(Messenger *m,
+                          uint32_t friendnumber, const uint8_t *data, uint16_t len, void *object, void *userdata), void *object)
+{
+    if (friend_not_valid(m, friendnumber)) {
+        return -1;
+    }
+
+    m->friendlist[friendnumber].rtp_audio_function = packet_handler_callback;
+    m->friendlist[friendnumber].rtp_audio_object = object;
+    return 0;
+}
+
+int m_callback_rtp_video(Messenger *m, int32_t friendnumber, int (*packet_handler_callback)(Messenger *m,
+                          uint32_t friendnumber, const uint8_t *data, uint16_t len, void *object, void *userdata), void *object)
+{
+    if (friend_not_valid(m, friendnumber)) {
+        return -1;
+    }
+
+    m->friendlist[friendnumber].rtp_video_function = packet_handler_callback;
+    m->friendlist[friendnumber].rtp_video_object = object;
     return 0;
 }
 
@@ -2333,7 +2388,7 @@ static int handle_packet(void *object, int i, const uint8_t *temp, uint16_t len,
             }
 
             if (m->msi_packet) {
-                (*m->msi_packet)(m, i, data, data_length, m->msi_packet_userdata);
+                (*m->msi_packet)(m, i, data, data_length, m->msi_packet_userdata, userdata);
             }
 
             break;

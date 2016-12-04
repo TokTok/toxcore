@@ -72,7 +72,7 @@
 #define MAX_TCP_RELAYS_PEER 4
 
 /* Packet ids 0 to CRYPTO_RESERVED_PACKETS - 1 are reserved for use by net_crypto. */
-#define CRYPTO_RESERVED_PACKETSS 16
+#define CRYPTO_RESERVED_PACKETS 16
 
 /* All packets starting with a byte in this range are considered lossless packets. */
 #define PACKET_ID_LOSSLESS_RANGE_START  160

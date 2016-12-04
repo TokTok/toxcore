@@ -35,7 +35,8 @@
 #include <stdlib.h>
 
 
-int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, uint16_t length, void *object);
+int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, uint16_t length, void *object,
+                      void *userdata);
 
 
 RTPSession *rtp_new(int payload_type, Messenger *m, uint32_t friendnumber,
@@ -84,16 +85,23 @@ void rtp_kill(RTPSession *session)
     rtp_stop_receiving(session);
     free(session);
 }
+
 int rtp_allow_receiving(RTPSession *session)
 {
     if (session == NULL) {
         return -1;
     }
 
-    if (m_callback_rtp_packet(session->m, session->friend_number, session->payload_type,
-                              handle_rtp_packet, session) == -1) {
-        LOGGER_WARNING(session->m->log, "Failed to register rtp receive handler");
-        return -1;
+    if (session->payload_type == rtp_TypeAudio) {
+        if (m_callback_rtp_audio(session->m, session->friend_number, handle_rtp_packet, session)) {
+            LOGGER_WARNING(session->m->log, "Failed to register rtp receive handler");
+            return -1;
+        }
+    } else if (session->payload_type == rtp_TypeVideo) {
+        if (m_callback_rtp_video(session->m, session->friend_number, handle_rtp_packet, session)) {
+            LOGGER_WARNING(session->m->log, "Failed to register rtp receive handler");
+            return -1;
+        }
     }
 
     LOGGER_DEBUG(session->m->log, "Started receiving on session: %p", session);
@@ -105,11 +113,16 @@ int rtp_stop_receiving(RTPSession *session)
         return -1;
     }
 
-    m_callback_rtp_packet(session->m, session->friend_number, session->payload_type, NULL, NULL);
+    if (session->payload_type == rtp_TypeAudio) {
+        m_callback_rtp_audio(session->m, session->friend_number, NULL, NULL);
+    } else if (session->payload_type == rtp_TypeVideo) {
+        m_callback_rtp_video(session->m, session->friend_number, NULL, NULL);
+    }
 
     LOGGER_DEBUG(session->m->log, "Stopped receiving on session: %p", session);
     return 0;
 }
+
 int rtp_send_data(RTPSession *session, const uint8_t *data, uint16_t length, Logger *log)
 {
     if (!session) {
@@ -120,7 +133,7 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint16_t length, Log
     uint8_t rdata[length + sizeof(struct RTPHeader) + 1];
     memset(rdata, 0, sizeof(rdata));
 
-    rdata[0] = session->payload_type;
+    rdata[0] = PACKET_ID_AV_RTP_NOS + session->payload_type;
 
     struct RTPHeader *header = (struct RTPHeader *)(rdata  + 1);
 
@@ -130,7 +143,7 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint16_t length, Log
     header->cc = 0;
 
     header->ma = 0;
-    header->pt = session->payload_type % 128;
+    header->pt = session->payload_type;
 
     header->sequnum = htons(session->sequnum);
     header->timestamp = htonl(current_time_monotonic());
@@ -154,7 +167,7 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint16_t length, Log
     } else {
 
         /**
-         * The lenght is greater than the maximum allowed lenght (including header)
+         * The length is greater than the maximum allowed length (including header)
          * Send the packet in multiple pieces.
          */
 
@@ -234,7 +247,8 @@ static struct RTPMessage *new_message(size_t allocate_len, const uint8_t *data, 
 
     return msg;
 }
-int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, uint16_t length, void *object)
+int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, uint16_t length, void *object,
+                      void *userdata)
 {
     (void) m;
     (void) friendnumber;
