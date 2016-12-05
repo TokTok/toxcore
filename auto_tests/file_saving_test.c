@@ -26,16 +26,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <tox/tox.h>
-#include <tox/toxencryptsave.h>
+#include "../toxcore/tox.h"
+#include "../toxencryptsave/toxencryptsave.h"
 
-static const char *pphrase = "bar", * name = "foo";
+static const char *pphrase = "bar", *name = "foo";
 
 void tse(void)
 {
     Tox *t;
     struct Tox_Options to;
-    uint8_t *clear, * cipher;
+    uint8_t *clear, *cipher;
     off_t sz;
     FILE *f;
     TOX_ERR_ENCRYPTION eerr;
@@ -121,6 +121,8 @@ int main(void)
 {
     tse();
     tsd();
+
+    remove("save");
 
     return 0;
 }
