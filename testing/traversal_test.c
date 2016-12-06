@@ -23,9 +23,11 @@
  * -g -pthread `pkg-config --cflags --libs libsodium` -lminiupnpc -lnatpmp
  */
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
 #include "../toxcore/tox.h"
@@ -54,43 +56,47 @@ typedef struct my_node_t {
 } my_node_t;
 
 
+static const char *level_str(TOX_LOG_LEVEL level)
+{
+    switch (level) {
+        case TOX_LOG_LEVEL_TRACE:
+            return "[TRACE]";
+
+        case TOX_LOG_LEVEL_DEBUG:
+            return "[DEBUG]";
+
+        case TOX_LOG_LEVEL_INFO:
+            return "[INFO]";
+
+        case TOX_LOG_LEVEL_WARNING:
+            return "[WARNING]";
+
+        case TOX_LOG_LEVEL_ERROR:
+            return "[ERROR]";
+
+        default:
+            return "[???]";
+    }
+}
+
+
 static void log_callback(Tox *tox, TOX_LOG_LEVEL level, const char *path, uint32_t line, const char *func,
                          const char *msg, void *user_data)
 {
     UNUSED(tox);
-    UNUSED(user_data);
+    const struct timeval *start = (const struct timeval *)user_data;
+    assert(start != NULL);
 
     const char *file = strrchr(path, '/');
 
     file = file ? file + 1 : path;
 
-    switch (level) {
-        case TOX_LOG_LEVEL_TRACE:
-            printf("[TRACE]   ");
-            break;
+    struct timeval now;
+    gettimeofday(&now, NULL);
 
-        case TOX_LOG_LEVEL_DEBUG:
-            printf("[DEBUG]   ");
-            break;
-
-        case TOX_LOG_LEVEL_INFO:
-            printf("[INFO]    ");
-            break;
-
-        case TOX_LOG_LEVEL_WARNING:
-            printf("[WARNING] ");
-            break;
-
-        case TOX_LOG_LEVEL_ERROR:
-            printf("[ERROR]   ");
-            break;
-
-        default:
-            printf("[???]     ");
-            break;
-    }
-
-    printf("%s:%d   %s(): %s\n", file, line, func, msg);
+    struct timeval diff;
+    timersub(&now, start, &diff);
+    printf("[%3d.%06d] %-9s %s:%d   %s(): %s\n", diff.tv_sec, diff.tv_usec, level_str(level), file, line, func, msg);
 }
 
 static char *str_to_key(const char *str)
@@ -113,12 +119,13 @@ static char *str_to_key(const char *str)
     return key;
 }
 
-static Tox *tox_traversal_new(TYPE t, PROTO p, uint16_t tcp_port)
+static Tox *tox_traversal_new(TYPE t, PROTO p, uint16_t tcp_port, struct timeval *start)
 {
     struct Tox_Options *opts = tox_options_new(NULL);
 
     // Set log callback
     tox_options_set_log_callback(opts, &log_callback);
+    tox_options_set_log_user_data(opts, start);
 
     switch (t) {
         case TYPE_UPNP:
@@ -174,10 +181,17 @@ int main(int argc, char *argv[])
 {
     int i, j;
 
-    Tox *upnp_udp = tox_traversal_new(TYPE_UPNP, PROTO_UDP, 0);
-    Tox *upnp_tcp = tox_traversal_new(TYPE_UPNP, PROTO_TCP, 44300);
-    Tox *natpmp_udp = tox_traversal_new(TYPE_NATPMP, PROTO_UDP, 0);
-    Tox *natpmp_tcp = tox_traversal_new(TYPE_NATPMP, PROTO_TCP, 44301);
+    struct timeval start;
+    gettimeofday(&start, NULL);
+
+    log_callback(NULL, TOX_LOG_LEVEL_DEBUG, __FILE__, __LINE__, __func__,
+                 "Initialising tox instances", &start);
+    Tox *upnp_udp = tox_traversal_new(TYPE_UPNP, PROTO_UDP, 0, &start);
+    Tox *upnp_tcp = tox_traversal_new(TYPE_UPNP, PROTO_TCP, 44300, &start);
+    Tox *natpmp_udp = tox_traversal_new(TYPE_NATPMP, PROTO_UDP, 0, &start);
+    Tox *natpmp_tcp = tox_traversal_new(TYPE_NATPMP, PROTO_TCP, 44301, &start);
+    log_callback(NULL, TOX_LOG_LEVEL_DEBUG, __FILE__, __LINE__, __func__,
+                 "Initialisation complete", &start);
 
     my_node_t udp_node[] = {
         { "144.76.60.215",   33445, str_to_key("04119E835DF3E78BACF0F84235B300546AF8B936F035185E2A8E9E0A67C8924F") },
