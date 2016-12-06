@@ -332,6 +332,195 @@ enum class MESSAGE_TYPE {
 }
 
 
+error for alloc {
+  /**
+   * The function failed to allocate enough memory for the data structure.
+   */
+  MALLOC,
+}
+
+
+/*******************************************************************************
+ *
+ * :: Loading/saving of internal state
+ *
+ ******************************************************************************/
+
+
+uint8_t[size] savedata {
+  /**
+   * Calculates the number of bytes required to store the tox instance with
+   * $get. This function cannot fail. The result is always greater than 0.
+   *
+   * @see threading for concurrency implications.
+   */
+  size();
+
+  /**
+   * Store all information associated with the tox instance to a byte array.
+   *
+   * @param savedata A memory region large enough to store the tox instance
+   *   data. Call $size to find the number of bytes required. If this parameter
+   *   is NULL, this function has no effect.
+   */
+  get();
+}
+
+
+static class saver {
+  /**
+   * Write an 8 bit unsigned integer.
+   */
+  typedef void u08_cb(uint8_t value, any user_data);
+  /**
+   * Write a 16 bit unsigned integer.
+   */
+  typedef void u16_cb(uint16_t value, any user_data);
+  /**
+   * Write a 32 bit unsigned integer.
+   */
+  typedef void u32_cb(uint32_t value, any user_data);
+  /**
+   * Write a 64 bit unsigned integer.
+   */
+  typedef void u64_cb(uint64_t value, any user_data);
+
+  /**
+   * Write an array of the given length. This call is followed by exactly
+   * `elements` calls to other functions. Arrays may be nested, so each
+   * element of the array may be another call to $arr_cb with its own element
+   * count and subsequent calls.
+   */
+  typedef void arr_cb(size_t elements, any user_data);
+
+  /**
+   * Write a list of key/value pairs. A call to this function is followed by
+   * `elements * 2` calls to other functions. Every other call is either key
+   * or value. Keys can be assumed to be unique.
+   */
+  typedef void map_cb(size_t elements, any user_data);
+
+  /**
+   * Write a byte array of a given length.
+   */
+  typedef void bin_cb(const uint8_t[length] data, any user_data);
+
+  /**
+   * This struct contains callbacks for the save function. You will probably
+   * want to implement all callbacks to produce a useful result.
+   */
+  struct this [get, set] {
+    u08_cb *u08;
+    u16_cb *u16;
+    u32_cb *u32;
+    u64_cb *u64;
+
+    arr_cb *arr;
+    map_cb *map;
+    bin_cb *bin;
+  }
+
+
+  /**
+   * Allocates a new $this object and initialises it with the default
+   * handlers.
+   *
+   * Objects returned from this function must be freed using the $free
+   * function.
+   *
+   * @return A new $this object with default options or NULL on failure.
+   */
+  static this new()
+      with error for alloc;
+
+
+  /**
+   * Releases all resources associated with a saver objects.
+   *
+   * Passing a pointer that was not returned by $new results in
+   * undefined behaviour.
+   */
+  void free();
+}
+
+void save(const saver_t *saver, any user_data);
+
+
+static class loader {
+  /**
+   * Read an 8 bit unsigned integer.
+   */
+  typedef uint8_t u08_cb(any user_data);
+  /**
+   * Read a 16 bit unsigned integer.
+   */
+  typedef uint16_t u16_cb(any user_data);
+  /**
+   * Read a 32 bit unsigned integer.
+   */
+  typedef uint32_t u32_cb(any user_data);
+  /**
+   * Read a 64 bit unsigned integer.
+   */
+  typedef uint64_t u64_cb(any user_data);
+
+  /**
+   * Read the an array length. This call is followed by exactly the returned
+   * number calls to other functions.
+   */
+  typedef size_t arr_cb(any user_data);
+
+  /**
+   * Read the length of the list of key/value pairs. A call to this function
+   * is followed by twice the returned number of calls to other functions.
+   * Every other call is either key or value.
+   */
+  typedef size_t map_cb(any user_data);
+
+  /**
+   * Read a byte array of a given length.
+   */
+  typedef void bin_cb(uint8_t *data, size_t *length, any user_data);
+
+  /**
+   * This struct contains callbacks for the load function. You will probably
+   * want to implement all callbacks to produce a useful result.
+   */
+  struct this [get, set] {
+    u08_cb *u08;
+    u16_cb *u16;
+    u32_cb *u32;
+    u64_cb *u64;
+
+    arr_cb *arr;
+    map_cb *map;
+    bin_cb *bin;
+  }
+
+
+  /**
+   * Allocates a new $this object and initialises it with the default
+   * handlers.
+   *
+   * Objects returned from this function must be freed using the $free
+   * function.
+   *
+   * @return A new $this object with default options or NULL on failure.
+   */
+  static this new()
+      with error for alloc;
+
+
+  /**
+   * Releases all resources associated with a loader objects.
+   *
+   * Passing a pointer that was not returned by $new results in
+   * undefined behaviour.
+   */
+  void free();
+}
+
+
 /*******************************************************************************
  *
  * :: Startup options
@@ -555,6 +744,18 @@ static class options {
        */
       any user_data;
     }
+
+    namespace load {
+      /**
+       * An implementation of the loader interface specified in $loader_t.
+       */
+      const loader_t *callbacks;
+
+      /**
+       * User data pointer passed to each of the loader callbacks.
+       */
+      any user_data;
+    }
   }
 
 
@@ -582,12 +783,8 @@ static class options {
    *
    * @return A new $this object with default options or NULL on failure.
    */
-  static this new() {
-    /**
-     * The function failed to allocate enough memory for the options struct.
-     */
-    MALLOC,
-  }
+  static this new()
+      with error for alloc;
 
 
   /**
@@ -682,26 +879,6 @@ static this new(const options_t *options) {
  * functions can be called, and the pointer value can no longer be read.
  */
 void kill();
-
-
-uint8_t[size] savedata {
-  /**
-   * Calculates the number of bytes required to store the tox instance with
-   * $get. This function cannot fail. The result is always greater than 0.
-   *
-   * @see threading for concurrency implications.
-   */
-  size();
-
-  /**
-   * Store all information associated with the tox instance to a byte array.
-   *
-   * @param savedata A memory region large enough to store the tox instance
-   *   data. Call $size to find the number of bytes required. If this parameter
-   *   is NULL, this function has no effect.
-   */
-  get();
-}
 
 
 /*******************************************************************************
