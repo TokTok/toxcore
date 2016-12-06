@@ -48,13 +48,13 @@ void tse(void)
     f = fopen("save", "w");
 
     sz = tox_get_savedata_size(t);
-    clear = malloc(sz);
+    clear = (uint8_t *)malloc(sz);
 
     /*this function does not write any data at all*/
     tox_get_savedata(t, clear);
 
     sz += TOX_PASS_ENCRYPTION_EXTRA_LENGTH;
-    cipher = malloc(sz);
+    cipher = (uint8_t *)malloc(sz);
 
     if (!tox_pass_encrypt(clear, sz - TOX_PASS_ENCRYPTION_EXTRA_LENGTH, (uint8_t *)pphrase, strlen(pphrase), cipher,
                           &eerr)) {
@@ -73,7 +73,7 @@ void tse(void)
 void tsd(void)
 {
     uint8_t readname[TOX_MAX_NAME_LENGTH];
-    uint8_t *clear, * cipher;
+    uint8_t *clear, *cipher;
     int sz;
     FILE *f;
     Tox *t;
@@ -85,8 +85,8 @@ void tsd(void)
     sz = fseek(f, 0, SEEK_END);
     fseek(f, 0, SEEK_SET);
 
-    cipher = malloc(sz);
-    clear = malloc(sz - TOX_PASS_ENCRYPTION_EXTRA_LENGTH);
+    cipher = (uint8_t *)malloc(sz);
+    clear = (uint8_t *)malloc(sz - TOX_PASS_ENCRYPTION_EXTRA_LENGTH);
     fgets((char *)cipher, sz, f);
 
     if (!tox_pass_decrypt(cipher, sz, (uint8_t *)pphrase, strlen(pphrase), clear, &derr)) {
