@@ -458,6 +458,13 @@ static class options {
      */
     bool udp_enabled;
 
+    /**
+     * Enable local network peer discovery.
+     *
+     * Disabling this will cause Tox to not look for peers on the local network.
+     */
+    bool local_discovery_enabled;
+
     namespace proxy {
       /**
        * Pass communications through a proxy.
