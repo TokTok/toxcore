@@ -300,10 +300,6 @@ START_TEST(test_AV_three_calls)
     (void) pthread_create(tids + 1, NULL, call_thread, tds + 1);
     (void) pthread_create(tids + 2, NULL, call_thread, tds + 2);
 
-    (void) pthread_detach(tids[0]);
-    (void) pthread_detach(tids[1]);
-    (void) pthread_detach(tids[2]);
-
     time_t start_time = time(NULL);
 
     while (time(NULL) - start_time < 5) {
