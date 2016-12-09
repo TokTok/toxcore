@@ -255,7 +255,8 @@ int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, 
 
     RTPSession *session = (RTPSession *)object;
 
-    data ++;
+    data++;
+
     length--;
 
     if (!session || length < sizeof(struct RTPHeader)) {
@@ -265,7 +266,7 @@ int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, 
 
     const struct RTPHeader *header = (const struct RTPHeader *) data;
 
-    if (header->pt != session->payload_type % 128) {
+    if (header->pt != session->payload_type) {
         LOGGER_WARNING(m->log, "Invalid payload type with the session");
         return -1;
     }
@@ -326,16 +327,15 @@ int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, 
          * processing message
          */
 
-        if (session->mp->header.sequnum == ntohs(header->sequnum) &&
-                session->mp->header.timestamp == ntohl(header->timestamp)) {
+        if (session->mp->header.sequnum == ntohs(header->sequnum)
+            && session->mp->header.timestamp == ntohl(header->timestamp)) {
             /* First case */
 
             /* Make sure we have enough allocated memory */
-            if (session->mp->header.tlen - session->mp->len < length - sizeof(struct RTPHeader) ||
-                    session->mp->header.tlen <= ntohs(header->cpart)) {
+            if (session->mp->header.tlen - session->mp->len < length - sizeof(struct RTPHeader)
+                || session->mp->header.tlen <= ntohs(header->cpart)) {
                 /* There happened to be some corruption on the stream;
-                 * continue wihtout this part
-                 */
+                 * continue wihtout this part */
                 return 0;
             }
 
@@ -410,12 +410,6 @@ NEW_MULTIPARTED:
          */
         if (session->mcb) {
             session->mp = new_message(ntohs(header->tlen) + sizeof(struct RTPHeader), data, length);
-
-            /* Reposition data if necessary */
-            if (ntohs(header->cpart)) {
-                ;
-            }
-
             memmove(session->mp->data + ntohs(header->cpart), session->mp->data, session->mp->len);
         }
     }

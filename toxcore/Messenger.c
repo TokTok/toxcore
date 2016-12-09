@@ -2793,7 +2793,6 @@ static uint32_t friends_list_save(const Messenger *m, uint8_t *data)
             uint8_t *next_data = friend_save(&temp, cur_data);
 #ifdef TOX_DEBUG
             assert(next_data - cur_data == friend_size());
-            assert(memcmp(cur_data, &temp, friend_size()) == 0);
 #endif
             cur_data = next_data;
             num++;
@@ -2853,7 +2852,6 @@ static int friends_list_load(Messenger *m, const uint8_t *data, uint32_t length)
         const uint8_t *next_data = friend_load(&temp, cur_data);
 #ifdef TOX_DEBUG
         assert(next_data - cur_data == friend_size());
-        assert(memcmp(&temp, cur_data, friend_size()) == 0);
 #endif
         cur_data = next_data;
 
