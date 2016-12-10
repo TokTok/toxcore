@@ -488,17 +488,14 @@ int invoke_callback(MSICall *call, MSICallbackID cb, void *userdata)
         LOGGER_DEBUG(call->session->messenger->log, "Invoking callback function: %d", cb);
 
         if (call->session->callbacks[cb](call->session->av, call, userdata) != 0) {
-            LOGGER_WARNING(call->session->messenger->log,
-                           "Callback state handling failed, sending error");
-
-            /* If no callback present or error happened while handling,
-             * an error message will be sent to friend */
-            if (call->error == msi_ENone) {
-                call->error = msi_EHandle;
-            }
+            /* If callback isn't set or an error occurred an error message will be sent to friend */
+            LOGGER_WARNING(call->session->messenger->log, "Callback state handling failed, sending error");
         } else {
             return 0;
         }
+    }
+    if (call->error == msi_ENone) {
+        call->error = msi_EHandle;
     }
     return -1;
 }
