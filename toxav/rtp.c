@@ -80,7 +80,8 @@ static struct RTPMessage *new_message(size_t allocate_len, const uint8_t *data, 
 static int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, uint16_t length, void *object,
                       void *userdata)
 {
-    (void) friendnumber;
+    (void) friendnumber;  // Unused variable
+    (void) userdata;      // Unused variable
 
     RTPSession *session = (RTPSession *)object;
 
@@ -362,7 +363,7 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint16_t length, Log
     if (MAX_CRYPTO_DATA_SIZE > length + sizeof(struct RTPHeader) + 1) {
 
         /**
-         * The lenght is lesser than the maximum allowed lenght (including header)
+         * The length is lesser than the maximum allowed length (including header)
          * Send the packet in single piece.
          */
 
