@@ -35,8 +35,8 @@ static uint16_t port = 6667;
 
 static int sock;
 
-#define SERVER_CONNECT "NICK "IRC_NAME"\nUSER "IRC_NAME" 8 * :"IRC_NAME"\n"
-#define CHANNEL_JOIN "JOIN "IRC_CHANNEL"\n"
+#define SERVER_CONNECT "NICK " IRC_NAME "\nUSER " IRC_NAME " 8 * :" IRC_NAME "\n"
+#define CHANNEL_JOIN "JOIN " IRC_CHANNEL "\n"
 
 /* In toxcore/network.c */
 uint64_t current_time_monotonic(void);
@@ -132,8 +132,8 @@ static void copy_groupmessage(Tox *tox, uint32_t groupnumber, uint32_t friendgro
     uint8_t sendbuf[2048];
     uint16_t send_len = 0;
 
-    memcpy(sendbuf, "PRIVMSG "IRC_CHANNEL" :", sizeof("PRIVMSG "IRC_CHANNEL" :"));
-    send_len += sizeof("PRIVMSG "IRC_CHANNEL" :") - 1;
+    memcpy(sendbuf, "PRIVMSG " IRC_CHANNEL " :", sizeof("PRIVMSG " IRC_CHANNEL " :"));
+    send_len += sizeof("PRIVMSG " IRC_CHANNEL " :") - 1;
     memcpy(sendbuf + send_len, name, namelen);
     send_len += namelen;
     sendbuf[send_len] = ':';
