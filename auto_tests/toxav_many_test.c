@@ -202,6 +202,7 @@ START_TEST(test_AV_three_calls)
     uint32_t index[] = { 1, 2, 3, 4, 5 };
     Tox *Alice, *bootstrap, *Bobs[3];
     ToxAV *AliceAV, *BobsAV[3];
+    void* retval;
 
     CallControl AliceCC[3], BobsCC[3];
 
@@ -310,9 +311,14 @@ START_TEST(test_AV_three_calls)
         c_sleep(20);
     }
 
-    (void) pthread_join(tids[0], NULL);
-    (void) pthread_join(tids[1], NULL);
-    (void) pthread_join(tids[2], NULL);
+    ck_assert(pthread_join(tids[0], &retval) == 0);
+    ck_assert(retval == NULL);
+   
+    ck_assert(pthread_join(tids[1], &retval) == 0);
+    ck_assert(retval == NULL);
+
+    ck_assert(pthread_join(tids[2], &retval) == 0);
+    ck_assert(retval == NULL);
 
     printf("Killing all instances\n");
     toxav_kill(BobsAV[0]);
