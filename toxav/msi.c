@@ -496,13 +496,11 @@ int invoke_callback(MSICall *call, MSICallbackID cb, void *userdata)
             if (call->error == msi_ENone) {
                 call->error = msi_EHandle;
             }
-
-            return -1;
+        } else {
+            return 0;
         }
     }
-
-    return 0;
-
+    return -1;
 }
 
 static MSICall *get_call(MSISession *session, uint32_t friend_number)
