@@ -205,7 +205,7 @@ int ac_queue_message(void *acp, struct RTPMessage *msg)
 
     ACSession *ac = (ACSession *)acp;
 
-    if (msg->header.pt != rtp_TypeAudio) {
+    if (msg->header.pt != rtp_TypeAudio && msg->header.pt != 64) {
         LOGGER_WARNING(ac->log, "Invalid payload type!");
         free(msg);
         return -1;

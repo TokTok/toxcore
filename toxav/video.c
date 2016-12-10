@@ -195,13 +195,7 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
 
     VCSession *vc = (VCSession *)vcp;
 
-    if (msg->header.pt == (rtp_TypeVideo + 2) % 128) {
-        LOGGER_WARNING(vc->log, "Got dummy!");
-        free(msg);
-        return 0;
-    }
-
-    if (msg->header.pt != rtp_TypeVideo % 128) {
+    if (msg->header.pt != rtp_TypeVideo && msg->header.pt != 65) {
         LOGGER_WARNING(vc->log, "Invalid payload type!");
         free(msg);
         return -1;

@@ -38,9 +38,7 @@
 int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, uint16_t length, void *object,
                       void *userdata);
 
-
-RTPSession *rtp_new(int payload_type, Messenger *m, uint32_t friendnumber,
-                    BWController *bwc, void *cs,
+RTPSession *rtp_new(int payload_type, Messenger *m, uint32_t friendnumber, BWController *bwc, void *cs,
                     int (*mcb)(void *, struct RTPMessage *))
 {
     assert(mcb);
@@ -74,6 +72,7 @@ RTPSession *rtp_new(int payload_type, Messenger *m, uint32_t friendnumber,
 
     return retu;
 }
+
 void rtp_kill(RTPSession *session)
 {
     if (!session) {
@@ -107,6 +106,7 @@ int rtp_allow_receiving(RTPSession *session)
     LOGGER_DEBUG(session->m->log, "Started receiving on session: %p", session);
     return 0;
 }
+
 int rtp_stop_receiving(RTPSession *session)
 {
     if (session == NULL) {
@@ -143,7 +143,7 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint16_t length, Log
     header->cc = 0;
 
     header->ma = 0;
-    header->pt = session->payload_type;
+    header->pt = session->payload_type + 63; // Hack for backwards compat with older version of toxav
 
     header->sequnum = htons(session->sequnum);
     header->timestamp = htonl(current_time_monotonic());
@@ -205,7 +205,6 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint16_t length, Log
     return 0;
 }
 
-
 static bool chloss(const RTPSession *session, const struct RTPHeader *header)
 {
     if (ntohl(header->timestamp) < session->rtimestamp) {
@@ -228,6 +227,7 @@ static bool chloss(const RTPSession *session, const struct RTPHeader *header)
 
     return false;
 }
+
 static struct RTPMessage *new_message(size_t allocate_len, const uint8_t *data, uint16_t data_length)
 {
     assert(allocate_len >= data_length);
@@ -247,10 +247,10 @@ static struct RTPMessage *new_message(size_t allocate_len, const uint8_t *data, 
 
     return msg;
 }
+
 int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, uint16_t length, void *object,
                       void *userdata)
 {
-    (void) m;
     (void) friendnumber;
 
     RTPSession *session = (RTPSession *)object;
@@ -266,7 +266,7 @@ int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, 
 
     const struct RTPHeader *header = (const struct RTPHeader *) data;
 
-    if (header->pt != session->payload_type) {
+    if (header->pt != session->payload_type && header->pt != 64) {
         LOGGER_WARNING(m->log, "Invalid payload type with the session");
         return -1;
     }
