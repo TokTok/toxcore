@@ -202,7 +202,7 @@ START_TEST(test_AV_three_calls)
     uint32_t index[] = { 1, 2, 3, 4, 5 };
     Tox *Alice, *bootstrap, *Bobs[3];
     ToxAV *AliceAV, *BobsAV[3];
-    void* retval;
+    void *retval;
 
     CallControl AliceCC[3], BobsCC[3];
 
@@ -313,7 +313,7 @@ START_TEST(test_AV_three_calls)
 
     ck_assert(pthread_join(tids[0], &retval) == 0);
     ck_assert(retval == NULL);
-   
+
     ck_assert(pthread_join(tids[1], &retval) == 0);
     ck_assert(retval == NULL);
 
