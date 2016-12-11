@@ -277,6 +277,27 @@ int to_host_family(IP *ip)
     return -1;
 }
 
+int write_dht_packet(uint8_t *target, uint16_t target_size, const uint8_t pkt_type,
+                     const uint8_t pub_key[crypto_box_PUBLICKEYBYTES],
+                     const uint8_t nonce[crypto_box_NONCEBYTES], const uint8_t *data,
+                     const uint16_t data_size) {
+  if (!target) {
+    return -1;
+  }
+
+  if (target_size - 1 - crypto_box_PUBLICKEYBYTES - crypto_box_NONCEBYTES < data_size) {
+    return -2;
+  }
+
+  target[0] = pkt_type;
+  memcpy(target + 1, pub_key, crypto_box_PUBLICKEYBYTES);
+  memcpy(target + 1 + crypto_box_PUBLICKEYBYTES, nonce, crypto_box_NONCEBYTES);
+  memcpy(target + 1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES, data, data_size);
+
+  return 1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES + data_size;
+}
+
+
 #define PACKED_NODE_SIZE_IP4 (1 + SIZE_IP4 + sizeof(uint16_t) + crypto_box_PUBLICKEYBYTES)
 #define PACKED_NODE_SIZE_IP6 (1 + SIZE_IP6 + sizeof(uint16_t) + crypto_box_PUBLICKEYBYTES)
 
