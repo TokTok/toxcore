@@ -426,6 +426,7 @@ if(BUILD_TOXAV)
   auto_test(toxav_basic)
   auto_test(toxav_many)
 endif()
+auto_test(version)
 
 ################################################################################
 #

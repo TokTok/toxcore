@@ -183,13 +183,23 @@ const VERSION_PATCH                = 5;
 
 /**
  * A macro to check at preprocessing time whether the client code is compatible
- * with the installed version of Tox.
+ * with the installed version of Tox. Trailing zeros in the version number are 
+ * ignored.
  */
-#define TOX_VERSION_IS_API_COMPATIBLE(MAJOR, MINOR, PATCH)      \
-  (TOX_VERSION_MAJOR == MAJOR &&                                \
-   (TOX_VERSION_MINOR > MINOR ||                                \
-    (TOX_VERSION_MINOR == MINOR &&                              \
-     TOX_VERSION_PATCH >= PATCH)))
+#define TOX_VERSION_IS_API_COMPATIBLE(MAJOR, MINOR, PATCH)      	\
+  (TOX_VERSION_MAJOR > 0 && TOX_VERSION_MAJOR == MAJOR) && (		\
+    /* 1.x.x, 2.x.x, etc. with matching major version. */		\
+    TOX_VERSION_MINOR > MINOR ||					\
+    TOX_VERSION_MINOR == MINOR && TOX_VERSION_PATCH >= PATCH		\
+  ) || (TOX_VERSION_MAJOR == 0 && MAJOR == 0) && (			\
+    /* 0.x.x makes minor behave like major above. */			\
+    (TOX_VERSION_MINOR > 0 && TOX_VERSION_MINOR == MINOR) && (		\
+      TOX_VERSION_PATCH >= PATCH					\
+    ) || (TOX_VERSION_MINOR == 0 && MINOR == 0) && (			\
+      /* 0.0.x and 0.0.y are only compatible if x == y. */		\
+      TOX_VERSION_PATCH == PATCH					\
+    )									\
+  )
 
 /**
  * A macro to make compilation fail if the client code is not compatible with
