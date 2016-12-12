@@ -3,6 +3,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "../toxcore/tox.h"
@@ -15,102 +16,88 @@
 #define c_sleep(x) usleep(1000*x)
 #endif
 
-static void random_name(Tox *m)
+static void set_random(Tox *m, bool (*function)(Tox *, const uint8_t *, size_t, TOX_ERR_SET_INFO *), size_t length)
 {
-    uint8_t name[TOX_MAX_NAME_LENGTH];
+    uint8_t text[length];
     uint32_t i;
 
-    for (i = 0; i < TOX_MAX_NAME_LENGTH; ++i) {
-        name[i] = ('A' + (rand() % 26));
+    for (i = 0; i < length; ++i) {
+        text[i] = ('A' + (rand() % 26));
     }
-    name[TOX_MAX_NAME_LENGTH - 1] = 0;
+    text[length - 1] = 0;
 
-    tox_self_set_name(m, name, sizeof(name), 0);
+    function(m, text, sizeof(text), 0);
     return;
 }
 
-static void random_status(Tox *m)
+static uint8_t status_to_compare[TOX_MAX_STATUS_MESSAGE_LENGTH] = { 0 };
+static uint8_t name_to_compare[TOX_MAX_NAME_LENGTH] = { 0 };
+
+void namechange_callback(Tox *tox, uint32_t friend_number, const uint8_t *name, size_t length, void *user_data)
 {
-    uint8_t status[TOX_MAX_STATUS_MESSAGE_LENGTH];
-    uint32_t i;
-
-    for (i = 0; i < TOX_MAX_STATUS_MESSAGE_LENGTH; ++i) {
-        status[i] = ('A' + (rand() % 26));
-    }
-    status[TOX_MAX_STATUS_MESSAGE_LENGTH - 1] = 0;
-
-    tox_self_set_status_message(m, status, sizeof(status), 0);
-    return;
+    memcpy(name_to_compare, name, length);
 }
 
-#define NUM_TOXES 2
+void statuschange_callback(Tox *tox, uint32_t friend_number, const uint8_t *message, size_t length, void *user_data)
+{
+    memcpy(status_to_compare, message, length);
+}
 
 int main(int argc, char *argv[]) 
 {
-    Tox *tox[NUM_TOXES];
+    Tox *tox1 = tox_new(tox_options_new(NULL), 0);
+    Tox *tox2 = tox_new(tox_options_new(NULL), 0);
 
-    uint8_t i;
-    for (i = 0; i < NUM_TOXES; ++i) {
-        tox[i] = tox_new(tox_options_new(NULL), 0);
-    }
+    uint8_t address[TOX_ADDRESS_SIZE];
+    tox_self_get_address(tox1, address);
+    tox_friend_add_norequest(tox2, address, NULL);
+    tox_self_get_address(tox2, address);
+    tox_friend_add_norequest(tox1, address, NULL);
 
-    // This won't work if you want to test with more Tox instances.
-    for (i = 0; i < NUM_TOXES; ++i) {
-        uint8_t address[TOX_ADDRESS_SIZE];
-        tox_self_get_address(tox[i], address);
-        tox_friend_add_norequest(tox[(i + 1) % NUM_TOXES], address, NULL);
-    }
+    uint8_t reference_name[TOX_MAX_NAME_LENGTH] = { 0 };
+    uint8_t reference_status[TOX_MAX_STATUS_MESSAGE_LENGTH] = { 0 };
 
+    set_random(tox1, tox_self_set_name, TOX_MAX_NAME_LENGTH);
+    set_random(tox2, tox_self_set_name, TOX_MAX_NAME_LENGTH);
+    set_random(tox1, tox_self_set_status_message, TOX_MAX_STATUS_MESSAGE_LENGTH);
+    set_random(tox2, tox_self_set_status_message, TOX_MAX_STATUS_MESSAGE_LENGTH);
 
-    uint8_t name[NUM_TOXES][TOX_MAX_NAME_LENGTH] = { { 0 } };
-    uint8_t status[NUM_TOXES][TOX_MAX_STATUS_MESSAGE_LENGTH] = { { 0 } };
+    tox_self_get_name(tox2, reference_name);
+    tox_self_get_status_message(tox2, reference_status);
 
-    for (i = 0; i < NUM_TOXES; ++i) {
-        random_name(tox[i]);
-        tox_self_get_name(tox[i], name[i]);
+    tox_callback_friend_name(tox1, namechange_callback);
+    tox_callback_friend_status_message(tox1, statuschange_callback);
 
-        random_status(tox[i]);
-        tox_self_get_status_message(tox[i], status[i]);
-    }
-    
-    const uint32_t iteration_interval = tox_iteration_interval(tox[0]);
+    const uint32_t iteration_interval = tox_iteration_interval(tox1);
 
-    while (tox_friend_get_connection_status(tox[0], 0, NULL) != TOX_CONNECTION_UDP) {
-        for (i = 0; i < NUM_TOXES; ++i) {
-            tox_iterate(tox[i], NULL);
+    while (true) {
+        if (tox_self_get_connection_status(tox1) &&
+                tox_self_get_connection_status(tox2) &&
+                tox_friend_get_connection_status(tox1, 0, 0) == TOX_CONNECTION_UDP) {
+            printf("Connected.\n");
+            break;
         }
+        tox_iterate(tox1, NULL);
+        tox_iterate(tox2, NULL);
 
         c_sleep(iteration_interval);
     }
 
-    uint8_t status_to_compare[TOX_MAX_STATUS_MESSAGE_LENGTH] = { 0 };
-    uint8_t name_to_compare[TOX_MAX_NAME_LENGTH] = { 0 };
-
-    size_t status_length = tox_friend_get_status_message_size(tox[0], 0, 0);
-    size_t name_length   = tox_friend_get_name_size(tox[0], 0, 0);
-
-    tox_friend_get_status_message(tox[0], 0, status_to_compare, 0);
-    tox_friend_get_name(tox[0], 0, name_to_compare, 0);
-
-    while (memcmp(status[1], status_to_compare, status_length) != 0 &&
-           memcmp(name[1],   name_to_compare,   name_length)   != 0) 
-    {
-        for (i = 0; i < NUM_TOXES; ++i) {
-            tox_iterate(tox[i], NULL);
+    while (true) {
+        if (memcmp(reference_name, name_to_compare, TOX_MAX_NAME_LENGTH) == 0 &&
+                memcmp(reference_status, status_to_compare, TOX_MAX_STATUS_MESSAGE_LENGTH) == 0) {
+            printf("Exchanged names and status messages.\n");
+            break;
         }
-
-        status_length = tox_friend_get_status_message_size(tox[0], 0, 0);
-        name_length   = tox_friend_get_name_size(tox[0], 0, 0);
-
-        tox_friend_get_status_message(tox[0], 0, status_to_compare, 0);
-        tox_friend_get_name(tox[0], 0, name_to_compare, 0);
+        tox_iterate(tox1, NULL);
+        tox_iterate(tox2, NULL);
 
         c_sleep(iteration_interval);
     }
 
-    size_t save_size = tox_get_savedata_size(tox[0]);
+    size_t save_size = tox_get_savedata_size(tox1);
     uint8_t data[save_size];
-    tox_get_savedata(tox[0], data);
+    tox_get_savedata(tox1, data);
 
     struct Tox_Options options;
     tox_options_default(&options);
@@ -118,28 +105,15 @@ int main(int argc, char *argv[])
     options.savedata_data = data;
     options.savedata_length = save_size;
 
-    assert(memcmp(name[1], name_to_compare, name_length) == 0);
-    assert(memcmp(status[1], status_to_compare, status_length) == 0);
-
-    printf("1st status_length: %lu\n", status_length);
-    printf("1st name_length: %lu\n", name_length);
-
     Tox *tox_to_compare = tox_new(&options, 0);
-
-    status_length = tox_friend_get_status_message_size(tox[0], 0, 0);
-    name_length   = tox_friend_get_name_size(tox[0], 0, 0);
 
     tox_friend_get_status_message(tox_to_compare, 0, status_to_compare, 0);
     tox_friend_get_name(tox_to_compare, 0, name_to_compare, 0);
 
-    printf("2nd status_length: %lu\n", status_length);
-    printf("2nd name_length: %lu\n", name_length);
+    assert(memcmp(reference_name, name_to_compare, TOX_MAX_NAME_LENGTH) == 0);
+    assert(memcmp(reference_status, status_to_compare, TOX_MAX_STATUS_MESSAGE_LENGTH) == 0);
 
-    assert(memcmp(name[1], name_to_compare, name_length) == 0);
-    assert(memcmp(status[1], status_to_compare, status_length) == 0);
-
-    for (i = 0; i < NUM_TOXES; ++i) {
-        tox_kill(tox[i]);
-    }
+    tox_kill(tox1);
+    tox_kill(tox2);
     tox_kill(tox_to_compare);
 }
