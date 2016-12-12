@@ -308,7 +308,7 @@ static void do_natpmp_map_port_tcp(Messenger *m)
 {
     NAT_TRAVERSAL_STATUS status;
 
-    if ((m->nat_traversal_timeout.natpmp_tcp_retries > 0) && is_timeout(m->nat_traversal.natpmp_tcp_timeout, 0)) {
+    if ((m->nat_traversal.natpmp_tcp_retries > 0) && is_timeout(m->nat_traversal.natpmp_tcp_timeout, 0)) {
         natpmp_map_port(m->log, NAT_TRAVERSAL_TCP, m->options.tcp_server_port, NAT_TRAVERSAL_LEASE_TIMEOUT,
                         (natpmp_t *)m->nat_traversal.natpmp, &status);
 
