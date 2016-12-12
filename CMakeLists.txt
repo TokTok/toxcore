@@ -200,6 +200,14 @@ set(toxcore_PKGCONFIG_LIBS)
 # LAYER 1: Crypto core
 # --------------------
 apidsl(
+  toxcore/bin_io.api.h)
+add_module(toxbinio
+  toxcore/bin_io.c
+  toxcore/bin_io.h)
+
+# LAYER 1: Crypto core
+# --------------------
+apidsl(
   toxcore/crypto_core.api.h)
 add_module(toxcrypto
   toxcore/crypto_core.c
@@ -222,7 +230,7 @@ add_module(toxnetwork
   toxcore/network.h
   toxcore/util.c
   toxcore/util.h)
-target_link_modules(toxnetwork toxcrypto)
+target_link_modules(toxnetwork toxbinio toxcrypto)
 
 if(CMAKE_THREAD_LIBS_INIT)
   target_link_modules(toxnetwork ${CMAKE_THREAD_LIBS_INIT})
