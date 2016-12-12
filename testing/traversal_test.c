@@ -52,7 +52,7 @@ typedef struct my_node_t {
     char ip[16];
     uint16_t port;
     //char key_str[2 * TOX_PUBLIC_KEY_SIZE + 1];
-    char *key;
+    uint8_t *key;
 } my_node_t;
 
 
@@ -96,17 +96,17 @@ static void log_callback(Tox *tox, TOX_LOG_LEVEL level, const char *path, uint32
 
     struct timeval diff;
     timersub(&now, start, &diff);
-    printf("[%3d.%06d] %-9s %s:%d   %s(): %s\n", diff.tv_sec, diff.tv_usec, level_str(level), file, line, func, msg);
+    printf("[%3ld.%06ld] %-9s %s:%d   %s(): %s\n", diff.tv_sec, diff.tv_usec, level_str(level), file, line, func, msg);
 }
 
-static char *str_to_key(const char *str)
+static uint8_t *str_to_key(const char *str)
 {
     if (strlen(str) != 2 * TOX_PUBLIC_KEY_SIZE) {
         return NULL;
     }
 
     int i;
-    char *key = calloc(TOX_PUBLIC_KEY_SIZE, sizeof(char));
+    uint8_t *key = (uint8_t *)calloc(TOX_PUBLIC_KEY_SIZE, sizeof(char));
 
     if (key == NULL) {
         return NULL;
@@ -215,29 +215,46 @@ int main(int argc, char *argv[])
         j = rand() % 10;
 
         if (tox_self_get_connection_status(upnp_udp) == TOX_CONNECTION_NONE) {
-            tox_bootstrap(upnp_udp, udp_node[j].ip, udp_node[j].port, (uint8_t *) udp_node[j].key, NULL);
-            tox_add_tcp_relay(upnp_udp, tcp_node[0].ip, tcp_node[0].port, (uint8_t *) tcp_node[0].key, NULL);
+            tox_bootstrap(upnp_udp, udp_node[j].ip, udp_node[j].port, udp_node[j].key, NULL);
+            tox_add_tcp_relay(upnp_udp, tcp_node[0].ip, tcp_node[0].port, tcp_node[0].key, NULL);
         }
 
         if (tox_self_get_connection_status(upnp_tcp) == TOX_CONNECTION_NONE) {
-            tox_bootstrap(upnp_tcp, udp_node[j].ip, udp_node[j].port, (uint8_t *) udp_node[j].key, NULL);
-            tox_add_tcp_relay(upnp_tcp, tcp_node[0].ip, tcp_node[0].port, (uint8_t *) tcp_node[0].key, NULL);
+            tox_bootstrap(upnp_tcp, udp_node[j].ip, udp_node[j].port, udp_node[j].key, NULL);
+            tox_add_tcp_relay(upnp_tcp, tcp_node[0].ip, tcp_node[0].port, tcp_node[0].key, NULL);
         }
 
         if (tox_self_get_connection_status(natpmp_udp) == TOX_CONNECTION_NONE) {
-            tox_bootstrap(natpmp_udp, udp_node[j].ip, udp_node[j].port, (uint8_t *) udp_node[j].key, NULL);
-            tox_add_tcp_relay(natpmp_udp, tcp_node[0].ip, tcp_node[0].port, (uint8_t *) tcp_node[0].key, NULL);
+            tox_bootstrap(natpmp_udp, udp_node[j].ip, udp_node[j].port, udp_node[j].key, NULL);
+            tox_add_tcp_relay(natpmp_udp, tcp_node[0].ip, tcp_node[0].port, tcp_node[0].key, NULL);
         }
 
         if (tox_self_get_connection_status(natpmp_tcp) == TOX_CONNECTION_NONE) {
-            tox_bootstrap(natpmp_tcp, udp_node[j].ip, udp_node[j].port, (uint8_t *) udp_node[j].key, NULL);
-            tox_add_tcp_relay(natpmp_tcp, tcp_node[0].ip, tcp_node[0].port, (uint8_t *) tcp_node[j].key, NULL);
+            tox_bootstrap(natpmp_tcp, udp_node[j].ip, udp_node[j].port, udp_node[j].key, NULL);
+            tox_add_tcp_relay(natpmp_tcp, tcp_node[0].ip, tcp_node[0].port, tcp_node[j].key, NULL);
         }
 
+        struct timeval iter_start;
+
+        gettimeofday(&iter_start, NULL);
+
         tox_iterate(upnp_udp, NULL);
+
         tox_iterate(upnp_tcp, NULL);
+
         tox_iterate(natpmp_udp, NULL);
+
         tox_iterate(natpmp_tcp, NULL);
+
+        struct timeval iter_end;
+
+        gettimeofday(&iter_end, NULL);
+
+        struct timeval iter_diff;
+
+        timersub(&iter_end, &iter_start, &iter_diff);
+
+        printf("iterate for all instances took %ld.%06lds\n", iter_diff.tv_sec, iter_diff.tv_usec);
 
         sleep(1);
     }
