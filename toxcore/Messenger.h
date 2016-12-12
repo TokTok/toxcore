@@ -245,6 +245,22 @@ struct Messenger {
     uint8_t has_added_relays; // If the first connection has occurred in do_messenger
     Node_format loaded_relays[NUM_SAVED_TCP_RELAYS]; // Relays loaded from config
 
+    struct {
+        uint16_t upnp_udp_ip4_retries;
+        uint64_t upnp_udp_ip4_timeout;
+        uint16_t upnp_udp_ip6_retries;
+        uint64_t upnp_udp_ip6_timeout;
+        uint16_t upnp_tcp_ip4_retries;
+        uint64_t upnp_tcp_ip4_timeout;
+        uint16_t upnp_tcp_ip6_retries;
+        uint64_t upnp_tcp_ip6_timeout;
+        void *natpmp;
+        uint16_t natpmp_udp_retries;
+        uint64_t natpmp_udp_timeout;
+        uint16_t natpmp_tcp_retries;
+        uint64_t natpmp_tcp_timeout;
+    } nat_traversal;
+
     void (*friend_message)(struct Messenger *m, uint32_t, unsigned int, const uint8_t *, size_t, void *);
     void (*friend_namechange)(struct Messenger *m, uint32_t, const uint8_t *, size_t, void *);
     void (*friend_statusmessagechange)(struct Messenger *m, uint32_t, const uint8_t *, size_t, void *);

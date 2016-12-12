@@ -28,7 +28,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "Messenger.h"
 #include "logger.h"
+
+#define NAT_TRAVERSAL_LEASE_TIMEOUT 60
+#define NAT_TRAVERSAL_MAX_RETRIES 100
 
 
 /**
@@ -62,6 +66,9 @@ typedef enum NAT_TRAVERSAL_STATUS {
 
     /* Port mapped successfully */
     NAT_TRAVERSAL_OK,
+
+    /* NAT-PMP waiting for reply */
+    NAT_TRAVERSAL_TRYAGAIN,
 
     /* UPnP/NAT-PMP not compiled */
     NAT_TRAVERSAL_ERR_DISABLED,
@@ -109,9 +116,8 @@ typedef struct nat_traversal_status_t {
 } nat_traversal_status_t;
 
 
-/* Setup port forwarding */
-bool nat_map_port(Logger *log, uint8_t traversal_type, NAT_TRAVERSAL_PROTO proto, uint16_t port, bool ipv6_enabled,
-                  nat_traversal_status_t *status);
+/* Renew mapped ports (called in "do_messenger()") */
+void do_nat_map_ports(Messenger *m);
 
 /* Return error string from status */
 const char *str_nat_traversal_error(NAT_TRAVERSAL_STATUS status);

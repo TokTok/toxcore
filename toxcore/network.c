@@ -32,7 +32,6 @@
 #include "network.h"
 
 #include "logger.h"
-#include "nat_traversal.h"
 #include "util.h"
 
 #if !defined(_WIN32) && !defined(__WIN32__) && !defined (WIN32)
@@ -508,19 +507,9 @@ static void at_shutdown(void)
 /* Initialize networking.
  * Added for reverse compatibility with old new_networking calls.
  */
-// TODO(Ansa89): see https://github.com/TokTok/c-toxcore/issues/219
 Networking_Core *new_networking(Logger *log, IP ip, uint16_t port)
 {
-    return new_networking_nat(log, ip, port, port + (TOX_PORTRANGE_TO - TOX_PORTRANGE_FROM), TRAVERSAL_TYPE_NONE, 0);
-}
-
-/* Initialize networking.
- * Added for reverse compatibility with old new_networking_ex calls.
- */
-// TODO(Ansa89): see https://github.com/TokTok/c-toxcore/issues/219
-Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint16_t port_to, unsigned int *error)
-{
-    return new_networking_nat(log, ip, port_from, port_to, TRAVERSAL_TYPE_NONE, 0);
+    return new_networking_ex(log, ip, port, port + (TOX_PORTRANGE_TO - TOX_PORTRANGE_FROM), 0);
 }
 
 /* Initialize networking.
@@ -533,9 +522,7 @@ Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint1
  *
  * If error is non NULL it is set to 0 if no issues, 1 if socket related error, 2 if other.
  */
-// TODO(Ansa89): see https://github.com/TokTok/c-toxcore/issues/219
-Networking_Core *new_networking_nat(Logger *log, IP ip, uint16_t port_from, uint16_t port_to, uint8_t traversal_type,
-                                    unsigned int *error)
+Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint16_t port_to, unsigned int *error)
 {
     /* If both from and to are 0, use default port range
      * If one is 0 and the other is non-0, use the non-0 value as only port
@@ -716,8 +703,6 @@ Networking_Core *new_networking_nat(Logger *log, IP ip, uint16_t port_from, uint
             if (error) {
                 *error = 0;
             }
-
-            nat_map_port(log, traversal_type, NAT_TRAVERSAL_UDP, port_to_try, (ip.family == AF_INET6), NULL);
 
             return temp;
         }

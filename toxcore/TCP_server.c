@@ -26,7 +26,6 @@
 
 #include "TCP_server.h"
 
-#include "nat_traversal.h"
 #include "util.h"
 
 #if !defined(_WIN32) && !defined(__WIN32__) && !defined (WIN32)
@@ -1025,19 +1024,8 @@ static sock_t new_listening_TCP_socket(int family, uint16_t port)
     return sock;
 }
 
-/**
- * Added for reverse compatibility with old new_TCP_server calls.
- */
-// TODO(Ansa89): see https://github.com/TokTok/c-toxcore/issues/219
 TCP_Server *new_TCP_server(Logger *log, uint8_t ipv6_enabled, uint16_t num_sockets, const uint16_t *ports,
                            const uint8_t *secret_key, Onion *onion)
-{
-    return new_TCP_server_nat(log, ipv6_enabled, num_sockets, ports, TRAVERSAL_TYPE_NONE, secret_key, onion);
-}
-
-// TODO(Ansa89): see https://github.com/TokTok/c-toxcore/issues/219
-TCP_Server *new_TCP_server_nat(Logger *log, uint8_t ipv6_enabled, uint16_t num_sockets, const uint16_t *ports,
-                               uint8_t traversal_type, const uint8_t *secret_key, Onion *onion)
 {
     if (num_sockets == 0 || ports == NULL) {
         return NULL;
@@ -1097,8 +1085,6 @@ TCP_Server *new_TCP_server_nat(Logger *log, uint8_t ipv6_enabled, uint16_t num_s
             }
 
 #endif
-
-            nat_map_port(log, traversal_type, NAT_TRAVERSAL_TCP, ports[i], ipv6_enabled, NULL);
 
             temp->socks_listening[temp->num_listening_socks] = sock;
             ++temp->num_listening_socks;

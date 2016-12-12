@@ -27,6 +27,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include "util.h"
 
 #ifdef HAVE_LIBMINIUPNPC
 #include <miniupnpc/miniupnpc.h>
@@ -46,7 +47,7 @@
 
 #ifdef HAVE_LIBMINIUPNPC
 /* Setup port forwarding using UPnP */
-static bool upnp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port, bool ipv6_enabled,
+static bool upnp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port, uint32_t lifetime, bool ipv6_enabled,
                           NAT_TRAVERSAL_STATUS *status)
 {
     LOGGER_INFO(log, "Attempting to set up UPnP port forwarding");
@@ -85,16 +86,19 @@ static bool upnp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port,
         case 1:
             LOGGER_INFO(log, "UPnP: A valid IGD has been found");
 
-            char portstr[10];
+            char portstr[10], lifetimestr[10];
             snprintf(portstr, sizeof(portstr), "%d", port);
+            snprintf(lifetimestr, sizeof(lifetimestr), "%d", lifetime);
 
             switch (proto) {
                 case NAT_TRAVERSAL_UDP:
-                    error = UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, portstr, portstr, lanaddr, "Tox", "UDP", 0, "0");
+                    error = UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, portstr, portstr, lanaddr, "Tox", "UDP", 0,
+                                                lifetimestr);
                     break;
 
                 case NAT_TRAVERSAL_TCP:
-                    error = UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, portstr, portstr, lanaddr, "Tox", "TCP", 0, "0");
+                    error = UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, portstr, portstr, lanaddr, "Tox", "TCP", 0,
+                                                lifetimestr);
                     break;
 
                 default:
@@ -135,17 +139,91 @@ static bool upnp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port,
 
     return ret;
 }
+
+
+/* Renew UDP UPnP mapped ports */
+static void do_upnp_map_port_udp(Messenger *m)
+{
+    NAT_TRAVERSAL_STATUS status;
+
+    if ((m->nat_traversal.upnp_udp_ip4_retries > 0) && is_timeout(m->nat_traversal.upnp_udp_ip4_timeout, 0)) {
+        upnp_map_port(m->log, NAT_TRAVERSAL_UDP, m->net->port, NAT_TRAVERSAL_LEASE_TIMEOUT, false, &status);
+
+        if (status == NAT_TRAVERSAL_OK) {
+            m->nat_traversal.upnp_udp_ip4_timeout = unix_time() + NAT_TRAVERSAL_LEASE_TIMEOUT;
+        } else {
+            m->nat_traversal.upnp_udp_ip4_retries--;
+        }
+    }
+
+    if (m->options.ipv6enabled && (m->nat_traversal.upnp_udp_ip6_retries > 0)
+            && is_timeout(m->nat_traversal.upnp_udp_ip6_timeout, 0)) {
+        upnp_map_port(m->log, NAT_TRAVERSAL_UDP, m->net->port, NAT_TRAVERSAL_LEASE_TIMEOUT, true, &status);
+
+        if (status == NAT_TRAVERSAL_OK) {
+            m->nat_traversal.upnp_udp_ip6_timeout = unix_time() + NAT_TRAVERSAL_LEASE_TIMEOUT;
+        } else {
+            m->nat_traversal.upnp_udp_ip6_retries--;
+        }
+    }
+}
+
+
+/* Renew TCP UPnP mapped ports */
+static void do_upnp_map_port_tcp(Messenger *m)
+{
+    NAT_TRAVERSAL_STATUS status;
+
+    if ((m->nat_traversal.upnp_tcp_ip4_retries > 0) && is_timeout(m->nat_traversal.upnp_tcp_ip4_timeout, 0)) {
+        upnp_map_port(m->log, NAT_TRAVERSAL_TCP, m->options.tcp_server_port, NAT_TRAVERSAL_LEASE_TIMEOUT, false, &status);
+
+        if (status == NAT_TRAVERSAL_OK) {
+            m->nat_traversal.upnp_tcp_ip4_timeout = unix_time() + NAT_TRAVERSAL_LEASE_TIMEOUT;
+        } else {
+            m->nat_traversal.upnp_tcp_ip4_retries--;
+        }
+    }
+
+    if (m->options.ipv6enabled && (m->nat_traversal.upnp_tcp_ip6_retries > 0)
+            && is_timeout(m->nat_traversal.upnp_tcp_ip6_timeout, 0)) {
+        upnp_map_port(m->log, NAT_TRAVERSAL_TCP, m->options.tcp_server_port, NAT_TRAVERSAL_LEASE_TIMEOUT, true, &status);
+
+        if (status == NAT_TRAVERSAL_OK) {
+            m->nat_traversal.upnp_tcp_ip6_timeout = unix_time() + NAT_TRAVERSAL_LEASE_TIMEOUT;
+        } else {
+            m->nat_traversal.upnp_tcp_ip6_retries--;
+        }
+    }
+}
 #endif /* HAVE_LIBMINIUPNPC */
 
 
 #ifdef HAVE_LIBNATPMP
 /* Setup port forwarding using NAT-PMP */
-static bool natpmp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port, NAT_TRAVERSAL_STATUS *status)
+static bool natpmp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port, uint32_t lifetime, natpmp_t *natpmp,
+                            NAT_TRAVERSAL_STATUS *status)
 {
     LOGGER_INFO(log, "Attempting to set up NAT-PMP port forwarding");
 
-    natpmp_t natpmp;
-    int error = initnatpmp(&natpmp, 0, 0);
+    natpmpresp_t resp;
+    int error = readnatpmpresponseorretry(natpmp, &resp);
+
+    if (!error) {
+        *status = NAT_TRAVERSAL_OK;
+        LOGGER_INFO(log, "NAT-PMP: %s (port %d)", str_nat_traversal_error(*status), port);
+        natpmp->has_pending_request = 0;
+        closenatpmp(natpmp);
+        return true;
+    } else if (error == NATPMP_TRYAGAIN) {
+        *status = NAT_TRAVERSAL_TRYAGAIN;
+        LOGGER_WARNING(log, "NAT-PMP: %s (%s)", str_nat_traversal_error(*status), strnatpmperr(error));
+        return false;
+    } else {
+        natpmp->has_pending_request = 0;
+        closenatpmp(natpmp);
+    }
+
+    error = initnatpmp(natpmp, 0, 0);
 
     if (error) {
         *status = NAT_TRAVERSAL_ERR_INIT_FAIL;
@@ -155,17 +233,18 @@ static bool natpmp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t por
 
     switch (proto) {
         case NAT_TRAVERSAL_UDP:
-            error = sendnewportmappingrequest(&natpmp, NATPMP_PROTOCOL_UDP, port, port, 3600);
+            error = sendnewportmappingrequest(natpmp, NATPMP_PROTOCOL_UDP, port, port, lifetime);
             break;
 
         case NAT_TRAVERSAL_TCP:
-            error = sendnewportmappingrequest(&natpmp, NATPMP_PROTOCOL_TCP, port, port, 3600);
+            error = sendnewportmappingrequest(natpmp, NATPMP_PROTOCOL_TCP, port, port, lifetime);
             break;
 
         default:
             *status = NAT_TRAVERSAL_ERR_UNKNOWN_PROTO;
             LOGGER_WARNING(log, "NAT-PMP: %s", str_nat_traversal_error(*status));
-            closenatpmp(&natpmp);
+            natpmp->has_pending_request = 0;
+            closenatpmp(natpmp);
             return false;
     }
 
@@ -173,97 +252,117 @@ static bool natpmp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t por
     if (error != 12) {
         *status = NAT_TRAVERSAL_ERR_SEND_REQ_FAIL;
         LOGGER_WARNING(log, "NAT-PMP: %s (%s)", str_nat_traversal_error(*status), strnatpmperr(error));
-        closenatpmp(&natpmp);
+        natpmp->has_pending_request = 0;
+        closenatpmp(natpmp);
         return false;
     }
 
-    natpmpresp_t resp;
-    error = readnatpmpresponseorretry(&natpmp, &resp);
+    error = readnatpmpresponseorretry(natpmp, &resp);
 
-    for (; error == NATPMP_TRYAGAIN; error = readnatpmpresponseorretry(&natpmp, &resp)) {
-        sleep(1);
-    }
-
-    bool ret;
-
-    if (error) {
-        *status = NAT_TRAVERSAL_ERR_MAPPING_FAIL;
-        LOGGER_WARNING(log, "NAT-PMP: %s (%s)", str_nat_traversal_error(*status), strnatpmperr(error));
-        ret = false;
-    } else {
+    if (!error) {
         *status = NAT_TRAVERSAL_OK;
         LOGGER_INFO(log, "NAT-PMP: %s (port %d)", str_nat_traversal_error(*status), port);
-        ret = true;
+        natpmp->has_pending_request = 0;
+        closenatpmp(natpmp);
+        return true;
+    } else if (error == NATPMP_TRYAGAIN) {
+        *status = NAT_TRAVERSAL_TRYAGAIN;
+    } else {
+        *status = NAT_TRAVERSAL_ERR_MAPPING_FAIL;
+        natpmp->has_pending_request = 0;
+        closenatpmp(natpmp);
     }
 
-    closenatpmp(&natpmp);
+    LOGGER_WARNING(log, "NAT-PMP: %s (%s)", str_nat_traversal_error(*status), strnatpmperr(error));
 
-    return ret;
+    return false;
+}
+
+
+/* Renew UDP NAT-PMP mapped ports */
+static void do_natpmp_map_port_udp(Messenger *m)
+{
+    NAT_TRAVERSAL_STATUS status;
+
+    if ((m->nat_traversal.natpmp_udp_retries > 0) && is_timeout(m->nat_traversal.natpmp_udp_timeout, 0)) {
+        natpmp_map_port(m->log, NAT_TRAVERSAL_UDP, m->net->port, NAT_TRAVERSAL_LEASE_TIMEOUT,
+                        (natpmp_t *)m->nat_traversal.natpmp, &status);
+
+        if (status == NAT_TRAVERSAL_OK) {
+            m->nat_traversal.natpmp_udp_timeout = unix_time() + NAT_TRAVERSAL_LEASE_TIMEOUT;
+        } else if (status == NAT_TRAVERSAL_TRYAGAIN) {
+            struct timeval t;
+
+            if (!getnatpmprequesttimeout((natpmp_t *)m->nat_traversal.natpmp, &t)) {
+                m->nat_traversal.natpmp_udp_timeout = unix_time() + t.tv_sec + 1;
+            }
+        } else {
+            m->nat_traversal.natpmp_udp_retries--;
+        }
+    }
+}
+
+
+/* Renew TCP NAT-PMP mapped ports */
+static void do_natpmp_map_port_tcp(Messenger *m)
+{
+    NAT_TRAVERSAL_STATUS status;
+
+    if ((m->nat_traversal_timeout.natpmp_tcp_retries > 0) && is_timeout(m->nat_traversal.natpmp_tcp_timeout, 0)) {
+        natpmp_map_port(m->log, NAT_TRAVERSAL_TCP, m->options.tcp_server_port, NAT_TRAVERSAL_LEASE_TIMEOUT,
+                        (natpmp_t *)m->nat_traversal.natpmp, &status);
+
+        if (status == NAT_TRAVERSAL_OK) {
+            m->nat_traversal.natpmp_tcp_timeout = unix_time() + NAT_TRAVERSAL_LEASE_TIMEOUT;
+        } else if (status == NAT_TRAVERSAL_TRYAGAIN) {
+            struct timeval t;
+
+            if (!getnatpmprequesttimeout((natpmp_t *)m->nat_traversal.natpmp, &t)) {
+                m->nat_traversal.natpmp_tcp_timeout = unix_time() + t.tv_sec + 1;
+            }
+        } else {
+            m->nat_traversal.natpmp_tcp_retries--;
+        }
+    }
 }
 #endif /* HAVE_LIBNATPMP */
 
 
-/* Setup port forwarding */
-bool nat_map_port(Logger *log, uint8_t traversal_type, NAT_TRAVERSAL_PROTO proto, uint16_t port, bool ipv6_enabled,
-                  nat_traversal_status_t *status)
+/* Renew mapped ports (called in "do_messenger()") */
+void do_nat_map_ports(Messenger *m)
 {
-    if (status != NULL) {
-        status->upnp_ipv4 = NAT_TRAVERSAL_ERR_DISABLED;
-        status->upnp_ipv6 = NAT_TRAVERSAL_ERR_DISABLED;
-        status->natpmp = NAT_TRAVERSAL_ERR_DISABLED;
-    }
-
 #if !defined(HAVE_LIBMINIUPNPC) && !defined(HAVE_LIBNATPMP)
     // Silence warnings if no libraries are found
-    UNUSED(log);
-    UNUSED(traversal_type);
-    UNUSED(proto);
-    UNUSED(port);
-    UNUSED(ipv6_enabled);
-
-    return false;
-#else
-    bool upnp_ipv4 = true;
-    bool upnp_ipv6 = true;
-    bool natpmp = true;
+    UNUSED(m);
+#endif /* !HAVE_LIBMINIUPNPC && !HAVE_LIBNATPMP */
 
 #ifdef HAVE_LIBMINIUPNPC
 
-    if (traversal_type & TRAVERSAL_TYPE_UPNP) {
-        if (status != NULL) {
-            upnp_ipv4 = upnp_map_port(log, proto, port, false, &status->upnp_ipv4);
+    if (m->options.traversal_type & TRAVERSAL_TYPE_UPNP) {
+        if (!m->options.udp_disabled) {
+            do_upnp_map_port_udp(m);
+        }
 
-            if (ipv6_enabled) {
-                upnp_ipv6 = upnp_map_port(log, proto, port, true, &status->upnp_ipv6);
-            }
-
-        } else {
-            NAT_TRAVERSAL_STATUS status;
-            upnp_ipv4 = upnp_map_port(log, proto, port, false, &status);
-
-            if (ipv6_enabled) {
-                upnp_ipv6 = upnp_map_port(log, proto, port, true, &status);
-            }
-
+        if (m->tcp_server) {
+            do_upnp_map_port_tcp(m);
         }
     }
 
 #endif /* HAVE_LIBMINIUPNPC */
+
 #ifdef HAVE_LIBNATPMP
 
-    if (traversal_type & TRAVERSAL_TYPE_NATPMP) {
-        if (status != NULL) {
-            natpmp = natpmp_map_port(log, proto, port, &status->natpmp);
-        } else {
-            NAT_TRAVERSAL_STATUS status;
-            natpmp = natpmp_map_port(log, proto, port, &status);
+    if (m->options.traversal_type & TRAVERSAL_TYPE_NATPMP) {
+        if (!m->options.udp_disabled) {
+            do_natpmp_map_port_udp(m);
+        }
+
+        if (m->tcp_server) {
+            do_natpmp_map_port_tcp(m);
         }
     }
 
 #endif /* HAVE_LIBNATPMP */
-
-    return upnp_ipv4 && upnp_ipv6 && natpmp;
-#endif /* !HAVE_LIBMINIUPNPC && !HAVE_LIBNATPMP */
 }
 
 
@@ -273,6 +372,9 @@ const char *str_nat_traversal_error(NAT_TRAVERSAL_STATUS status)
     switch (status) {
         case NAT_TRAVERSAL_OK:
             return "Port mapped successfully";
+
+        case NAT_TRAVERSAL_TRYAGAIN:
+            return "Waiting for reply";
 
         case NAT_TRAVERSAL_ERR_DISABLED:
             return "Feature not available";
