@@ -28,11 +28,16 @@
 #include "Messenger.h"
 
 #include "logger.h"
+#include "nat_traversal.h"
 #include "network.h"
 #include "util.h"
 
 #ifdef TOX_DEBUG
 #include <assert.h>
+#endif
+
+#ifdef HAVE_LIBNATPMP
+#include <natpmp.h>
 #endif
 
 
@@ -1921,8 +1926,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
     } else {
         IP ip;
         ip_init(&ip, options->ipv6enabled);
-        // TODO(Ansa89): see https://github.com/TokTok/c-toxcore/issues/219
-        m->net = new_networking_nat(log, ip, options->port_range[0], options->port_range[1], options->traversal_type, &net_err);
+        m->net = new_networking_ex(log, ip, options->port_range[0], options->port_range[1], &net_err);
     }
 
     if (m->net == NULL) {
@@ -1970,9 +1974,8 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
     }
 
     if (options->tcp_server_port) {
-        // TODO(Ansa89): see https://github.com/TokTok/c-toxcore/issues/219
-        m->tcp_server = new_TCP_server_nat(log, options->ipv6enabled, 1, &options->tcp_server_port, options->traversal_type,
-                                           m->dht->self_secret_key, m->onion);
+        m->tcp_server = new_TCP_server(log, options->ipv6enabled, 1, &options->tcp_server_port, m->dht->self_secret_key,
+                                       m->onion);
 
         if (m->tcp_server == NULL) {
             kill_friend_connections(m->fr_c);
@@ -1996,6 +1999,24 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
     friendreq_init(&(m->fr), m->fr_c);
     set_nospam(&(m->fr), random_int());
     set_filter_function(&(m->fr), &friend_already_added, m);
+
+    m->nat_traversal.upnp_udp_ip4_retries = NAT_TRAVERSAL_MAX_RETRIES;
+    m->nat_traversal.upnp_udp_ip4_timeout = unix_time();
+    m->nat_traversal.upnp_udp_ip6_retries = NAT_TRAVERSAL_MAX_RETRIES;
+    m->nat_traversal.upnp_udp_ip6_timeout = unix_time();
+    m->nat_traversal.upnp_tcp_ip4_retries = NAT_TRAVERSAL_MAX_RETRIES;
+    m->nat_traversal.upnp_tcp_ip4_timeout = unix_time();
+    m->nat_traversal.upnp_tcp_ip6_retries = NAT_TRAVERSAL_MAX_RETRIES;
+    m->nat_traversal.upnp_tcp_ip6_timeout = unix_time();
+#ifdef HAVE_LIBNATPMP
+    m->nat_traversal.natpmp = calloc(1, sizeof(natpmp_t));
+#else
+    m->nat_traversal.natpmp = NULL;
+#endif
+    m->nat_traversal.natpmp_udp_retries = NAT_TRAVERSAL_MAX_RETRIES;
+    m->nat_traversal.natpmp_udp_timeout = unix_time();
+    m->nat_traversal.natpmp_tcp_retries = NAT_TRAVERSAL_MAX_RETRIES;
+    m->nat_traversal.natpmp_tcp_timeout = unix_time();
 
     if (error) {
         *error = MESSENGER_ERROR_NONE;
@@ -2501,6 +2522,8 @@ void do_messenger(Messenger *m, void *userdata)
     }
 
     unix_time_update();
+
+    do_nat_map_ports(m);
 
     if (!m->options.udp_disabled) {
         networking_poll(m->net, userdata);

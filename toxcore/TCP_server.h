@@ -122,17 +122,9 @@ const uint8_t *tcp_server_public_key(const TCP_Server *tcp_server);
 size_t tcp_server_listen_count(const TCP_Server *tcp_server);
 
 /* Create new TCP server instance.
- * Added for reverse compatibility with old new_TCP_server calls.
  */
-// TODO(Ansa89): see https://github.com/TokTok/c-toxcore/issues/219
 TCP_Server *new_TCP_server(Logger *log, uint8_t ipv6_enabled, uint16_t num_sockets, const uint16_t *ports,
                            const uint8_t *secret_key, Onion *onion);
-
-/* Create new TCP server instance.
- */
-// TODO(Ansa89): see https://github.com/TokTok/c-toxcore/issues/219
-TCP_Server *new_TCP_server_nat(Logger *log, uint8_t ipv6_enabled, uint16_t num_sockets, const uint16_t *ports,
-                               uint8_t traversal_type, const uint8_t *secret_key, Onion *onion);
 
 /* Run the TCP_server
  */
