@@ -43,7 +43,7 @@ bool reconfigure_audio_decoder(ACSession *ac, int32_t sampling_rate, int8_t chan
 
 
 
-ACSession *ac_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_audio_receive_frame_cb *cb, void *cb_data)
+ACSession *ac_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_audio_receive_frame_cb *cb)
 {
     ACSession *ac = (ACSession *)calloc(sizeof(ACSession), 1);
 
@@ -97,8 +97,7 @@ ACSession *ac_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_audio_re
 
     ac->av = av;
     ac->friend_number = friend_number;
-    ac->acb.first = cb;
-    ac->acb.second = cb_data;
+    ac->on_audio_frame = cb;
 
     return ac;
 
@@ -125,7 +124,7 @@ void ac_kill(ACSession *ac)
     LOGGER_DEBUG(ac->log, "Terminated audio handler: %p", ac);
     free(ac);
 }
-void ac_iterate(ACSession *ac)
+void ac_iterate(ACSession *ac, void *userdata)
 {
     if (!ac) {
         return;
@@ -186,11 +185,11 @@ void ac_iterate(ACSession *ac)
 
         if (rc < 0) {
             LOGGER_WARNING(ac->log, "Decoding error: %s", opus_strerror(rc));
-        } else if (ac->acb.first) {
+        } else if (ac->on_audio_frame) {
             ac->lp_frame_duration = (rc * 1000) / ac->lp_sampling_rate;
 
-            ac->acb.first(ac->av, ac->friend_number, tmp, rc, ac->lp_channel_count,
-                          ac->lp_sampling_rate, ac->acb.second);
+            ac->on_audio_frame(ac->av, ac->friend_number, tmp, rc, ac->lp_channel_count,
+                               ac->lp_sampling_rate, userdata);
         }
 
         return;
@@ -206,13 +205,7 @@ int ac_queue_message(void *acp, struct RTPMessage *msg)
 
     ACSession *ac = (ACSession *)acp;
 
-    if ((msg->header.pt & 0x7f) == (rtp_TypeAudio + 2) % 128) {
-        LOGGER_WARNING(ac->log, "Got dummy!");
-        free(msg);
-        return 0;
-    }
-
-    if ((msg->header.pt & 0x7f) != rtp_TypeAudio % 128) {
+    if (msg->header.pt != rtp_TypeAudio && msg->header.pt != 64) {
         LOGGER_WARNING(ac->log, "Invalid payload type!");
         free(msg);
         return -1;

@@ -29,12 +29,11 @@
 
 #include <stdbool.h>
 
-/**
- * Payload type identifier. Also used as rtp callback prefix.
- */
+/** Payload type identifier. Also used as rtp callback prefix.
+ *  Depends on max being less than PACKET_AV_BLOCK_SIZE */
 enum {
-    rtp_TypeAudio = 192,
-    rtp_TypeVideo,
+    rtp_TypeAudio = 1,
+    rtp_TypeVideo = 2,
 };
 
 struct RTPHeader {
