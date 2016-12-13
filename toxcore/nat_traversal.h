@@ -117,7 +117,7 @@ typedef struct nat_traversal_status_t {
 
 
 /* Renew mapped ports (called in "do_messenger()") */
-void do_nat_map_ports(Messenger *m);
+void *do_nat_map_ports_thread(void *arg);
 
 /* Return error string from status */
 const char *str_nat_traversal_error(NAT_TRAVERSAL_STATUS status);
