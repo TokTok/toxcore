@@ -328,8 +328,8 @@ static void do_natpmp_map_port_tcp(Messenger *m)
 #endif /* HAVE_LIBNATPMP */
 
 
-/* Renew mapped ports (called in "do_messenger()") */
-void do_nat_map_ports(Messenger *m)
+/* Renew mapped ports */
+static void do_nat_map_ports(Messenger *m)
 {
 #if !defined(HAVE_LIBMINIUPNPC) && !defined(HAVE_LIBNATPMP)
     // Silence warnings if no libraries are found
@@ -363,6 +363,20 @@ void do_nat_map_ports(Messenger *m)
     }
 
 #endif /* HAVE_LIBNATPMP */
+}
+
+
+/* Renew mapped ports (called in "do_messenger()") */
+void *do_nat_map_ports_thread(void *arg)
+{
+    Messenger *m = (Messenger *) arg;
+
+    if (!pthread_mutex_trylock(&m->nat_traversal.lock)) {
+        do_nat_map_ports(m);
+        pthread_mutex_unlock(&m->nat_traversal.lock);
+    }
+
+    return NULL;
 }
 
 

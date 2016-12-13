@@ -30,6 +30,8 @@
 #include "friend_requests.h"
 #include "logger.h"
 
+#include <pthread.h>
+
 #define MAX_NAME_LENGTH 128
 /* TODO(irungentoo): this must depend on other variable. */
 #define MAX_STATUSMESSAGE_LENGTH 1007
@@ -246,6 +248,7 @@ struct Messenger {
     Node_format loaded_relays[NUM_SAVED_TCP_RELAYS]; // Relays loaded from config
 
     struct {
+        pthread_mutex_t lock;
         uint16_t upnp_udp_ip4_retries;
         uint64_t upnp_udp_ip4_timeout;
         uint16_t upnp_udp_ip6_retries;
