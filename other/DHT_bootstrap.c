@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
     IP ip;
     ip_init(&ip, ipv6enabled);
 
-    DHT *dht = new_DHT(NULL, new_networking(NULL, ip, PORT), true);
+    DHT *dht = new_DHT(NULL, new_networking(NULL, ip, PORT), true, true);
     Onion *onion = new_onion(dht);
     Onion_Announce *onion_a = new_onion_announce(dht);
 
