@@ -195,6 +195,27 @@ static void do_upnp_map_port_tcp(Messenger *m)
         }
     }
 }
+
+
+/* Renew UPnP mapped ports thread */
+static void *do_upnp_map_ports_thread(void *arg)
+{
+    Messenger *m = (Messenger *) arg;
+
+    if (!pthread_mutex_trylock(&m->nat_traversal.upnp_lock)) {
+        if (!m->options.udp_disabled) {
+            do_upnp_map_port_udp(m);
+        }
+
+        if (m->tcp_server) {
+            do_upnp_map_port_tcp(m);
+        }
+
+        pthread_mutex_unlock(&m->nat_traversal.upnp_lock);
+    }
+
+    return NULL;
+}
 #endif /* HAVE_LIBMINIUPNPC */
 
 
@@ -325,11 +346,32 @@ static void do_natpmp_map_port_tcp(Messenger *m)
         }
     }
 }
+
+
+/* Renew NAT-PMP mapped ports thread */
+static void *do_natpmp_map_ports_thread(void *arg)
+{
+    Messenger *m = (Messenger *) arg;
+
+    if (!pthread_mutex_trylock(&m->nat_traversal.natpmp_lock)) {
+        if (!m->options.udp_disabled) {
+            do_natpmp_map_port_udp(m);
+        }
+
+        if (m->tcp_server) {
+            do_natpmp_map_port_tcp(m);
+        }
+
+        pthread_mutex_unlock(&m->nat_traversal.natpmp_lock);
+    }
+
+    return NULL;
+}
 #endif /* HAVE_LIBNATPMP */
 
 
-/* Renew mapped ports */
-static void do_nat_map_ports(Messenger *m)
+/* Renew mapped ports (called in "do_messenger()") */
+void do_nat_map_ports(Messenger *m)
 {
 #if !defined(HAVE_LIBMINIUPNPC) && !defined(HAVE_LIBNATPMP)
     // Silence warnings if no libraries are found
@@ -339,13 +381,10 @@ static void do_nat_map_ports(Messenger *m)
 #ifdef HAVE_LIBMINIUPNPC
 
     if (m->options.traversal_type & TRAVERSAL_TYPE_UPNP) {
-        if (!m->options.udp_disabled) {
-            do_upnp_map_port_udp(m);
-        }
+        pthread_t pth;
 
-        if (m->tcp_server) {
-            do_upnp_map_port_tcp(m);
-        }
+        pthread_create(&pth, NULL, do_upnp_map_ports_thread, m);
+        pthread_detach(pth);
     }
 
 #endif /* HAVE_LIBMINIUPNPC */
@@ -353,30 +392,13 @@ static void do_nat_map_ports(Messenger *m)
 #ifdef HAVE_LIBNATPMP
 
     if (m->options.traversal_type & TRAVERSAL_TYPE_NATPMP) {
-        if (!m->options.udp_disabled) {
-            do_natpmp_map_port_udp(m);
-        }
+        pthread_t pth;
 
-        if (m->tcp_server) {
-            do_natpmp_map_port_tcp(m);
-        }
+        pthread_create(&pth, NULL, do_natpmp_map_ports_thread, m);
+        pthread_detach(pth);
     }
 
 #endif /* HAVE_LIBNATPMP */
-}
-
-
-/* Renew mapped ports (called in "do_messenger()") */
-void *do_nat_map_ports_thread(void *arg)
-{
-    Messenger *m = (Messenger *) arg;
-
-    if (!pthread_mutex_trylock(&m->nat_traversal.lock)) {
-        do_nat_map_ports(m);
-        pthread_mutex_unlock(&m->nat_traversal.lock);
-    }
-
-    return NULL;
 }
 
 

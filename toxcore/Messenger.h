@@ -248,7 +248,8 @@ struct Messenger {
     Node_format loaded_relays[NUM_SAVED_TCP_RELAYS]; // Relays loaded from config
 
     struct {
-        pthread_mutex_t lock;
+        pthread_mutex_t upnp_lock;
+        pthread_mutex_t natpmp_lock;
         uint16_t upnp_udp_ip4_retries;
         uint64_t upnp_udp_ip4_timeout;
         uint16_t upnp_udp_ip6_retries;

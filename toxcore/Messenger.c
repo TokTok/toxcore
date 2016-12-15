@@ -2003,7 +2003,9 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
     pthread_mutexattr_t lock_attr;
     pthread_mutexattr_init(&lock_attr);
     pthread_mutexattr_settype(&lock_attr, PTHREAD_MUTEX_ERRORCHECK);
-    pthread_mutex_init(&m->nat_traversal.lock, &lock_attr);
+    pthread_mutex_init(&m->nat_traversal.upnp_lock, &lock_attr);
+    pthread_mutex_init(&m->nat_traversal.natpmp_lock, &lock_attr);
+    pthread_mutexattr_destroy(&lock_attr);
 
     m->nat_traversal.upnp_udp_ip4_retries = NAT_TRAVERSAL_MAX_RETRIES;
     m->nat_traversal.upnp_udp_ip4_timeout = unix_time();
@@ -2528,8 +2530,7 @@ void do_messenger(Messenger *m, void *userdata)
 
     unix_time_update();
 
-    pthread_t pth;
-    pthread_create(&pth, NULL, do_nat_map_ports_thread, m);
+    do_nat_map_ports(m);
 
     if (!m->options.udp_disabled) {
         networking_poll(m->net, userdata);
