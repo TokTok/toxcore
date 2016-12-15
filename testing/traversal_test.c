@@ -79,7 +79,6 @@ static const char *level_str(TOX_LOG_LEVEL level)
     }
 }
 
-
 static void log_callback(Tox *tox, TOX_LOG_LEVEL level, const char *path, uint32_t line, const char *func,
                          const char *msg, void *user_data)
 {
@@ -211,7 +210,7 @@ int main(int argc, char *argv[])
 
     srand(time(NULL));
 
-    for (i = 0; i < 100; i++) {
+    for (i = 0; i < 600; i++) {
         j = rand() % 10;
 
         if (tox_self_get_connection_status(upnp_udp) == TOX_CONNECTION_NONE) {

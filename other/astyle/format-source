@@ -23,8 +23,8 @@ if ! which "$ASTYLE"; then
 fi
 
 if ! which "$APIDSL"; then
-  if [ -f $(dirname $0)/../apidsl/apigen.native ]; then
-    APIDSL=$(dirname $0)/../apidsl/apigen.native
+  if [ -f ../apidsl/apigen.native ]; then
+    APIDSL=../apidsl/apigen.native
   else
     APIDSL=apidsl_curl
   fi
