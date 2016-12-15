@@ -31,37 +31,33 @@
 
 static const char *pphrase = "bar", *name = "foo";
 
-void tse(void)
+static void tse(void)
 {
-    Tox *t;
-    struct Tox_Options to;
-    uint8_t *clear, *cipher;
-    off_t sz;
-    FILE *f;
-    TOX_ERR_ENCRYPTION eerr;
+    struct Tox_Options options;
+    tox_options_default(&options);
+    Tox *t = tox_new(&options, NULL);
 
-    tox_options_default(&to);
-    t = tox_new(&to, NULL);
+    tox_self_set_name(t, (const uint8_t *)name, strlen(name), NULL);
 
-    tox_self_set_name(t, (uint8_t *)name, strlen((char *)name), NULL);
+    FILE *f = fopen("save", "w");
 
-    f = fopen("save", "w");
-
-    sz = tox_get_savedata_size(t);
-    clear = (uint8_t *)malloc(sz);
+    off_t sz = tox_get_savedata_size(t);
+    uint8_t *clear = (uint8_t *)malloc(sz);
 
     /*this function does not write any data at all*/
     tox_get_savedata(t, clear);
 
     sz += TOX_PASS_ENCRYPTION_EXTRA_LENGTH;
-    cipher = (uint8_t *)malloc(sz);
+    uint8_t *cipher = (uint8_t *)malloc(sz);
 
-    if (!tox_pass_encrypt(clear, sz - TOX_PASS_ENCRYPTION_EXTRA_LENGTH, (uint8_t *)pphrase, strlen(pphrase), cipher,
+    TOX_ERR_ENCRYPTION eerr;
+    if (!tox_pass_encrypt(clear, sz - TOX_PASS_ENCRYPTION_EXTRA_LENGTH, (const uint8_t *)pphrase, strlen(pphrase), cipher,
                           &eerr)) {
         fprintf(stderr, "error: could not encrypt, error code %d\n", eerr);
         exit(4);
     }
 
+    printf("written sz = %d\n", sz);
     fwrite(cipher, sz, sizeof(*cipher), f);
 
     free(cipher);
@@ -70,43 +66,40 @@ void tse(void)
     tox_kill(t);
 }
 
-void tsd(void)
+static void tsd(void)
 {
-    uint8_t readname[TOX_MAX_NAME_LENGTH];
-    uint8_t *clear, *cipher;
-    int sz;
-    FILE *f;
-    Tox *t;
-    struct Tox_Options to;
-    TOX_ERR_NEW err;
-    TOX_ERR_DECRYPTION derr;
-
-    f = fopen("save", "r");
-    sz = fseek(f, 0, SEEK_END);
+    FILE *f = fopen("save", "r");
+    int sz = fseek(f, 0, SEEK_END);
     fseek(f, 0, SEEK_SET);
 
-    cipher = (uint8_t *)malloc(sz);
-    clear = (uint8_t *)malloc(sz - TOX_PASS_ENCRYPTION_EXTRA_LENGTH);
-    fgets((char *)cipher, sz, f);
+    printf("read sz = %d\n", sz);
+    uint8_t *cipher = (uint8_t *)malloc(sz);
+    uint8_t *clear = (uint8_t *)malloc(sz - TOX_PASS_ENCRYPTION_EXTRA_LENGTH);
+    fread(cipher, 1, sz, f);
 
-    if (!tox_pass_decrypt(cipher, sz, (uint8_t *)pphrase, strlen(pphrase), clear, &derr)) {
+    TOX_ERR_DECRYPTION derr;
+    if (!tox_pass_decrypt(cipher, sz, (const uint8_t *)pphrase, strlen(pphrase), clear, &derr)) {
         fprintf(stderr, "error: could not decrypt, error code %d\n", derr);
         exit(3);
     }
 
-    tox_options_default(&to);
-    to.savedata_type = TOX_SAVEDATA_TYPE_TOX_SAVE;
-    to.savedata_data = clear;
+    struct Tox_Options options;
+    tox_options_default(&options);
+    options.savedata_type = TOX_SAVEDATA_TYPE_TOX_SAVE;
+    options.savedata_data = clear;
 
-    if ((t = tox_new(&to, &err)) == NULL) {
+    TOX_ERR_NEW err;
+    Tox *t = tox_new(&options, &err);
+    if (t == NULL) {
         fprintf(stderr, "error: tox_new returned the error value %d\n", err);
         exit(1);
     }
 
+    uint8_t readname[TOX_MAX_NAME_LENGTH];
     tox_self_get_name(t, readname);
     readname[tox_self_get_name_size(t)] = '\0';
 
-    if (strcmp((char *)readname, name)) {
+    if (strcmp((const char *)readname, name)) {
         fprintf(stderr, "error: name returned by tox_self_get_name does not match expected result\n");
         exit(2);
     }
@@ -126,4 +119,3 @@ int main(void)
 
     return 0;
 }
-
