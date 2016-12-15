@@ -183,7 +183,7 @@ const VERSION_PATCH                = 0;
 
 /**
  * A macro to check at preprocessing time whether the client code is compatible
- * with the installed version of Tox. Leading zeros in the version number are 
+ * with the installed version of Tox. Leading zeros in the version number are
  * ignored. E.g. 0.1.5 is to 0.1.4 what 1.5 is to 1.4, that is: it can add new
  * features, but can't break the API.
  */
@@ -606,6 +606,12 @@ static class options {
      */
     MALLOC,
   }
+
+  /**
+   * Allocates a new $this object and initialises it with the values from the
+   * passed object.
+   */
+  void copy(const this rhs);
 
 
   /**
