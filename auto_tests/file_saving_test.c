@@ -58,8 +58,8 @@ static void tse(void)
         exit(4);
     }
 
-    fwrite(cipher, sz, sizeof(*cipher), f);
-    printf("written sz = %li\n", sz);
+    size_t wv = fwrite(cipher, sizeof(*cipher), sz, f);
+    printf("written wv = %li of %li\n", wv, sz);
 
     free(cipher);
     free(clear);
@@ -90,9 +90,8 @@ static void tsd(void)
 
     tox_options_default(&options);
 
-    options.savedata_type = TOX_SAVEDATA_TYPE_TOX_SAVE;
-
-    options.savedata_data = clear;
+    tox_options_set_savedata_type(&options, TOX_SAVEDATA_TYPE_TOX_SAVE);
+    tox_options_set_savedata_data(&options, clear, sz);
 
     TOX_ERR_NEW err;
 
