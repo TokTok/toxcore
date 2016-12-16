@@ -427,11 +427,13 @@ auto_test(tox_many)
 auto_test(tox_many_tcp)
 auto_test(tox_one)
 auto_test(version)
+auto_test(tox_loop_test)
 
 if(BUILD_TOXAV)
   auto_test(toxav_basic)
   auto_test(toxav_many)
 endif()
+
 
 ################################################################################
 #
