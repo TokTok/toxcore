@@ -833,19 +833,33 @@ const uint32_t iteration_interval();
  */
 void iterate(any user_data);
 
+
+/**
+ * Error codes for $loop().
+ */
+error for loop {
+  /**
+   * Failed running select().
+   */
+  SELECT,
+}
+
+
 /**
  * Run $iterate() any time a packet arrives, only returns after ${loop.stop}().
  */
-uint32_t loop(any user_data);
+bool loop(any user_data) with error for loop;
+
 
 namespace loop {
+
   /**
    * Tell $loop() to return.
    */
   void stop();
 
   /**
-   * Callback ran when $loop() calls into $iterate(), the client can lock a mutex here.
+   * This callback is invoked when $loop() calls into $iterate(), the client can lock a mutex here.
    */
   event begin const {
     /**
@@ -855,7 +869,7 @@ namespace loop {
   }
 
   /**
-   * Callback ran when $loop() is finished with $iterate(), the client can unlock the mutex here.
+   * This callback is invoked when $loop() is finished with $iterate(), the client can unlock the mutex here.
    */
   event end const {
     /**
