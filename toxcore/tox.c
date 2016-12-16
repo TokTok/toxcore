@@ -34,6 +34,7 @@ typedef struct Messenger Tox;
 #include "Messenger.h"
 #include "group.h"
 #include "logger.h"
+#include "net_crypto.h"
 
 #include "../toxencryptsave/defines.h"
 
@@ -372,42 +373,47 @@ void tox_iterate(Tox *tox, void *user_data)
     do_groupchats((Group_Chats *)m->conferences_object, user_data);
 }
 
-uint32_t tox_fd_count(Tox *tox)
-{
-    Messenger *m = tox;
-    return 1 + m->net_crypto->tcp_c->tcp_connections_length;
-}
-
 /**
  * Gathers a list of every network FD activity is expected on
- * @param sockets an array of size tox_fd_count()
+ * @param sockets an array of size tox_fd_count().
  */
-uint32_t tox_fds(Tox *tox, uint32_t *sockets, uint32_t max_sockets)
+uint32_t tox_fds(Tox *tox, sock_t **sockets, uint32_t max_sockets)
 {
     Messenger *m = tox;
-    int count = 0;
+    uint32_t i, count, fdcount;
 
-    if (max_sockets >= 1) {
-        sockets[count] = m->net->sock;
-        max_sockets--;
+    count = 0;
+    fdcount = 1 + m->net_crypto->tcp_c->tcp_connections_length;
+
+    if (fdcount != max_sockets) {
+        sock_t *tmp_sockets = (sock_t *) realloc(*sockets, fdcount * sizeof(sock_t));
+
+        if (tmp_sockets != NULL) {
+            *sockets = tmp_sockets;
+            max_sockets = fdcount;
+        }
+    }
+
+    if (max_sockets > 0) {
+        (*sockets)[count] = m->net->sock;
         count++;
+        max_sockets--;
     }
 
     TCP_Connections *conns = m->net_crypto->tcp_c;
-    int x;
 
-    for (x = 0; x < conns->tcp_connections_length; x++) {
+    for (i = 0; i < conns->tcp_connections_length; i++) {
         if (max_sockets == 0) {
             break;
         }
 
-        TCP_con *conn = &conns->tcp_connections[x];
-        sockets[count] = conn->connection->sock;
+        TCP_con *conn = &conns->tcp_connections[i];
+        (*sockets)[count] = conn->connection->sock;
         count++;
         max_sockets--;
     }
 
-    return count;
+    return fdcount;
 }
 
 void tox_callback_loop_begin(Tox *tox, tox_loop_begin_cb *callback)
@@ -422,18 +428,19 @@ void tox_callback_loop_end(Tox *tox, tox_loop_end_cb *callback)
     m->loop_end_cb = callback;
 }
 
-uint32_t tox_loop(Tox *tox, void *user_data)
+bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error)
 {
-    struct timeval timeout;
-    int maxfd;
-    uint32_t i, list_size = 0;
-    uint32_t *fdlist = NULL;
     Messenger *m = tox;
-    m->loop_run = true;
-    fd_set readable;
+    uint32_t fdcount = 0;
+    sock_t *fdlist = NULL;
 
+    m->loop_run = true;
 
     while (m->loop_run) {
+        uint32_t i;
+        sock_t maxfd;
+        fd_set readable;
+
         if (m->loop_begin_cb) {
             m->loop_begin_cb(tox, user_data);
         }
@@ -443,14 +450,7 @@ uint32_t tox_loop(Tox *tox, void *user_data)
         maxfd = 0;
         FD_ZERO(&readable);
 
-        uint32_t fdcount = tox_fd_count(tox);
-
-        if (fdcount > list_size) {
-            fdlist = realloc(fdlist, fdcount * sizeof(uint32_t));
-            list_size = fdcount;
-        }
-
-        fdcount = tox_fds(tox, fdlist, list_size);
+        fdcount = tox_fds(tox, &fdlist, fdcount);
 
         for (i = 0; i < fdcount; i++) {
             FD_SET(fdlist[i], &readable);
@@ -460,21 +460,34 @@ uint32_t tox_loop(Tox *tox, void *user_data)
             }
         }
 
+        struct timeval timeout;
+
         timeout.tv_sec = 0;
-        timeout.tv_usec = tox_iteration_interval(tox) * 1000 * 2; // TODO, use a longer timeout (cleverca22)
+
+        timeout.tv_usec = tox_iteration_interval(tox) * 1000 * 2; // TODO(cleverca22): use a longer timeout.
 
         if (m->loop_end_cb) {
             m->loop_end_cb(tox, user_data);
         }
 
-        int ret = select(maxfd, &readable, NULL, NULL, &timeout);
+        if (select(maxfd, &readable, NULL, NULL, &timeout) < 0) {
+            if (error != NULL) {
+                *error = TOX_ERR_LOOP_SELECT;
+            }
 
-        if (ret < 0) {
-            return ret;
+            free(fdlist);
+
+            return false;
         }
     }
 
-    return 0;
+    if (error != NULL) {
+        *error = TOX_ERR_LOOP_OK;
+    }
+
+    free(fdlist);
+
+    return true;
 }
 
 void tox_loop_stop(Tox *tox)
