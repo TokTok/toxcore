@@ -1,15 +1,13 @@
-
-
-#include "helpers.h"
-
-#include "../toxcore/tox.h"
-
 #include <check.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
+
+#include "../toxcore/tox.h"
+
+#include "helpers.h"
 
 #define TCP_RELAY_PORT 33448
 /* The Travis-CI container responds poorly to ::1 as a localhost address
@@ -50,7 +48,7 @@ void *tox_loop_worker(void *data)
 START_TEST(test_tox_loop)
 {
     pthread_t worker, worker_tcp;
-    struct Tox_Options opts;
+    struct Tox_Options *opts = tox_options_new(NULL);
     loop_test userdata;
     uint8_t dpk[TOX_PUBLIC_KEY_SIZE];
     int retval;
@@ -59,21 +57,20 @@ START_TEST(test_tox_loop)
     userdata.stop_count = 0;
     pthread_mutex_init(&userdata.mutex, NULL);
 
-    tox_options_default(&opts);
-    opts.tcp_port = TCP_RELAY_PORT;
-    userdata.tox = tox_new(&opts, 0);
+    tox_options_set_tcp_port(opts, TCP_RELAY_PORT);
+    userdata.tox = tox_new(opts, NULL);
     tox_callback_loop_begin(userdata.tox, tox_loop_cb_start);
     tox_callback_loop_end(userdata.tox, tox_loop_cb_stop);
     pthread_create(&worker, NULL, tox_loop_worker, &userdata);
 
     tox_self_get_dht_id(userdata.tox, dpk);
 
-    tox_options_default(&opts);
+    tox_options_default(opts);
     loop_test userdata_tcp;
     userdata_tcp.start_count = 0;
     userdata_tcp.stop_count = 0;
     pthread_mutex_init(&userdata_tcp.mutex, NULL);
-    userdata_tcp.tox = tox_new(&opts, 0);
+    userdata_tcp.tox = tox_new(opts, NULL);
     tox_callback_loop_begin(userdata_tcp.tox, tox_loop_cb_start);
     tox_callback_loop_end(userdata_tcp.tox, tox_loop_cb_stop);
     pthread_create(&worker_tcp, NULL, tox_loop_worker, &userdata_tcp);

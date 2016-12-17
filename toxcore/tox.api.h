@@ -839,9 +839,17 @@ void iterate(any user_data);
  */
 error for loop {
   /**
+   * Invalid arguments passed.
+   */
+  BAD_ARGS,
+  /**
    * Failed running select().
    */
   SELECT,
+  /**
+   * Failed getting sockets file descriptors.
+   */
+  GET_FDS,
 }
 
 

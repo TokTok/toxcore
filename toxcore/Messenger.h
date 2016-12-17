@@ -273,8 +273,8 @@ struct Messenger {
     unsigned int last_connection_status;
 
     bool loop_run;
-    void (*loop_begin_cb)(struct Messenger *tox, void *user_data);
-    void (*loop_end_cb)(struct Messenger *tox, void *user_data);
+    void (*loop_begin_cb)(struct Messenger *m, void *user_data);
+    void (*loop_end_cb)(struct Messenger *m, void *user_data);
 
     Messenger_Options options;
 };

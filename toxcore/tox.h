@@ -994,9 +994,19 @@ typedef enum TOX_ERR_LOOP {
     TOX_ERR_LOOP_OK,
 
     /**
+     * Invalid arguments passed.
+     */
+    TOX_ERR_LOOP_BAD_ARGS,
+
+    /**
      * Failed running select().
      */
     TOX_ERR_LOOP_SELECT,
+
+    /**
+     * Failed getting sockets file descriptors.
+     */
+    TOX_ERR_LOOP_GET_FDS,
 
 } TOX_ERR_LOOP;
 
