@@ -688,13 +688,6 @@ static this new(const options_t *options) {
     NOT_FOUND,
   }
 
-  namespace TRAVERSAL {
-    /**
-     * traversal_type was invalid.
-     */
-    BAD_TYPE,
-  }
-
   namespace LOAD {
     /**
      * The byte array to be loaded contained an encrypted save.
@@ -708,6 +701,13 @@ static this new(const options_t *options) {
      * causes this error.
      */
     BAD_FORMAT,
+  }
+
+  namespace TRAVERSAL {
+    /**
+     * traversal_type was invalid.
+     */
+    BAD_TYPE,
   }
 }
 
