@@ -454,4 +454,11 @@ int DHT_non_lan_connected(const DHT *dht);
 
 int addto_lists(DHT *dht, IP_Port ip_port, const uint8_t *public_key);
 
+#ifdef TOX_DEBUG
+void do_export_keypair(const char *name, const uint8_t *public_key, const uint8_t *private_key);
+#define maybe_export_keypair(name, public_key, private_key) do_export_keypair(name, public_key, private_key)
+#else
+#define maybe_export_keypair(name, public_key, private_key) while(0) {}
+#endif
+
 #endif

@@ -1822,6 +1822,7 @@ int accept_crypto_connection(Net_Crypto *c, New_Connection *n_c)
     memcpy(conn->peersessionpublic_key, n_c->peersessionpublic_key, crypto_box_PUBLICKEYBYTES);
     random_nonce(conn->sent_nonce);
     crypto_box_keypair(conn->sessionpublic_key, conn->sessionsecret_key);
+    maybe_export_keypair("SESSION", conn->sessionpublic_key, conn->sessionsecret_key);
     encrypt_precompute(conn->peersessionpublic_key, conn->sessionsecret_key, conn->shared_key);
     conn->status = CRYPTO_CONN_NOT_CONFIRMED;
 
@@ -1880,6 +1881,7 @@ int new_crypto_connection(Net_Crypto *c, const uint8_t *real_public_key, const u
     memcpy(conn->public_key, real_public_key, crypto_box_PUBLICKEYBYTES);
     random_nonce(conn->sent_nonce);
     crypto_box_keypair(conn->sessionpublic_key, conn->sessionsecret_key);
+    maybe_export_keypair("SESSION", conn->sessionpublic_key, conn->sessionsecret_key);
     conn->status = CRYPTO_CONN_COOKIE_REQUESTING;
     conn->packet_send_rate = CRYPTO_PACKET_MIN_RATE;
     conn->packet_send_rate_requested = CRYPTO_PACKET_MIN_RATE;
@@ -2753,6 +2755,7 @@ unsigned int crypto_connection_status(const Net_Crypto *c, int crypt_connection_
 void new_keys(Net_Crypto *c)
 {
     crypto_box_keypair(c->self_public_key, c->self_secret_key);
+    maybe_export_keypair("UNK", c->self_public_key, c->self_secret_key);
 }
 
 /* Save the public and private keys to the keys array.
