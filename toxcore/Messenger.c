@@ -2637,16 +2637,23 @@ void do_messenger(Messenger *m, void *userdata)
 struct SAVED_FRIEND {
     uint8_t status;
     uint8_t real_pk[crypto_box_PUBLICKEYBYTES];
-    uint8_t info[SAVED_FRIEND_REQUEST_SIZE]; // the data that is sent during the friend requests we do.
+    uint8_t info[SAVED_FRIEND_REQUEST_SIZE]; 
+    // ^ The data sent during the friend requests we do.
+    uint8_t : 8; // padding
     uint16_t info_size; // Length of the info.
     uint8_t name[MAX_NAME_LENGTH];
     uint16_t name_length;
     uint8_t statusmessage[MAX_STATUSMESSAGE_LENGTH];
+    uint8_t : 8; // padding
     uint16_t statusmessage_length;
     uint8_t userstatus;
+    uint8_t : 8; // padding
+    uint16_t : 16; // padding
     uint32_t friendrequest_nospam;
     uint64_t last_seen_time;
-};
+} __attribute__ ((aligned (8)));
+// __attribute__ ((aligned (8))) *shouldn't* do anything, as everything's 
+// manually aligned to 8-byte boundaries but left it in to be on the safe side.
 
 static uint32_t friend_size()
 {
