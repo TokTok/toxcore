@@ -40,7 +40,10 @@ LIBCONFIG_FOUND="no"
 LIBCHECK_FOUND="no"
 WANT_NACL="no"
 ADD_NACL_OBJECTS_TO_PKGCONFIG="yes"
-MINIUPNP="auto"
+# TODO(Ansa89): force-disable UPnp support because
+#               it slow down tox_iterate() too much
+#MINIUPNP="auto"
+MINIUPNP="no"
 NATPMP="auto"
 
 TOXCORE_LT_LDFLAGS="-version-info $LIBTOXCORE_LT_VERSION"
@@ -70,16 +73,18 @@ AC_ARG_ENABLE([nacl],
     ]
 )
 
-AC_ARG_ENABLE([miniupnp],
-    [AC_HELP_STRING([--disable-miniupnp], [upnp port forwarding (default: enabled)]) ],
-    [
-        if test "x$enableval" = "xyes"; then
-            MINIUPNP="yes"
-        elif test "x$enableval" = "xno"; then
-            MINIUPNP="no"
-        fi
-    ]
-)
+# TODO(Ansa89): force-disable UPnp support because
+#               it slow down tox_iterate() too much
+#AC_ARG_ENABLE([miniupnp],
+#    [AC_HELP_STRING([--disable-miniupnp], [upnp port forwarding (default: enabled)]) ],
+#    [
+#        if test "x$enableval" = "xyes"; then
+#            MINIUPNP="yes"
+#        elif test "x$enableval" = "xno"; then
+#            MINIUPNP="no"
+#        fi
+#    ]
+#)
 
 AC_ARG_ENABLE([natpmp],
     [AC_HELP_STRING([--disable-natpmp], [nat-pmp port forwarding (default: enabled)]) ],

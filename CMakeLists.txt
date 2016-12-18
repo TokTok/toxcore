@@ -177,7 +177,10 @@ pkg_use_module(PORTAUDIO            portaudio-2.0 )
 pkg_use_module(SNDFILE              sndfile       )
 
 # For UPnP
-pkg_use_module(MINIUPNP             miniupnpc     )
+#pkg_use_module(MINIUPNP             miniupnpc     )
+# TODO(Ansa89): force-disable UPnP support because
+#               it slow down tox_iterate() too much
+set(MINIUPNP_FOUND FALSE)
 
 # For NAT-PMP
 pkg_use_module(NATPMP               natpmp        )
@@ -189,7 +192,7 @@ else()
 endif()
 
 if(MINIUPNP_FOUND)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_LIBMINIUPNPC")
+ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_LIBMINIUPNPC")
 endif()
 
 if(NATPMP_FOUND)
