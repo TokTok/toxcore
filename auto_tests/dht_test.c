@@ -93,7 +93,7 @@ static void test_addto_lists_update(DHT            *dht,
 {
     int used, test, test1, test2, found;
     IP_Port test_ipp;
-    uint8_t test_id[crypto_box_PUBLICKEYBYTES];
+    uint8_t test_id[CRYPTO_PUBLIC_KEY_SIZE];
     uint8_t ipv6 = ip_port->ip.family == AF_INET6 ? 1 : 0;
 
     // check id update for existing ip_port
@@ -167,8 +167,8 @@ static void test_addto_lists_bad(DHT            *dht,
 {
     // check "bad" clients replacement
     int used, test1, test2, test3;
-    uint8_t public_key[crypto_box_PUBLICKEYBYTES], test_id1[crypto_box_PUBLICKEYBYTES], test_id2[crypto_box_PUBLICKEYBYTES],
-            test_id3[crypto_box_PUBLICKEYBYTES];
+    uint8_t public_key[CRYPTO_PUBLIC_KEY_BYTES], test_id1[CRYPTO_PUBLIC_KEY_SIZE], test_id2[CRYPTO_PUBLIC_KEY_SIZE],
+            test_id3[CRYPTO_PUBLIC_KEY_SIZE];
     uint8_t ipv6 = ip_port->ip.family == AF_INET6 ? 1 : 0;
 
     randombytes(public_key, sizeof(public_key));
@@ -211,8 +211,8 @@ static void test_addto_lists_possible_bad(DHT            *dht,
 {
     // check "possibly bad" clients replacement
     int used, test1, test2, test3;
-    uint8_t public_key[crypto_box_PUBLICKEYBYTES], test_id1[crypto_box_PUBLICKEYBYTES], test_id2[crypto_box_PUBLICKEYBYTES],
-            test_id3[crypto_box_PUBLICKEYBYTES];
+    uint8_t public_key[CRYPTO_PUBLIC_KEY_BYTES], test_id1[CRYPTO_PUBLIC_KEY_SIZE], test_id2[CRYPTO_PUBLIC_KEY_SIZE],
+            test_id3[CRYPTO_PUBLIC_KEY_SIZE];
     uint8_t ipv6 = ip_port->ip.family == AF_INET6 ? 1 : 0;
 
     randombytes(public_key, sizeof(public_key));
@@ -274,7 +274,7 @@ static void test_addto_lists_good(DHT            *dht,
                                   IP_Port        *ip_port,
                                   const uint8_t  *comp_client_id)
 {
-    uint8_t public_key[crypto_box_PUBLICKEYBYTES];
+    uint8_t public_key[CRYPTO_PUBLIC_KEY_SIZE];
     uint8_t ipv6 = ip_port->ip.family == AF_INET6 ? 1 : 0;
 
     mark_all_good(list, length, ipv6);
@@ -307,7 +307,7 @@ static void test_addto_lists(IP ip)
     ck_assert_msg(dht != 0, "Failed to create DHT");
 
     IP_Port ip_port = { .ip = ip, .port = TOX_PORT_DEFAULT };
-    uint8_t public_key[crypto_box_PUBLICKEYBYTES];
+    uint8_t public_key[CRYPTO_PUBLIC_KEY_SIZE];
     int i, used;
 
     // check lists filling
@@ -389,36 +389,36 @@ static void print_pk(uint8_t *public_key)
 {
     uint32_t j;
 
-    for (j = 0; j < crypto_box_PUBLICKEYBYTES; j++) {
+    for (j = 0; j < CRYPTO_PUBLIC_KEY_SIZE; j++) {
         printf("%02hhX", public_key[j]);
     }
 
     printf("\n");
 }
 
-static void test_add_to_list(uint8_t cmp_list[][crypto_box_PUBLICKEYBYTES + 1],
+static void test_add_to_list(uint8_t cmp_list[][CRYPTO_PUBLIC_KEY_SIZE + 1],
                              unsigned int length, const uint8_t *pk,
                              const uint8_t *cmp_pk)
 {
-    uint8_t p_b[crypto_box_PUBLICKEYBYTES];
+    uint8_t p_b[CRYPTO_PUBLIC_KEY_SIZE];
     unsigned int i;
 
     for (i = 0; i < length; ++i) {
-        if (!cmp_list[i][crypto_box_PUBLICKEYBYTES]) {
-            memcpy(cmp_list[i], pk, crypto_box_PUBLICKEYBYTES);
-            cmp_list[i][crypto_box_PUBLICKEYBYTES] = 1;
+        if (!cmp_list[i][CRYPTO_PUBLIC_KEY_SIZE]) {
+            memcpy(cmp_list[i], pk, CRYPTO_PUBLIC_KEY_SIZE);
+            cmp_list[i][CRYPTO_PUBLIC_KEY_SIZE] = 1;
             return;
         }
 
-        if (memcmp(cmp_list[i], pk, crypto_box_PUBLICKEYBYTES) == 0) {
+        if (memcmp(cmp_list[i], pk, CRYPTO_PUBLIC_KEY_SIZE) == 0) {
             return;
         }
     }
 
     for (i = 0; i < length; ++i) {
         if (id_closest(cmp_pk, cmp_list[i], pk) == 2) {
-            memcpy(p_b, cmp_list[i], crypto_box_PUBLICKEYBYTES);
-            memcpy(cmp_list[i], pk, crypto_box_PUBLICKEYBYTES);
+            memcpy(p_b, cmp_list[i], CRYPTO_PUBLIC_KEY_SIZE);
+            memcpy(cmp_list[i], pk, CRYPTO_PUBLIC_KEY_SIZE);
             test_add_to_list(cmp_list, length, p_b, cmp_pk);
             break;
         }
@@ -431,7 +431,7 @@ static void test_list_main(void)
 {
     DHT *dhts[NUM_DHT];
 
-    uint8_t cmp_list1[NUM_DHT][MAX_FRIEND_CLIENTS][crypto_box_PUBLICKEYBYTES + 1];
+    uint8_t cmp_list1[NUM_DHT][MAX_FRIEND_CLIENTS][CRYPTO_PUBLIC_KEY_SIZE + 1];
     memset(cmp_list1, 0, sizeof(cmp_list1));
 
     unsigned int i, j, k, l;
@@ -480,7 +480,7 @@ static void test_list_main(void)
     for (l = 0; l < NUM_DHT; ++l) {
         for (i = 0; i < MAX_FRIEND_CLIENTS; ++i) {
             for (j = 1; j < NUM_DHT; ++j) {
-                if (memcmp(cmp_list1[l][i], dhts[(l + j) % NUM_DHT]->self_public_key, crypto_box_PUBLICKEYBYTES) != 0) {
+                if (memcmp(cmp_list1[l][i], dhts[(l + j) % NUM_DHT]->self_public_key, CRYPTO_PUBLIC_KEY_SIZE) != 0) {
                     continue;
                 }
 
@@ -488,7 +488,7 @@ static void test_list_main(void)
 
                 for (k = 0; k < LCLIENT_LIST; ++k) {
                     if (memcmp(dhts[l]->self_public_key, dhts[(l + j) % NUM_DHT]->close_clientlist[k].public_key,
-                               crypto_box_PUBLICKEYBYTES) == 0) {
+                               CRYPTO_PUBLIC_KEY_SIZE) == 0) {
                         ++count;
                     }
                 }
@@ -519,7 +519,7 @@ static void test_list_main(void)
                 count = 0;
 
                 for (k = 0; k < MAX_SENT_NODES; ++k) {
-                    if (memcmp(dhts[l]->self_public_key, ln[k].public_key, crypto_box_PUBLICKEYBYTES) == 0) {
+                    if (memcmp(dhts[l]->self_public_key, ln[k].public_key, CRYPTO_PUBLIC_KEY_SIZE) == 0) {
                         ++count;
                     }
                 }
@@ -653,16 +653,16 @@ END_TEST
 START_TEST(test_dht_create_packet)
 {
     uint8_t plain[100] = {0};
-    uint8_t pkt[1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES + sizeof(plain) + crypto_box_MACBYTES];
+    uint8_t pkt[1 + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE + sizeof(plain) + CRYPTO_MAC_SIZE];
 
-    uint8_t key[crypto_box_KEYBYTES];
+    uint8_t key[CRYPTO_SYMMETRIC_KEY_SIZE];
     new_symmetric_key(key);
 
     int length = DHT_create_packet(key, key, NET_PACKET_GET_NODES, plain, sizeof(plain), pkt);
 
     ck_assert_msg(pkt[0] == NET_PACKET_GET_NODES, "Malformed packet.");
-    ck_assert_msg(memcmp(pkt + 1, key, crypto_box_KEYBYTES) == 0, "Malformed packet.");
-    ck_assert_msg(length == 1 + crypto_box_PUBLICKEYBYTES + crypto_box_NONCEBYTES + sizeof(plain) + crypto_box_MACBYTES,
+    ck_assert_msg(memcmp(pkt + 1, key, CRYPTO_SYMMETRIC_KEY_SIZE) == 0, "Malformed packet.");
+    ck_assert_msg(length == 1 + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE + sizeof(plain) + CRYPTO_MAC_SIZE,
                   "Invalid size. Should be %d got %d", sizeof(pkt), length);
 
     printf("Create Packet Successful!\n");
