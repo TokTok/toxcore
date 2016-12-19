@@ -246,17 +246,22 @@ struct Messenger {
     Node_format loaded_relays[NUM_SAVED_TCP_RELAYS]; // Relays loaded from config
 
     struct {
+        void *upnp_udp_ip4;
         uint16_t upnp_udp_ip4_retries;
         uint64_t upnp_udp_ip4_timeout;
+        void *upnp_udp_ip6;
         uint16_t upnp_udp_ip6_retries;
         uint64_t upnp_udp_ip6_timeout;
+        void *upnp_tcp_ip4;
         uint16_t upnp_tcp_ip4_retries;
         uint64_t upnp_tcp_ip4_timeout;
+        void *upnp_tcp_ip6;
         uint16_t upnp_tcp_ip6_retries;
         uint64_t upnp_tcp_ip6_timeout;
-        void *natpmp;
+        void *natpmp_udp;
         uint16_t natpmp_udp_retries;
         uint64_t natpmp_udp_timeout;
+        void *natpmp_tcp;
         uint16_t natpmp_tcp_retries;
         uint64_t natpmp_tcp_timeout;
     } nat_traversal;

@@ -36,6 +36,10 @@
 #include <assert.h>
 #endif
 
+#ifdef HAVE_LIBMINIUPNPC
+#include "../toxupnp/toxupnp.h"
+#endif
+
 #ifdef HAVE_LIBNATPMP
 #include <natpmp.h>
 #endif
@@ -2000,6 +2004,17 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
     set_nospam(&(m->fr), random_int());
     set_filter_function(&(m->fr), &friend_already_added, m);
 
+#ifdef HAVE_LIBMINIUPNPC
+    m->nat_traversal.upnp_udp_ip4 = newUPNPDiscoverOpts();
+    m->nat_traversal.upnp_udp_ip6 = newUPNPDiscoverOpts();
+    m->nat_traversal.upnp_tcp_ip4 = newUPNPDiscoverOpts();
+    m->nat_traversal.upnp_tcp_ip6 = newUPNPDiscoverOpts();
+#else
+    m->nat_traversal.upnp_udp_ip4 = NULL;
+    m->nat_traversal.upnp_udp_ip6 = NULL;
+    m->nat_traversal.upnp_tcp_ip4 = NULL;
+    m->nat_traversal.upnp_tcp_ip6 = NULL;
+#endif
     m->nat_traversal.upnp_udp_ip4_retries = NAT_TRAVERSAL_MAX_RETRIES;
     m->nat_traversal.upnp_udp_ip4_timeout = unix_time();
     m->nat_traversal.upnp_udp_ip6_retries = NAT_TRAVERSAL_MAX_RETRIES;
@@ -2009,9 +2024,11 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
     m->nat_traversal.upnp_tcp_ip6_retries = NAT_TRAVERSAL_MAX_RETRIES;
     m->nat_traversal.upnp_tcp_ip6_timeout = unix_time();
 #ifdef HAVE_LIBNATPMP
-    m->nat_traversal.natpmp = calloc(1, sizeof(natpmp_t));
+    m->nat_traversal.natpmp_udp = calloc(1, sizeof(natpmp_t));
+    m->nat_traversal.natpmp_tcp = calloc(1, sizeof(natpmp_t));
 #else
-    m->nat_traversal.natpmp = NULL;
+    m->nat_traversal.natpmp_udp = NULL;
+    m->nat_traversal.natpmp_tcp = NULL;
 #endif
     m->nat_traversal.natpmp_udp_retries = NAT_TRAVERSAL_MAX_RETRIES;
     m->nat_traversal.natpmp_udp_timeout = unix_time();

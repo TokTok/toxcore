@@ -177,11 +177,11 @@ pkg_use_module(PORTAUDIO            portaudio-2.0 )
 pkg_use_module(SNDFILE              sndfile       )
 
 # For UPnP
-#pkg_use_module(MINIUPNP             miniupnpc     )
+pkg_use_module(MINIUPNP             miniupnpc     )
 # TODO(Ansa89): force-disable UPnP support because
 #               it slow down tox_iterate() too much
 #               https://github.com/miniupnp/miniupnp/issues/223
-set(MINIUPNP_FOUND FALSE)
+#set(MINIUPNP_FOUND FALSE)
 
 # For NAT-PMP
 pkg_use_module(NATPMP               natpmp        )
@@ -247,7 +247,11 @@ if(CMAKE_THREAD_LIBS_INIT)
 endif()
 
 if(MINIUPNP_FOUND)
-  target_link_modules(toxnetwork ${MINIUPNP_LIBRARIES})
+  add_module(toxupnp
+    toxupnp/toxupnp.c
+    toxupnp/toxupnp.h)
+  target_link_modules(toxupnp ${MINIUPNP_LIBRARIES})
+  target_link_modules(toxnetwork toxupnp ${MINIUPNP_LIBRARIES})
   set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-lminiupnp")
 endif()
 

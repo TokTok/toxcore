@@ -43,8 +43,8 @@ ADD_NACL_OBJECTS_TO_PKGCONFIG="yes"
 # TODO(Ansa89): force-disable UPnp support because
 #               it slow down tox_iterate() too much
 #               https://github.com/miniupnp/miniupnp/issues/223
-#MINIUPNP="auto"
-MINIUPNP="no"
+#MINIUPNP="no"
+MINIUPNP="auto"
 NATPMP="auto"
 
 TOXCORE_LT_LDFLAGS="-version-info $LIBTOXCORE_LT_VERSION"
@@ -77,16 +77,16 @@ AC_ARG_ENABLE([nacl],
 # TODO(Ansa89): force-disable UPnp support because
 #               it slow down tox_iterate() too much
 #               https://github.com/miniupnp/miniupnp/issues/223
-#AC_ARG_ENABLE([miniupnp],
-#    [AC_HELP_STRING([--disable-miniupnp], [upnp port forwarding (default: enabled)]) ],
-#    [
-#        if test "x$enableval" = "xyes"; then
-#            MINIUPNP="yes"
-#        elif test "x$enableval" = "xno"; then
-#            MINIUPNP="no"
-#        fi
-#    ]
-#)
+AC_ARG_ENABLE([miniupnp],
+    [AC_HELP_STRING([--disable-miniupnp], [upnp port forwarding (default: enabled)]) ],
+    [
+        if test "x$enableval" = "xyes"; then
+            MINIUPNP="yes"
+        elif test "x$enableval" = "xno"; then
+            MINIUPNP="no"
+        fi
+    ]
+)
 
 AC_ARG_ENABLE([natpmp],
     [AC_HELP_STRING([--disable-natpmp], [nat-pmp port forwarding (default: enabled)]) ],
@@ -909,6 +909,7 @@ AM_CONDITIONAL(BUILD_TESTS, test "x$BUILD_TESTS" = "xyes")
 AM_CONDITIONAL(BUILD_NTOX, test "x$BUILD_NTOX" = "xyes")
 AM_CONDITIONAL(BUILD_AV, test "x$BUILD_AV" = "xyes")
 AM_CONDITIONAL(BUILD_TESTING, test "x$BUILD_TESTING" = "xyes")
+AM_CONDITIONAL(BUILD_MINIUPNP_ASYNC, test "x$MINIUPNP" = "xyes")
 AM_CONDITIONAL(WITH_NACL, test "x$WANT_NACL" = "xyes")
 AM_CONDITIONAL(WIN32, test "x$WIN32" = "xyes")
 

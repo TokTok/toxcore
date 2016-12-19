@@ -8,6 +8,7 @@ include ../toxcore/Makefile.inc
 include ../toxdns/Makefile.inc
 include ../toxencryptsave/Makefile.inc
 include ../toxav/Makefile.inc
+include ../toxupnp/Makefile.inc
 include ../other/Makefile.inc
 include ../testing/Makefile.inc
 include ../other/bootstrap_daemon/src/Makefile.inc

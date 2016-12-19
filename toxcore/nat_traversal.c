@@ -35,6 +35,7 @@
 #include <miniupnpc/upnpcommands.h>
 #include <miniupnpc/upnperrors.h>
 #include <stdio.h>
+#include "../toxupnp/toxupnp.h"
 #endif
 
 #ifdef HAVE_LIBNATPMP
@@ -45,6 +46,7 @@
 
 #define UNUSED(x) (void)(x)
 #define NAT_TRAVERSAL_LEASE_TIMEOUT 60
+#define NAT_TRAVERSAL_TRYAGAIN_TIMEOUT 1
 
 
 /**
@@ -164,22 +166,36 @@ static const char *str_nat_traversal_error(NAT_TRAVERSAL_STATUS status)
 #ifdef HAVE_LIBMINIUPNPC
 /* Setup port forwarding using UPnP */
 static bool upnp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port, uint32_t lifetime, bool ipv6_enabled,
-                          NAT_TRAVERSAL_STATUS *status)
+                          UPNPDiscoverOpts *opts, NAT_TRAVERSAL_STATUS *status)
 {
     LOGGER_INFO(log, "Attempting to set up UPnP port forwarding");
 
     bool ret = false;
     int error;
 
-#if MINIUPNPC_API_VERSION < 14
-    struct UPNPDev *devlist = upnpDiscover(1000, NULL, NULL, 0, ipv6_enabled, &error);
-#else
-    struct UPNPDev *devlist = upnpDiscover(1000, NULL, NULL, 0, ipv6_enabled, 2, &error);
-#endif
+    /*#if MINIUPNPC_API_VERSION < 14
+        struct UPNPDev *devlist = upnpDiscover(1000, NULL, NULL, 0, ipv6_enabled, &error);
+    #else
+        struct UPNPDev *devlist = upnpDiscover(1000, NULL, NULL, 0, ipv6_enabled, 2, &error);
+    #endif
 
-    if (error) {
+        if (error) {
+            *status = NAT_TRAVERSAL_ERR_DISCOVERY_FAIL;
+            LOGGER_WARNING(log, "UPnP: %s (%s)", str_nat_traversal_error(*status), strupnperror(error));
+            return false;
+        }*/
+    error = upnpDiscoverAsyncGetStatus(opts);
+
+    if (error == UPNPDISCOVER_RUNNING) {
+        *status = NAT_TRAVERSAL_TRYAGAIN;
+        LOGGER_WARNING(log, "UPnP: %s", str_nat_traversal_error(*status));
+        return false;
+    } else if (error) {
         *status = NAT_TRAVERSAL_ERR_DISCOVERY_FAIL;
         LOGGER_WARNING(log, "UPnP: %s (%s)", str_nat_traversal_error(*status), strupnperror(error));
+        upnpDiscoverAsyncSetDelay(opts, 1000);
+        upnpDiscoverAsyncSetIPv6(opts, ipv6_enabled);
+        upnpDiscoverAsync(opts);
         return false;
     }
 
@@ -189,9 +205,12 @@ static bool upnp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port,
 
     char lanaddr[64];
 
-    error = UPNP_GetValidIGD(devlist, &urls, &data, lanaddr, sizeof(lanaddr));
+    /*error = UPNP_GetValidIGD(devlist, &urls, &data, lanaddr, sizeof(lanaddr));
 
-    freeUPNPDevlist(devlist);
+    freeUPNPDevlist(devlist);*/
+    error = UPNP_GetValidIGDAsync(opts, &urls, &data, lanaddr, sizeof(lanaddr));
+
+    upnpDiscoverAsyncFreeDevlist(opts);
 
     switch (error) {
         case 0:
@@ -263,10 +282,13 @@ static void do_upnp_map_port_udp(Messenger *m)
     NAT_TRAVERSAL_STATUS status;
 
     if ((m->nat_traversal.upnp_udp_ip4_retries > 0) && is_timeout(m->nat_traversal.upnp_udp_ip4_timeout, 0)) {
-        upnp_map_port(m->log, NAT_TRAVERSAL_UDP, m->net->port, NAT_TRAVERSAL_LEASE_TIMEOUT, false, &status);
+        upnp_map_port(m->log, NAT_TRAVERSAL_UDP, m->net->port, NAT_TRAVERSAL_LEASE_TIMEOUT, false,
+                      (UPNPDiscoverOpts *)m->nat_traversal.upnp_udp_ip4, &status);
 
         if (status == NAT_TRAVERSAL_OK) {
             m->nat_traversal.upnp_udp_ip4_timeout = unix_time() + NAT_TRAVERSAL_LEASE_TIMEOUT;
+        } else if (status == NAT_TRAVERSAL_TRYAGAIN) {
+            m->nat_traversal.upnp_udp_ip4_timeout = unix_time() + NAT_TRAVERSAL_TRYAGAIN_TIMEOUT;
         } else {
             m->nat_traversal.upnp_udp_ip4_retries--;
         }
@@ -274,10 +296,13 @@ static void do_upnp_map_port_udp(Messenger *m)
 
     if (m->options.ipv6enabled && (m->nat_traversal.upnp_udp_ip6_retries > 0)
             && is_timeout(m->nat_traversal.upnp_udp_ip6_timeout, 0)) {
-        upnp_map_port(m->log, NAT_TRAVERSAL_UDP, m->net->port, NAT_TRAVERSAL_LEASE_TIMEOUT, true, &status);
+        upnp_map_port(m->log, NAT_TRAVERSAL_UDP, m->net->port, NAT_TRAVERSAL_LEASE_TIMEOUT, true,
+                      (UPNPDiscoverOpts *)m->nat_traversal.upnp_udp_ip6, &status);
 
         if (status == NAT_TRAVERSAL_OK) {
             m->nat_traversal.upnp_udp_ip6_timeout = unix_time() + NAT_TRAVERSAL_LEASE_TIMEOUT;
+        } else if (status == NAT_TRAVERSAL_TRYAGAIN) {
+            m->nat_traversal.upnp_udp_ip6_timeout = unix_time() + NAT_TRAVERSAL_TRYAGAIN_TIMEOUT;
         } else {
             m->nat_traversal.upnp_udp_ip6_retries--;
         }
@@ -291,10 +316,13 @@ static void do_upnp_map_port_tcp(Messenger *m)
     NAT_TRAVERSAL_STATUS status;
 
     if ((m->nat_traversal.upnp_tcp_ip4_retries > 0) && is_timeout(m->nat_traversal.upnp_tcp_ip4_timeout, 0)) {
-        upnp_map_port(m->log, NAT_TRAVERSAL_TCP, m->options.tcp_server_port, NAT_TRAVERSAL_LEASE_TIMEOUT, false, &status);
+        upnp_map_port(m->log, NAT_TRAVERSAL_TCP, m->options.tcp_server_port, NAT_TRAVERSAL_LEASE_TIMEOUT, false,
+                      (UPNPDiscoverOpts *) m->nat_traversal.upnp_tcp_ip4, &status);
 
         if (status == NAT_TRAVERSAL_OK) {
             m->nat_traversal.upnp_tcp_ip4_timeout = unix_time() + NAT_TRAVERSAL_LEASE_TIMEOUT;
+        } else if (status == NAT_TRAVERSAL_TRYAGAIN) {
+            m->nat_traversal.upnp_tcp_ip4_timeout = unix_time() + NAT_TRAVERSAL_TRYAGAIN_TIMEOUT;
         } else {
             m->nat_traversal.upnp_tcp_ip4_retries--;
         }
@@ -302,10 +330,13 @@ static void do_upnp_map_port_tcp(Messenger *m)
 
     if (m->options.ipv6enabled && (m->nat_traversal.upnp_tcp_ip6_retries > 0)
             && is_timeout(m->nat_traversal.upnp_tcp_ip6_timeout, 0)) {
-        upnp_map_port(m->log, NAT_TRAVERSAL_TCP, m->options.tcp_server_port, NAT_TRAVERSAL_LEASE_TIMEOUT, true, &status);
+        upnp_map_port(m->log, NAT_TRAVERSAL_TCP, m->options.tcp_server_port, NAT_TRAVERSAL_LEASE_TIMEOUT, true,
+                      (UPNPDiscoverOpts *) m->nat_traversal.upnp_tcp_ip6, &status);
 
         if (status == NAT_TRAVERSAL_OK) {
             m->nat_traversal.upnp_tcp_ip6_timeout = unix_time() + NAT_TRAVERSAL_LEASE_TIMEOUT;
+        } else if (status == NAT_TRAVERSAL_TRYAGAIN) {
+            m->nat_traversal.upnp_tcp_ip6_timeout = unix_time() + NAT_TRAVERSAL_TRYAGAIN_TIMEOUT;
         } else {
             m->nat_traversal.upnp_tcp_ip6_retries--;
         }
@@ -402,15 +433,17 @@ static void do_natpmp_map_port_udp(Messenger *m)
 
     if ((m->nat_traversal.natpmp_udp_retries > 0) && is_timeout(m->nat_traversal.natpmp_udp_timeout, 0)) {
         natpmp_map_port(m->log, NAT_TRAVERSAL_UDP, m->net->port, NAT_TRAVERSAL_LEASE_TIMEOUT,
-                        (natpmp_t *)m->nat_traversal.natpmp, &status);
+                        (natpmp_t *)m->nat_traversal.natpmp_udp, &status);
 
         if (status == NAT_TRAVERSAL_OK) {
             m->nat_traversal.natpmp_udp_timeout = unix_time() + NAT_TRAVERSAL_LEASE_TIMEOUT;
         } else if (status == NAT_TRAVERSAL_TRYAGAIN) {
             struct timeval t;
 
-            if (!getnatpmprequesttimeout((natpmp_t *)m->nat_traversal.natpmp, &t)) {
+            if (!getnatpmprequesttimeout((natpmp_t *)m->nat_traversal.natpmp_udp, &t)) {
                 m->nat_traversal.natpmp_udp_timeout = unix_time() + t.tv_sec + 1;
+            } else {
+                m->nat_traversal.natpmp_udp_timeout = unix_time() + NAT_TRAVERSAL_TRYAGAIN_TIMEOUT;
             }
         } else {
             m->nat_traversal.natpmp_udp_retries--;
@@ -426,15 +459,17 @@ static void do_natpmp_map_port_tcp(Messenger *m)
 
     if ((m->nat_traversal.natpmp_tcp_retries > 0) && is_timeout(m->nat_traversal.natpmp_tcp_timeout, 0)) {
         natpmp_map_port(m->log, NAT_TRAVERSAL_TCP, m->options.tcp_server_port, NAT_TRAVERSAL_LEASE_TIMEOUT,
-                        (natpmp_t *)m->nat_traversal.natpmp, &status);
+                        (natpmp_t *)m->nat_traversal.natpmp_tcp, &status);
 
         if (status == NAT_TRAVERSAL_OK) {
             m->nat_traversal.natpmp_tcp_timeout = unix_time() + NAT_TRAVERSAL_LEASE_TIMEOUT;
         } else if (status == NAT_TRAVERSAL_TRYAGAIN) {
             struct timeval t;
 
-            if (!getnatpmprequesttimeout((natpmp_t *)m->nat_traversal.natpmp, &t)) {
+            if (!getnatpmprequesttimeout((natpmp_t *)m->nat_traversal.natpmp_tcp, &t)) {
                 m->nat_traversal.natpmp_tcp_timeout = unix_time() + t.tv_sec + 1;
+            } else {
+                m->nat_traversal.natpmp_tcp_timeout = unix_time() + NAT_TRAVERSAL_TRYAGAIN_TIMEOUT;
             }
         } else {
             m->nat_traversal.natpmp_tcp_retries--;
@@ -455,11 +490,11 @@ void do_nat_map_ports(Messenger *m)
 #ifdef HAVE_LIBMINIUPNPC
 
     if (m->options.traversal_type & TRAVERSAL_TYPE_UPNP) {
-        if (!m->options.udp_disabled) {
+        if ((!m->options.udp_disabled) && (m->nat_traversal.upnp_udp_ip4 != NULL) && (m->nat_traversal.upnp_udp_ip6 != NULL)) {
             do_upnp_map_port_udp(m);
         }
 
-        if (m->tcp_server) {
+        if ((m->tcp_server) && (m->nat_traversal.upnp_tcp_ip4 != NULL) && (m->nat_traversal.upnp_tcp_ip6 != NULL)) {
             do_upnp_map_port_tcp(m);
         }
     }
@@ -469,11 +504,11 @@ void do_nat_map_ports(Messenger *m)
 #ifdef HAVE_LIBNATPMP
 
     if (m->options.traversal_type & TRAVERSAL_TYPE_NATPMP) {
-        if (!m->options.udp_disabled) {
+        if ((!m->options.udp_disabled) && (m->nat_traversal.natpmp_udp != NULL)) {
             do_natpmp_map_port_udp(m);
         }
 
-        if (m->tcp_server) {
+        if ((m->tcp_server) && (m->nat_traversal.natpmp_tcp != NULL)) {
             do_natpmp_map_port_tcp(m);
         }
     }
