@@ -825,11 +825,6 @@ typedef enum TOX_ERR_NEW {
     TOX_ERR_NEW_PROXY_NOT_FOUND,
 
     /**
-     * traversal_type was invalid.
-     */
-    TOX_ERR_NEW_TRAVERSAL_BAD_TYPE,
-
-    /**
      * The byte array to be loaded contained an encrypted save.
      */
     TOX_ERR_NEW_LOAD_ENCRYPTED,
@@ -842,6 +837,11 @@ typedef enum TOX_ERR_NEW {
      * causes this error.
      */
     TOX_ERR_NEW_LOAD_BAD_FORMAT,
+
+    /**
+     * traversal_type was invalid.
+     */
+    TOX_ERR_NEW_TRAVERSAL_BAD_TYPE,
 
 } TOX_ERR_NEW;
 

@@ -29,97 +29,11 @@
 #include <stdint.h>
 
 #include "Messenger.h"
-#include "logger.h"
 
-#define NAT_TRAVERSAL_LEASE_TIMEOUT 60
 #define NAT_TRAVERSAL_MAX_RETRIES 100
-
-
-/**
- * Allowed traversal types (they are bitmasks).
- */
-enum TRAVERSAL_TYPE {
-
-    TRAVERSAL_TYPE_NONE = 0,
-
-    TRAVERSAL_TYPE_UPNP = 1,
-
-    TRAVERSAL_TYPE_NATPMP = 2,
-
-};
-
-/**
- * The protocol that will be used by the nat traversal.
- */
-typedef enum NAT_TRAVERSAL_PROTO {
-
-    NAT_TRAVERSAL_UDP,
-
-    NAT_TRAVERSAL_TCP,
-
-} NAT_TRAVERSAL_PROTO;
-
-/**
- * Possible status values.
- */
-typedef enum NAT_TRAVERSAL_STATUS {
-
-    /* Port mapped successfully */
-    NAT_TRAVERSAL_OK,
-
-    /* NAT-PMP waiting for reply */
-    NAT_TRAVERSAL_TRYAGAIN,
-
-    /* UPnP/NAT-PMP not compiled */
-    NAT_TRAVERSAL_ERR_DISABLED,
-
-    /* Unknown error */
-    NAT_TRAVERSAL_ERR_UNKNOWN,
-
-    /* Unknown protocol specified by user */
-    NAT_TRAVERSAL_ERR_UNKNOWN_PROTO,
-
-    /* UPnP/NAT-PMP port mapping failed */
-    NAT_TRAVERSAL_ERR_MAPPING_FAIL,
-
-    /* UPnP discovery failed */
-    NAT_TRAVERSAL_ERR_DISCOVERY_FAIL,
-
-    /* UPnP no IGD found */
-    NAT_TRAVERSAL_ERR_NO_IGD_FOUND,
-
-    /* UPnP IGD found, but not connected */
-    NAT_TRAVERSAL_ERR_IGD_NO_CONN,
-
-    /* UPnP device found, but not IGD */
-    NAT_TRAVERSAL_ERR_NOT_IGD,
-
-    /* NAT-PMP initialization failed */
-    NAT_TRAVERSAL_ERR_INIT_FAIL,
-
-    /* NAT-PMP send request failed */
-    NAT_TRAVERSAL_ERR_SEND_REQ_FAIL,
-
-} NAT_TRAVERSAL_STATUS;
-
-/**
- * Struct to report nat traversal success/fail.
- */
-typedef struct nat_traversal_status_t {
-
-    NAT_TRAVERSAL_STATUS upnp_ipv4;
-
-    NAT_TRAVERSAL_STATUS upnp_ipv6;
-
-    NAT_TRAVERSAL_STATUS natpmp;
-
-} nat_traversal_status_t;
 
 
 /* Renew mapped ports (called in "do_messenger()") */
 void do_nat_map_ports(Messenger *m);
-
-/* Return error string from status */
-const char *str_nat_traversal_error(NAT_TRAVERSAL_STATUS status);
 
 #endif

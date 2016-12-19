@@ -180,6 +180,7 @@ pkg_use_module(SNDFILE              sndfile       )
 #pkg_use_module(MINIUPNP             miniupnpc     )
 # TODO(Ansa89): force-disable UPnP support because
 #               it slow down tox_iterate() too much
+#               https://github.com/miniupnp/miniupnp/issues/223
 set(MINIUPNP_FOUND FALSE)
 
 # For NAT-PMP

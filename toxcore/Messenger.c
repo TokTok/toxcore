@@ -2000,13 +2000,6 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
     set_nospam(&(m->fr), random_int());
     set_filter_function(&(m->fr), &friend_already_added, m);
 
-    pthread_mutexattr_t lock_attr;
-    pthread_mutexattr_init(&lock_attr);
-    pthread_mutexattr_settype(&lock_attr, PTHREAD_MUTEX_ERRORCHECK);
-    pthread_mutex_init(&m->nat_traversal.upnp_lock, &lock_attr);
-    pthread_mutex_init(&m->nat_traversal.natpmp_lock, &lock_attr);
-    pthread_mutexattr_destroy(&lock_attr);
-
     m->nat_traversal.upnp_udp_ip4_retries = NAT_TRAVERSAL_MAX_RETRIES;
     m->nat_traversal.upnp_udp_ip4_timeout = unix_time();
     m->nat_traversal.upnp_udp_ip6_retries = NAT_TRAVERSAL_MAX_RETRIES;

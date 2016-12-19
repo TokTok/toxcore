@@ -42,6 +42,7 @@ WANT_NACL="no"
 ADD_NACL_OBJECTS_TO_PKGCONFIG="yes"
 # TODO(Ansa89): force-disable UPnp support because
 #               it slow down tox_iterate() too much
+#               https://github.com/miniupnp/miniupnp/issues/223
 #MINIUPNP="auto"
 MINIUPNP="no"
 NATPMP="auto"
@@ -75,6 +76,7 @@ AC_ARG_ENABLE([nacl],
 
 # TODO(Ansa89): force-disable UPnp support because
 #               it slow down tox_iterate() too much
+#               https://github.com/miniupnp/miniupnp/issues/223
 #AC_ARG_ENABLE([miniupnp],
 #    [AC_HELP_STRING([--disable-miniupnp], [upnp port forwarding (default: enabled)]) ],
 #    [
