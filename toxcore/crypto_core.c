@@ -29,6 +29,10 @@
 
 #include "crypto_core.h"
 
+#include "network.h"
+
+#include <string.h>
+
 #ifndef VANILLA_NACL
 /* We use libsodium by default. */
 #include <sodium.h>
@@ -111,7 +115,7 @@ uint64_t random_64b(void)
  * return 0 if it isn't.
  * return 1 if it is.
  */
-int public_key_valid(const uint8_t *public_key)
+bool public_key_valid(const uint8_t *public_key)
 {
     if (public_key[31] >= 128) { /* Last bit of key is always zero. */
         return 0;
@@ -130,7 +134,7 @@ int encrypt_precompute(const uint8_t *public_key, const uint8_t *secret_key, uin
     return crypto_box_beforenm(enc_key, public_key, secret_key);
 }
 
-int encrypt_data_symmetric(const uint8_t *secret_key, const uint8_t *nonce, const uint8_t *plain, uint32_t length,
+int encrypt_data_symmetric(const uint8_t *secret_key, const uint8_t *nonce, const uint8_t *plain, size_t length,
                            uint8_t *encrypted)
 {
     if (length == 0 || !secret_key || !nonce || !plain || !encrypted) {
@@ -152,7 +156,7 @@ int encrypt_data_symmetric(const uint8_t *secret_key, const uint8_t *nonce, cons
     return length + crypto_box_MACBYTES;
 }
 
-int decrypt_data_symmetric(const uint8_t *secret_key, const uint8_t *nonce, const uint8_t *encrypted, uint32_t length,
+int decrypt_data_symmetric(const uint8_t *secret_key, const uint8_t *nonce, const uint8_t *encrypted, size_t length,
                            uint8_t *plain)
 {
     if (length <= crypto_box_BOXZEROBYTES || !secret_key || !nonce || !encrypted || !plain) {
@@ -174,7 +178,7 @@ int decrypt_data_symmetric(const uint8_t *secret_key, const uint8_t *nonce, cons
 }
 
 int encrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const uint8_t *nonce,
-                 const uint8_t *plain, uint32_t length, uint8_t *encrypted)
+                 const uint8_t *plain, size_t length, uint8_t *encrypted)
 {
     if (!public_key || !secret_key) {
         return -1;
@@ -188,7 +192,7 @@ int encrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const uin
 }
 
 int decrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const uint8_t *nonce,
-                 const uint8_t *encrypted, uint32_t length, uint8_t *plain)
+                 const uint8_t *encrypted, size_t length, uint8_t *plain)
 {
     if (!public_key || !secret_key) {
         return -1;
@@ -263,7 +267,7 @@ int32_t crypto_new_keypair(uint8_t *public_key, uint8_t *secret_key)
     return crypto_box_keypair(public_key, secret_key);
 }
 
-void crypto_derive_public_key(uint8_t *public_key, uint8_t *secret_key)
+void crypto_derive_public_key(uint8_t *public_key, const uint8_t *secret_key)
 {
     crypto_scalarmult_curve25519_base(public_key, secret_key);
 }
