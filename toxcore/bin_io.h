@@ -56,14 +56,11 @@ typedef struct Bin_W Bin_W;
 #endif /* BIN_W_DEFINED */
 
 /**
- * Create a new binary writer with a given initial capacity.
+ * Create a new empty binary writer.
  *
- * The buffer will be resized automatically when writing beyond the initial
- * capacity.
- *
- * @param initial The initial capacity of the writer.
+ * bin_w_size() will return 0 on the returned writer.
  */
-struct Bin_W *bin_w_new(size_t initial, BIN_ERR_NEW *error);
+struct Bin_W *bin_w_new(BIN_ERR_NEW *error);
 
 /**
  * Deallocate the binary writer and its buffer. If you hold a pointer to the
@@ -73,8 +70,12 @@ struct Bin_W *bin_w_new(size_t initial, BIN_ERR_NEW *error);
 void bin_w_free(struct Bin_W *w);
 
 /**
- * Get a pointer to the internal buffer. When the writer is deleted, this
- * pointer becomes invalid.
+ * Get a pointer to the internal buffer.
+ *
+ * This pointer is invalidated in the following situations:
+ * - The writer is deleted.
+ * - The internal buffer is reallocated. This can happen during any write
+ *   operation, so you must assume the pointer is invalid after write.
  */
 uint8_t *bin_w_get(const struct Bin_W *w);
 
@@ -122,36 +123,22 @@ void bin_w_u64(struct Bin_W *w, uint64_t v, BIN_ERR_WRITE *error);
  */
 void bin_w_arr(struct Bin_W *w, uint8_t *data, size_t length, BIN_ERR_WRITE *error);
 
-typedef enum BIN_ERR_READ {
-
-    /**
-     * The function returned successfully.
-     */
-    BIN_ERR_READ_OK,
-
-    /**
-     * Insufficient bytes remaining in the reader.
-     */
-    BIN_ERR_READ_EOF,
-
-} BIN_ERR_READ;
-
-
 /**
  * The abstract data type of a binary reader. Must be allocated using bin_r_new
  * and freed using bin_r_free.
  *
  * The reader is the data retrieval counterpart of the writer specified above.
- * It reads integers in network byte order as written by the writer.
+ * Integers read by the reader are written to the argument in host byte order.
  *
  * Each retrieval function advances the reader by the number of bytes read.
  * There is no way to reset the reader. If you need to read the same data
  * again, create a new reader.
  *
- * The return value for each of the reader functions is unspecified in case
- * of error. Once the reader is in error state, it will remain in the error
- * state and all subsequent reads will result in an error. It is safe to
- * perform a sequence of reads and only check the last read for an error.
+ * Each reader function returns a boolean value signalling success. The
+ * contents of the passed values are unspecified in case of error. Once the
+ * reader is in error state, it will remain in the error state and all
+ * subsequent reads will result in an error. It is safe to perform a sequence
+ * of reads and only check the last read for an error.
  */
 #ifndef BIN_R_DEFINED
 #define BIN_R_DEFINED
@@ -167,14 +154,6 @@ typedef struct Bin_R Bin_R;
 struct Bin_R *bin_r_new(uint8_t *data, size_t length, BIN_ERR_NEW *error);
 
 /**
- * Create a new reader from the current one at the current offset.
- *
- * This reader will also not own the data passed, so the data must outlive
- * every child reader created from the initial one.
- */
-struct Bin_R *bin_r_clone(struct Bin_R *r, BIN_ERR_NEW *error);
-
-/**
  * Deallocate the reader object. The data pointer is not deallocated.
  */
 void bin_r_free(struct Bin_R *r);
@@ -182,32 +161,31 @@ void bin_r_free(struct Bin_R *r);
 /**
  * Read an 8 bit unsigned integer and advance the reader by 1 byte.
  */
-uint8_t bin_r_u08(struct Bin_R *r, BIN_ERR_READ *error);
+bool bin_r_u08(struct Bin_R *r, uint8_t *v);
 
 /**
  * Read a 16 bit unsigned integer in big endian and advance the reader by
  * 2 bytes.
  */
-uint16_t bin_r_u16(struct Bin_R *r, BIN_ERR_READ *error);
+bool bin_r_u16(struct Bin_R *r, uint16_t *v);
 
 /**
  * Read a 32 bit unsigned integer in big endian and advance the reader by
  * 4 bytes.
  */
-uint32_t bin_r_u32(struct Bin_R *r, BIN_ERR_READ *error);
+bool bin_r_u32(struct Bin_R *r, uint32_t *v);
 
 /**
  * Read a 64 bit unsigned integer in big endian and advance the reader by
  * 8 bytes.
  */
-uint64_t bin_r_u64(struct Bin_R *r, BIN_ERR_READ *error);
+bool bin_r_u64(struct Bin_R *r, uint64_t *v);
 
 /**
  * Read a byte array of the given length and write it to the passed data
  * buffer. In case of error, the values of the bytes pointed to by the data
  * pointer are unspecified.
  */
-void bin_r_arr(struct Bin_R *r, uint8_t *data, size_t length, BIN_ERR_READ *error);
+bool bin_r_arr(struct Bin_R *r, uint8_t *data, size_t length);
 
 #endif /* BIN_IO_H */
-
