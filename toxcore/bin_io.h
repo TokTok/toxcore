@@ -1,6 +1,7 @@
 #ifndef BIN_IO_H
 #define BIN_IO_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -20,21 +21,6 @@ typedef enum BIN_ERR_NEW {
 } BIN_ERR_NEW;
 
 
-typedef enum BIN_ERR_WRITE {
-
-    /**
-     * The function returned successfully.
-     */
-    BIN_ERR_WRITE_OK,
-
-    /**
-     * Out of memory.
-     */
-    BIN_ERR_WRITE_MALLOC,
-
-} BIN_ERR_WRITE;
-
-
 /**
  * The abstract data type of a binary writer. Must be allocated using bin_w_new
  * and freed using bin_w_free.
@@ -44,11 +30,17 @@ typedef enum BIN_ERR_WRITE {
  * array. Using a sequence of function calls, we can implement serialisers for
  * more complex data structures.
  *
- * Integers are written in network byte order (Big Endian), i.e. with the most
- * significant byte first.
+ * Integers are passed in host byte order. The writer performs byte order
+ * conversion and writes the bytes in network order (Big Endian), i.e. with
+ * the most significant byte first.
  *
  * The writer currently intentionally does not support a reset functionality,
  * making it write-once.
+ *
+ * Each writer function returns a boolean signalling its success. If it fails,
+ * it returns false and puts the writer in the error state. Subsequent writes
+ * will have no effect and always return false. Currently, the only reason a
+ * writer function may fail is memory allocation failure.
  */
 #ifndef BIN_W_DEFINED
 #define BIN_W_DEFINED
@@ -101,27 +93,27 @@ size_t bin_w_copy(const struct Bin_W *w, size_t offset, uint8_t *data, size_t le
 /**
  * Write an 8 bit unsigned integer to the writer.
  */
-void bin_w_u08(struct Bin_W *w, uint8_t v, BIN_ERR_WRITE *error);
+bool bin_w_u08(struct Bin_W *w, uint8_t v);
 
 /**
  * Write a 16 bit unsigned integer to the writer as 2 bytes in big endian.
  */
-void bin_w_u16(struct Bin_W *w, uint16_t v, BIN_ERR_WRITE *error);
+bool bin_w_u16(struct Bin_W *w, uint16_t v);
 
 /**
  * Write a 32 bit unsigned integer to the writer as 4 bytes in big endian.
  */
-void bin_w_u32(struct Bin_W *w, uint32_t v, BIN_ERR_WRITE *error);
+bool bin_w_u32(struct Bin_W *w, uint32_t v);
 
 /**
  * Write a 64 bit unsigned integer to the writer as 8 bytes in big endian.
  */
-void bin_w_u64(struct Bin_W *w, uint64_t v, BIN_ERR_WRITE *error);
+bool bin_w_u64(struct Bin_W *w, uint64_t v);
 
 /**
  * Write a byte array to the writer.
  */
-void bin_w_arr(struct Bin_W *w, uint8_t *data, size_t length, BIN_ERR_WRITE *error);
+bool bin_w_arr(struct Bin_W *w, uint8_t *data, size_t length);
 
 /**
  * The abstract data type of a binary reader. Must be allocated using bin_r_new
