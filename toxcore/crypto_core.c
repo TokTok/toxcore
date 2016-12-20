@@ -173,7 +173,7 @@ int32_t encrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const
     uint8_t k[crypto_box_BEFORENMBYTES];
     encrypt_precompute(public_key, secret_key, k);
     int ret = encrypt_data_symmetric(k, nonce, plain, length, encrypted);
-    sodium_memzero(k, sizeof k);
+    crypto_memzero(k, sizeof k);
     return ret;
 }
 
@@ -187,7 +187,7 @@ int32_t decrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const
     uint8_t k[crypto_box_BEFORENMBYTES];
     encrypt_precompute(public_key, secret_key, k);
     int ret = decrypt_data_symmetric(k, nonce, encrypted, length, plain);
-    sodium_memzero(k, sizeof k);
+    crypto_memzero(k, sizeof k);
     return ret;
 }
 
