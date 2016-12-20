@@ -37,6 +37,7 @@
 /* We use libsodium by default. */
 #include <sodium.h>
 #else
+#include "sodium_utils.h"
 #include <crypto_box.h>
 #include <crypto_hash_sha256.h>
 #include <crypto_hash_sha512.h>
@@ -266,27 +267,6 @@ void crypto_sha256(uint8_t *hash, const uint8_t *data, size_t length)
 void crypto_sha512(uint8_t *hash, const uint8_t *data, size_t length)
 {
     crypto_hash_sha512(hash, data, length);
-}
-
-void crypto_memzero(void *data, size_t length)
-{
-#ifdef VANILLA_NACL
-    /* TODO(c-toxcore#347): this is insecure. We need to provide our own
-     * secure memzero/memcmp for NaCL. */
-    memset(data, 0, length);
-#else
-    sodium_memzero(data, length);
-#endif
-}
-
-int32_t crypto_memcmp(const void *p1, const void *p2, size_t length)
-{
-#ifdef VANILLA_NACL
-    /* TODO(c-toxcore#347): Implement secure memcmp. */
-    return memcmp(p1, p2, length);
-#else
-    return sodium_memcmp(p1, p2, length);
-#endif
 }
 
 void random_bytes(uint8_t *data, size_t length)
