@@ -2,6 +2,7 @@
 #ifndef BIN_IO_H
 #define BIN_IO_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -18,13 +19,6 @@ error for new {
   MALLOC,
 }
 
-error for write {
-  /**
-   * Out of memory.
-   */
-  MALLOC,
-}
-
 class w
 {
   /**
@@ -36,11 +30,17 @@ class w
    * array. Using a sequence of function calls, we can implement serialisers for
    * more complex data structures.
    *
-   * Integers are written in network byte order (Big Endian), i.e. with the most
-   * significant byte first.
+   * Integers are passed in host byte order. The writer performs byte order
+   * conversion and writes the bytes in network order (Big Endian), i.e. with
+   * the most significant byte first.
    *
    * The writer currently intentionally does not support a reset functionality,
    * making it write-once.
+   *
+   * Each writer function returns a boolean signalling its success. If it fails,
+   * it returns false and puts the writer in the error state. Subsequent writes
+   * will have no effect and always return false. Currently, the only reason a
+   * writer function may fail is memory allocation failure.
    */
   struct this;
 
@@ -91,23 +91,23 @@ class w
   /**
    * Write an 8 bit unsigned integer to the writer.
    */
-  void u08(uint8_t  v) with error for write;
+  bool u08(uint8_t  v);
   /**
    * Write a 16 bit unsigned integer to the writer as 2 bytes in big endian.
    */
-  void u16(uint16_t v) with error for write;
+  bool u16(uint16_t v);
   /**
    * Write a 32 bit unsigned integer to the writer as 4 bytes in big endian.
    */
-  void u32(uint32_t v) with error for write;
+  bool u32(uint32_t v);
   /**
    * Write a 64 bit unsigned integer to the writer as 8 bytes in big endian.
    */
-  void u64(uint64_t v) with error for write;
+  bool u64(uint64_t v);
   /**
    * Write a byte array to the writer.
    */
-  void arr(uint8_t[length] data) with error for write;
+  bool arr(uint8_t[length] data);
 }
 
 class r
