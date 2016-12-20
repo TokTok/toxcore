@@ -1954,7 +1954,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
     m->onion = new_onion(m->dht);
     m->onion_a = new_onion_announce(m->dht);
     m->onion_c =  new_onion_client(m->net_crypto);
-    m->fr_c = new_friend_connections(m->onion_c);
+    m->fr_c = new_friend_connections(m->onion_c, options->local_discovery_enabled);
 
     if (!(m->onion && m->onion_a && m->onion_c)) {
         kill_friend_connections(m->fr_c);
@@ -2728,11 +2728,10 @@ static uint32_t friends_list_save(const Messenger *m, uint8_t *data)
             memcpy(temp.real_pk, m->friendlist[i].real_pk, crypto_box_PUBLICKEYBYTES);
 
             if (temp.status < 3) {
-                if (m->friendlist[i].info_size > SAVED_FRIEND_REQUEST_SIZE) {
-                    memcpy(temp.info, m->friendlist[i].info, SAVED_FRIEND_REQUEST_SIZE);
-                } else {
-                    memcpy(temp.info, m->friendlist[i].info, m->friendlist[i].info_size);
-                }
+                const size_t friendrequest_length =
+                    MIN(m->friendlist[i].info_size,
+                        MIN(SAVED_FRIEND_REQUEST_SIZE, MAX_FRIEND_REQUEST_DATA_SIZE));
+                memcpy(temp.info, m->friendlist[i].info, friendrequest_length);
 
                 temp.info_size = htons(m->friendlist[i].info_size);
                 temp.friendrequest_nospam = m->friendlist[i].friendrequest_nospam;

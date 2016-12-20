@@ -172,7 +172,7 @@ uint32_t tox_version_major(void);
  * breaking the API or ABI. Set to 0 when the major version number is
  * incremented.
  */
-#define TOX_VERSION_MINOR              0
+#define TOX_VERSION_MINOR              1
 
 uint32_t tox_version_minor(void);
 
@@ -180,7 +180,7 @@ uint32_t tox_version_minor(void);
  * The patch or revision number. Incremented when bugfixes are applied without
  * changing any functionality or API or ABI.
  */
-#define TOX_VERSION_PATCH              5
+#define TOX_VERSION_PATCH              1
 
 uint32_t tox_version_patch(void);
 
@@ -204,13 +204,6 @@ uint32_t tox_version_patch(void);
       TOX_VERSION_PATCH == PATCH                                        \
     )                                                                   \
   )
-
-/**
- * A macro to make compilation fail if the client code is not compatible with
- * the installed version of Tox.
- */
-#define TOX_VERSION_REQUIRE(MAJOR, MINOR, PATCH)                \
-  typedef char tox_required_version[TOX_IS_COMPATIBLE(MAJOR, MINOR, PATCH) ? 1 : -1]
 
 /**
  * Return whether the compiled library version is compatible with the passed
@@ -484,19 +477,17 @@ typedef void tox_log_cb(Tox *tox, TOX_LOG_LEVEL level, const char *file, uint32_
 
 
 /**
- * This struct contains all the startup options for Tox. You can either
- * allocate this object yourself, and pass it to tox_options_default, or call tox_options_new to get
- * a new default options object.
+ * This struct contains all the startup options for Tox. You must tox_options_new to
+ * allocate an object of this type.
  *
- * If you allocate it yourself, be aware that your binary will rely on the
- * memory layout of this struct. In particular, if additional fields are added
- * in future versions of the API, code that allocates it itself will become
- * incompatible.
+ * WARNING: Although this struct happens to be visible in the API, it is
+ * effectively private. Do not allocate this yourself or access members
+ * directly, as it *will* break binary compatibility frequently.
  *
  * @deprecated The memory layout of this struct (size, alignment, and field
  * order) is not part of the ABI. To remain compatible, prefer to use tox_options_new to
  * allocate the object and accessor functions to set the members. The struct
- * will become opaque (i.e. the definition will become private) in v0.1.0.
+ * will become opaque (i.e. the definition will become private) in v0.2.0.
  */
 struct Tox_Options {
 
@@ -519,6 +510,14 @@ struct Tox_Options {
      * Disabling UDP support is necessary when using anonymous proxies or Tor.
      */
     bool udp_enabled;
+
+
+    /**
+     * Enable local network peer discovery.
+     *
+     * Disabling this will cause Tox to not look for peers on the local network.
+     */
+    bool local_discovery_enabled;
 
 
     /**
@@ -634,6 +633,10 @@ void tox_options_set_ipv6_enabled(struct Tox_Options *options, bool ipv6_enabled
 bool tox_options_get_udp_enabled(const struct Tox_Options *options);
 
 void tox_options_set_udp_enabled(struct Tox_Options *options, bool udp_enabled);
+
+bool tox_options_get_local_discovery_enabled(const struct Tox_Options *options);
+
+void tox_options_set_local_discovery_enabled(struct Tox_Options *options, bool local_discovery_enabled);
 
 TOX_PROXY_TYPE tox_options_get_proxy_type(const struct Tox_Options *options);
 
