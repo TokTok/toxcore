@@ -1,6 +1,14 @@
 #include "helpers.h"
 
-#ifdef _BSD_SOURCE
+// See man 2 sbrk.
+#if _BSD_SOURCE || _SVID_SOURCE || \
+  (_XOPEN_SOURCE >= 500 || \
+   _XOPEN_SOURCE && _XOPEN_SOURCE_EXTENDED) && \
+  !(_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600)
+#define HAVE_SBRK 1
+#endif
+
+#if HAVE_SBRK
 #include <assert.h>
 #include <unistd.h>
 #endif
@@ -20,9 +28,9 @@ int main(void)
         tox_kill(tox);
     }
 
-#if _BSD_SOURCE
+#if HAVE_SBRK
     // Low water mark.
-    char *hwm = NULL;
+    char *hwm = (char *)sbrk(0);
 #endif
     printf("Creating/deleting %d tox instances\n", ITERATIONS);
 
@@ -32,13 +40,7 @@ int main(void)
         tox_kill(tox);
 #if _BSD_SOURCE
         char *next_hwm = (char *)sbrk(0);
-
-        if (!hwm) {
-            hwm = next_hwm;
-        } else {
-            assert(hwm == next_hwm);
-        }
-
+        assert(hwm == next_hwm);
 #endif
     }
 
