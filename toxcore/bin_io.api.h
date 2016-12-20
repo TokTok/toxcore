@@ -45,14 +45,11 @@ class w
   struct this;
 
   /**
-   * Create a new binary writer with a given initial capacity.
+   * Create a new empty binary writer.
    *
-   * The buffer will be resized automatically when writing beyond the initial
-   * capacity.
-   *
-   * @param initial The initial capacity of the writer.
+   * $size() will return 0 on the returned writer.
    */
-  static this new(size_t initial)
+  static this new()
       with error for new;
 
   /**
@@ -63,8 +60,12 @@ class w
   void free();
 
   /**
-   * Get a pointer to the internal buffer. When the writer is deleted, this
-   * pointer becomes invalid.
+   * Get a pointer to the internal buffer.
+   *
+   * This pointer is invalidated in the following situations:
+   * - The writer is deleted.
+   * - The internal buffer is reallocated. This can happen during any write
+   *   operation, so you must assume the pointer is invalid after write.
    */
   const uint8_t *get();
 
@@ -109,13 +110,6 @@ class w
   void arr(uint8_t[length] data) with error for write;
 }
 
-error for read {
-  /**
-   * Insufficient bytes remaining in the reader.
-   */
-  EOF,
-}
-
 class r
 {
   /**
@@ -123,16 +117,17 @@ class r
    * and freed using $free.
    *
    * The reader is the data retrieval counterpart of the writer specified above.
-   * It reads integers in network byte order as written by the writer.
+   * Integers read by the reader are written to the argument in host byte order.
    *
    * Each retrieval function advances the reader by the number of bytes read.
    * There is no way to reset the reader. If you need to read the same data
    * again, create a new reader.
    *
-   * The return value for each of the reader functions is unspecified in case
-   * of error. Once the reader is in error state, it will remain in the error
-   * state and all subsequent reads will result in an error. It is safe to
-   * perform a sequence of reads and only check the last read for an error.
+   * Each reader function returns a boolean value signalling success. The
+   * contents of the passed values are unspecified in case of error. Once the
+   * reader is in error state, it will remain in the error state and all
+   * subsequent reads will result in an error. It is safe to perform a sequence
+   * of reads and only check the last read for an error.
    */
   struct this;
 
@@ -146,15 +141,6 @@ class r
       with error for new;
 
   /**
-   * Create a new reader from the current one at the current offset.
-   *
-   * This reader will also not own the data passed, so the data must outlive
-   * every child reader created from the initial one.
-   */
-  this clone()
-      with error for new;
-
-  /**
    * Deallocate the reader object. The data pointer is not deallocated.
    */
   void free();
@@ -162,28 +148,28 @@ class r
   /**
    * Read an 8 bit unsigned integer and advance the reader by 1 byte.
    */
-  uint8_t  u08() with error for read;
+  bool u08(uint8_t *v);
   /**
    * Read a 16 bit unsigned integer in big endian and advance the reader by
    * 2 bytes.
    */
-  uint16_t u16() with error for read;
+  bool u16(uint16_t *v);
   /**
    * Read a 32 bit unsigned integer in big endian and advance the reader by
    * 4 bytes.
    */
-  uint32_t u32() with error for read;
+  bool u32(uint32_t *v);
   /**
    * Read a 64 bit unsigned integer in big endian and advance the reader by
    * 8 bytes.
    */
-  uint64_t u64() with error for read;
+  bool u64(uint64_t *v);
   /**
    * Read a byte array of the given length and write it to the passed data
    * buffer. In case of error, the values of the bytes pointed to by the data
    * pointer are unspecified.
    */
-  void     arr(uint8_t[length] data) with error for read;
+  bool arr(uint8_t[length] data);
 }
 
 }

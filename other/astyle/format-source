@@ -35,6 +35,7 @@ apidsl_curl() {
 }
 
 # Check if apidsl generated sources are up to date.
+$APIDSL toxcore/bin_io.api.h > toxcore/bin_io.h
 $APIDSL toxcore/crypto_core.api.h > toxcore/crypto_core.h
 $APIDSL toxcore/tox.api.h > toxcore/tox.h
 $APIDSL toxav/toxav.api.h > toxav/toxav.h
