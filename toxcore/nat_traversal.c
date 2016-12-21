@@ -30,12 +30,13 @@
 #include "util.h"
 
 #ifdef HAVE_LIBMINIUPNPC
-#include <miniupnpc/miniupnpc.h>
+#include <miniupnpc/miniupnpc-async.h>
+/*#include <miniupnpc/miniupnpc.h>
 #include <miniupnpc/miniwget.h>
 #include <miniupnpc/upnpcommands.h>
 #include <miniupnpc/upnperrors.h>
 #include <stdio.h>
-#include "../toxupnp/toxupnp.h"
+#include "../toxupnp/toxupnp.h"*/
 #endif
 
 #ifdef HAVE_LIBNATPMP
@@ -166,7 +167,7 @@ static const char *str_nat_traversal_error(NAT_TRAVERSAL_STATUS status)
 #ifdef HAVE_LIBMINIUPNPC
 /* Setup port forwarding using UPnP */
 static bool upnp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port, uint32_t lifetime, bool ipv6_enabled,
-                          UPNPDiscoverOpts *opts, NAT_TRAVERSAL_STATUS *status)
+                          upnpc_t *upnp, NAT_TRAVERSAL_STATUS *status)
 {
     LOGGER_INFO(log, "Attempting to set up UPnP port forwarding");
 
@@ -184,7 +185,8 @@ static bool upnp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port,
             LOGGER_WARNING(log, "UPnP: %s (%s)", str_nat_traversal_error(*status), strupnperror(error));
             return false;
         }*/
-    error = upnpDiscoverAsyncGetStatus(opts);
+
+    /*error = upnpDiscoverAsyncGetStatus(opts);
 
     if (error == UPNPDISCOVER_RUNNING) {
         *status = NAT_TRAVERSAL_TRYAGAIN;
@@ -197,17 +199,68 @@ static bool upnp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port,
         upnpDiscoverAsyncSetIPv6(opts, ipv6_enabled);
         upnpDiscoverAsync(opts);
         return false;
+    }*/
+
+    if (upnp->state == EFinalized) {
+        error = upnpc_init(upnp, NULL);
+
+        if (error < 0) {
+            *status = NAT_TRAVERSAL_ERR_INIT_FAIL;
+            LOGGER_WARNING(log, "UPnP: %s (%d)", str_nat_traversal_error(*status), error);
+
+            return false;
+        }
+    } else if ((upnp->status != EReady) && (upnp->status != EError)) {
+        *status = NAT_TRAVERSAL_TRYAGAIN;
+        LOGGER_WARNING(log, "UPnP: %s", str_nat_traversal_error(*status));
+
+        return false;
     }
 
-    struct UPNPUrls urls;
+    if (upnp->state == EReady) {
+        if (upnp->http_response_code == 200) {
+            *status = NAT_TRAVERSAL_OK;
+            LOGGER_INFO(log, "UPnP: %s (port %d)", str_nat_traversal_error(*status), port);
+
+            upnpc_finalize(upnp);
+
+            return true;
+        } else {
+            *status = NAT_TRAVERSAL_ERR_MAPPING_FAIL;
+            LOGGER_WARNING(log, "UPnP: %s (%s)", str_nat_traversal_error(*status),
+                           GetValueFromNameValueList(&upnp->soap_response_data, "errorDescription"));
+        }
+    } else {
+        *status = NAT_TRAVERSAL_ERR_MAPPING_FAIL;
+        LOGGER_WARNING(log, "UPnP: %s", str_nat_traversal_error(*status));
+    }
+
+    switch (proto) {
+        case NAT_TRAVERSAL_UDP:
+            upnpc_add_port_mapping(upnp, NULL, port, port, "", "UDP", "Tox", lifetime);
+            break;
+
+        case NAT_TRAVERSAL_TCP:
+            upnpc_add_port_mapping(upnp, NULL, port, port, "", "TCP", "Tox", lifetime);
+            break;
+
+        default:
+            *status = NAT_TRAVERSAL_ERR_UNKNOWN_PROTO;
+            LOGGER_WARNING(log, "UPnP: %s", str_nat_traversal_error(*status));
+            break;
+    }
+
+    return false;
+
+    /*struct UPNPUrls urls;
 
     struct IGDdatas data;
 
     char lanaddr[64];
 
-    /*error = UPNP_GetValidIGD(devlist, &urls, &data, lanaddr, sizeof(lanaddr));
+    //error = UPNP_GetValidIGD(devlist, &urls, &data, lanaddr, sizeof(lanaddr));
 
-    freeUPNPDevlist(devlist);*/
+    //freeUPNPDevlist(devlist);
     error = UPNP_GetValidIGDAsync(opts, &urls, &data, lanaddr, sizeof(lanaddr));
 
     upnpDiscoverAsyncFreeDevlist(opts);
@@ -272,7 +325,7 @@ static bool upnp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port,
 
     FreeUPNPUrls(&urls);
 
-    return ret;
+    return ret;*/
 }
 
 
