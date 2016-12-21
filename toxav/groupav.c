@@ -261,7 +261,7 @@ static void group_av_peer_new(void *object, int groupnumber, int friendgroupnumb
     group_peer_set_object(group_av->g_c, groupnumber, friendgroupnumber, peer_av);
 }
 
-static void group_av_peer_delete(void *object, int groupnumber, int friendgroupnumber, void *peer_object)
+static void group_av_peer_delete(void *object, int groupnumber, void *peer_object)
 {
     Group_Peer_AV *peer_av = (Group_Peer_AV *)peer_object;
 
@@ -462,7 +462,7 @@ int add_av_groupchat(Logger *log, Group_Chats *g_c, void (*audio_callback)(Messe
                      unsigned int,
                      uint8_t, unsigned int, void *), void *userdata)
 {
-    int groupnumber = add_groupchat(g_c, GROUPCHAT_TYPE_AV);
+    int groupnumber = add_groupchat(g_c, GROUPCHAT_TYPE_AV, NULL);
 
     if (groupnumber == -1) {
         return -1;
@@ -479,7 +479,7 @@ int add_av_groupchat(Logger *log, Group_Chats *g_c, void (*audio_callback)(Messe
 /* Join a AV group (you need to have been invited first.)
  *
  * returns group number on success
- * returns -1 on failure.
+ * returns -1 .. -6 on failure (see join_groupchat)
  */
 int join_av_groupchat(Logger *log, Group_Chats *g_c, int32_t friendnumber, const uint8_t *data, uint16_t length,
                       void (*audio_callback)(Messenger *, int, int, const int16_t *, unsigned int, uint8_t, unsigned int, void *),
@@ -487,13 +487,13 @@ int join_av_groupchat(Logger *log, Group_Chats *g_c, int32_t friendnumber, const
 {
     int groupnumber = join_groupchat(g_c, friendnumber, GROUPCHAT_TYPE_AV, data, length);
 
-    if (groupnumber == -1) {
-        return -1;
+    if (groupnumber < 0) {
+        return groupnumber;
     }
 
     if (groupchat_enable_av(log, g_c, groupnumber, audio_callback, userdata) == -1) {
         del_groupchat(g_c, groupnumber);
-        return -1;
+        return -5; /* initialization failed */
     }
 
     return groupnumber;
@@ -510,15 +510,26 @@ static int send_audio_packet(Group_Chats *g_c, int groupnumber, uint8_t *packet,
         return -1;
     }
 
+    size_t plen = 1 + sizeof(uint16_t) + length;
+
+    if (plen > MAX_CRYPTO_DATA_SIZE) {
+        return -1;
+    }
+
     Group_AV *group_av = (Group_AV *)group_get_object(g_c, groupnumber);
-    uint8_t data[1 + sizeof(uint16_t) + length];
+
+    if (!group_av) {
+        return -1;
+    }
+
+    uint8_t data[MAX_CRYPTO_DATA_SIZE];
     data[0] = GROUP_AUDIO_PACKET_ID;
 
     uint16_t sequnum = htons(group_av->audio_sequnum);
     memcpy(data + 1, &sequnum, sizeof(sequnum));
     memcpy(data + 1 + sizeof(sequnum), packet, length);
 
-    if (send_group_lossy_packet(g_c, groupnumber, data, sizeof(data)) == -1) {
+    if (send_group_lossy_packet(g_c, groupnumber, data, (uint16_t)plen) == -1) {
         return -1;
     }
 
