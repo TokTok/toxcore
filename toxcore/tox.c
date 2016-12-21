@@ -158,17 +158,17 @@ void tox_options_default(struct Tox_Options *options)
     }
 }
 
-struct Tox_Options *tox_options_new(TOX_ERR_OPTIONS_NEW *error)
+struct Tox_Options *tox_options_new(TOX_ERR_ALLOC *error)
 {
     struct Tox_Options *options = (struct Tox_Options *)calloc(sizeof(struct Tox_Options), 1);
 
     if (options) {
         tox_options_default(options);
-        SET_ERROR_PARAMETER(error, TOX_ERR_OPTIONS_NEW_OK);
+        SET_ERROR_PARAMETER(error, TOX_ERR_ALLOC_OK);
         return options;
     }
 
-    SET_ERROR_PARAMETER(error, TOX_ERR_OPTIONS_NEW_MALLOC);
+    SET_ERROR_PARAMETER(error, TOX_ERR_ALLOC_MALLOC);
     return NULL;
 }
 

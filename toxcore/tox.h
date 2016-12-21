@@ -367,6 +367,293 @@ typedef enum TOX_MESSAGE_TYPE {
 } TOX_MESSAGE_TYPE;
 
 
+typedef enum TOX_ERR_ALLOC {
+
+    /**
+     * The function returned successfully.
+     */
+    TOX_ERR_ALLOC_OK,
+
+    /**
+     * The function failed to allocate enough memory for the data structure.
+     */
+    TOX_ERR_ALLOC_MALLOC,
+
+} TOX_ERR_ALLOC;
+
+
+
+/*******************************************************************************
+ *
+ * :: Loading/saving of internal state
+ *
+ ******************************************************************************/
+
+
+
+/**
+ * Calculates the number of bytes required to store the tox instance with
+ * tox_get_savedata. This function cannot fail. The result is always greater than 0.
+ *
+ * @see threading for concurrency implications.
+ */
+size_t tox_get_savedata_size(const Tox *tox);
+
+/**
+ * Store all information associated with the tox instance to a byte array.
+ *
+ * @param savedata A memory region large enough to store the tox instance
+ *   data. Call tox_get_savedata_size to find the number of bytes required. If this parameter
+ *   is NULL, this function has no effect.
+ */
+void tox_get_savedata(const Tox *tox, uint8_t *savedata);
+
+/**
+ * Write an 8 bit unsigned integer.
+ */
+typedef void tox_saver_u08_cb(struct Tox_Saver *saver, uint8_t value, void *user_data);
+
+
+/**
+ * Write a 16 bit unsigned integer.
+ */
+typedef void tox_saver_u16_cb(struct Tox_Saver *saver, uint16_t value, void *user_data);
+
+
+/**
+ * Write a 32 bit unsigned integer.
+ */
+typedef void tox_saver_u32_cb(struct Tox_Saver *saver, uint32_t value, void *user_data);
+
+
+/**
+ * Write a 64 bit unsigned integer.
+ */
+typedef void tox_saver_u64_cb(struct Tox_Saver *saver, uint64_t value, void *user_data);
+
+
+/**
+ * Write an array of the given length. This call is followed by exactly
+ * `elements` calls to other functions. Arrays may be nested, so each
+ * element of the array may be another call to tox_saver_arr_cb with its own element
+ * count and subsequent calls.
+ */
+typedef void tox_saver_arr_cb(struct Tox_Saver *saver, size_t elements, void *user_data);
+
+
+/**
+ * Write a list of key/value pairs. A call to this function is followed by
+ * `elements * 2` calls to other functions. Every other call is either key
+ * or value. Keys can be assumed to be unique.
+ */
+typedef void tox_saver_map_cb(struct Tox_Saver *saver, size_t elements, void *user_data);
+
+
+/**
+ * Write a byte array of a given length.
+ */
+typedef void tox_saver_bin_cb(struct Tox_Saver *saver, const uint8_t *data, size_t length, void *user_data);
+
+
+/**
+ * This struct contains callbacks for the save function. You will probably
+ * want to implement all callbacks to produce a useful result.
+ */
+struct Tox_Saver {
+
+    tox_saver_u08_cb *u08;
+
+
+    tox_saver_u16_cb *u16;
+
+
+    tox_saver_u32_cb *u32;
+
+
+    tox_saver_u64_cb *u64;
+
+
+    tox_saver_arr_cb *arr;
+
+
+    tox_saver_map_cb *map;
+
+
+    tox_saver_bin_cb *bin;
+
+};
+
+
+tox_saver_u08_cb *tox_saver_get_u08(const struct Tox_Saver *saver);
+
+void tox_saver_set_u08(struct Tox_Saver *saver, tox_saver_u08_cb *u08);
+
+tox_saver_u16_cb *tox_saver_get_u16(const struct Tox_Saver *saver);
+
+void tox_saver_set_u16(struct Tox_Saver *saver, tox_saver_u16_cb *u16);
+
+tox_saver_u32_cb *tox_saver_get_u32(const struct Tox_Saver *saver);
+
+void tox_saver_set_u32(struct Tox_Saver *saver, tox_saver_u32_cb *u32);
+
+tox_saver_u64_cb *tox_saver_get_u64(const struct Tox_Saver *saver);
+
+void tox_saver_set_u64(struct Tox_Saver *saver, tox_saver_u64_cb *u64);
+
+tox_saver_arr_cb *tox_saver_get_arr(const struct Tox_Saver *saver);
+
+void tox_saver_set_arr(struct Tox_Saver *saver, tox_saver_arr_cb *arr);
+
+tox_saver_map_cb *tox_saver_get_map(const struct Tox_Saver *saver);
+
+void tox_saver_set_map(struct Tox_Saver *saver, tox_saver_map_cb *map);
+
+tox_saver_bin_cb *tox_saver_get_bin(const struct Tox_Saver *saver);
+
+void tox_saver_set_bin(struct Tox_Saver *saver, tox_saver_bin_cb *bin);
+
+/**
+ * Allocates a new Tox_Saver object and initialises it with the default
+ * handlers.
+ *
+ * Objects returned from this function must be freed using the tox_saver_free
+ * function.
+ *
+ * @return A new Tox_Saver object with default options or NULL on failure.
+ */
+struct Tox_Saver *tox_saver_new(TOX_ERR_ALLOC *error);
+
+/**
+ * Releases all resources associated with a saver objects.
+ *
+ * Passing a pointer that was not returned by tox_saver_new results in
+ * undefined behaviour.
+ */
+void tox_saver_free(struct Tox_Saver *saver);
+
+void tox_save(Tox *tox, const struct Tox_Saver *saver, void *user_data);
+
+/**
+ * Read an 8 bit unsigned integer.
+ */
+typedef uint8_t tox_loader_u08_cb(struct Tox_Loader *loader, void *user_data);
+
+
+/**
+ * Read a 16 bit unsigned integer.
+ */
+typedef uint16_t tox_loader_u16_cb(struct Tox_Loader *loader, void *user_data);
+
+
+/**
+ * Read a 32 bit unsigned integer.
+ */
+typedef uint32_t tox_loader_u32_cb(struct Tox_Loader *loader, void *user_data);
+
+
+/**
+ * Read a 64 bit unsigned integer.
+ */
+typedef uint64_t tox_loader_u64_cb(struct Tox_Loader *loader, void *user_data);
+
+
+/**
+ * Read the an array length. This call is followed by exactly the returned
+ * number calls to other functions.
+ */
+typedef size_t tox_loader_arr_cb(struct Tox_Loader *loader, void *user_data);
+
+
+/**
+ * Read the length of the list of key/value pairs. A call to this function
+ * is followed by twice the returned number of calls to other functions.
+ * Every other call is either key or value.
+ */
+typedef size_t tox_loader_map_cb(struct Tox_Loader *loader, void *user_data);
+
+
+/**
+ * Read a byte array of a given length.
+ */
+typedef void tox_loader_bin_cb(struct Tox_Loader *loader, uint8_t *data, size_t *length, void *user_data);
+
+
+/**
+ * This struct contains callbacks for the load function. You will probably
+ * want to implement all callbacks to produce a useful result.
+ */
+struct Tox_Loader {
+
+    tox_loader_u08_cb *u08;
+
+
+    tox_loader_u16_cb *u16;
+
+
+    tox_loader_u32_cb *u32;
+
+
+    tox_loader_u64_cb *u64;
+
+
+    tox_loader_arr_cb *arr;
+
+
+    tox_loader_map_cb *map;
+
+
+    tox_loader_bin_cb *bin;
+
+};
+
+
+tox_loader_u08_cb *tox_loader_get_u08(const struct Tox_Loader *loader);
+
+void tox_loader_set_u08(struct Tox_Loader *loader, tox_loader_u08_cb *u08);
+
+tox_loader_u16_cb *tox_loader_get_u16(const struct Tox_Loader *loader);
+
+void tox_loader_set_u16(struct Tox_Loader *loader, tox_loader_u16_cb *u16);
+
+tox_loader_u32_cb *tox_loader_get_u32(const struct Tox_Loader *loader);
+
+void tox_loader_set_u32(struct Tox_Loader *loader, tox_loader_u32_cb *u32);
+
+tox_loader_u64_cb *tox_loader_get_u64(const struct Tox_Loader *loader);
+
+void tox_loader_set_u64(struct Tox_Loader *loader, tox_loader_u64_cb *u64);
+
+tox_loader_arr_cb *tox_loader_get_arr(const struct Tox_Loader *loader);
+
+void tox_loader_set_arr(struct Tox_Loader *loader, tox_loader_arr_cb *arr);
+
+tox_loader_map_cb *tox_loader_get_map(const struct Tox_Loader *loader);
+
+void tox_loader_set_map(struct Tox_Loader *loader, tox_loader_map_cb *map);
+
+tox_loader_bin_cb *tox_loader_get_bin(const struct Tox_Loader *loader);
+
+void tox_loader_set_bin(struct Tox_Loader *loader, tox_loader_bin_cb *bin);
+
+/**
+ * Allocates a new Tox_Loader object and initialises it with the default
+ * handlers.
+ *
+ * Objects returned from this function must be freed using the tox_loader_free
+ * function.
+ *
+ * @return A new Tox_Loader object with default options or NULL on failure.
+ */
+struct Tox_Loader *tox_loader_new(TOX_ERR_ALLOC *error);
+
+/**
+ * Releases all resources associated with a loader objects.
+ *
+ * Passing a pointer that was not returned by tox_loader_new results in
+ * undefined behaviour.
+ */
+void tox_loader_free(struct Tox_Loader *loader);
+
 
 /*******************************************************************************
  *
@@ -623,6 +910,18 @@ struct Tox_Options {
      */
     void *log_user_data;
 
+
+    /**
+     * An implementation of the loader interface specified in Tox_Loader.
+     */
+    const struct Tox_Loader *load_callbacks;
+
+
+    /**
+     * User data pointer passed to each of the loader callbacks.
+     */
+    void *load_user_data;
+
 };
 
 
@@ -686,6 +985,14 @@ void *tox_options_get_log_user_data(const struct Tox_Options *options);
 
 void tox_options_set_log_user_data(struct Tox_Options *options, void *user_data);
 
+const struct Tox_Loader *tox_options_get_load_callbacks(const struct Tox_Options *options);
+
+void tox_options_set_load_callbacks(struct Tox_Options *options, const struct Tox_Loader *callbacks);
+
+void *tox_options_get_load_user_data(const struct Tox_Options *options);
+
+void tox_options_set_load_user_data(struct Tox_Options *options, void *user_data);
+
 /**
  * Initialises a Tox_Options object with the default options.
  *
@@ -699,21 +1006,6 @@ void tox_options_set_log_user_data(struct Tox_Options *options, void *user_data)
  */
 void tox_options_default(struct Tox_Options *options);
 
-typedef enum TOX_ERR_OPTIONS_NEW {
-
-    /**
-     * The function returned successfully.
-     */
-    TOX_ERR_OPTIONS_NEW_OK,
-
-    /**
-     * The function failed to allocate enough memory for the options struct.
-     */
-    TOX_ERR_OPTIONS_NEW_MALLOC,
-
-} TOX_ERR_OPTIONS_NEW;
-
-
 /**
  * Allocates a new Tox_Options object and initialises it with the default
  * options. This function can be used to preserve long term ABI compatibility by
@@ -724,7 +1016,7 @@ typedef enum TOX_ERR_OPTIONS_NEW {
  *
  * @return A new Tox_Options object with default options or NULL on failure.
  */
-struct Tox_Options *tox_options_new(TOX_ERR_OPTIONS_NEW *error);
+struct Tox_Options *tox_options_new(TOX_ERR_ALLOC *error);
 
 /**
  * Releases all resources associated with an options objects.
@@ -832,23 +1124,6 @@ Tox *tox_new(const struct Tox_Options *options, TOX_ERR_NEW *error);
  * functions can be called, and the pointer value can no longer be read.
  */
 void tox_kill(Tox *tox);
-
-/**
- * Calculates the number of bytes required to store the tox instance with
- * tox_get_savedata. This function cannot fail. The result is always greater than 0.
- *
- * @see threading for concurrency implications.
- */
-size_t tox_get_savedata_size(const Tox *tox);
-
-/**
- * Store all information associated with the tox instance to a byte array.
- *
- * @param savedata A memory region large enough to store the tox instance
- *   data. Call tox_get_savedata_size to find the number of bytes required. If this parameter
- *   is NULL, this function has no effect.
- */
-void tox_get_savedata(const Tox *tox, uint8_t *savedata);
 
 
 /*******************************************************************************
@@ -2938,3 +3213,4 @@ uint16_t tox_self_get_tcp_port(const Tox *tox, TOX_ERR_GET_PORT *error);
 #endif
 
 #endif
+

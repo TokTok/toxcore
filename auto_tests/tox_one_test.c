@@ -30,11 +30,11 @@ static void set_random_name_and_status_message(Tox *tox, uint8_t *name, uint8_t 
 START_TEST(test_one)
 {
     {
-        TOX_ERR_OPTIONS_NEW o_err;
+        TOX_ERR_ALLOC o_err;
         struct Tox_Options *o1 = tox_options_new(&o_err);
         struct Tox_Options o2;
         tox_options_default(&o2);
-        ck_assert_msg(o_err == TOX_ERR_OPTIONS_NEW_OK, "tox_options_new wrong error");
+        ck_assert_msg(o_err == TOX_ERR_ALLOC_OK, "tox_options_new wrong error");
         ck_assert_msg(memcmp(o1, &o2, sizeof(struct Tox_Options)) == 0, "tox_options_new error");
         tox_options_free(o1);
     }
