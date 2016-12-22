@@ -12,13 +12,6 @@
 class bin
 {
 
-error for new {
-  /**
-   * Insufficient memory to allocate the writer or its initial buffer.
-   */
-  MALLOC,
-}
-
 class w
 {
   /**
@@ -48,9 +41,10 @@ class w
    * Create a new empty binary writer.
    *
    * $size() will return 0 on the returned writer.
+   *
+   * @return A new writer, or NULL on memory allocation failure.
    */
-  static this new()
-      with error for new;
+  static this new();
 
   /**
    * Deallocate the binary writer and its buffer. If you hold a pointer to the
@@ -136,9 +130,10 @@ class r
    *
    * The reader will not own the data passed, so the caller must ensure that
    * the data outlives the reader.
+   *
+   * @return A new reader, or NULL on memory allocation failure.
    */
-  static this new(uint8_t[length] data)
-      with error for new;
+  static this new(uint8_t[length] data);
 
   /**
    * Deallocate the reader object. The data pointer is not deallocated.

@@ -6,21 +6,6 @@
 #include <stdint.h>
 
 
-typedef enum BIN_ERR_NEW {
-
-    /**
-     * The function returned successfully.
-     */
-    BIN_ERR_NEW_OK,
-
-    /**
-     * Insufficient memory to allocate the writer or its initial buffer.
-     */
-    BIN_ERR_NEW_MALLOC,
-
-} BIN_ERR_NEW;
-
-
 /**
  * The abstract data type of a binary writer. Must be allocated using bin_w_new
  * and freed using bin_w_free.
@@ -51,8 +36,10 @@ typedef struct Bin_W Bin_W;
  * Create a new empty binary writer.
  *
  * bin_w_size() will return 0 on the returned writer.
+ *
+ * @return A new writer, or NULL on memory allocation failure.
  */
-struct Bin_W *bin_w_new(BIN_ERR_NEW *error);
+struct Bin_W *bin_w_new(void);
 
 /**
  * Deallocate the binary writer and its buffer. If you hold a pointer to the
@@ -142,8 +129,10 @@ typedef struct Bin_R Bin_R;
  *
  * The reader will not own the data passed, so the caller must ensure that
  * the data outlives the reader.
+ *
+ * @return A new reader, or NULL on memory allocation failure.
  */
-struct Bin_R *bin_r_new(uint8_t *data, size_t length, BIN_ERR_NEW *error);
+struct Bin_R *bin_r_new(uint8_t *data, size_t length);
 
 /**
  * Deallocate the reader object. The data pointer is not deallocated.
