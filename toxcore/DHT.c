@@ -2608,6 +2608,15 @@ DHT *new_DHT(Logger *log, Networking_Core *net, bool holepunching_enabled)
         return NULL;
     }
 
+
+    dht->queries = query_new(dht->net);
+
+    if (dht->queries == NULL) {
+        kill_DHT(dht);
+        return NULL;
+    }
+    networking_registerhandler(dht->net, NET_PACKET_DATA_RESPONSE, &query_handle_toxid_response, dht);
+
     networking_registerhandler(dht->net, NET_PACKET_GET_NODES, &handle_getnodes, dht);
     networking_registerhandler(dht->net, NET_PACKET_SEND_NODES_IPV6, &handle_sendnodes_ipv6, dht);
     networking_registerhandler(dht->net, NET_PACKET_CRYPTO, &cryptopacket_handle, dht);
@@ -2653,6 +2662,16 @@ void do_DHT(DHT *dht)
     do_to_ping(dht->ping);
 #if DHT_HARDENING
     do_hardening(dht);
+#endif
+
+    query_iterate(dht);
+
+#ifdef ENABLE_ASSOC_DHT
+
+    if (dht->assoc) {
+        do_Assoc(dht->assoc, dht);
+    }
+
 #endif
     dht->last_run = unix_time();
 }
