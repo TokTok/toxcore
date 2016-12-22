@@ -185,6 +185,19 @@ endif()
 #
 # :: Tox Core Library
 #
+# The toxcore library is split into several smaller libraries. The libraries
+# are layered such that any library in a layer N can only link to libraries in
+# layers below it. The layers are as follows:
+#
+# 1. Basic data structures and algorithms (such as crypto).
+# 2. Platform abstraction (network, time, etc.).
+# 3. DHT, the Distributed Hash Table, for basic node finding.
+# 4. Code for establishing direct connections via TCP or UDP. Includes onion.
+# 5. A layer on top of direct connections, adding the concept of a "friend".
+# 6. Application level protocols such as file transfer and instant messaging.
+# 7. Group chats (conferences) built on top of the messenger.
+# 8. The public tox.h API. This is a thin wrapper of application protocol code.
+#
 ################################################################################
 
 # toxcore_PKGCONFIG_LIBS is what's added to the Libs: line in toxcore.pc. It
@@ -197,8 +210,8 @@ endif()
 #    explicitly linking against them.
 set(toxcore_PKGCONFIG_LIBS)
 
-# LAYER 1: Crypto core
-# --------------------
+# LAYER 1: Binary readers/writers
+# -------------------------------
 apidsl(
   toxcore/bin_io.api.h)
 add_module(toxbinio
