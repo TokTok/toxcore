@@ -75,26 +75,25 @@ class byte_Vector
   const size_t size();
 
   /**
-   * Make sure that the vector's capacity is at least `required_capacity`.
+   * Make sure that the vector's capacity is at least `minimum_capacity`.
    *
-   * If vector's capacity is below `required_capacity`, vector reallocates its
+   * If vector's capacity is below `minimum_capacity`, vector reallocates its
    * internal buffer and increases the capacity to fit at least
-   * `required_capacity`. It's possible the vector will increase the capacity
-   * past `required_capacity`.
+   * `minimum_capacity`. It's possible the vector will increase the capacity
+   * past `minimum_capacity`.
    *
-   * If vector's capacity is already greater or equal to `required_capacity`,
+   * If vector's capacity is already greater or equal to `minimum_capacity`,
    * nothing happens and the function succeeds.
    *
-   * @param required_capacity Minimum capacity the vector should have.
+   * @param minimum_capacity Minimum capacity the vector should have.
    *
    * @return True if after the function call the capacity of the vector is >=
-   * `required_capacity`, false if couldn't reserve at least
-   * `required_capacity`.
+   * `minimum_capacity`, false if couldn't reserve at least `minimum_capacity`.
    *
    * Note that the function returns true even if vector's capacity was  >=
-   * `required_capacity` before this function call.
+   * `minimum_capacity` before this function call.
    */
-  bool reserve(size_t required_capacity);
+  bool reserve(size_t minimum_capacity);
 
   /**
    * Shrink the internal buffer to fit the contained data, making capacity
