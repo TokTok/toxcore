@@ -93,8 +93,6 @@ class byte_Vector
    *
    * Note that the function returns true even if vector's capacity was  >=
    * `required_capacity` before this function call.
-   *
-   * @return True on success, false on failure.
    */
   bool reserve(size_t required_capacity);
 

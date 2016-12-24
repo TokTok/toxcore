@@ -91,8 +91,6 @@ size_t byte_vector_size(const struct Byte_Vector *_vector);
  *
  * Note that the function returns true even if vector's capacity was  >=
  * `required_capacity` before this function call.
- *
- * @return True on success, false on failure.
  */
 bool byte_vector_reserve(struct Byte_Vector *_vector, size_t required_capacity);
 
