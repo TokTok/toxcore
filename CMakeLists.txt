@@ -198,13 +198,23 @@ endif()
 #    explicitly linking against them.
 set(toxcore_PKGCONFIG_LIBS)
 
-# LAYER 1: Crypto core
+# TODO(iphy, nurupo): move this in a separate library shared among toxcore, toxav, etc.
+# LAYER ?: ???
 # --------------------
+apidsl(
+  toxcore/byte_vector.api.h)
+# FIXME(nurupo): do we really have to write the module name without any kind of word separation ('_' or different letter case)
+#                and abbreviate the name?
+add_module(tox_byte_vector
+  toxcore/byte_vector.c
+  toxcore/byte_vector.h)
+
 apidsl(
   toxcore/bin_io.api.h)
 add_module(toxbinio
   toxcore/bin_io.c
   toxcore/bin_io.h)
+target_link_modules(toxbinio tox_byte_vector)
 
 # LAYER 1: Crypto core
 # --------------------
