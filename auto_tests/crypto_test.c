@@ -323,6 +323,59 @@ START_TEST(test_increment_nonce)
 }
 END_TEST
 
+START_TEST(test_memzero)
+{
+    uint8_t src[sizeof(test_c)];
+    memcpy(src, test_c, sizeof(test_c));
+
+    crypto_memzero(src, sizeof(src));
+    size_t i;
+
+    for (i = 0; i < sizeof(src); i++) {
+        ck_assert_msg(src[i] == 0, "Memory is not zeroed");
+    }
+}
+END_TEST
+
+clock_t memcmp_time(void *a, void *b, size_t len)
+{
+    clock_t start = clock();
+    crypto_memcmp(a, b, len);
+    return clock() - start;
+}
+
+#define CRYPTO_TEST_MEMCMP_SIZE 1024*1024
+#define CRYPTO_TEST_MEMCMP_COUNT 10
+#define CRYPTO_TEST_MEMCMP_EPS 50
+
+START_TEST(test_memcmp)
+{
+    uint8_t src[CRYPTO_TEST_MEMCMP_SIZE];
+    rand_bytes(src, sizeof(src));
+
+    uint8_t same[sizeof(src)];
+    memcpy(same, src, sizeof(src));
+
+    uint8_t not_same[sizeof(src)];
+    rand_bytes(not_same, sizeof(not_same));
+
+    size_t i;
+    int64_t sum = 0;
+
+    for (i = 0; i < CRYPTO_TEST_MEMCMP_COUNT; i++) {
+        int32_t diff_same = (int32_t)memcmp_time(src, same, sizeof(src));
+        int32_t diff_not_same = (int32_t)memcmp_time(src, not_same, sizeof(src));
+
+        sum += diff_not_same - diff_same;
+    }
+
+    int64_t average = sum / CRYPTO_TEST_MEMCMP_COUNT;
+
+    ck_assert_msg(average < CRYPTO_TEST_MEMCMP_EPS,
+                  "Average delta time is too long (%d)", average);
+}
+END_TEST
+
 static Suite *crypto_suite(void)
 {
     Suite *s = suite_create("Crypto");
@@ -333,6 +386,8 @@ static Suite *crypto_suite(void)
     DEFTESTCASE(large_data);
     DEFTESTCASE(large_data_symmetric);
     DEFTESTCASE_SLOW(increment_nonce, 20);
+    DEFTESTCASE(memzero);
+    DEFTESTCASE(memcmp);
 
     return s;
 }
