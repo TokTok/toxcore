@@ -3,6 +3,7 @@
 #endif
 
 #include "../toxcore/net_crypto.h"
+#include "../toxcore/misc_tools.h"
 #include <check.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -323,6 +324,86 @@ START_TEST(test_increment_nonce)
 }
 END_TEST
 
+START_TEST(test_memzero)
+{
+    uint8_t src[sizeof(test_c)];
+    memcpy(src, test_c, sizeof(test_c));
+
+    crypto_memzero(src, sizeof(src));
+    size_t i;
+
+    for (i = 0; i < sizeof(src); i++) {
+        ck_assert_msg(src[i] == 0, "Memory is not zeroed");
+    }
+}
+END_TEST
+
+#define CRYPTO_TEST_MEMCMP_SIZE 1024*1024
+#define CRYPTO_TEST_MEMCMP_COUNT 10
+#define CRYPTO_TEST_MEMCMP_EPS 10
+
+make_quick_sort(clock_t)
+
+int cmp(clock_t a, clock_t b)
+{
+    if (a < b) {
+        return -1;
+    }
+
+    if (a > b) {
+        return 1;
+    }
+
+    return 0;
+}
+
+clock_t memcmp_time(void *a, void *b, size_t len)
+{
+    clock_t start = clock();
+    crypto_memcmp(a, b, len);
+    return clock() - start;
+}
+
+clock_t memcmp_median(void *a, void *b, size_t len)
+{
+    size_t i;
+    clock_t results[CRYPTO_TEST_MEMCMP_COUNT];
+
+    for (i = 0; i < CRYPTO_TEST_MEMCMP_COUNT; i++) {
+        results[i] = memcmp_time(a, b, len);
+    }
+
+    clock_t_quick_sort(results, CRYPTO_TEST_MEMCMP_COUNT, cmp);
+    return results[CRYPTO_TEST_MEMCMP_COUNT / 2];
+}
+
+START_TEST(test_memcmp)
+{
+    uint8_t src[CRYPTO_TEST_MEMCMP_SIZE];
+    rand_bytes(src, sizeof(src));
+
+    uint8_t same[sizeof(src)];
+    memcpy(same, src, sizeof(src));
+
+    uint8_t not_same[sizeof(src)];
+    rand_bytes(not_same, sizeof(not_same));
+
+    clock_t same_mediane = memcmp_median(src, same, sizeof(src));
+    clock_t not_same_mediane = memcmp_median(src, not_same, sizeof(src));
+
+    clock_t delta;
+
+    if (same_mediane > not_same_mediane) {
+        delta = same_mediane - not_same_mediane;
+    } else {
+        delta = not_same_mediane - same_mediane;
+    }
+
+    ck_assert_msg(delta < CRYPTO_TEST_MEMCMP_EPS,
+                  "Delta time is too long (%d, %d)", same_mediane, not_same);
+}
+END_TEST
+
 static Suite *crypto_suite(void)
 {
     Suite *s = suite_create("Crypto");
@@ -333,6 +414,8 @@ static Suite *crypto_suite(void)
     DEFTESTCASE(large_data);
     DEFTESTCASE(large_data_symmetric);
     DEFTESTCASE_SLOW(increment_nonce, 20);
+    DEFTESTCASE(memzero);
+    DEFTESTCASE(memcmp);
 
     return s;
 }
