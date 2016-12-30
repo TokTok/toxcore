@@ -854,7 +854,7 @@ error for loop {
 
 
 /**
- * Run $iterate() any time a packet arrives, only returns after ${loop.stop}().
+ * Run $iterate() any time a packet arrives, returns after ${loop.stop}() or ${kill}().
  */
 bool loop(any user_data) with error for loop;
 
