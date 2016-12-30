@@ -14,6 +14,10 @@ find_library(RT_LIBRARIES           rt           )
 
 # For toxcore.
 pkg_use_module(LIBSODIUM            libsodium    )
+pkg_use_module(LIBEV                ev           )
+if(NOT LIBEV_FOUND)
+  pkg_use_module(LIBEVENT           libevent     )
+endif()
 
 # For toxav.
 pkg_use_module(OPUS                 opus         )
