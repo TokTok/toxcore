@@ -176,6 +176,14 @@ else()
   set(BUILD_TOXAV FALSE)
 endif()
 
+if(LIBEV_FOUND)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_LIBEV")
+endif()
+
+if(LIBEVENT_FOUND)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_LIBEVENT")
+endif()
+
 ################################################################################
 #
 # :: Tox Core Library
@@ -227,6 +235,16 @@ endif()
 if(RT_LIBRARIES)
   target_link_modules(toxnetwork ${RT_LIBRARIES})
   set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-lrt")
+endif()
+
+if(LIBEV_FOUND)
+  target_link_modules(toxnetwork ${LIBEV_LIBRARIES})
+  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-lev")
+endif()
+
+if(LIBEVENT_FOUND)
+  target_link_modules(toxnetwork ${LIBEVENT_LIBRARIES})
+  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-levent")
 endif()
 
 if(WIN32)

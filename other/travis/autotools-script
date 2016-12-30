@@ -10,6 +10,7 @@
   --with-nacl-headers=$CACHE_DIR/include/amd64 \
   --enable-nacl \
   --enable-daemon \
+  --enable-libev \
   --enable-logging \
   --enable-ntox \
   --with-log-level=TRACE
