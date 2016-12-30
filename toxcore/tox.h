@@ -1012,7 +1012,7 @@ typedef enum TOX_ERR_LOOP {
 
 
 /**
- * Run tox_iterate() any time a packet arrives, only returns after tox_loop_stop().
+ * Run tox_iterate() any time a packet arrives, returns after tox_loop_stop() or tox_kill().
  */
 bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error);
 

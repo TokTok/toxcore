@@ -30,6 +30,12 @@
 #include "friend_requests.h"
 #include "logger.h"
 
+#ifdef HAVE_LIBEVENT
+#include <event2/event.h>
+#elif HAVE_LIBEV
+#include <ev.h>
+#endif
+
 #define MAX_NAME_LENGTH 128
 /* TODO(irungentoo): this must depend on other variable. */
 #define MAX_STATUSMESSAGE_LENGTH 1007
@@ -272,7 +278,14 @@ struct Messenger {
     void (*core_connection_change)(struct Messenger *m, unsigned int, void *);
     unsigned int last_connection_status;
 
+#ifdef HAVE_LIBEVENT
+    struct event_base *dispatcher;
+#elif HAVE_LIBEV
+    struct ev_loop *dispatcher;
+    ev_async stop_loop;
+#else
     bool loop_run;
+#endif
     void (*loop_begin_cb)(struct Messenger *m, void *user_data);
     void (*loop_end_cb)(struct Messenger *m, void *user_data);
 
