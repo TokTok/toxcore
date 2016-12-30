@@ -31,6 +31,8 @@ LIBCHECK_FOUND="no"
 WANT_NACL="no"
 ADD_NACL_OBJECTS_TO_PKGCONFIG="yes"
 SET_SO_VERSION="yes"
+LIBEV="no"
+LIBEVENT="no"
 
 AC_ARG_ENABLE([soname-versions],
     [AC_HELP_STRING([--enable-soname-versions], [enable soname versions (must be disabled for android) (default: enabled)]) ],
@@ -51,6 +53,28 @@ AC_ARG_ENABLE([nacl],
             WANT_NACL="no"
         elif test "x$enableval" = "xyes"; then
             WANT_NACL="yes"
+        fi
+    ]
+)
+
+AC_ARG_ENABLE([libev],
+    [AC_HELP_STRING([--enable-libev], [use libev to watch for events (default: disabled)]) ],
+    [
+        if test "x$enableval" = "xyes"; then
+            LIBEV="yes"
+        elif test "x$enableval" = "xno"; then
+            LIBEV="no"
+        fi
+    ]
+)
+
+AC_ARG_ENABLE([libevent],
+    [AC_HELP_STRING([--enable-libevent], [use libevent to watch for events (default: disabled)]) ],
+    [
+        if test "x$enableval" = "xyes"; then
+            LIBEVENT="yes"
+        elif test "x$enableval" = "xno"; then
+            LIBEVENT="no"
         fi
     ]
 )
@@ -211,6 +235,10 @@ LIBSODIUM_SEARCH_HEADERS=
 LIBSODIUM_SEARCH_LIBS=
 NACL_SEARCH_HEADERS=
 NACL_SEARCH_LIBS=
+LIBEV_SEARCH_HEADERS=
+LIBEV_SEARCH_LIBS=
+LIBEVENT_SEARCH_HEADERS=
+LIBEVENT_SEARCH_LIBS=
 
 AC_ARG_WITH(dependency-search,
     AC_HELP_STRING([--with-dependency-search=DIR],
@@ -261,6 +289,42 @@ AC_ARG_WITH(libsodium-libs,
         [
             LIBSODIUM_SEARCH_LIBS="$withval"
             AC_MSG_NOTICE([will search for libsodium libraries in $withval])
+        ]
+)
+
+AC_ARG_WITH(libev-headers,
+        AC_HELP_STRING([--with-libev-headers=DIR],
+                       [search for libev header files in DIR]),
+        [
+            LIBEV_SEARCH_HEADERS="$withval"
+            AC_MSG_NOTICE([will search for libev header files in $withval])
+        ]
+)
+
+AC_ARG_WITH(libev-libs,
+        AC_HELP_STRING([--with-libev-libs=DIR],
+                       [search for libev libraries in DIR]),
+        [
+            LIBEV_SEARCH_LIBS="$withval"
+            AC_MSG_NOTICE([will search for libev libraries in $withval])
+        ]
+)
+
+AC_ARG_WITH(libevent-headers,
+        AC_HELP_STRING([--with-libevent-headers=DIR],
+                       [search for libevent header files in DIR]),
+        [
+            LIBEVENT_SEARCH_HEADERS="$withval"
+            AC_MSG_NOTICE([will search for libevent header files in $withval])
+        ]
+)
+
+AC_ARG_WITH(libevent-libs,
+        AC_HELP_STRING([--with-libevent-libs=DIR],
+                       [search for libevent libraries in DIR]),
+        [
+            LIBEVENT_SEARCH_LIBS="$withval"
+            AC_MSG_NOTICE([will search for libevent libraries in $withval])
         ]
 )
 
@@ -394,6 +458,100 @@ elif test "x$LIBSODIUM_FOUND" = "xno"; then
     AC_SUBST(LIBSODIUM_LDFLAGS)
 fi
 
+if test "x$LIBEV" = "xyes" -o "x$LIBEV" = "xauto"; then
+    LIBEV_LIBS=
+    LIBEV_LDFLAGS=
+    LDFLAGS_SAVE="$LDFLAGS"
+
+    if test -n "$LIBEV_SEARCH_LIBS"; then
+        LDFLAGS="-L$LIBEV_SEARCH_LIBS $LDFLAGS"
+        AC_CHECK_LIB(ev, ev_run,
+            [
+                LIBEV="yes"
+                LIBEV_LDFLAGS="-L$LIBEV_SEARCH_LIBS"
+                LIBEV_LIBS="-lev"
+            ],
+            [
+                if test "x$LIBEV" = "xyes"; then
+                    AC_MSG_ERROR([required library libev was not found in requested location $LIBEV_SEARCH_LIBS])
+                elif test "x$LIBEV" = "xauto"; then
+                    AC_MSG_WARN([disabling libev support])
+                    LIBEV="no"
+                fi
+            ]
+        )
+    else
+        AC_CHECK_LIB(ev, ev_run,
+            [
+                LIBEV="yes"
+                LIBEV_LIBS="-lev"
+            ],
+            [
+                if test "x$LIBEV" = "xyes"; then
+                    AC_MSG_ERROR([required library libev was not found in requested location $LIBEV_SEARCH_LIBS])
+                elif test "x$LIBEV" = "xauto"; then
+                    AC_MSG_WARN([disabling libev support])
+                    LIBEV="no"
+                fi
+            ]
+        )
+    fi
+
+    if test "x$LIBEV" = "xyes"; then
+        LDFLAGS="$LDFLAGS_SAVE"
+        AC_SUBST(LIBEV_LIBS)
+        AC_SUBST(LIBEV_LDFLAGS)
+	AC_DEFINE([HAVE_LIBEV], [1], [Define to 1 if you have the 'libev' library (-lev).])
+    fi
+fi
+
+if test "x$LIBEV" = "xno" && test "x$LIBEVENT" = "xyes" -o "x$LIBEVENT" = "xauto"; then
+    LIBEVENT_LIBS=
+    LIBEVENT_LDFLAGS=
+    LDFLAGS_SAVE="$LDFLAGS"
+
+    if test -n "$LIBEVENT_SEARCH_LIBS"; then
+        LDFLAGS="-L$LIBEVENT_SEARCH_LIBS $LDFLAGS"
+        AC_CHECK_LIB(event, event_base_loop,
+            [
+                LIBEVENT="yes"
+                LIBEVENT_LDFLAGS="-L$LIBEVENT_SEARCH_LIBS"
+                LIBEVENT_LIBS="-levent"
+            ],
+            [
+                if test "x$LIBEVENT" = "xyes"; then
+                    AC_MSG_ERROR([required library libevent was not found in requested location $LIBEVENT_SEARCH_LIBS])
+                elif test "x$LIBEVENT" = "xauto"; then
+                    AC_MSG_WARN([disabling libevent support])
+                    LIBEVENT="no"
+                fi
+            ]
+        )
+    else
+        AC_CHECK_LIB(event, event_base_loop,
+            [
+                LIBEVENT="yes"
+                LIBEVENT_LIBS="-levent"
+            ],
+            [
+                if test "x$LIBEVENT" = "xyes"; then
+                    AC_MSG_ERROR([required library libevent was not found in requested location $LIBEVENT_SEARCH_LIBS])
+                elif test "x$LIBEVENT" = "xauto"; then
+                    AC_MSG_WARN([disabling libevent support])
+                    LIBEVENT="no"
+                fi
+            ]
+        )
+    fi
+
+    if test "x$LIBEVENT" = "xyes"; then
+        LDFLAGS="$LDFLAGS_SAVE"
+        AC_SUBST(LIBEVENT_LIBS)
+        AC_SUBST(LIBEVENT_LDFLAGS)
+        AC_DEFINE([HAVE_LIBEVENT], [1], [Define to 1 if you have the 'libevent' library (-levent).])
+    fi
+fi
+
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h netdb.h netinet/in.h stdint.h stdlib.h string.h sys/socket.h sys/time.h unistd.h])
 
@@ -451,6 +609,62 @@ elif test "x$LIBSODIUM_FOUND" = "xno"; then
     CFLAGS="$CFLAGS_SAVE"
     CPPFLAGS="$CPPFLAGS_SAVE"
     AC_SUBST(LIBSODIUM_CFLAGS)
+fi
+
+if test "x$LIBEV" = "xyes"; then
+    LIBEV_CFLAGS=
+    CFLAGS_SAVE="$CFLAGS"
+    CPPFLAGS_SAVE="$CPPFLAGS"
+    if test -n "$LIBEV_SEARCH_HEADERS"; then
+        CFLAGS="-I$LIBEV_SEARCH_HEADERS $CFLAGS"
+        CPPFLAGS="-I$LIBEV_SEARCH_HEADERS $CPPFLAGS"
+        AC_CHECK_HEADER(ev.h,
+            [
+                MINIUPNP_CFLAGS="-I$LIBEV_SEARCH_HEADERS"
+            ],
+            [
+                AC_MSG_ERROR([header files for required library libev were not found in requested location $LIBEV_SEARCH_HEADERS])
+            ]
+        )
+    else
+        AC_CHECK_HEADER(ev.h,
+            [],
+            [
+                AC_MSG_ERROR([header files for required library libev was not found on your system, please check http://libev.schmorp.de/])
+            ]
+        )
+    fi
+    CFLAGS="$CFLAGS_SAVE"
+    CPPFLAGS="$CPPFLAGS_SAVE"
+    AC_SUBST(LIBEV_CFLAGS)
+fi
+
+if test "x$LIBEVENT" = "xyes"; then
+    LIBEVENT_CFLAGS=
+    CFLAGS_SAVE="$CFLAGS"
+    CPPFLAGS_SAVE="$CPPFLAGS"
+    if test -n "$LIBEVENT_SEARCH_HEADERS"; then
+        CFLAGS="-I$LIBEVENT_SEARCH_HEADERS $CFLAGS"
+        CPPFLAGS="-I$LIBEVENT_SEARCH_HEADERS $CPPFLAGS"
+        AC_CHECK_HEADER(event2/event.h,
+            [
+                MINIUPNP_CFLAGS="-I$LIBEVENT_SEARCH_HEADERS"
+            ],
+            [
+                AC_MSG_ERROR([header files for required library libevent were not found in requested location $LIBEVENT_SEARCH_HEADERS])
+            ]
+        )
+    else
+        AC_CHECK_HEADER(event2/event.h,
+            [],
+            [
+                AC_MSG_ERROR([header files for required library libevent was not found on your system, please check http://libevent.org/])
+            ]
+        )
+    fi
+    CFLAGS="$CFLAGS_SAVE"
+    CPPFLAGS="$CPPFLAGS_SAVE"
+    AC_SUBST(LIBEVENT_CFLAGS)
 fi
 
 # Checks for typedefs, structures, and compiler characteristics.
