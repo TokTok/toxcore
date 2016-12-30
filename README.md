@@ -12,27 +12,25 @@
 This Roadmap is somewhat tentative, but should give you a good idea of where
 we're going, and where we've been.
 
-Currently unsorted, the following is intended to function as a discussion guide
-to developers/contributors.
+Sorted alphanumericaly, the following is intended to function as a discussion
+guide to developers/contributors.
 
 ### In Progress
-- [ ] Toxcore
-    - [ ] 100% unit testing
-    - [ ] Make ToxAV stateless
-    - [ ] Allow a single toxcore instance to handle multiple keypairs (or 'clients')
-    - [ ] Consistent naming scheme throughout toxcore
-    - [X] Make toxcore stateless
-- [ ] Messenger
-    - [ ] Improve group chat implementation
-    - [ ] Improve A/V implementation
-    - [ ] Multiple device support
+- [ ] 100% unit testing
+- [ ] Allow a single toxcore instance to handle multiple keypairs (or 'clients')
+- [ ] Consistent naming scheme throughout toxcore
+- [ ] Improve A/V implementation
+- [ ] Improve group chat implementation
+- [ ] Make ToxAV stateless
+- [ ] Make toxcore stateless
+- [ ] Multiple device support
 
 ### Done
-- [X] Create Toxcore
 - [X] Create DHT
-- [X] Create Onion
-- [X] Implement Crypto
 - [X] Create Messenger
+- [X] Create Onion
+- [X] Create Toxcore
+- [X] Implement Crypto
 
 ## Q&A:
 
@@ -60,4 +58,3 @@ However, Tox does use [TCP relays](/docs/TCP_Network.txt) as a fallback if it en
 
 ### Connecting & Communicating
 Every peer is represented as a [byte string](https://en.wikipedia.org/wiki/String_(computer_science)) (the public key [Tox ID] of the peer). By using torrent-style DHT, peers can find the IP of other peers by using their Tox ID. Once the IP is obtained, peers can initiate a [secure](/docs/updates/Crypto.md) connection with each other. Once the connection is made, peers can exchange messages, send files, start video chats, etc. using encrypted communications.
-
