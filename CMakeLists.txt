@@ -174,6 +174,10 @@ find_library(RT_LIBRARIES           rt            )
 
 # For toxcore.
 pkg_use_module(LIBSODIUM  REQUIRED  libsodium     )
+pkg_use_module(LIBEV                ev            )
+if(NOT LIBEV_FOUND)
+  pkg_use_module(LIBEVENT           libevent      )
+endif()
 
 # For toxav.
 pkg_use_module(OPUS                 opus          )
@@ -197,6 +201,14 @@ if(OPUS_FOUND AND VPX_FOUND)
   set(BUILD_TOXAV TRUE)
 else()
   set(BUILD_TOXAV FALSE)
+endif()
+
+if(LIBEV_FOUND)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_LIBEV")
+endif()
+
+if(LIBEVENT_FOUND)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_LIBEVENT")
 endif()
 
 ################################################################################
@@ -250,6 +262,16 @@ endif()
 if(RT_LIBRARIES)
   target_link_modules(toxnetwork ${RT_LIBRARIES})
   set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-lrt")
+endif()
+
+if(LIBEV_FOUND)
+  target_link_modules(toxnetwork ${LIBEV_LIBRARIES})
+  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-lev")
+endif()
+
+if(LIBEVENT_FOUND)
+  target_link_modules(toxnetwork ${LIBEVENT_LIBRARIES})
+  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-levent")
 endif()
 
 if(WIN32)
