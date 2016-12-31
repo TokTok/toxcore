@@ -8,9 +8,9 @@ dependencies:
     - sudo apt-get install build-essential libtool autotools-dev automake checkinstall check git yasm
     - sudo apt-get install libopus-dev libvpx-dev pkg-config
 
-# ------------ so that test number 7 succeeds ---------------
+# ------------ 7: Test command: /home/ubuntu/c-toxcore/auto_network_test ---------------
     - sudo bash -c "echo '::1             localhost ipv6-localhost ipv6-loopback' >> /etc/hosts" # ipv6 localhost entry
-# ------------ so that test number 7 succeeds ---------------
+# ------------ 7: Test command: /home/ubuntu/c-toxcore/auto_network_test ---------------
 
     #- sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100
     #- sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 100
