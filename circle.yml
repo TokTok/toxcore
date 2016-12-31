@@ -18,6 +18,8 @@ dependencies:
     - gcc --version ; exit 0
     - clang --version ; exit 0
 
+compile:
+  override:
     ### ------- get libsodium -------
     - mkdir ~/libsodium
     - cd ~/libsodium/ ; git clone https://github.com/jedisct1/libsodium.git
