@@ -39,5 +39,5 @@ dependencies:
 
 test:
   override:
-    - make test ARGS="-V" ; ex1=$? ; if [ $ex1 -ne 0 ]; then sleep 60; make test ARGS="-V" ; exit $? ; fi
+    - make VERBOSE=1 test ; ex1=$? ; if [ $ex1 -ne 0 ]; then sleep 60; make VERBOSE=1 test ; exit $? ; fi
 
