@@ -80,12 +80,6 @@ typedef struct {
     void *user_data;
 } event_arg_t;
 #endif
-#ifdef HAVE_LIBEV
-typedef struct {
-    ev_io listener;
-    struct ev_loop *dispatcher;
-} tox_ev_io;
-#endif
 
 bool tox_version_is_compatible(uint32_t major, uint32_t minor, uint32_t patch)
 {
@@ -456,11 +450,14 @@ void tox_do_iterate(evutil_socket_t fd, short events, void *arg)
 #elif HAVE_LIBEV
 void tox_stop_loop_cb(struct ev_loop *dispatcher, ev_async *listener, int events)
 {
+
+    if ((dispatcher == NULL) || (listener == NULL)) {
+        return;
+    }
+
     event_arg_t *tmp = (event_arg_t *) listener->data;
     Messenger *m = (Messenger *) tmp->tox;
     uint32_t i;
-
-    ev_async_stop(dispatcher, listener);
 
     if (ev_is_active(&m->net->sock_listener.listener) || ev_is_pending(&m->net->sock_listener.listener)) {
         ev_io_stop(dispatcher, &m->net->sock_listener.listener);
@@ -476,20 +473,19 @@ void tox_stop_loop_cb(struct ev_loop *dispatcher, ev_async *listener, int events
         }
     }
 
-    ev_break(dispatcher, EVBREAK_ALL);
+    ev_async_stop(dispatcher, listener);
 
-    ev_loop_destroy(dispatcher);
+    ev_break(dispatcher, EVBREAK_ALL);
 }
 
-void tox_do_iterate(struct ev_loop *dispatcher, ev_io *listener, int events)
+void tox_do_iterate(struct ev_loop *dispatcher, ev_io *sock_listener, int events)
 {
 
-    if ((dispatcher == NULL) || (listener == NULL)) {
+    if ((dispatcher == NULL) || (sock_listener == NULL)) {
         return;
     }
 
-    tox_ev_io *sock_listener = (tox_ev_io *) listener;
-    event_arg_t *tmp = (event_arg_t *) sock_listener->listener.data;
+    event_arg_t *tmp = (event_arg_t *) sock_listener->data;
     Messenger *m = (Messenger *) tmp->tox;
     uint32_t i;
 
@@ -500,10 +496,10 @@ void tox_do_iterate(struct ev_loop *dispatcher, ev_io *listener, int events)
     tox_iterate(tmp->tox, tmp->user_data);
 
     if (!ev_is_active(&m->net->sock_listener.listener) && !ev_is_pending(&m->net->sock_listener.listener)) {
-        m->net->sock_listener.dispatcher = m->dispatcher;
-        m->net->sock_listener.listener.data = sock_listener->listener.data;
+        m->net->sock_listener.dispatcher = dispatcher;
         ev_io_init(&m->net->sock_listener.listener, tox_do_iterate, m->net->sock, EV_READ);
-        ev_io_start(m->dispatcher, &m->net->sock_listener.listener);
+        m->net->sock_listener.listener.data = sock_listener->data;
+        ev_io_start(dispatcher, &m->net->sock_listener.listener);
     }
 
     TCP_Connections *conns = m->net_crypto->tcp_c;
@@ -512,9 +508,9 @@ void tox_do_iterate(struct ev_loop *dispatcher, ev_io *listener, int events)
         TCP_Client_Connection *conn = conns->tcp_connections[i].connection;
 
         if (!ev_is_active(&conn->sock_listener.listener) && !ev_is_pending(&conn->sock_listener.listener)) {
-            conn->sock_listener.dispatcher = m->dispatcher;
-            conn->sock_listener.listener.data = sock_listener->listener.data;
+            conn->sock_listener.dispatcher = dispatcher;
             ev_io_init(&conn->sock_listener.listener, tox_do_iterate, conn->sock, EV_READ);
+            conn->sock_listener.listener.data = sock_listener->data;
             ev_io_start(m->dispatcher, &conn->sock_listener.listener);
         }
     }
@@ -566,14 +562,73 @@ bool tox_fds(Messenger *m, sock_t **sockets, uint32_t *sockets_num)
 
     return true;
 }
+#endif
 
-void tox_do_iterate(Tox *tox, void *user_data)
+bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error)
 {
     if (tox == NULL) {
-        return;
+        if (error != NULL) {
+            *error = TOX_ERR_LOOP_BAD_ARGS;
+        }
+
+        return false;
     }
 
-    Messenger *m = tox;
+    Messenger *m = (Messenger *) tox;
+    bool ret = true;
+
+#ifdef HAVE_LIBEVENT
+    event_arg_t *tmp = calloc(1, sizeof(event_arg_t));
+
+    tmp->tox = tox;
+    tmp->user_data = user_data;
+
+    tox_do_iterate(0, 0, tmp);
+    ret = event_base_dispatch(m->dispatcher) < 0 ? false : true;
+
+    if (error != NULL) {
+        if (ret) {
+            *error = TOX_ERR_LOOP_OK;
+        } else {
+            *error = TOX_ERR_LOOP_BREAK;
+        }
+    }
+
+    free(tmp);
+#elif HAVE_LIBEV
+    event_arg_t *tmp = calloc(1, sizeof(event_arg_t));
+
+    tmp->tox = tox;
+    tmp->user_data = user_data;
+
+    ev_async_init(&m->stop_loop, tox_stop_loop_cb);
+    m->stop_loop.data = tmp;
+    ev_async_start(m->dispatcher, &m->stop_loop);
+
+    ev_io stub_listener;
+    ev_init(&stub_listener, tox_do_iterate);
+    stub_listener.data = tmp;
+    tox_do_iterate(m->dispatcher, &stub_listener, 0);
+
+    // TODO(Ansa89): travis states that "ev_run" returns "void",
+    // but "man 3 ev" states it returns "bool"
+    //ret = !ev_run(m->dispatcher, 0);
+    //if (error != NULL) {
+    //    if (ret) {
+    //        *error = TOX_ERR_LOOP_OK;
+    //    } else {
+    //        *error = TOX_ERR_LOOP_BREAK;
+    //    }
+    //}
+
+    ev_run(m->dispatcher, 0);
+
+    if (error != NULL) {
+        *error = TOX_ERR_LOOP_OK;
+    }
+
+    free(tmp);
+#else
     uint32_t fdcount = 0;
     sock_t *fdlist = NULL;
 
@@ -602,9 +657,13 @@ void tox_do_iterate(Tox *tox, void *user_data)
                 m->loop_end_cb(tox, user_data);
             }
 
+            if (error != NULL) {
+                *error = TOX_ERR_LOOP_GET_FDS;
+            }
+
             free(fdlist);
 
-            return;
+            return false;
         }
 
         for (i = 0; i < fdcount; i++) {
@@ -627,63 +686,21 @@ void tox_do_iterate(Tox *tox, void *user_data)
         }
 
         if (select(maxfd, &readable, NULL, NULL, &timeout) < 0) {
+            if (error != NULL) {
+                *error = TOX_ERR_LOOP_SELECT;
+            }
+
             free(fdlist);
 
-            return;
+            return false;
         }
+    }
+
+    if (error != NULL) {
+        *error = TOX_ERR_LOOP_OK;
     }
 
     free(fdlist);
-}
-#endif
-
-bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error)
-{
-    if (tox == NULL) {
-        if (error != NULL) {
-            *error = TOX_ERR_LOOP_BAD_ARGS;
-        }
-
-        return false;
-    }
-
-    bool ret = true;
-
-#ifdef HAVE_LIBEVENT
-    Messenger *m = (Messenger *) tox;
-    event_arg_t *tmp = calloc(1, sizeof(event_arg_t));
-
-    tmp->tox = tox;
-    tmp->user_data = user_data;
-
-    tox_do_iterate(0, 0, tmp);
-    ret = event_base_dispatch(m->dispatcher) < 0 ? false : true;
-
-    free(tmp);
-#elif HAVE_LIBEV
-    Messenger *m = (Messenger *) tox;
-    event_arg_t *tmp = calloc(1, sizeof(event_arg_t));
-
-    tmp->tox = tox;
-    tmp->user_data = user_data;
-
-    m->stop_loop.data = tmp;
-    ev_async_init(&m->stop_loop, tox_stop_loop_cb);
-    ev_async_start(m->dispatcher, &m->stop_loop);
-
-    tox_ev_io stub;
-    ev_init(&stub.listener, tox_do_iterate);
-    stub.dispatcher = m->dispatcher;
-    stub.listener.data = tmp;
-    tox_do_iterate(m->dispatcher, &stub.listener, 0);
-    // TODO(Ansa89): travis states that "ev_run" returns "void",
-    // but "man 3 ev" states it returns "bool"
-    //ret = ev_run(m->dispatcher, 0);
-    ev_run(m->dispatcher, 0);
-
-    free(tmp);
-#else
-    tox_do_iterate(tox, user_data);
 #endif
 
     return ret;
@@ -695,7 +712,7 @@ void tox_loop_stop(Tox *tox)
         return;
     }
 
-    Messenger *m = tox;
+    Messenger *m = (Messenger *) tox;
 
 #ifdef HAVE_LIBEVENT
     event_base_loopbreak(m->dispatcher);
