@@ -5,7 +5,7 @@ dependencies:
   pre:
     - sudo apt-get update
     - sudo apt-get install clang
-    - sudo sudo apt-get install build-essential libtool autotools-dev automake checkinstall check git yasm
+    - sudo apt-get install build-essential libtool autotools-dev automake checkinstall check git yasm
     - sudo apt-get install libopus-dev libvpx-dev pkg-config
 
 # ------------ so that test number 7 succeeds ---------------
