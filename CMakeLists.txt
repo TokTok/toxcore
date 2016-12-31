@@ -148,6 +148,8 @@ if(ASAN)
   set(CMAKE_REQUIRED_LIBRARIES "${SAFE_CMAKE_REQUIRED_LIBRARIES}")
 endif()
 
+option(BUILD_TQNL "Enable compilation of Tox Quick Name Lookup Features" ON)
+
 find_package(Threads   REQUIRED)
 
 find_library(NCURSES_LIBRARIES      ncurses       )
@@ -250,8 +252,7 @@ add_module(toxdht
   toxcore/ping.h
   toxcore/ping_array.c
   toxcore/ping_array.h
-  toxcore/query.c
-  toxcore/query.h)
+  )
 target_link_modules(toxdht toxnetwork)
 
 # LAYER 4: Onion routing, TCP connections, crypto connections
@@ -307,6 +308,25 @@ add_module(toxcore
   toxcore/tox.c
   toxcore/tox.h)
 target_link_modules(toxcore toxgroup)
+
+################################################################################
+#
+# :: Tox Quick Name Lookup Library
+#
+################################################################################
+if(BUILD_TQNL)
+  apidsl(
+    toxqnl/tqnl.api.h
+    )
+
+  add_module(toxqnl
+    toxqnl/tqnl.c
+    toxqnl/query.h
+    toxqnl/query.c
+    )
+
+  target_link_modules(toxqnl toxcore)
+endif()
 
 ################################################################################
 #
@@ -410,6 +430,9 @@ function(auto_test target)
     if(BUILD_TOXAV)
       target_link_modules(auto_${target}_test toxav)
     endif()
+    if(BUILD_TQNL)
+      target_link_modules(auto_${target}_test toxqnl)
+    endif()
     add_test(NAME ${target} COMMAND auto_${target}_test)
     set_tests_properties(${target} PROPERTIES TIMEOUT "${TEST_TIMEOUT_SECONDS}")
   endif()
@@ -431,13 +454,14 @@ auto_test(tox_many)
 auto_test(tox_many_tcp)
 auto_test(tox_one)
 auto_test(version)
-auto_test(query)
 
 if(BUILD_TOXAV)
   auto_test(toxav_basic)
   auto_test(toxav_many)
 endif()
-
+if(BUILD_TQNL)
+  auto_test(query)
+endif()
 ################################################################################
 #
 # :: Bootstrap daemon
@@ -590,6 +614,13 @@ if(BUILD_TOXAV)
   install(FILES
     toxav/toxav.h
     DESTINATION "include/tox")
+endif()
+
+if(BUILD_TQNL)
+  install(FILES
+    toxqnl/tqnl.h
+    DESTINATION "include/tox"
+    )
 endif()
 
 ################################################################################

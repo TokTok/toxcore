@@ -6,8 +6,8 @@
 
 #include "../toxcore/DHT.h"
 #include "../toxcore/Messenger.h"
-#include "../toxcore/query.c"
-#include "../toxcore/tox.h"
+#include "../toxqnl/query.c"
+#include "../toxqnl/tqnl.h"
 // #include "../toxcore/DHT.c"
 
 #include "helpers.h"
@@ -31,9 +31,13 @@ static uint8_t toxid[TOX_ADDRESS_SIZE] = {
 
 static bool done = false;
 
-static void tox_query_response(Tox *tox, const uint8_t *request, size_t length, const uint8_t *tox_id,
+static void tox_query_response(TOX_QNL *tqnl, const uint8_t *request, size_t length, const uint8_t *tox_id,
                                void *user_data)
 {
+    (void)tqnl;    // Unused variables
+    (void)request;
+    (void)length;
+
     ck_assert_msg(1, "query callback");
     ck_assert_msg(user_data == &response_cookie, "Invalid Cookie in response callback");
     ck_assert_msg(memcmp(tox_id, toxid, TOX_ADDRESS_SIZE) == 0, "Unexpected ToxID from callback");
@@ -80,7 +84,7 @@ static int query_handle_toxid_request(void *object, IP_Port source, const uint8_
     ck_assert_msg(pkt_size == QUERY_PKT_ENCRYPTED_SIZE(TOX_ADDRESS_SIZE), "Build packet callback broken size!");
 
     int send_res = sendpacket(m->dht->net, source, encrypted, pkt_size);
-    ck_assert_msg(send_res != -1, "unbale to send packet");
+    ck_assert_msg(send_res != -1, "unable to send packet");
     return send_res;
 }
 
@@ -90,7 +94,10 @@ START_TEST(test_query_ip4)
     TOX_ERR_NEW error = 0;
     Tox *server = tox_new(NULL, &error);
     ck_assert_msg(error == TOX_ERR_NEW_OK, "Unable to create server");
+
     Tox *client = tox_new(NULL, &error);
+    TOX_QNL_ERR_NEW qnl_err = 0;
+    TOX_QNL *tqnl = tox_qnl_new(client, &qnl_err);
     ck_assert_msg(error == TOX_ERR_NEW_OK, "Unable to create client");
 
     // Build server
@@ -98,14 +105,14 @@ START_TEST(test_query_ip4)
                                server);
 
     // Build client
-    tox_callback_query_response(client, tox_query_response);
+    tox_qnl_callback_request_response(tqnl, tox_query_response);
 
     uint16_t server_port = tox_self_get_udp_port(server, NULL);
 
-    TOX_ERR_QUERY_REQUEST r_error = 0;
-    tox_query_request(client, "127.0.0.1", server_port, ((Messenger *)server)->dht->self_public_key,
+    TOX_QNL_ERR_REQUEST_SEND r_error = 0;
+    tox_qnl_request_send(tqnl, "127.0.0.1", server_port, ((Messenger *)server)->dht->self_public_key,
                       name, name_length, &r_error);
-    ck_assert_msg(r_error == TOX_ERR_QUERY_REQUEST_OK, "Error Sending Query Packet %i", r_error);
+    ck_assert_msg(r_error == TOX_QNL_ERR_REQUEST_SEND_OK, "Error Sending Query Packet %i", r_error);
 
     while (!done) {
         tox_iterate(server, NULL);
@@ -126,6 +133,8 @@ START_TEST(test_query_ip6)
     Tox *server = tox_new(NULL, &error);
     ck_assert_msg(error == TOX_ERR_NEW_OK, "Unable to create server");
     Tox *client = tox_new(NULL, &error);
+    TOX_QNL_ERR_NEW qnl_err = 0;
+    TOX_QNL *tqnl = tox_qnl_new(client, &qnl_err);
     ck_assert_msg(error == TOX_ERR_NEW_OK, "Unable to create client");
 
     // Build server
@@ -133,14 +142,14 @@ START_TEST(test_query_ip6)
                                server);
 
     // Build client
-    tox_callback_query_response(client, tox_query_response);
+    tox_qnl_callback_request_response(tqnl, tox_query_response);
 
     uint16_t server_port = tox_self_get_udp_port(server, NULL);
 
-    TOX_ERR_QUERY_REQUEST r_error = 0;
-    tox_query_request(client, "::1", server_port, ((Messenger *)server)->dht->self_public_key,
+    TOX_QNL_ERR_REQUEST_SEND r_error = 0;
+    tox_qnl_request_send(tqnl, "::1", server_port, ((Messenger *)server)->dht->self_public_key,
                       name, name_length, &r_error);
-    ck_assert_msg(r_error == TOX_ERR_QUERY_REQUEST_OK, "Error Sending Query Packet %i", r_error);
+    ck_assert_msg(r_error == TOX_QNL_ERR_REQUEST_SEND_OK, "Error Sending Query Packet %i", r_error);
 
     while (!done) {
         tox_iterate(server, NULL);
@@ -160,14 +169,16 @@ START_TEST(test_query_store)
 
     TOX_ERR_NEW error = 0;
     Tox *client = tox_new(NULL, &error);
+    TOX_QNL_ERR_NEW qnl_err = 0;
+    TOX_QNL *tqnl = tox_qnl_new(client, &qnl_err);
     ck_assert_msg(error == TOX_ERR_NEW_OK, "Unable to create client");
 
     // Build client
-    tox_callback_query_response(client, tox_query_response);
-    TOX_ERR_QUERY_REQUEST r_error = 0;
-    tox_query_request(client, "127.0.0.1", 33445, ((Messenger *)client)->dht->self_public_key,
+    tox_qnl_callback_request_response(tqnl, tox_query_response);
+    TOX_QNL_ERR_REQUEST_SEND r_error = 0;
+    tox_qnl_request_send(tqnl, "127.0.0.1", 33445, ((Messenger *)client)->dht->self_public_key,
                       name, name_length, &r_error);
-    ck_assert_msg(r_error == TOX_ERR_QUERY_REQUEST_OK, "Error Sending Query Packet %i", r_error);
+    ck_assert_msg(r_error == TOX_QNL_ERR_REQUEST_SEND_OK, "Error Sending Query Packet %i", r_error);
 
     c_sleep(1);
 
@@ -179,9 +190,9 @@ START_TEST(test_query_store)
         c_sleep(20);
     }
 
-    tox_query_request(client, "127.0.0.1", 33445, ((Messenger *)client)->dht->self_public_key,
+    tox_qnl_request_send(tqnl, "127.0.0.1", 33445, ((Messenger *)client)->dht->self_public_key,
                       name, name_length, &r_error);
-    ck_assert_msg(r_error == TOX_ERR_QUERY_REQUEST_PENDING, "Existing Query didn't pend! %i", r_error);
+    ck_assert_msg(r_error == TOX_QNL_ERR_REQUEST_SEND_PENDING, "Existing Query didn't pend! %i", r_error);
 
     tox_kill(client);
 }
@@ -192,14 +203,16 @@ START_TEST(test_query_host)
 
     TOX_ERR_NEW error = 0;
     Tox *client = tox_new(NULL, &error);
+    TOX_QNL_ERR_NEW qnl_err = 0;
+    TOX_QNL *tqnl = tox_qnl_new(client, &qnl_err);
     ck_assert_msg(error == TOX_ERR_NEW_OK, "Unable to create client");
 
     // Build client
-    tox_callback_query_response(client, tox_query_response);
-    TOX_ERR_QUERY_REQUEST r_error = 0;
-    tox_query_request(client, "baonethuaoreucaoeustaohdsatnhkbgcypidstnkbcgasrcpidancgubkagduhtou",
+    tox_qnl_callback_request_response(tqnl, tox_query_response);
+    TOX_QNL_ERR_REQUEST_SEND r_error = 0;
+    tox_qnl_request_send(tqnl, "baonethuaoreucaoeustaohdsatnhkbgcypidstnkbcgasrcpidancgubkagduhtou",
                       33445, ((Messenger *)client)->dht->self_public_key, name, name_length, &r_error);
-    ck_assert_msg(r_error == TOX_ERR_QUERY_REQUEST_BAD_HOST, "BAD_HOST WAS ACCEPTED %i", r_error);
+    ck_assert_msg(r_error == TOX_QNL_ERR_REQUEST_SEND_BAD_HOST, "BAD_HOST WAS ACCEPTED %i", r_error);
 
     int i = 3;
 
@@ -215,11 +228,11 @@ START_TEST(test_query_host)
     ck_assert_msg(error == TOX_ERR_NEW_OK, "Unable to create client");
 
     // Build client
-    tox_callback_query_response(client, tox_query_response);
+    tox_qnl_callback_request_response(tqnl, tox_query_response);
     r_error = 0;
-    tox_query_request(client, "baonethuaoreucaoeustaohdsatnhkbgcypidstnkbcgasrcpidancgubkagduhtou",
+    tox_qnl_request_send(tqnl, "baonethuaoreucaoeustaohdsatnhkbgcypidstnkbcgasrcpidancgubkagduhtou",
                       0, ((Messenger *)client)->dht->self_public_key, name, name_length, &r_error);
-    ck_assert_msg(r_error == TOX_ERR_QUERY_REQUEST_BAD_PORT, "BAD_PORT WAS ACCEPTED %i", r_error);
+    ck_assert_msg(r_error == TOX_QNL_ERR_REQUEST_SEND_BAD_PORT, "BAD_PORT WAS ACCEPTED %i", r_error);
 
     i = 3;
 
@@ -236,13 +249,15 @@ START_TEST(test_query_null)
 {
     TOX_ERR_NEW error = 0;
     Tox *client = tox_new(NULL, &error);
+    TOX_QNL_ERR_NEW qnl_err = 0;
+    TOX_QNL *tqnl = tox_qnl_new(client, &qnl_err);
     ck_assert_msg(error == TOX_ERR_NEW_OK, "Unable to create client");
 
     // Build client
-    tox_callback_query_response(client, tox_query_response);
-    TOX_ERR_QUERY_REQUEST r_error = 0;
-    tox_query_request(client, NULL, 33445, ((Messenger *)client)->dht->self_public_key, name, name_length, &r_error);
-    ck_assert_msg(r_error == TOX_ERR_QUERY_REQUEST_NULL, "BAD ADDRESS WAS ACCEPTED %i", r_error);
+    tox_qnl_callback_request_response(tqnl, tox_query_response);
+    TOX_QNL_ERR_REQUEST_SEND r_error = 0;
+    tox_qnl_request_send(tqnl, NULL, 33445, ((Messenger *)client)->dht->self_public_key, name, name_length, &r_error);
+    ck_assert_msg(r_error == TOX_QNL_ERR_REQUEST_SEND_NULL, "BAD ADDRESS WAS ACCEPTED %i", r_error);
 
     int i = 3;
 
@@ -258,10 +273,10 @@ START_TEST(test_query_null)
     ck_assert_msg(error == TOX_ERR_NEW_OK, "Unable to create client");
 
     // Build client
-    tox_callback_query_response(client, tox_query_response);
+    tox_qnl_callback_request_response(tqnl, tox_query_response);
     r_error = 0;
-    tox_query_request(client, "127.0.0.1", 33445, ((Messenger *)client)->dht->self_public_key, NULL, name_length, &r_error);
-    ck_assert_msg(r_error == TOX_ERR_QUERY_REQUEST_NULL, "BAD NAME WAS ACCEPTED %i", r_error);
+    tox_qnl_request_send(tqnl, "127.0.0.1", 33445, ((Messenger *)client)->dht->self_public_key, NULL, name_length, &r_error);
+    ck_assert_msg(r_error == TOX_QNL_ERR_REQUEST_SEND_NULL, "BAD NAME WAS ACCEPTED %i", r_error);
 
     i = 3;
 
@@ -277,10 +292,10 @@ START_TEST(test_query_null)
     ck_assert_msg(error == TOX_ERR_NEW_OK, "Unable to create client");
 
     // Build client
-    tox_callback_query_response(client, tox_query_response);
+    tox_qnl_callback_request_response(tqnl, tox_query_response);
     r_error = 0;
-    tox_query_request(client, "127.0.0.1", 33445, ((Messenger *)client)->dht->self_public_key, name, 0, &r_error);
-    ck_assert_msg(r_error == TOX_ERR_QUERY_REQUEST_NULL, "BAD NAME_LENGTH WAS ACCEPTED %i", r_error);
+    tox_qnl_request_send(tqnl, "127.0.0.1", 33445, ((Messenger *)client)->dht->self_public_key, name, 0, &r_error);
+    ck_assert_msg(r_error == TOX_QNL_ERR_REQUEST_SEND_NULL, "BAD NAME_LENGTH WAS ACCEPTED %i", r_error);
 
     i = 3;
 

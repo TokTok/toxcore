@@ -7,11 +7,10 @@
 
 #include "query.h"
 
-#include "DHT.h"
-#include "logger.h"
-#include "Messenger.h"
-#include "network.h"
-#include "util.h"
+#include "../toxcore/DHT.h"
+#include "../toxcore/logger.h"
+#include "../toxcore/Messenger.h"
+#include "../toxcore/util.h"
 
 // #include <assert.h>
 
@@ -158,7 +157,8 @@ static int q_send(const DHT *dht, const Query *send)
 {
     uint8_t packet[QUERY_PKT_ENCRYPTED_SIZE(send->length)];
 
-    size_t written_size = q_build_packet(send->key, dht->self_public_key, dht->self_secret_key, NET_PACKET_DATA_NAME_REQUEST,
+    size_t written_size = q_build_packet(send->key, dht->self_public_key, dht->self_secret_key,
+                                         NET_PACKET_DATA_NAME_REQUEST,
                                          send->name, send->length, packet);
     // TODO(grayhatter) add tox_assert(written_size == QUERY_PKT_ENCRYPTED_SIZE(send->length));
 
@@ -185,10 +185,10 @@ static Query q_make(IP_Port *ipp, const uint8_t key[CRYPTO_PUBLIC_KEY_SIZE], con
 }
 
 
-int query_send_request(void *tox, const char *address, uint16_t port, const uint8_t *key,
+int query_send_request(TOX_QNL *tqnl, const char *address, uint16_t port, const uint8_t *key,
                        const uint8_t *name, size_t length)
 {
-    Messenger *m = (Messenger *)tox;
+    Messenger *m = tqnl->m;
 
     struct addrinfo *root;
 
@@ -227,13 +227,13 @@ int query_send_request(void *tox, const char *address, uint16_t port, const uint
     Query new_query = q_make(&ipp, key, name, length);
 
     // Verify name isn't currently pending response
-    if (q_check(m->dht->queries, &new_query, 1) != -1) {
+    if (q_check(tqnl->pending_list, &new_query, 1) != -1) {
         return -2; // A similar request is already pending
     }
 
     // Send request
     if (q_send(m->dht, &new_query) == 0) {
-        if (q_add(m->dht->queries, &new_query)) {
+        if (q_add(tqnl->pending_list, &new_query)) {
             return 0;
         }
 
@@ -243,9 +243,9 @@ int query_send_request(void *tox, const char *address, uint16_t port, const uint
     return -4; // Unknown error.
 }
 
-int query_handle_toxid_response(void *object, IP_Port source, const uint8_t *pkt, uint16_t length, void *userdata)
+int query_handle_toxid_response(void *obj, IP_Port source, const uint8_t *pkt, uint16_t length, void *userdata)
 {
-    DHT *dht = (DHT *)object;
+    TOX_QNL *tqnl = (TOX_QNL *)obj;
 
     if (pkt[0] != NET_PACKET_DATA_NAME_RESPONSE) {
         return -1;
@@ -260,8 +260,8 @@ int query_handle_toxid_response(void *object, IP_Port source, const uint8_t *pkt
     // We verify the sender is in our list before we even try to decrypt anything
     unsigned int i;
 
-    for (i = 0; i < dht->queries->count; ++i) {
-        if (q_verify_server(&source, &dht->queries->query_list[i].ipp)) {
+    for (i = 0; i < tqnl->pending_list->count; ++i) {
+        if (q_verify_server(&source, &tqnl->pending_list->query_list[i].ipp)) {
             break;
         }
     }
@@ -276,7 +276,7 @@ int query_handle_toxid_response(void *object, IP_Port source, const uint8_t *pkt
 
     uint8_t clear[length];
 
-    int res = decrypt_data(sender_key, dht->self_secret_key, nonce,
+    int res = decrypt_data(sender_key, tqnl->m->dht->self_secret_key, nonce,
                            pkt + 1 + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE, length, clear);
 
     if (res == -1) {
@@ -285,48 +285,48 @@ int query_handle_toxid_response(void *object, IP_Port source, const uint8_t *pkt
 
     Query test = q_make(&source, sender_key, clear, length - CRYPTO_MAC_SIZE);
 
-    int loc = q_check(dht->queries, &test, 0);
+    int loc = q_check(tqnl->pending_list, &test, 0);
 
     if (loc == -1) {
         return -1;
     }
 
-    if (dht->queries->query_response) {
-        dht->queries->query_response(dht->queries->query_response_object, dht->queries->query_list[loc].name,
-                                     dht->queries->query_list[loc].length, clear, userdata);
+    if (tqnl->callback) {
+        tqnl->callback(tqnl, tqnl->pending_list->query_list[loc].name, tqnl->pending_list->query_list[loc].length,
+                       clear, userdata);
     }
 
-    q_drop(dht->queries, loc);
+    q_drop(tqnl->pending_list, loc);
     return 0;
 }
 
-Pending_Queries *query_new(Networking_Core *net)
+Pending_Queries *query_new(void)
 {
-    Pending_Queries *new = calloc(1, sizeof(Pending_Queries));
+    Pending_Queries *pending_list = calloc(1, sizeof(Pending_Queries));
 
-    if (!new) {
+    if (!pending_list) {
         return NULL;
     }
 
-    new->query_list = calloc(1, sizeof(Query));
+    pending_list->query_list = calloc(1, sizeof(Query));
 
-    if (new->query_list == NULL) {
-        free(new);
+    if (pending_list->query_list == NULL) {
+        free(pending_list);
         return NULL;
     }
 
-    return new;
+    return pending_list;
 }
 
 void query_iterate(void *object)
 {
-    DHT *dht = (DHT *)object;
+    TOX_QNL *tqnl = (TOX_QNL *)object;
 
-    if (dht->queries->count) {
+    if (tqnl->pending_list->count) {
         unsigned int i;
 
-        for (i = 0; i < dht->queries->count; ++i) {
-            q_send(dht, &dht->queries->query_list[i]);
+        for (i = 0; i < tqnl->pending_list->count; ++i) {
+            q_send(tqnl->m->dht, &tqnl->pending_list->query_list[i]);
         }
     }
 
