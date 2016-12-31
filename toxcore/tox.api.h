@@ -843,6 +843,10 @@ error for loop {
    */
   BAD_ARGS,
   /**
+   * Failed running events dispatcher.
+   */
+  BREAK,
+  /**
    * Failed running select().
    */
   SELECT,
