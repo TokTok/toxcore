@@ -22,14 +22,14 @@
 static bool q_grow(Pending_Queries *queries)
 {
     size_t size = queries->count + 2;
-    Query *new = realloc(queries->query_list, size * sizeof(Query));
+    Query *next = (Query *)realloc(queries->query_list, size * sizeof(Query));
 
-    if (!new) {
+    if (!next) {
         return false;
     }
 
     queries->size  = size;
-    queries->query_list = new;
+    queries->query_list = next;
 
     return true;
 }
@@ -134,7 +134,7 @@ static size_t q_build_packet(const uint8_t *their_public_key, const uint8_t *our
     int status = encrypt_data(their_public_key, our_secret_key, nonce, data, length, encrypted);
 
     if (status == -1) {
-        return -1;
+        return SIZE_MAX;
     }
 
     // Build the packet
@@ -162,7 +162,7 @@ static int q_send(const DHT *dht, const Query *send)
                                          send->name, send->length, packet);
     // TODO(grayhatter) add tox_assert(written_size == QUERY_PKT_ENCRYPTED_SIZE(send->length));
 
-    if (written_size != -1) {
+    if (written_size != SIZE_MAX) {
         return sendpacket(dht->net, send->ipp, packet, written_size) != written_size;
     }
 
@@ -196,7 +196,8 @@ int query_send_request(TOX_QNL *tqnl, const char *address, uint16_t port, const 
         return -1;
     }
 
-    IP_Port ipp = { .port = htons(port) };
+    IP_Port ipp = {{0}};
+    ipp.port = htons(port);
 
     struct addrinfo *info = root;
 
@@ -302,13 +303,13 @@ int query_handle_toxid_response(void *obj, IP_Port source, const uint8_t *pkt, u
 
 Pending_Queries *query_new(void)
 {
-    Pending_Queries *pending_list = calloc(1, sizeof(Pending_Queries));
+    Pending_Queries *pending_list = (Pending_Queries *)calloc(1, sizeof(Pending_Queries));
 
     if (!pending_list) {
         return NULL;
     }
 
-    pending_list->query_list = calloc(1, sizeof(Query));
+    pending_list->query_list = (Query *)calloc(1, sizeof(Query));
 
     if (pending_list->query_list == NULL) {
         free(pending_list);

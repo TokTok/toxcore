@@ -19,7 +19,7 @@ struct Tox_QNL *tox_qnl_new(Tox *tox, TOX_QNL_ERR_NEW *error)
         SET_ERROR(error, TOX_QNL_ERR_NEW_INVALID_TOX);
     }
 
-    struct Tox_QNL *tqnl = calloc(1, sizeof(*tqnl));
+    struct Tox_QNL *tqnl = (Tox_QNL *)calloc(1, sizeof(*tqnl));
 
     if (!tqnl) {
         SET_ERROR(error, TOX_QNL_ERR_NEW_MALLOC);
