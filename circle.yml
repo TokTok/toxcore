@@ -38,8 +38,6 @@ dependencies:
 ##### ------------ BUILD ------------
 
 test:
-  pre:
-    - echo "dummy"
   override:
     - make test ARGS="-V" ; ex1=$? ; if [ $ex1 -ne 0 ]; then sleep 60; make test ARGS="-V" ; exit $? ; fi
 
