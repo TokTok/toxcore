@@ -1904,7 +1904,6 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
 #ifdef HAVE_LIBEVENT
     m->dispatcher = event_base_new();
 #elif HAVE_LIBEV
-    //m->dispatcher = EV_DEFAULT;
     m->dispatcher = ev_loop_new(0);
 #else
     m->loop_run = false;
@@ -2047,7 +2046,7 @@ void kill_messenger(Messenger *m)
 #ifdef HAVE_LIBEVENT
     event_base_free(m->dispatcher);
 #elif  HAVE_LIBEV
-    //ev_loop_destroy(m->dispatcher);
+    ev_loop_destroy(m->dispatcher);
 #endif
 
     logger_kill(m->log);

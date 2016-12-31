@@ -999,6 +999,11 @@ typedef enum TOX_ERR_LOOP {
     TOX_ERR_LOOP_BAD_ARGS,
 
     /**
+     * Failed running events dispatcher.
+     */
+    TOX_ERR_LOOP_BREAK,
+
+    /**
      * Failed running select().
      */
     TOX_ERR_LOOP_SELECT,
