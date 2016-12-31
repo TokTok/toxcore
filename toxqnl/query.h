@@ -5,8 +5,9 @@
 #ifndef QUERY_H
 #define QUERY_H
 
-#include "crypto_core.h"
-#include "network.h"
+#include "../toxcore/crypto_core.h"
+#include "../toxcore/Messenger.h"
+#include "../toxcore/network.h"
 
 // query timeout in milliseconds
 #define QUERY_TIMEOUT 500
@@ -29,21 +30,27 @@ typedef struct {
     size_t count;
     Query *query_list;
 
-    void (*query_response)(void *tox, const uint8_t *request, size_t length, const uint8_t *tox_id,
-                           void *user_data) ;
-    void *query_response_object;
-
 } Pending_Queries;
 
-int query_send_request(void *tox, const char *address, uint16_t port, const uint8_t *key,
+struct Tox_QNL {
+    Messenger *m;
+
+    Pending_Queries *pending_list;
+
+    void (*callback)(struct Tox_QNL *tqnl, const uint8_t *request, size_t length, const uint8_t *tox_id, void *user_data);
+};
+
+typedef struct Tox_QNL TOX_QNL;
+
+int query_send_request(TOX_QNL *tqnl, const char *address, uint16_t port, const uint8_t *key,
                        const uint8_t *name, size_t length);
 
-int query_handle_toxid_response(void *object, IP_Port source, const uint8_t *pkt, uint16_t length, void *userdata);
+int query_handle_toxid_response(void *tqnl, IP_Port source, const uint8_t *pkt, uint16_t length, void *userdata);
 
 /**
  * Generate a new query object
  */
-Pending_Queries *query_new(Networking_Core *net);
+Pending_Queries *query_new(void);
 
 /**
  * Process/iterate pending queries.
