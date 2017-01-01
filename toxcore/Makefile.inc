@@ -75,4 +75,5 @@ libtoxcore_la_LIBADD =  $(LIBSODIUM_LIBS) \
                         $(NAC_LIBS) \
                         $(MINIUPNP_LIBS) \
                         $(NATPMP_LIBS) \
-                        $(PTHREAD_LIBS)
+                        $(PTHREAD_LIBS) \
+			libtoxupnp.la

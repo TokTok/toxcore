@@ -30,13 +30,13 @@
 #include "util.h"
 
 #ifdef HAVE_LIBMINIUPNPC
-#include <miniupnpc/miniupnpc-async.h>
-/*#include <miniupnpc/miniupnpc.h>
+//#include <miniupnpc/miniupnpc-async.h>
+#include <miniupnpc/miniupnpc.h>
 #include <miniupnpc/miniwget.h>
 #include <miniupnpc/upnpcommands.h>
 #include <miniupnpc/upnperrors.h>
 #include <stdio.h>
-#include "../toxupnp/toxupnp.h"*/
+#include "../toxupnp/toxupnp.h"
 #endif
 
 #ifdef HAVE_LIBNATPMP
@@ -167,7 +167,7 @@ static const char *str_nat_traversal_error(NAT_TRAVERSAL_STATUS status)
 #ifdef HAVE_LIBMINIUPNPC
 /* Setup port forwarding using UPnP */
 static bool upnp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port, uint32_t lifetime, bool ipv6_enabled,
-                          upnpc_t *upnp, NAT_TRAVERSAL_STATUS *status)
+                          UPNPDiscoverOpts *opts, NAT_TRAVERSAL_STATUS *status)
 {
     LOGGER_INFO(log, "Attempting to set up UPnP port forwarding");
 
@@ -186,7 +186,7 @@ static bool upnp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port,
             return false;
         }*/
 
-    /*error = upnpDiscoverAsyncGetStatus(opts);
+    error = upnpDiscoverAsyncGetStatus(opts);
 
     if (error == UPNPDISCOVER_RUNNING) {
         *status = NAT_TRAVERSAL_TRYAGAIN;
@@ -199,9 +199,9 @@ static bool upnp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port,
         upnpDiscoverAsyncSetIPv6(opts, ipv6_enabled);
         upnpDiscoverAsync(opts);
         return false;
-    }*/
+    }
 
-    if (upnp->state == EFinalized) {
+    /*if (upnp->state == EFinalized) {
         error = upnpc_init(upnp, NULL);
 
         if (error < 0) {
@@ -250,19 +250,18 @@ static bool upnp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port,
             break;
     }
 
-    return false;
+    return false;*/
 
-    /*struct UPNPUrls urls;
+    struct UPNPUrls urls;
 
     struct IGDdatas data;
 
     char lanaddr[64];
 
     //error = UPNP_GetValidIGD(devlist, &urls, &data, lanaddr, sizeof(lanaddr));
-
-    //freeUPNPDevlist(devlist);
     error = UPNP_GetValidIGDAsync(opts, &urls, &data, lanaddr, sizeof(lanaddr));
 
+    //freeUPNPDevlist(devlist);
     upnpDiscoverAsyncFreeDevlist(opts);
 
     switch (error) {
@@ -325,7 +324,7 @@ static bool upnp_map_port(Logger *log, NAT_TRAVERSAL_PROTO proto, uint16_t port,
 
     FreeUPNPUrls(&urls);
 
-    return ret;*/
+    return ret;
 }
 
 
