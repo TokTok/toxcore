@@ -498,6 +498,7 @@ if test "x$MINIUPNP" = "xyes" -o "x$MINIUPNP" = "xauto"; then
         AC_CHECK_LIB(miniupnpc, upnpDiscover,
             [
                 MINIUPNP="yes"
+                MINIUPNP_LIBS="-lminiupnpc"
             ],
             [
                 if test "x$MINIUPNP" = "xyes"; then
@@ -514,6 +515,7 @@ if test "x$MINIUPNP" = "xyes" -o "x$MINIUPNP" = "xauto"; then
         LDFLAGS="$LDFLAGS_SAVE"
         AC_SUBST(MINIUPNP_LIBS)
         AC_SUBST(MINIUPNP_LDFLAGS)
+        AC_DEFINE([HAVE_LIBMINIUPNPC], [1], [Define to 1 if you have the 'miniupnpc' library (-lminiupnpc).])
     fi
 fi
 
@@ -543,6 +545,7 @@ if test "x$NATPMP" = "xyes" -o "x$NATPMP" = "xauto"; then
         AC_CHECK_LIB(natpmp, initnatpmp,
             [
                 NATPMP="yes"
+                NATPMP_LIBS="-lnatpmp"
             ],
             [
                 if test "x$NATPMP" = "xyes"; then
@@ -559,6 +562,7 @@ if test "x$NATPMP" = "xyes" -o "x$NATPMP" = "xauto"; then
         LDFLAGS="$LDFLAGS_SAVE"
         AC_SUBST(NATPMP_LIBS)
         AC_SUBST(NATPMP_LDFLAGS)
+        AC_DEFINE([HAVE_LIBNATPMP], [1], [Define to 1 if you have the 'natpmp' library (-lnatpmp).])
     fi
 fi
 

@@ -40,6 +40,7 @@ void tox_options_set_##ns##name(struct Tox_Options *options, type name) \
 
 ACCESSORS(bool, , ipv6_enabled)
 ACCESSORS(bool, , udp_enabled)
+ACCESSORS(uint8_t, , traversal_type)
 ACCESSORS(TOX_PROXY_TYPE, proxy_ , type)
 ACCESSORS(const char *, proxy_ , host)
 ACCESSORS(uint16_t, proxy_ , port)
