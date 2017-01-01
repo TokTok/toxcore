@@ -7,6 +7,8 @@ matrix:
       ghc: 7.8
     - env: JOB=autotools ENV=linux
       compiler: gcc
+    - env: JOB=formatting ENV=linux
+      compiler: gcc
     - env: JOB=toxcore ENV=linux
       compiler: clang
     - env: JOB=toxcore ENV=osx

@@ -384,7 +384,7 @@ set(TEST_TIMEOUT_SECONDS "" CACHE STRING "Limit runtime of each test to the numb
 
 option(FORMAT_TEST "Require the format_test to be executed; fail cmake if it can't" OFF)
 
-if(APIDSL AND ASTYLE)
+if(APIDSL AND ASTYLE AND FORMAT_TEST)
   add_test(
     NAME format_test
     COMMAND ${toxcore_SOURCE_DIR}/other/astyle/format-source
