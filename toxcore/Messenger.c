@@ -1932,6 +1932,11 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
     }
 
 #ifdef HAVE_LIBEVENT
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+    evthread_use_windows_threads();
+#else
+    evthread_use_pthreads();
+#endif
     m->dispatcher = event_base_new();
 #elif HAVE_LIBEV
     m->dispatcher = ev_loop_new(0);

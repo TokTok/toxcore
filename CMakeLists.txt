@@ -168,34 +168,38 @@ endif()
 
 find_package(Threads   REQUIRED)
 
-find_library(NCURSES_LIBRARIES      ncurses       )
-find_library(UTIL_LIBRARIES         util          )
-find_library(RT_LIBRARIES           rt            )
+find_library(NCURSES_LIBRARIES      ncurses           )
+find_library(UTIL_LIBRARIES         util              )
+find_library(RT_LIBRARIES           rt                )
 
 # For toxcore.
-pkg_use_module(LIBSODIUM  REQUIRED  libsodium     )
-pkg_use_module(LIBEV                ev            )
+pkg_use_module(LIBSODIUM  REQUIRED  libsodium         )
+pkg_use_module(LIBEV                ev                )
 if(NOT LIBEV_FOUND)
-  pkg_use_module(LIBEVENT           libevent      )
+  if(NOT WIN32)
+    pkg_use_module(LIBEVENT         libevent_pthreads )
+  else()
+    pkg_use_module(LIBEVENT         libevent          )
+  endif()
 endif()
 
 # For toxav.
-pkg_use_module(OPUS                 opus          )
-pkg_use_module(VPX                  vpx           )
+pkg_use_module(OPUS                 opus              )
+pkg_use_module(VPX                  vpx               )
 
 # For tox-bootstrapd.
-pkg_use_module(LIBCONFIG            libconfig     )
+pkg_use_module(LIBCONFIG            libconfig         )
 
 # For auto tests.
-pkg_use_module(CHECK                check         )
+pkg_use_module(CHECK                check             )
 
 # For tox-spectest.
-pkg_use_module(MSGPACK              msgpack       )
+pkg_use_module(MSGPACK              msgpack           )
 
 # For av_test.
-pkg_use_module(OPENCV               opencv        )
-pkg_use_module(PORTAUDIO            portaudio-2.0 )
-pkg_use_module(SNDFILE              sndfile       )
+pkg_use_module(OPENCV               opencv            )
+pkg_use_module(PORTAUDIO            portaudio-2.0     )
+pkg_use_module(SNDFILE              sndfile           )
 
 if(OPUS_FOUND AND VPX_FOUND)
   set(BUILD_TOXAV TRUE)
@@ -205,9 +209,7 @@ endif()
 
 if(LIBEV_FOUND)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_LIBEV")
-endif()
-
-if(LIBEVENT_FOUND)
+elseif(LIBEVENT_FOUND)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_LIBEVENT")
 endif()
 
@@ -267,11 +269,13 @@ endif()
 if(LIBEV_FOUND)
   target_link_modules(toxnetwork ${LIBEV_LIBRARIES})
   set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-lev")
-endif()
-
-if(LIBEVENT_FOUND)
+elseif(LIBEVENT_FOUND)
   target_link_modules(toxnetwork ${LIBEVENT_LIBRARIES})
-  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-levent")
+  if(NOT WIN32)
+    set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-levent -levent_pthreads")
+  else()
+    set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-levent")
+  endif()
 endif()
 
 if(WIN32)
