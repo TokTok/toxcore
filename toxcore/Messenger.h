@@ -32,6 +32,7 @@
 
 #ifdef HAVE_LIBEVENT
 #include <event2/event.h>
+#include <event2/thread.h>
 #elif HAVE_LIBEV
 #include <ev.h>
 #endif
