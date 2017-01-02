@@ -64,7 +64,7 @@ static bool q_verify_server(const IP_Port *existing, const IP_Port *pending)
  */
 static int q_check(const Pending_Queries *queries, const Query *pend, bool outgoing)
 {
-    unsigned i;
+    size_t i;
 
     for (i = 0; i < queries->count; ++i) {
         Query *test = &queries->query_list[i];
@@ -86,10 +86,6 @@ static int q_check(const Pending_Queries *queries, const Query *pend, bool outgo
                 continue;
             }
         }
-
-        // if (memcmp(test.nonce, pend.nonce, ) {
-        // continue;
-        // }
 
         return i;
     }
@@ -149,8 +145,9 @@ static size_t q_build_packet(const uint8_t *their_public_key, const uint8_t *our
     size += CRYPTO_NONCE_SIZE;
 
     memcpy(built + size, encrypted, status);
+    size += status;
 
-    return 1 + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE + status;
+    return size;
 }
 
 static int q_send(const DHT *dht, const Query *send)
@@ -259,7 +256,7 @@ int query_handle_toxid_response(void *obj, IP_Port source, const uint8_t *pkt, u
     length -= 1; // drop the packet type
 
     // We verify the sender is in our list before we even try to decrypt anything
-    unsigned int i;
+    size_t i;
 
     for (i = 0; i < tqnl->pending_list->count; ++i) {
         if (q_verify_server(&source, &tqnl->pending_list->query_list[i].ipp)) {
@@ -319,17 +316,11 @@ Pending_Queries *query_new(void)
     return pending_list;
 }
 
-void query_iterate(void *object)
+void query_iterate(TOX_QNL *tqnl)
 {
-    TOX_QNL *tqnl = (TOX_QNL *)object;
-
     if (tqnl->pending_list->count) {
-        unsigned int i;
-
-        for (i = 0; i < tqnl->pending_list->count; ++i) {
+        for (size_t i = 0; i < tqnl->pending_list->count; ++i) {
             q_send(tqnl->m->dht, &tqnl->pending_list->query_list[i]);
         }
     }
-
-    return;
 }
