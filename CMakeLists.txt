@@ -178,9 +178,7 @@ endif()
 
 if(LIBEV_FOUND)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_LIBEV")
-endif()
-
-if(LIBEVENT_FOUND)
+elseif(LIBEVENT_FOUND)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_LIBEVENT")
 endif()
 
@@ -240,11 +238,13 @@ endif()
 if(LIBEV_FOUND)
   target_link_modules(toxnetwork ${LIBEV_LIBRARIES})
   set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-lev")
-endif()
-
-if(LIBEVENT_FOUND)
+elseif(LIBEVENT_FOUND)
   target_link_modules(toxnetwork ${LIBEVENT_LIBRARIES})
-  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-levent")
+  if(NOT WIN32)
+    set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-levent -levent_pthreads")
+  else()
+    set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-levent")
+  endif()
 endif()
 
 if(WIN32)
