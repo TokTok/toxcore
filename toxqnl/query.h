@@ -29,7 +29,6 @@ typedef struct {
     size_t size;
     size_t count;
     Query *query_list;
-
 } Pending_Queries;
 
 struct Tox_QNL {
@@ -55,9 +54,7 @@ Pending_Queries *query_new(void);
 /**
  * Process/iterate pending queries.
  *
- * void *object is expected to always be a DHT *object. That cant be enforced by type here because
- *      the DHT sturct contains a Pending_Queries struct defined in this file.
  */
-void query_iterate(void *object);
+void query_iterate(TOX_QNL *object);
 
 #endif
