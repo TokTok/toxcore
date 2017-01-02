@@ -248,8 +248,7 @@ add_module(toxdht
   toxcore/ping.c
   toxcore/ping.h
   toxcore/ping_array.c
-  toxcore/ping_array.h
-  )
+  toxcore/ping_array.h)
 target_link_modules(toxdht toxnetwork)
 
 # LAYER 4: Onion routing, TCP connections, crypto connections
@@ -314,14 +313,12 @@ target_link_modules(toxcore toxgroup)
 ################################################################################
 if(BUILD_TQNL)
   apidsl(
-    toxqnl/tqnl.api.h
-    )
+    toxqnl/tqnl.api.h)
 
   add_module(toxqnl
     toxqnl/tqnl.c
     toxqnl/query.h
-    toxqnl/query.c
-    )
+    toxqnl/query.c)
 
   target_link_modules(toxqnl toxcore)
 endif()

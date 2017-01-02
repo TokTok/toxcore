@@ -36,6 +36,7 @@ struct Tox_QNL *tox_qnl_new(Tox *tox, TOX_QNL_ERR_NEW *error)
 
     networking_registerhandler(m->net, NET_PACKET_DATA_NAME_RESPONSE, &query_handle_toxid_response, tqnl);
 
+    SET_ERROR(error, TOX_QNL_ERR_NEW_OK)
     return tqnl;
 }
 
