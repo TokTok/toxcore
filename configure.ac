@@ -501,7 +501,7 @@ if test "x$LIBEV" = "xyes" -o "x$LIBEV" = "xauto"; then
         LDFLAGS="$LDFLAGS_SAVE"
         AC_SUBST(LIBEV_LIBS)
         AC_SUBST(LIBEV_LDFLAGS)
-	AC_DEFINE([HAVE_LIBEV], [1], [Define to 1 if you have the 'libev' library (-lev).])
+        AC_DEFINE([HAVE_LIBEV], [1], [Define to 1 if you have the 'libev' library (-lev).])
     fi
 fi
 
@@ -516,7 +516,11 @@ if test "x$LIBEV" = "xno" && test "x$LIBEVENT" = "xyes" -o "x$LIBEVENT" = "xauto
             [
                 LIBEVENT="yes"
                 LIBEVENT_LDFLAGS="-L$LIBEVENT_SEARCH_LIBS"
-                LIBEVENT_LIBS="-levent"
+                if test "x$WIN32" = "xno"; then
+                    LIBEVENT_LIBS="-levent -levent_pthreads"
+                else
+                    LIBEVENT_LIBS="-levent"
+                fi
             ],
             [
                 if test "x$LIBEVENT" = "xyes"; then
@@ -531,7 +535,11 @@ if test "x$LIBEV" = "xno" && test "x$LIBEVENT" = "xyes" -o "x$LIBEVENT" = "xauto
         AC_CHECK_LIB(event, event_base_loop,
             [
                 LIBEVENT="yes"
-                LIBEVENT_LIBS="-levent"
+                if test "x$WIN32" = "xno"; then
+                    LIBEVENT_LIBS="-levent -levent_pthreads"
+                else
+                    LIBEVENT_LIBS="-levent"
+                fi
             ],
             [
                 if test "x$LIBEVENT" = "xyes"; then
@@ -646,7 +654,7 @@ if test "x$LIBEVENT" = "xyes"; then
     if test -n "$LIBEVENT_SEARCH_HEADERS"; then
         CFLAGS="-I$LIBEVENT_SEARCH_HEADERS $CFLAGS"
         CPPFLAGS="-I$LIBEVENT_SEARCH_HEADERS $CPPFLAGS"
-        AC_CHECK_HEADER(event2/event.h,
+        AC_CHECK_HEADERS([event2/event.h event2/thread.h],
             [
                 MINIUPNP_CFLAGS="-I$LIBEVENT_SEARCH_HEADERS"
             ],
@@ -655,7 +663,7 @@ if test "x$LIBEVENT" = "xyes"; then
             ]
         )
     else
-        AC_CHECK_HEADER(event2/event.h,
+        AC_CHECK_HEADERS([event2/event.h event2/thread.h],
             [],
             [
                 AC_MSG_ERROR([header files for required library libevent was not found on your system, please check http://libevent.org/])
