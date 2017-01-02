@@ -90,13 +90,13 @@ static int query_handle_toxid_request(void *object, IP_Port source, const uint8_
 START_TEST(test_query_ip4)
 {
 
-    TOX_ERR_NEW error = TOX_ERR_NEW_OK;
+    TOX_ERR_NEW error;
     Tox *server = tox_new(NULL, &error);
     ck_assert_msg(error == TOX_ERR_NEW_OK, "Unable to create server");
 
     Tox *client = tox_new(NULL, &error);
     ck_assert_msg(error == TOX_ERR_NEW_OK, "Unable to create client");
-    TOX_QNL_ERR_NEW qnl_err = TOX_QNL_ERR_NEW_OK;
+    TOX_QNL_ERR_NEW qnl_err;
     TOX_QNL *tqnl = tox_qnl_new(client, &qnl_err);
     ck_assert_msg(qnl_err == TOX_QNL_ERR_NEW_OK, "Unable to create TQNL");
 
@@ -129,13 +129,13 @@ END_TEST
 #ifndef TRAVIS_ENV
 START_TEST(test_query_ip6)
 {
-    TOX_ERR_NEW error = TOX_ERR_NEW_OK;
+    TOX_ERR_NEW error;
     Tox *server = tox_new(NULL, &error);
     ck_assert_msg(error == TOX_ERR_NEW_OK, "Unable to create server");
 
     Tox *client = tox_new(NULL, &error);
     ck_assert_msg(error == TOX_ERR_NEW_OK, "Unable to create client");
-    TOX_QNL_ERR_NEW qnl_err = TOX_QNL_ERR_NEW_OK;
+    TOX_QNL_ERR_NEW qnl_err;
     TOX_QNL *tqnl = tox_qnl_new(client, &qnl_err);
     ck_assert_msg(qnl_err == TOX_QNL_ERR_NEW_OK, "Unable to create TQNL");
 
@@ -148,7 +148,7 @@ START_TEST(test_query_ip6)
 
     uint16_t server_port = tox_self_get_udp_port(server, NULL);
 
-    TOX_QNL_ERR_REQUEST_SEND r_error = 0;
+    TOX_QNL_ERR_REQUEST_SEND r_error;
     tox_qnl_request_send(tqnl, "::1", server_port, ((Messenger *)server)->dht->self_public_key,
                          name, name_length, &r_error);
     ck_assert_msg(r_error == TOX_QNL_ERR_REQUEST_SEND_OK, "Error Sending Query Packet %i", r_error);
@@ -169,16 +169,16 @@ END_TEST
 START_TEST(test_query_store)
 {
 
-    TOX_ERR_NEW error = TOX_ERR_NEW_OK;
+    TOX_ERR_NEW error;
     Tox *client = tox_new(NULL, &error);
     ck_assert_msg(error == TOX_ERR_NEW_OK, "Unable to create client");
-    TOX_QNL_ERR_NEW qnl_err = TOX_QNL_ERR_NEW_OK;
+    TOX_QNL_ERR_NEW qnl_err;
     TOX_QNL *tqnl = tox_qnl_new(client, &qnl_err);
     ck_assert_msg(qnl_err == TOX_QNL_ERR_NEW_OK, "Unable to create TQNL");
 
     // Build client
     tox_qnl_callback_request_response(tqnl, tox_query_response);
-    TOX_QNL_ERR_REQUEST_SEND r_error = 0;
+    TOX_QNL_ERR_REQUEST_SEND r_error;
     tox_qnl_request_send(tqnl, "127.0.0.1", 33445, ((Messenger *)client)->dht->self_public_key,
                          name, name_length, &r_error);
     ck_assert_msg(r_error == TOX_QNL_ERR_REQUEST_SEND_OK, "Error Sending Query Packet %i", r_error);
@@ -204,16 +204,16 @@ END_TEST
 START_TEST(test_query_host)
 {
 
-    TOX_ERR_NEW error = TOX_ERR_NEW_OK;
+    TOX_ERR_NEW error;
     Tox *client = tox_new(NULL, &error);
     ck_assert_msg(error == TOX_ERR_NEW_OK, "Unable to create client");
-    TOX_QNL_ERR_NEW qnl_err = TOX_QNL_ERR_NEW_OK;
+    TOX_QNL_ERR_NEW qnl_err;
     TOX_QNL *tqnl = tox_qnl_new(client, &qnl_err);
     ck_assert_msg(qnl_err == TOX_QNL_ERR_NEW_OK, "Unable to create TQNL");
 
     // Build client
     tox_qnl_callback_request_response(tqnl, tox_query_response);
-    TOX_QNL_ERR_REQUEST_SEND r_error = 0;
+    TOX_QNL_ERR_REQUEST_SEND r_error;
     tox_qnl_request_send(tqnl, "baonethuaoreucaoeustaohdsatnhkbgcypidstnkbcgasrcpidancgubkagduhtou",
                          33445, ((Messenger *)client)->dht->self_public_key, name, name_length, &r_error);
     ck_assert_msg(r_error == TOX_QNL_ERR_REQUEST_SEND_BAD_HOST, "BAD_HOST WAS ACCEPTED %i", r_error);
@@ -250,16 +250,16 @@ END_TEST
 
 START_TEST(test_query_null)
 {
-    TOX_ERR_NEW error = TOX_ERR_NEW_OK;
+    TOX_ERR_NEW error;
     Tox *client = tox_new(NULL, &error);
     ck_assert_msg(error == TOX_ERR_NEW_OK, "Unable to create client");
-    TOX_QNL_ERR_NEW qnl_err = TOX_QNL_ERR_NEW_OK;
+    TOX_QNL_ERR_NEW qnl_err;
     TOX_QNL *tqnl = tox_qnl_new(client, &qnl_err);
     ck_assert_msg(qnl_err == TOX_QNL_ERR_NEW_OK, "Unable to create TQNL");
 
     // Build client
     tox_qnl_callback_request_response(tqnl, tox_query_response);
-    TOX_QNL_ERR_REQUEST_SEND r_error = 0;
+    TOX_QNL_ERR_REQUEST_SEND r_error;
     tox_qnl_request_send(tqnl, NULL, 33445, ((Messenger *)client)->dht->self_public_key, name, name_length, &r_error);
     ck_assert_msg(r_error == TOX_QNL_ERR_REQUEST_SEND_NULL, "BAD ADDRESS WAS ACCEPTED %i", r_error);
 
@@ -317,7 +317,7 @@ START_TEST(test_query_functions)
 
     // testing q_grow
     Pending_Queries testing_MAIN = {0};
-    Query         testing_SINGLE;
+    Query           testing_SINGLE;
 
     memset(&testing_MAIN, 0, sizeof(Pending_Queries));
     memset(&testing_SINGLE, 0, sizeof(Query));
@@ -356,14 +356,12 @@ START_TEST(test_query_functions)
     ck_assert_msg(testing_MAIN.size == 0, "query_list unexpected size");
 
 #if 0
-    testing q_verify_server(IP_Port existing, IP_Port pending)
-
-    testing  int q_check(Pending_Queries * queries, Query pend, bool outgoing)
-    testing  bool q_add(Pending_Queries * queries, Query pend)
-    testing  bool q_drop(Pending_Queries * queries, size_t loc)
-    testing  size_t q_build_packet(const uint8_t *their_public_key, const uint8_t *our_public_key,
-                                   const uint8_t *our_secret_key,
-                                   uint8_t type, const uint8_t *data, size_t length, uint8_t *built)
+    // TODO(grayhatter) finish all unit tests for the commented functions
+    q_verify_server()
+    q_check()
+    bool q_add()
+    bool q_drop()
+    size_t q_build_packet()
 #endif
     uint8_t key[CRYPTO_PUBLIC_KEY_SIZE];
     new_symmetric_key(key);
@@ -375,14 +373,12 @@ START_TEST(test_query_functions)
 
 
 #if 0
-    testing int q_send(DHT * dht, Query send)
-    testing  Query q_make(IP_Port ipp, const uint8_t key[TOX_PUBLIC_KEY_SIZE], const uint8_t *name, size_t length)
-    testing  query_send_request(Tox * tox, const char *address, uint16_t port, const uint8_t *key,
-                                const uint8_t *name, size_t length)
-    testing int query_handle_toxid_response(void *object, IP_Port source, const uint8_t *pkt, uint16_t length,
-                                            void *userdata)
-    testing Pending_Queries *query_new(Networking_Core * net)
-    testing void query_iterate(void *object)
+    q_send()
+    q_make()
+    query_send_request()
+    query_handle_toxid_response()
+    query_new()
+    query_iterate()
 #endif
 }
 END_TEST

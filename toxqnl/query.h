@@ -17,7 +17,7 @@ typedef struct {
     IP_Port  ipp;
     uint8_t  key[CRYPTO_PUBLIC_KEY_SIZE];
     uint8_t  name[QUERY_MAX_NAME_SIZE];
-    size_t  length;
+    size_t   length;
 
     uint64_t query_nonce;
 
