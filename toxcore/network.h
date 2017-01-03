@@ -56,13 +56,15 @@ typedef short sa_family_t;
 #include <errno.h>
 #include <fcntl.h>
 #include <netdb.h>
-#include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
 
 #endif
+
+struct in_addr;
+struct in6_addr;
 
 typedef int Socket;
 
@@ -114,7 +116,6 @@ typedef union {
     uint8_t uint8[4];
     uint16_t uint16[2];
     uint32_t uint32;
-    struct in_addr in_addr;
 }
 IP4;
 
@@ -123,7 +124,6 @@ typedef union {
     uint16_t uint16[8];
     uint32_t uint32[4];
     uint64_t uint64[2];
-    struct in6_addr in6_addr;
 }
 IP6;
 
@@ -141,6 +141,12 @@ typedef struct {
     uint16_t port;
 }
 IP_Port;
+
+void get_ip4(IP4 *ip, const struct in_addr *addr);
+void get_ip6(IP6 *ip, const struct in6_addr *addr);
+
+void fill_addr4(IP4 ip, struct in_addr *addr);
+void fill_addr6(IP6 ip, struct in6_addr *addr);
 
 /* Does the IP6 struct a contain an IPv4 address in an IPv6 one? */
 #define IPV6_IPV4_IN_V6(a) ((a.uint64[0] == 0) && (a.uint32[2] == htonl (0xffff)))
