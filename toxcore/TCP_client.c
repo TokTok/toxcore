@@ -50,14 +50,14 @@ static int connect_tox_socko(tox_sock sock, IP_Port ip_port, TCP_Proxy_Info *pro
 
         addrsize = sizeof(struct sockaddr_in);
         addr4->sin_family = AF_INET;
-        addr4->sin_addr = ip_port.ip.ip4.in_addr;
+        fill_addr4(ip_port.ip.ip4, &addr4->sin_addr);
         addr4->sin_port = ip_port.port;
     } else if (ip_port.ip.family == AF_INET6) {
         struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *)&addr;
 
         addrsize = sizeof(struct sockaddr_in6);
         addr6->sin6_family = AF_INET6;
-        addr6->sin6_addr = ip_port.ip.ip6.in6_addr;
+        fill_addr6(ip_port.ip.ip6, &addr6->sin6_addr);
         addr6->sin6_port = ip_port.port;
     } else {
         return 0;
