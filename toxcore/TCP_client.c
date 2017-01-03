@@ -35,7 +35,7 @@
 /* return 1 on success
  * return 0 on failure
  */
-static int connect_sock_to(sock_t sock, IP_Port ip_port, TCP_Proxy_Info *proxy_info)
+static int connect_sock_to(tox_sock sock, IP_Port ip_port, TCP_Proxy_Info *proxy_info)
 {
     if (proxy_info->proxy_type != TCP_PROXY_NONE) {
         ip_port = proxy_info->ip_port;
@@ -652,7 +652,7 @@ TCP_Client_Connection *new_TCP_connection(IP_Port ip_port, const uint8_t *public
         family = proxy_info->ip_port.ip.family;
     }
 
-    sock_t sock = socket(family, SOCK_STREAM, IPPROTO_TCP);
+    tox_sock sock = socket(family, SOCK_STREAM, IPPROTO_TCP);
 
     if (!sock_valid(sock)) {
         return NULL;
