@@ -37,16 +37,29 @@
 #include "logger.h"
 #include "util.h"
 
-#if !defined(_WIN32) && !defined(__WIN32__) && !defined (WIN32)
-#include <errno.h>
-#endif
-
 #ifdef __APPLE__
 #include <mach/clock.h>
 #include <mach/mach.h>
 #endif
 
-#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
+#ifndef IPV6_ADD_MEMBERSHIP
+#ifdef  IPV6_JOIN_GROUP
+#define IPV6_ADD_MEMBERSHIP IPV6_JOIN_GROUP
+#define IPV6_DROP_MEMBERSHIP IPV6_LEAVE_GROUP
+#endif
+#endif
+
+#if !defined(_WIN32) && !defined(__WIN32__) && !defined (WIN32)
+#include <errno.h>
+#else
+
+#ifndef IPV6_V6ONLY
+#define IPV6_V6ONLY 27
+#endif
+
+#ifndef EWOULDBLOCK
+#define EWOULDBLOCK WSAEWOULDBLOCK
+#endif
 
 static const char *inet_ntop(sa_family_t family, const void *addr, char *buf, size_t bufsize)
 {
