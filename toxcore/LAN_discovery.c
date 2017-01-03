@@ -109,7 +109,7 @@ static void fetch_broadcast_info(uint16_t port)
      * Definitely won't work like this on Windows...
      */
     broadcast_count = 0;
-    sock_t sock = 0;
+    Socket sock = 0;
 
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         return;
@@ -155,7 +155,7 @@ static void fetch_broadcast_info(uint16_t port)
 
         IP_Port *ip_port = &broadcast_ip_port[broadcast_count];
         ip_port->ip.family = AF_INET;
-        ip_port->ip.ip4.in_addr = sock4->sin_addr;
+        get_ip4(&ip_port->ip.ip4, &sock4->sin_addr);
 
         if (ip_port->ip.ip4.uint32 == 0) {
             continue;
