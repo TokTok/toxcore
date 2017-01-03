@@ -74,7 +74,7 @@ typedef struct Messenger Tox;
 #error TOX_MAX_STATUS_MESSAGE_LENGTH is assumed to be equal to MAX_STATUSMESSAGE_LENGTH
 #endif
 
-#if defined(HAVE_LIBEVENT) || defined(HAVE_LIBEV)
+#if defined(HAVE_LIBEV) || defined(HAVE_LIBEVENT)
 typedef struct {
     Tox *tox;
     void *user_data;
@@ -403,51 +403,7 @@ void tox_callback_loop_end(Tox *tox, tox_loop_end_cb *callback)
     m->loop_end_cb = callback;
 }
 
-#ifdef HAVE_LIBEVENT
-void tox_do_iterate(evutil_socket_t fd, short events, void *arg)
-{
-
-    if (arg == NULL) {
-        return;
-    }
-
-    event_arg_t *tmp = (event_arg_t *) arg;
-    Messenger *m = (Messenger *) tmp->tox;
-    uint32_t i;
-    struct timeval timeout;
-
-    if (m->loop_begin_cb) {
-        m->loop_begin_cb(m, tmp->user_data);
-    }
-
-    tox_iterate(tmp->tox, tmp->user_data);
-
-    timeout.tv_sec = 5;
-    timeout.tv_usec = 0;
-
-    if (!m->net->sock_listener) {
-        m->net->sock_listener = event_new(m->dispatcher, m->net->sock, EV_READ | EV_PERSIST, tox_do_iterate, arg);
-    }
-
-    event_add(m->net->sock_listener, &timeout);
-
-    TCP_Connections *conns = m->net_crypto->tcp_c;
-
-    for (i = 0; i < conns->tcp_connections_length; i++) {
-        TCP_Client_Connection *conn = conns->tcp_connections[i].connection;
-
-        if (!conn->sock_listener) {
-            conn->sock_listener = event_new(m->dispatcher, conn->sock, EV_READ | EV_PERSIST, tox_do_iterate, arg);
-        }
-
-        event_add(conn->sock_listener, NULL);
-    }
-
-    if (m->loop_end_cb) {
-        m->loop_end_cb(m, tmp->user_data);
-    }
-}
-#elif HAVE_LIBEV
+#ifdef HAVE_LIBEV
 void tox_stop_loop_cb(struct ev_loop *dispatcher, ev_async *listener, int events)
 {
 
@@ -519,6 +475,50 @@ void tox_do_iterate(struct ev_loop *dispatcher, ev_io *sock_listener, int events
         m->loop_end_cb(m, tmp->user_data);
     }
 }
+#elif HAVE_LIBEVENT
+void tox_do_iterate(evutil_socket_t fd, short events, void *arg)
+{
+
+    if (arg == NULL) {
+        return;
+    }
+
+    event_arg_t *tmp = (event_arg_t *) arg;
+    Messenger *m = (Messenger *) tmp->tox;
+    uint32_t i;
+    struct timeval timeout;
+
+    if (m->loop_begin_cb) {
+        m->loop_begin_cb(m, tmp->user_data);
+    }
+
+    tox_iterate(tmp->tox, tmp->user_data);
+
+    timeout.tv_sec = 5;
+    timeout.tv_usec = 0;
+
+    if (!m->net->sock_listener) {
+        m->net->sock_listener = event_new(m->dispatcher, m->net->sock, EV_READ | EV_PERSIST, tox_do_iterate, arg);
+    }
+
+    event_add(m->net->sock_listener, &timeout);
+
+    TCP_Connections *conns = m->net_crypto->tcp_c;
+
+    for (i = 0; i < conns->tcp_connections_length; i++) {
+        TCP_Client_Connection *conn = conns->tcp_connections[i].connection;
+
+        if (!conn->sock_listener) {
+            conn->sock_listener = event_new(m->dispatcher, conn->sock, EV_READ | EV_PERSIST, tox_do_iterate, arg);
+        }
+
+        event_add(conn->sock_listener, NULL);
+    }
+
+    if (m->loop_end_cb) {
+        m->loop_end_cb(m, tmp->user_data);
+    }
+}
 #else
 /**
  * Gathers a list of every network file descriptor,
@@ -577,25 +577,7 @@ bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error)
     Messenger *m = (Messenger *) tox;
     bool ret = true;
 
-#ifdef HAVE_LIBEVENT
-    event_arg_t *tmp = calloc(1, sizeof(event_arg_t));
-
-    tmp->tox = tox;
-    tmp->user_data = user_data;
-
-    tox_do_iterate(0, 0, tmp);
-    ret = event_base_dispatch(m->dispatcher) < 0 ? false : true;
-
-    if (error != NULL) {
-        if (ret) {
-            *error = TOX_ERR_LOOP_OK;
-        } else {
-            *error = TOX_ERR_LOOP_BREAK;
-        }
-    }
-
-    free(tmp);
-#elif HAVE_LIBEV
+#ifdef HAVE_LIBEV
     event_arg_t *tmp = calloc(1, sizeof(event_arg_t));
 
     tmp->tox = tox;
@@ -625,6 +607,24 @@ bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error)
 
     if (error != NULL) {
         *error = TOX_ERR_LOOP_OK;
+    }
+
+    free(tmp);
+#elif HAVE_LIBEVENT
+    event_arg_t *tmp = calloc(1, sizeof(event_arg_t));
+
+    tmp->tox = tox;
+    tmp->user_data = user_data;
+
+    tox_do_iterate(0, 0, tmp);
+    ret = event_base_dispatch(m->dispatcher) < 0 ? false : true;
+
+    if (error != NULL) {
+        if (ret) {
+            *error = TOX_ERR_LOOP_OK;
+        } else {
+            *error = TOX_ERR_LOOP_BREAK;
+        }
     }
 
     free(tmp);
@@ -714,10 +714,10 @@ void tox_loop_stop(Tox *tox)
 
     Messenger *m = (Messenger *) tox;
 
-#ifdef HAVE_LIBEVENT
-    event_base_loopbreak(m->dispatcher);
-#elif HAVE_LIBEV
+#ifdef HAVE_LIBEV
     ev_async_send(m->dispatcher, &m->stop_loop);
+#elif HAVE_LIBEVENT
+    event_base_loopbreak(m->dispatcher);
 #else
     m->loop_run = false;
 #endif

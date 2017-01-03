@@ -30,11 +30,11 @@
 #include "friend_requests.h"
 #include "logger.h"
 
-#ifdef HAVE_LIBEVENT
+#ifdef HAVE_LIBEV
+#include <ev.h>
+#elif HAVE_LIBEVENT
 #include <event2/event.h>
 #include <event2/thread.h>
-#elif HAVE_LIBEV
-#include <ev.h>
 #endif
 
 #define MAX_NAME_LENGTH 128
@@ -279,11 +279,11 @@ struct Messenger {
     void (*core_connection_change)(struct Messenger *m, unsigned int, void *);
     unsigned int last_connection_status;
 
-#ifdef HAVE_LIBEVENT
-    struct event_base *dispatcher;
-#elif HAVE_LIBEV
+#ifdef HAVE_LIBEV
     struct ev_loop *dispatcher;
     ev_async stop_loop;
+#elif HAVE_LIBEVENT
+    struct event_base *dispatcher;
 #else
     bool loop_run;
 #endif
