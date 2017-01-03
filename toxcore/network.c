@@ -123,7 +123,7 @@ static int inet_pton(sa_family_t family, const char *addrString, void *addrbuf)
  * return 1 if valid
  * return 0 if not valid
  */
-int sock_valid(sock_t sock)
+int sock_valid(Socket sock)
 {
 #if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
 
@@ -140,7 +140,7 @@ int sock_valid(sock_t sock)
 
 /* Close the socket.
  */
-void kill_sock(sock_t sock)
+void kill_sock(Socket sock)
 {
 #if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
     closesocket(sock);
@@ -154,7 +154,7 @@ void kill_sock(sock_t sock)
  * return 1 on success
  * return 0 on failure
  */
-int set_socket_nonblock(sock_t sock)
+int set_socket_nonblock(Socket sock)
 {
 #if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
     u_long mode = 1;
@@ -169,7 +169,7 @@ int set_socket_nonblock(sock_t sock)
  * return 1 on success
  * return 0 on failure
  */
-int set_socket_nosigpipe(sock_t sock)
+int set_socket_nosigpipe(Socket sock)
 {
 #if defined(__MACH__)
     int set = 1;
@@ -184,7 +184,7 @@ int set_socket_nosigpipe(sock_t sock)
  * return 1 on success
  * return 0 on failure
  */
-int set_socket_reuseaddr(sock_t sock)
+int set_socket_reuseaddr(Socket sock)
 {
     int set = 1;
     return (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const char *)&set, sizeof(set)) == 0);
@@ -195,7 +195,7 @@ int set_socket_reuseaddr(sock_t sock)
  * return 1 on success
  * return 0 on failure
  */
-int set_socket_dualstack(sock_t sock)
+int set_socket_dualstack(Socket sock)
 {
     int ipv6only = 0;
     socklen_t optsize = sizeof(ipv6only);
@@ -378,7 +378,7 @@ int sendpacket(Networking_Core *net, IP_Port ip_port, const uint8_t *data, uint1
  *  Packet data is put into data.
  *  Packet length is put into length.
  */
-static int receivepacket(Logger *log, sock_t sock, IP_Port *ip_port, uint8_t *data, uint32_t *length)
+static int receivepacket(Logger *log, Socket sock, IP_Port *ip_port, uint8_t *data, uint32_t *length)
 {
     memset(ip_port, 0, sizeof(IP_Port));
     struct sockaddr_storage addr;
