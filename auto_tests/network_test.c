@@ -2,6 +2,7 @@
 #include "config.h"
 #endif
 
+#include <arpa/inet.h>
 #include <check.h>
 #include <errno.h>
 #include <stdint.h>
