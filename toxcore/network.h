@@ -52,16 +52,8 @@
 #include <windows.h>
 #include <ws2tcpip.h>
 
-#ifndef IPV6_V6ONLY
-#define IPV6_V6ONLY 27
-#endif
-
 /* sa_family_t is the sockaddr_in / sockaddr_in6 family field */
 typedef short sa_family_t;
-
-#ifndef EWOULDBLOCK
-#define EWOULDBLOCK WSAEWOULDBLOCK
-#endif
 
 #else // Linux includes
 
@@ -78,26 +70,6 @@ typedef short sa_family_t;
 #endif
 
 typedef int Socket;
-
-#if defined(__AIX__)
-#   define _XOPEN_SOURCE 1
-#endif
-
-#if defined(__sun__)
-#define __EXTENSIONS__ 1 // SunOS!
-#if defined(__SunOS5_6__) || defined(__SunOS5_7__) || defined(__SunOS5_8__) || defined(__SunOS5_9__) || defined(__SunOS5_10__)
-//Nothing needed
-#else
-#define __MAKECONTEXT_V2_SOURCE 1
-#endif
-#endif
-
-#ifndef IPV6_ADD_MEMBERSHIP
-#ifdef  IPV6_JOIN_GROUP
-#define IPV6_ADD_MEMBERSHIP IPV6_JOIN_GROUP
-#define IPV6_DROP_MEMBERSHIP IPV6_LEAVE_GROUP
-#endif
-#endif
 
 #define MAX_UDP_PACKET_SIZE 2048
 
