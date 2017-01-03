@@ -56,7 +56,6 @@
 #define IPV6_V6ONLY 27
 #endif
 
-typedef unsigned int sock_t;
 /* sa_family_t is the sockaddr_in / sockaddr_in6 family field */
 typedef short sa_family_t;
 
@@ -76,9 +75,9 @@ typedef short sa_family_t;
 #include <sys/types.h>
 #include <unistd.h>
 
-typedef int sock_t;
-
 #endif
+
+typedef int Socket;
 
 #if defined(__AIX__)
 #   define _XOPEN_SOURCE 1
@@ -316,7 +315,7 @@ typedef struct {
     sa_family_t family;
     uint16_t port;
     /* Our UDP socket. */
-    sock_t sock;
+    Socket sock;
 } Networking_Core;
 
 /* Run this before creating sockets.
@@ -331,39 +330,39 @@ int networking_at_startup(void);
  * return 1 if valid
  * return 0 if not valid
  */
-int sock_valid(sock_t sock);
+int sock_valid(Socket sock);
 
 /* Close the socket.
  */
-void kill_sock(sock_t sock);
+void kill_sock(Socket sock);
 
 /* Set socket as nonblocking
  *
  * return 1 on success
  * return 0 on failure
  */
-int set_socket_nonblock(sock_t sock);
+int set_socket_nonblock(Socket sock);
 
 /* Set socket to not emit SIGPIPE
  *
  * return 1 on success
  * return 0 on failure
  */
-int set_socket_nosigpipe(sock_t sock);
+int set_socket_nosigpipe(Socket sock);
 
 /* Enable SO_REUSEADDR on socket.
  *
  * return 1 on success
  * return 0 on failure
  */
-int set_socket_reuseaddr(sock_t sock);
+int set_socket_reuseaddr(Socket sock);
 
 /* Set socket to dual (IPv4 + IPv6 socket)
  *
  * return 1 on success
  * return 0 on failure
  */
-int set_socket_dualstack(sock_t sock);
+int set_socket_dualstack(Socket sock);
 
 /* return current monotonic time in milliseconds (ms). */
 uint64_t current_time_monotonic(void);

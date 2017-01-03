@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
 
     IP ip = {0};
     ip.family = AF_INET;
-    sock_t sock = socket(ip.family, SOCK_DGRAM, IPPROTO_UDP);
+    Socket sock = socket(ip.family, SOCK_DGRAM, IPPROTO_UDP);
 
     if (!sock_valid(sock)) {
         return -1;
