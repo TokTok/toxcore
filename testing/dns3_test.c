@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
 
     target.sin_family = AF_INET;
 
-    target.sin_addr = ip.ip4.in_addr;
+    fill_addr4(ip.ip4, &target.sin_addr);
 
     target.sin_port = htons(53);
 
