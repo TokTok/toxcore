@@ -33,10 +33,10 @@
 #include "ccompat.h"
 #include "logger.h"
 
-#ifdef HAVE_LIBEVENT
-#include <event2/event.h>
-#elif HAVE_LIBEV
+#ifdef HAVE_LIBEV
 #include <ev.h>
+#elif HAVE_LIBEVENT
+#include <event2/event.h>
 #endif
 #include <stdint.h>
 #include <stdio.h>
@@ -301,13 +301,13 @@ typedef struct {
     uint16_t port;
     /* Our UDP socket. */
     Socket sock;
-#ifdef HAVE_LIBEVENT
-    struct event *sock_listener;
-#elif HAVE_LIBEV
+#ifdef HAVE_LIBEV
     struct {
         ev_io listener;
         struct ev_loop *dispatcher;
     } sock_listener;
+#elif HAVE_LIBEVENT
+    struct event *sock_listener;
 #endif
 } Networking_Core;
 
