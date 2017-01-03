@@ -49,8 +49,14 @@
 #endif
 
 #if !defined(_WIN32) && !defined(__WIN32__) && !defined (WIN32)
+
 #include <errno.h>
+#include <fcntl.h>
 #include <netinet/in.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+
 #else
 
 #ifndef IPV6_V6ONLY

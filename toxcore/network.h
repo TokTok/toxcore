@@ -47,24 +47,19 @@
 #include <windows.h>
 #include <ws2tcpip.h>
 
-/* sa_family_t is the sockaddr_in / sockaddr_in6 family field */
-typedef short sa_family_t;
-
 #else // Linux includes
 
 #include <arpa/inet.h>
 #include <errno.h>
-#include <fcntl.h>
 #include <netdb.h>
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <sys/types.h>
 #include <unistd.h>
 
 #endif
 
 struct in_addr;
 struct in6_addr;
+
+typedef unsigned short int sa_family_t;
 typedef int tox_sock;
 
 #define MAX_UDP_PACKET_SIZE 2048
