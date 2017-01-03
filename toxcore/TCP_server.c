@@ -39,7 +39,7 @@ struct TCP_Server {
     int efd;
     uint64_t last_run_pinged;
 #endif
-    sock_t *socks_listening;
+    tox_sock *socks_listening;
     unsigned int num_listening_socks;
 
     uint8_t public_key[CRYPTO_PUBLIC_KEY_SIZE];
@@ -71,7 +71,7 @@ size_t tcp_server_listen_count(const TCP_Server *tcp_server)
 /* return 1 on success
  * return 0 on failure
  */
-static int bind_to_port(sock_t sock, int family, uint16_t port)
+static int bind_to_port(tox_sock sock, int family, uint16_t port)
 {
     struct sockaddr_storage addr = {0};
     size_t addrsize;
@@ -225,7 +225,7 @@ static int del_accepted(TCP_Server *TCP_server, int index)
 /* return the amount of data in the tcp recv buffer.
  * return 0 on failure.
  */
-unsigned int TCP_socket_data_recv_buffer(sock_t sock)
+unsigned int TCP_socket_data_recv_buffer(tox_sock sock)
 {
 #if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
     unsigned long count = 0;
@@ -245,7 +245,7 @@ unsigned int TCP_socket_data_recv_buffer(sock_t sock)
  * return 0 if nothing has been read from socket.
  * return ~0 on failure.
  */
-uint16_t read_TCP_length(sock_t sock)
+uint16_t read_TCP_length(tox_sock sock)
 {
     unsigned int count = TCP_socket_data_recv_buffer(sock);
 
@@ -275,7 +275,7 @@ uint16_t read_TCP_length(sock_t sock)
  * return length on success
  * return -1 on failure/no data in buffer.
  */
-int read_TCP_packet(sock_t sock, uint8_t *data, uint16_t length)
+int read_TCP_packet(tox_sock sock, uint8_t *data, uint16_t length)
 {
     unsigned int count = TCP_socket_data_recv_buffer(sock);
 
@@ -297,7 +297,7 @@ int read_TCP_packet(sock_t sock, uint8_t *data, uint16_t length)
  * return 0 if could not read any packet.
  * return -1 on failure (connection must be killed).
  */
-int read_packet_TCP_secure_connection(sock_t sock, uint16_t *next_packet_length, const uint8_t *shared_key,
+int read_packet_TCP_secure_connection(tox_sock sock, uint16_t *next_packet_length, const uint8_t *shared_key,
                                       uint8_t *recv_nonce, uint8_t *data, uint16_t max_len)
 {
     if (*next_packet_length == 0) {
@@ -522,7 +522,7 @@ static int kill_accepted(TCP_Server *TCP_server, int index)
         rm_connection_index(TCP_server, &TCP_server->accepted_connection_array[index], i);
     }
 
-    sock_t sock = TCP_server->accepted_connection_array[index].sock;
+    tox_sock sock = TCP_server->accepted_connection_array[index].sock;
 
     if (del_accepted(TCP_server, index) != 0) {
         return -1;
@@ -964,7 +964,7 @@ static int confirm_TCP_connection(TCP_Server *TCP_server, TCP_Secure_Connection 
 /* return index on success
  * return -1 on failure
  */
-static int accept_connection(TCP_Server *TCP_server, sock_t sock)
+static int accept_connection(TCP_Server *TCP_server, tox_sock sock)
 {
     if (!sock_valid(sock)) {
         return -1;
@@ -996,9 +996,9 @@ static int accept_connection(TCP_Server *TCP_server, sock_t sock)
     return index;
 }
 
-static sock_t new_listening_TCP_socket(int family, uint16_t port)
+static tox_sock new_listening_TCP_socket(int family, uint16_t port)
 {
-    sock_t sock = socket(family, SOCK_STREAM, IPPROTO_TCP);
+    tox_sock sock = socket(family, SOCK_STREAM, IPPROTO_TCP);
 
     if (!sock_valid(sock)) {
         return ~0;
@@ -1041,7 +1041,7 @@ TCP_Server *new_TCP_server(uint8_t ipv6_enabled, uint16_t num_sockets, const uin
         return NULL;
     }
 
-    temp->socks_listening = (sock_t *)calloc(num_sockets, sizeof(sock_t));
+    temp->socks_listening = (tox_sock *)calloc(num_sockets, sizeof(tox_sock));
 
     if (temp->socks_listening == NULL) {
         free(temp);
@@ -1073,7 +1073,7 @@ TCP_Server *new_TCP_server(uint8_t ipv6_enabled, uint16_t num_sockets, const uin
 #endif
 
     for (i = 0; i < num_sockets; ++i) {
-        sock_t sock = new_listening_TCP_socket(family, ports[i]);
+        tox_sock sock = new_listening_TCP_socket(family, ports[i]);
 
         if (sock_valid(sock)) {
 #ifdef TCP_SERVER_USE_EPOLL
@@ -1117,7 +1117,7 @@ static void do_TCP_accept_new(TCP_Server *TCP_server)
     for (i = 0; i < TCP_server->num_listening_socks; ++i) {
         struct sockaddr_storage addr;
         socklen_t addrlen = sizeof(addr);
-        sock_t sock;
+        tox_sock sock;
 
         do {
             sock = accept(TCP_server->socks_listening[i], (struct sockaddr *)&addr, &addrlen);
@@ -1285,7 +1285,7 @@ static void do_TCP_epoll(TCP_Server *TCP_server)
         int n;
 
         for (n = 0; n < nfds; ++n) {
-            sock_t sock = events[n].data.u64 & 0xFFFFFFFF;
+            tox_sock sock = events[n].data.u64 & 0xFFFFFFFF;
             int status = (events[n].data.u64 >> 32) & 0xFF, index = (events[n].data.u64 >> 40);
 
             if ((events[n].events & EPOLLERR) || (events[n].events & EPOLLHUP) || (events[n].events & EPOLLRDHUP)) {
@@ -1326,7 +1326,7 @@ static void do_TCP_epoll(TCP_Server *TCP_server)
                     socklen_t addrlen = sizeof(addr);
 
                     while (1) {
-                        sock_t sock_new = accept(sock, (struct sockaddr *)&addr, &addrlen);
+                        tox_sock sock_new = accept(sock, (struct sockaddr *)&addr, &addrlen);
 
                         if (!sock_valid(sock_new)) {
                             break;
