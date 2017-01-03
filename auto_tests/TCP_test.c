@@ -407,7 +407,7 @@ START_TEST(test_client)
 
     ip_port_tcp_s.port = htons(ports[rand() % NUM_PORTS]);
     ip_port_tcp_s.ip.family = AF_INET6;
-    ip_port_tcp_s.ip.ip6.in6_addr = in6addr_loopback;
+    ip_port_tcp_s.ip.ip6 = get_ip6(&in6addr_loopback);
     TCP_Client_Connection *conn = new_TCP_connection(ip_port_tcp_s, self_public_key, f_public_key, f_secret_key, 0);
     c_sleep(50);
     do_TCP_connection(conn, NULL);
@@ -505,7 +505,7 @@ START_TEST(test_client_invalid)
 
     ip_port_tcp_s.port = htons(ports[rand() % NUM_PORTS]);
     ip_port_tcp_s.ip.family = AF_INET6;
-    ip_port_tcp_s.ip.ip6.in6_addr = in6addr_loopback;
+    ip_port_tcp_s.ip.ip6 = get_ip6(&in6addr_loopback);
     TCP_Client_Connection *conn = new_TCP_connection(ip_port_tcp_s, self_public_key, f_public_key, f_secret_key, 0);
     c_sleep(50);
     do_TCP_connection(conn, NULL);
@@ -574,7 +574,7 @@ START_TEST(test_tcp_connection)
 
     ip_port_tcp_s.port = htons(ports[rand() % NUM_PORTS]);
     ip_port_tcp_s.ip.family = AF_INET6;
-    ip_port_tcp_s.ip.ip6.in6_addr = in6addr_loopback;
+    ip_port_tcp_s.ip.ip6 = get_ip6(&in6addr_loopback);
 
     int connection = new_tcp_connection_to(tc_1, tcp_connections_public_key(tc_2), 123);
     ck_assert_msg(connection == 0, "Connection id wrong");
@@ -683,7 +683,7 @@ START_TEST(test_tcp_connection2)
 
     ip_port_tcp_s.port = htons(ports[rand() % NUM_PORTS]);
     ip_port_tcp_s.ip.family = AF_INET6;
-    ip_port_tcp_s.ip.ip6.in6_addr = in6addr_loopback;
+    ip_port_tcp_s.ip.ip6 = get_ip6(&in6addr_loopback);
 
     int connection = new_tcp_connection_to(tc_1, tcp_connections_public_key(tc_2), 123);
     ck_assert_msg(connection == 0, "Connection id wrong");
