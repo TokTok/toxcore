@@ -51,6 +51,7 @@
 
 #if !defined(_WIN32) && !defined(__WIN32__) && !defined (WIN32)
 #include <errno.h>
+#include <netinet/in.h>
 #else
 
 #ifndef IPV6_V6ONLY
@@ -316,6 +317,26 @@ static void loglogdata(Logger *log, const char *message, const uint8_t *buffer,
     }
 }
 
+void get_ip4(IP4 *result, const struct in_addr *addr)
+{
+    memcpy(result, addr, sizeof(IP4));
+}
+
+void get_ip6(IP6 *result, const struct in6_addr *addr)
+{
+    memcpy(result, addr, sizeof(IP6));
+}
+
+
+void fill_addr4(IP4 ip, struct in_addr *addr)
+{
+    memcpy(addr, &ip, sizeof(struct in_addr));
+}
+
+void fill_addr6(IP6 ip, struct in6_addr *addr)
+{
+    memcpy(addr, &ip, sizeof(struct in6_addr));
+}
 
 /* Basic network functions:
  * Function to send packet(data) of length length to ip_port.
@@ -352,7 +373,7 @@ int sendpacket(Networking_Core *net, IP_Port ip_port, const uint8_t *data, uint1
             ip6.uint32[1] = 0;
             ip6.uint32[2] = htonl(0xFFFF);
             ip6.uint32[3] = ip_port.ip.ip4.uint32;
-            addr6->sin6_addr = ip6.in6_addr;
+            fill_addr6(ip6, &addr6->sin6_addr);
 
             addr6->sin6_flowinfo = 0;
             addr6->sin6_scope_id = 0;
@@ -361,7 +382,7 @@ int sendpacket(Networking_Core *net, IP_Port ip_port, const uint8_t *data, uint1
 
             addrsize = sizeof(struct sockaddr_in);
             addr4->sin_family = AF_INET;
-            addr4->sin_addr = ip_port.ip.ip4.in_addr;
+            fill_addr4(ip_port.ip.ip4, &addr4->sin_addr);
             addr4->sin_port = ip_port.port;
         }
     } else if (ip_port.ip.family == AF_INET6) {
@@ -370,7 +391,7 @@ int sendpacket(Networking_Core *net, IP_Port ip_port, const uint8_t *data, uint1
         addrsize = sizeof(struct sockaddr_in6);
         addr6->sin6_family = AF_INET6;
         addr6->sin6_port = ip_port.port;
-        addr6->sin6_addr = ip_port.ip.ip6.in6_addr;
+        fill_addr6(ip_port.ip.ip6, &addr6->sin6_addr);
 
         addr6->sin6_flowinfo = 0;
         addr6->sin6_scope_id = 0;
@@ -418,12 +439,12 @@ static int receivepacket(Logger *log, Socket sock, IP_Port *ip_port, uint8_t *da
         struct sockaddr_in *addr_in = (struct sockaddr_in *)&addr;
 
         ip_port->ip.family = addr_in->sin_family;
-        ip_port->ip.ip4.in_addr = addr_in->sin_addr;
+        get_ip4(&ip_port->ip.ip4, &addr_in->sin_addr);
         ip_port->port = addr_in->sin_port;
     } else if (addr.ss_family == AF_INET6) {
         struct sockaddr_in6 *addr_in6 = (struct sockaddr_in6 *)&addr;
         ip_port->ip.family = addr_in6->sin6_family;
-        ip_port->ip.ip6.in6_addr = addr_in6->sin6_addr;
+        get_ip6(&ip_port->ip.ip6, &addr_in6->sin6_addr);
         ip_port->port = addr_in6->sin6_port;
 
         if (IPV6_IPV4_IN_V6(ip_port->ip.ip6)) {
@@ -644,7 +665,7 @@ Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint1
         addrsize = sizeof(struct sockaddr_in);
         addr4->sin_family = AF_INET;
         addr4->sin_port = 0;
-        addr4->sin_addr = ip.ip4.in_addr;
+        fill_addr4(ip.ip4, &addr4->sin_addr);
 
         portptr = &addr4->sin_port;
     } else if (temp->family == AF_INET6) {
@@ -653,7 +674,7 @@ Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint1
         addrsize = sizeof(struct sockaddr_in6);
         addr6->sin6_family = AF_INET6;
         addr6->sin6_port = 0;
-        addr6->sin6_addr = ip.ip6.in6_addr;
+        fill_addr6(ip.ip6, &addr6->sin6_addr);
 
         addr6->sin6_flowinfo = 0;
         addr6->sin6_scope_id = 0;
@@ -774,11 +795,16 @@ int ip_equal(const IP *a, const IP *b)
     /* same family */
     if (a->family == b->family) {
         if (a->family == AF_INET) {
-            return (a->ip4.in_addr.s_addr == b->ip4.in_addr.s_addr);
+            struct in_addr addr_a;
+            struct in_addr addr_b;
+            fill_addr4(a->ip4, &addr_a);
+            fill_addr4(b->ip4, &addr_b);
+            return addr_a.s_addr == addr_b.s_addr;
         }
 
         if (a->family == AF_INET6) {
-            return a->ip6.uint64[0] == b->ip6.uint64[0] && a->ip6.uint64[1] == b->ip6.uint64[1];
+            return a->ip6.uint64[0] == b->ip6.uint64[0] &&
+                   a->ip6.uint64[1] == b->ip6.uint64[1];
         }
 
         return 0;
@@ -787,11 +813,15 @@ int ip_equal(const IP *a, const IP *b)
     /* different family: check on the IPv6 one if it is the IPv4 one embedded */
     if ((a->family == AF_INET) && (b->family == AF_INET6)) {
         if (IPV6_IPV4_IN_V6(b->ip6)) {
-            return (a->ip4.in_addr.s_addr == b->ip6.uint32[3]);
+            struct in_addr addr_a;
+            fill_addr4(a->ip4, &addr_a);
+            return addr_a.s_addr == b->ip6.uint32[3];
         }
     } else if ((a->family == AF_INET6)  && (b->family == AF_INET)) {
         if (IPV6_IPV4_IN_V6(a->ip6)) {
-            return (a->ip6.uint32[3] == b->ip4.in_addr.s_addr);
+            struct in_addr addr_b;
+            fill_addr4(b->ip4, &addr_b);
+            return a->ip6.uint32[3] == addr_b.s_addr;
         }
     }
 
@@ -978,7 +1008,7 @@ int addr_parse_ip(const char *address, IP *to)
 
     if (1 == inet_pton(AF_INET, address, &addr4)) {
         to->family = AF_INET;
-        to->ip4.in_addr = addr4;
+        get_ip4(&to->ip4, &addr4);
         return 1;
     }
 
@@ -986,7 +1016,7 @@ int addr_parse_ip(const char *address, IP *to)
 
     if (1 == inet_pton(AF_INET6, address, &addr6)) {
         to->family = AF_INET6;
-        to->ip6.in6_addr = addr6;
+        get_ip6(&to->ip6, &addr6);
         return 1;
     }
 
@@ -1050,12 +1080,12 @@ int addr_resolve(const char *address, IP *to, IP *extra)
             case AF_INET:
                 if (walker->ai_family == family) { /* AF_INET requested, done */
                     struct sockaddr_in *addr = (struct sockaddr_in *)walker->ai_addr;
-                    to->ip4.in_addr = addr->sin_addr;
+                    get_ip4(&to->ip4, &addr->sin_addr);
                     result = TOX_ADDR_RESOLVE_INET;
                     done = 1;
                 } else if (!(result & TOX_ADDR_RESOLVE_INET)) { /* AF_UNSPEC requested, store away */
                     struct sockaddr_in *addr = (struct sockaddr_in *)walker->ai_addr;
-                    ip4.ip4.in_addr = addr->sin_addr;
+                    get_ip4(&ip4.ip4, &addr->sin_addr);
                     result |= TOX_ADDR_RESOLVE_INET;
                 }
 
@@ -1065,14 +1095,14 @@ int addr_resolve(const char *address, IP *to, IP *extra)
                 if (walker->ai_family == family) { /* AF_INET6 requested, done */
                     if (walker->ai_addrlen == sizeof(struct sockaddr_in6)) {
                         struct sockaddr_in6 *addr = (struct sockaddr_in6 *)walker->ai_addr;
-                        to->ip6.in6_addr = addr->sin6_addr;
+                        get_ip6(&to->ip6, &addr->sin6_addr);
                         result = TOX_ADDR_RESOLVE_INET6;
                         done = 1;
                     }
                 } else if (!(result & TOX_ADDR_RESOLVE_INET6)) { /* AF_UNSPEC requested, store away */
                     if (walker->ai_addrlen == sizeof(struct sockaddr_in6)) {
                         struct sockaddr_in6 *addr = (struct sockaddr_in6 *)walker->ai_addr;
-                        ip6.ip6.in6_addr = addr->sin6_addr;
+                        get_ip6(&ip6.ip6, &addr->sin6_addr);
                         result |= TOX_ADDR_RESOLVE_INET6;
                     }
                 }
