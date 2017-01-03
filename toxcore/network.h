@@ -52,7 +52,6 @@ typedef short sa_family_t;
 
 #else // Linux includes
 
-#include <arpa/inet.h>
 #include <netdb.h>
 #include <unistd.h>
 
