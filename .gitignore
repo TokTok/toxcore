@@ -23,6 +23,7 @@ Makefile.in
 DartConfiguration.tcl
 CTestTestfile.cmake
 *.pc
+CMakeLists.txt.user
 
 # Testing
 testing/data
