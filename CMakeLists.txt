@@ -128,7 +128,6 @@ endif()
 option(DEBUG "Enable assertions and other debugging facilities" OFF)
 if(DEBUG)
   set(MIN_LOGGER_LEVEL DEBUG)
-  add_definitions(-DTOX_DEBUG=1)
   add_cflag("-g3")
 endif()
 

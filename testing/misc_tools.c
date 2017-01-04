@@ -30,10 +30,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef TOX_DEBUG
-#include <assert.h>
-#endif // TOX_DEBUG
-
 // You are responsible for freeing the return value!
 uint8_t *hex_string_to_bin(const char *hex_string)
 {
