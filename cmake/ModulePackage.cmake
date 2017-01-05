@@ -57,6 +57,7 @@ function(add_module lib)
     set_target_properties(${lib}_shared PROPERTIES
       OUTPUT_NAME ${lib}
       VERSION ${PROJECT_VERSION}
+      SOVERSION ${PROJECT_VERSION_MAJOR}
     )
     install(TARGETS ${lib}_shared DESTINATION "lib")
   endif()
@@ -65,6 +66,7 @@ function(add_module lib)
     set_target_properties(${lib}_static PROPERTIES
       OUTPUT_NAME ${lib}
       VERSION ${PROJECT_VERSION}
+      SOVERSION ${PROJECT_VERSION_MAJOR}
     )
     install(TARGETS ${lib}_static DESTINATION "lib")
   endif()
