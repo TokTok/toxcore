@@ -57,17 +57,15 @@ function(add_module lib)
     set_target_properties(${lib}_shared PROPERTIES
       OUTPUT_NAME ${lib}
       VERSION ${PROJECT_VERSION}
-      SOVERSION ${PROJECT_VERSION_MAJOR}
+      # While on 0.x, the x behaves like the major version. 0.2 will be incompatible with 0.1.
+      # change this, when releasing 1.0
+	  SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
     )
     install(TARGETS ${lib}_shared DESTINATION "lib")
   endif()
   if(ENABLE_STATIC)
     add_library(${lib}_static STATIC ${ARGN})
-    set_target_properties(${lib}_static PROPERTIES
-      OUTPUT_NAME ${lib}
-      VERSION ${PROJECT_VERSION}
-      SOVERSION ${PROJECT_VERSION_MAJOR}
-    )
+    set_target_properties(${lib}_static PROPERTIES OUTPUT_NAME ${lib})
     install(TARGETS ${lib}_static DESTINATION "lib")
   endif()
 endfunction()
