@@ -362,6 +362,21 @@ enum class PROXY_TYPE {
 }
 
 /**
+ * Bitmask representing the type of technology used to try to traverse a NAT.
+ */
+bitmask TRAVERSAL_TYPE {
+  /**
+   * Use UPnP technology.
+   */
+  UPNP,
+  /**
+   * Use NAT-PMP technology.
+   */
+  NATPMP,
+}
+
+
+/**
  * Type of savedata to create the Tox instance from.
  */
 enum class SAVEDATA_TYPE {
@@ -466,6 +481,13 @@ static class options {
      * Disabling this will cause Tox to not look for peers on the local network.
      */
     bool local_discovery_enabled;
+
+    /**
+     * Try to traverse a NAT.
+     *
+     * Accepted values are from TOX_TRAVERSAL_TYPE.
+     */
+    uint8_t traversal_type;
 
     namespace proxy {
       /**
@@ -679,6 +701,13 @@ static this new(const options_t *options) {
      * causes this error.
      */
     BAD_FORMAT,
+  }
+
+  namespace TRAVERSAL {
+    /**
+     * traversal_type was invalid.
+     */
+    BAD_TYPE,
   }
 }
 

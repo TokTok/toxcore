@@ -25,6 +25,7 @@
 
 #include "crypto_core.h"
 #include "list.h"
+#include "logger.h"
 #include "onion.h"
 
 #ifdef TCP_SERVER_USE_EPOLL
@@ -122,8 +123,8 @@ size_t tcp_server_listen_count(const TCP_Server *tcp_server);
 
 /* Create new TCP server instance.
  */
-TCP_Server *new_TCP_server(uint8_t ipv6_enabled, uint16_t num_sockets, const uint16_t *ports, const uint8_t *secret_key,
-                           Onion *onion);
+TCP_Server *new_TCP_server(Logger *log, uint8_t ipv6_enabled, uint16_t num_sockets, const uint16_t *ports,
+                           const uint8_t *secret_key, Onion *onion);
 
 /* Run the TCP_server
  */

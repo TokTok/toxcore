@@ -126,6 +126,19 @@ Tox *tox_new(const struct Tox_Options *options, TOX_ERR_NEW *error)
         m_options.log_callback = (logger_cb *)tox_options_get_log_callback(options);
         m_options.log_user_data = tox_options_get_log_user_data(options);
 
+        switch (tox_options_get_traversal_type(options)) {
+            case TOX_TRAVERSAL_TYPE_NONE:
+            case TOX_TRAVERSAL_TYPE_UPNP:
+            case TOX_TRAVERSAL_TYPE_NATPMP:
+            case TOX_TRAVERSAL_TYPE_UPNP | TOX_TRAVERSAL_TYPE_NATPMP:
+                m_options.traversal_type = tox_options_get_traversal_type(options);
+                break;
+
+            default:
+                SET_ERROR_PARAMETER(error, TOX_ERR_NEW_TRAVERSAL_BAD_TYPE);
+                return NULL;
+        }
+
         switch (tox_options_get_proxy_type(options)) {
             case TOX_PROXY_TYPE_HTTP:
                 m_options.proxy_info.proxy_type = TCP_PROXY_HTTP;

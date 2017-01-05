@@ -73,6 +73,7 @@ enum {
 typedef struct {
     uint8_t ipv6enabled;
     uint8_t udp_disabled;
+    uint8_t traversal_type; // a value from TRAVERSAL_TYPE
     TCP_Proxy_Info proxy_info;
     uint16_t port_range[2];
     uint16_t tcp_server_port;
@@ -243,6 +244,27 @@ struct Messenger {
 
     uint8_t has_added_relays; // If the first connection has occurred in do_messenger
     Node_format loaded_relays[NUM_SAVED_TCP_RELAYS]; // Relays loaded from config
+
+    struct {
+        void *upnp_udp_ip4;
+        uint16_t upnp_udp_ip4_retries;
+        uint64_t upnp_udp_ip4_timeout;
+        void *upnp_udp_ip6;
+        uint16_t upnp_udp_ip6_retries;
+        uint64_t upnp_udp_ip6_timeout;
+        void *upnp_tcp_ip4;
+        uint16_t upnp_tcp_ip4_retries;
+        uint64_t upnp_tcp_ip4_timeout;
+        void *upnp_tcp_ip6;
+        uint16_t upnp_tcp_ip6_retries;
+        uint64_t upnp_tcp_ip6_timeout;
+        void *natpmp_udp;
+        uint16_t natpmp_udp_retries;
+        uint64_t natpmp_udp_timeout;
+        void *natpmp_tcp;
+        uint16_t natpmp_tcp_retries;
+        uint64_t natpmp_tcp_timeout;
+    } nat_traversal;
 
     void (*friend_message)(struct Messenger *m, uint32_t, unsigned int, const uint8_t *, size_t, void *);
     void (*friend_namechange)(struct Messenger *m, uint32_t, const uint8_t *, size_t, void *);

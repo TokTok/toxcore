@@ -1024,8 +1024,8 @@ static sock_t new_listening_TCP_socket(int family, uint16_t port)
     return sock;
 }
 
-TCP_Server *new_TCP_server(uint8_t ipv6_enabled, uint16_t num_sockets, const uint16_t *ports, const uint8_t *secret_key,
-                           Onion *onion)
+TCP_Server *new_TCP_server(Logger *log, uint8_t ipv6_enabled, uint16_t num_sockets, const uint16_t *ports,
+                           const uint8_t *secret_key, Onion *onion)
 {
     if (num_sockets == 0 || ports == NULL) {
         return NULL;

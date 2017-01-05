@@ -175,10 +175,28 @@ pkg_use_module(OPENCV               opencv        )
 pkg_use_module(PORTAUDIO            portaudio-2.0 )
 pkg_use_module(SNDFILE              sndfile       )
 
+# For UPnP
+pkg_use_module(MINIUPNP             miniupnpc     )
+# TODO(Ansa89): force-disable UPnP support because
+#               it slow down tox_iterate() too much
+#               https://github.com/miniupnp/miniupnp/issues/223
+#set(MINIUPNP_FOUND FALSE)
+
+# For NAT-PMP
+pkg_use_module(NATPMP               natpmp        )
+
 if(OPUS_FOUND AND VPX_FOUND)
   set(BUILD_TOXAV TRUE)
 else()
   set(BUILD_TOXAV FALSE)
+endif()
+
+if(MINIUPNP_FOUND)
+ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_LIBMINIUPNPC")
+endif()
+
+if(NATPMP_FOUND)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_LIBNATPMP")
 endif()
 
 ################################################################################
@@ -218,6 +236,8 @@ endif()
 add_module(toxnetwork
   toxcore/logger.c
   toxcore/logger.h
+  toxcore/nat_traversal.c
+  toxcore/nat_traversal.h
   toxcore/network.c
   toxcore/network.h
   toxcore/util.c
@@ -227,6 +247,20 @@ target_link_modules(toxnetwork toxcrypto)
 if(CMAKE_THREAD_LIBS_INIT)
   target_link_modules(toxnetwork ${CMAKE_THREAD_LIBS_INIT})
   set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+endif()
+
+if(MINIUPNP_FOUND)
+  add_module(toxupnp
+    toxupnp/toxupnp.c
+    toxupnp/toxupnp.h)
+  target_link_modules(toxupnp ${MINIUPNP_LIBRARIES})
+  target_link_modules(toxnetwork toxupnp ${MINIUPNP_LIBRARIES})
+  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-lminiupnp")
+endif()
+
+if(NATPMP_FOUND)
+  target_link_modules(toxnetwork ${NATPMP_LIBRARIES})
+  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-lnatpmp")
 endif()
 
 if(RT_LIBRARIES)
@@ -520,6 +554,11 @@ endif()
 if(NOT WIN32)
   add_c_executable(irc_syncbot testing/irc_syncbot.c)
   target_link_modules(irc_syncbot toxcore)
+endif()
+
+if(MINIUPNP_FOUND OR NATPMP_FOUND)
+  add_c_executable(traversal_test testing/traversal_test.c)
+  target_link_modules(traversal_test toxcore)
 endif()
 
 ################################################################################

@@ -400,6 +400,29 @@ typedef enum TOX_PROXY_TYPE {
 
 
 /**
+ * Bitmask representing the type of technology used to try to traverse a NAT.
+ */
+enum TOX_TRAVERSAL_TYPE {
+
+    /**
+     * The empty bit mask. None of the bits specified below are set.
+     */
+    TOX_TRAVERSAL_TYPE_NONE = 0,
+
+    /**
+     * Use UPnP technology.
+     */
+    TOX_TRAVERSAL_TYPE_UPNP = 1,
+
+    /**
+     * Use NAT-PMP technology.
+     */
+    TOX_TRAVERSAL_TYPE_NATPMP = 2,
+
+};
+
+
+/**
  * Type of savedata to create the Tox instance from.
  */
 typedef enum TOX_SAVEDATA_TYPE {
@@ -521,6 +544,14 @@ struct Tox_Options {
 
 
     /**
+     * Try to traverse a NAT.
+     *
+     * Accepted values are from TOX_TRAVERSAL_TYPE.
+     */
+    uint8_t traversal_type;
+
+
+    /**
      * Pass communications through a proxy.
      */
     TOX_PROXY_TYPE proxy_type;
@@ -637,6 +668,10 @@ void tox_options_set_udp_enabled(struct Tox_Options *options, bool udp_enabled);
 bool tox_options_get_local_discovery_enabled(const struct Tox_Options *options);
 
 void tox_options_set_local_discovery_enabled(struct Tox_Options *options, bool local_discovery_enabled);
+
+uint8_t tox_options_get_traversal_type(const struct Tox_Options *options);
+
+void tox_options_set_traversal_type(struct Tox_Options *options, uint8_t traversal_type);
 
 TOX_PROXY_TYPE tox_options_get_proxy_type(const struct Tox_Options *options);
 
@@ -802,6 +837,11 @@ typedef enum TOX_ERR_NEW {
      * causes this error.
      */
     TOX_ERR_NEW_LOAD_BAD_FORMAT,
+
+    /**
+     * traversal_type was invalid.
+     */
+    TOX_ERR_NEW_TRAVERSAL_BAD_TYPE,
 
 } TOX_ERR_NEW;
 
