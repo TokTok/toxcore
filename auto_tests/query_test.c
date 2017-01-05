@@ -19,16 +19,13 @@
 #define c_sleep(x) usleep(1000*x)
 #endif
 
-static unsigned int response_cookie = 348394;
-static uint8_t name[] = "requested_user.this_domain.tld";
-static size_t name_length = strlen("requested_user.this_domain.tld") - 1;
-static uint8_t toxid[TOX_ADDRESS_SIZE] = {
+static const uint8_t name[] = "requested_user.this_domain.tld";
+static const size_t name_length = 30; // strlen of "requested_user.this_domain.tld"
+static const uint8_t toxid[TOX_ADDRESS_SIZE] = {
     0xDD, 0x2A, 0x13, 0x40, 0xFE, 0xCE, 0x44, 0x12, 0x06, 0xB5, 0xF3, 0xD2, 0x02, 0xE6,
     0x14, 0x6E, 0x76, 0x61, 0x72, 0x70, 0x21, 0x44, 0x99, 0xB7, 0x2C, 0x55, 0x11, 0xFC,
     0xE8, 0x39, 0xF8, 0x5B, 0x28, 0xD7, 0xEA, 0xCB, 0xC4, 0x6C
 };
-
-static bool done = false;
 
 static void tox_query_response(TOX_QNL *tqnl, const uint8_t *request, size_t length, const uint8_t *tox_id,
                                void *user_data)
@@ -38,15 +35,17 @@ static void tox_query_response(TOX_QNL *tqnl, const uint8_t *request, size_t len
     (void)length;
 
     ck_assert_msg(1, "query callback");
-    ck_assert_msg(user_data == &response_cookie, "Invalid Cookie in response callback");
+    ck_assert_msg(user_data != NULL, "Invalid Cookie in response callback");
     ck_assert_msg(memcmp(tox_id, toxid, TOX_ADDRESS_SIZE) == 0, "Unexpected ToxID from callback");
-    done = true;
+    *(bool *)user_data = true;
 }
 
 
 static int query_handle_toxid_request(void *object, IP_Port source, const uint8_t *pkt, uint16_t length, void *userdata)
 {
     Messenger *m = (Messenger *)object;
+
+    (void)userdata; // unused
 
     if (pkt[0] != NET_PACKET_DATA_NAME_REQUEST) {
         ck_assert_msg(pkt[0] == NET_PACKET_DATA_NAME_REQUEST, "Bad incoming query request -- Packet = %u && length %u", pkt[0],
@@ -64,7 +63,7 @@ static int query_handle_toxid_request(void *object, IP_Port source, const uint8_
     uint8_t nonce[CRYPTO_NONCE_SIZE];
     memcpy(nonce, pkt + 1 + CRYPTO_PUBLIC_KEY_SIZE, CRYPTO_NONCE_SIZE);
     length -= CRYPTO_NONCE_SIZE;
-    ck_assert_msg(length == name_length + CRYPTO_MAC_SIZE , "Bad length after nonce, %u instead of %u", length,
+    ck_assert_msg(length == name_length + CRYPTO_MAC_SIZE, "Bad length after nonce, %u instead of %u", length,
                   name_length + CRYPTO_MAC_SIZE);
 
     uint8_t clear[length];
@@ -74,13 +73,13 @@ static int query_handle_toxid_request(void *object, IP_Port source, const uint8_
 
     ck_assert_msg(memcmp(clear, name, name_length) == 0, "Incoming packet is not equal to the name");
 
-    uint8_t encrypted[QUERY_PKT_ENCRYPTED_SIZE(TOX_ADDRESS_SIZE)];
+    uint8_t encrypted[QUERY_PKT_ENCRYPTED_SIZE + TOX_ADDRESS_SIZE];
 
     size_t pkt_size = q_build_packet(sender_key, m->dht->self_public_key, m->dht->self_secret_key,
                                      NET_PACKET_DATA_NAME_RESPONSE,
                                      toxid,
                                      TOX_ADDRESS_SIZE, encrypted);
-    ck_assert_msg(pkt_size == QUERY_PKT_ENCRYPTED_SIZE(TOX_ADDRESS_SIZE), "Build packet callback broken size!");
+    ck_assert_msg(pkt_size == QUERY_PKT_ENCRYPTED_SIZE + TOX_ADDRESS_SIZE, "Build packet callback broken size!");
 
     int send_res = sendpacket(m->dht->net, source, encrypted, pkt_size);
     ck_assert_msg(send_res != -1, "unable to send packet");
@@ -89,7 +88,6 @@ static int query_handle_toxid_request(void *object, IP_Port source, const uint8_
 
 START_TEST(test_query_ip4)
 {
-
     TOX_ERR_NEW error;
     Tox *server = tox_new(NULL, &error);
     ck_assert_msg(error == TOX_ERR_NEW_OK, "Unable to create server");
@@ -114,9 +112,11 @@ START_TEST(test_query_ip4)
                          name, name_length, &r_error);
     ck_assert_msg(r_error == TOX_QNL_ERR_REQUEST_SEND_OK, "Error Sending Query Packet %i", r_error);
 
+    bool done = false;
+
     while (!done) {
         tox_iterate(server, NULL);
-        tox_iterate(client, &response_cookie);
+        tox_iterate(client, &done);
 
         c_sleep(20);
     }
@@ -153,9 +153,11 @@ START_TEST(test_query_ip6)
                          name, name_length, &r_error);
     ck_assert_msg(r_error == TOX_QNL_ERR_REQUEST_SEND_OK, "Error Sending Query Packet %i", r_error);
 
+    bool done = false;
+
     while (!done) {
         tox_iterate(server, NULL);
-        tox_iterate(client, &response_cookie);
+        tox_iterate(client, &done);
 
         c_sleep(20);
     }
@@ -168,7 +170,6 @@ END_TEST
 
 START_TEST(test_query_store)
 {
-
     TOX_ERR_NEW error;
     Tox *client = tox_new(NULL, &error);
     ck_assert_msg(error == TOX_ERR_NEW_OK, "Unable to create client");
@@ -184,7 +185,6 @@ START_TEST(test_query_store)
     ck_assert_msg(r_error == TOX_QNL_ERR_REQUEST_SEND_OK, "Error Sending Query Packet %i", r_error);
 
     c_sleep(1);
-
 
     int i = 3;
 
@@ -203,7 +203,6 @@ END_TEST
 
 START_TEST(test_query_host)
 {
-
     TOX_ERR_NEW error;
     Tox *client = tox_new(NULL, &error);
     ck_assert_msg(error == TOX_ERR_NEW_OK, "Unable to create client");
@@ -314,7 +313,6 @@ END_TEST
 
 START_TEST(test_query_functions)
 {
-
     // testing q_grow
     Pending_Queries testing_MAIN = {0};
     Query           testing_SINGLE;
@@ -365,11 +363,11 @@ START_TEST(test_query_functions)
 #endif
     uint8_t key[CRYPTO_PUBLIC_KEY_SIZE];
     new_symmetric_key(key);
-    uint8_t build_pkt[QUERY_PKT_ENCRYPTED_SIZE(name_length)];
+    uint8_t build_pkt[QUERY_PKT_ENCRYPTED_SIZE + name_length];
     size_t build_size = q_build_packet(key, key, key, NET_PACKET_DATA_NAME_REQUEST, name, name_length, build_pkt);
     ck_assert_msg(build_pkt[0] == NET_PACKET_DATA_NAME_REQUEST, "q_build_packet malformed packet");
     ck_assert_msg(memcmp(build_pkt + 1, key, CRYPTO_PUBLIC_KEY_SIZE) == 0, "q_build_packet malformed packet");
-    ck_assert_msg(build_size == QUERY_PKT_ENCRYPTED_SIZE(name_length), "q_build_packet, invalid returned size");
+    ck_assert_msg(build_size == QUERY_PKT_ENCRYPTED_SIZE + name_length, "q_build_packet, invalid returned size");
 
 
 #if 0

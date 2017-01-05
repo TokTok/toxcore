@@ -19,7 +19,7 @@ typedef struct Tox Tox;
 #endif /* TOX_DEFINED */
 
 /**
- * ToxAV.
+ * Tox_QNL.
  */
 #ifndef TOX_QNL_DEFINED
 #define TOX_QNL_DEFINED

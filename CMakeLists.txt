@@ -614,8 +614,7 @@ endif()
 if(BUILD_TQNL)
   install(FILES
     toxqnl/tqnl.h
-    DESTINATION "include/tox"
-    )
+    DESTINATION "include/tox")
 endif()
 
 ################################################################################

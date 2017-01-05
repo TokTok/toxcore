@@ -6,7 +6,6 @@
 
 #define SET_ERROR(param, x) {if(param) {*param = x;}}
 
-
 struct Tox_QNL *tox_qnl_new(Tox *tox, TOX_QNL_ERR_NEW *error)
 {
     if (!tox) {
@@ -58,7 +57,6 @@ void tox_qnl_iterate(struct Tox_QNL *tqnl)
     // do stuff
 }
 
-
 bool tox_qnl_request_send(TOX_QNL *tqnl, const char *address, uint16_t port, const uint8_t *public_key,
                           const uint8_t *name,
                           size_t length, TOX_QNL_ERR_REQUEST_SEND *error)
@@ -104,7 +102,6 @@ bool tox_qnl_request_send(TOX_QNL *tqnl, const char *address, uint16_t port, con
     return false;
 }
 
-
 /**
  * Set the callback for the `request_response` event. Pass NULL to unset.
  *
@@ -113,4 +110,3 @@ void tox_qnl_callback_request_response(struct Tox_QNL *tqnl, tox_qnl_request_res
 {
     tqnl->callback = callback;
 }
-

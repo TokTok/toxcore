@@ -20,11 +20,9 @@ class tox {
 }
 
 /**
- * ToxAV.
+ * Tox_QNL.
  */
 class tox_QNL {
-
-
   struct this;
 
   static this new(tox::this *tox) {
