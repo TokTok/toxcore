@@ -72,7 +72,6 @@ if(WARNINGS)
   add_flag("-Weverything")
 
   # Disable specific warning flags for both C and C++.
-  add_flag("-Wno-cast-align")
   add_flag("-Wno-conversion")
   add_flag("-Wno-covered-switch-default")
   add_flag("-Wno-documentation-deprecated-sync")
