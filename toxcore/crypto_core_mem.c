@@ -40,7 +40,7 @@ void crypto_memzero(void *data, size_t length)
     SecureZeroMemory(pnt, len);
 #elif defined(HAVE_MEMSET_S)
 
-    errno_t code = memset_s(data, (rsize_t) length, 0, (rsize_t) length)
+    errno_t code = memset_s(data, (rsize_t) length, 0, (rsize_t) length);
 
     if (len > 0U && code != 0) {
         abort(); /* LCOV_EXCL_LINE */
