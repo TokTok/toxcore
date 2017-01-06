@@ -302,7 +302,6 @@ target_link_modules(toxgroup toxmessenger)
 apidsl(
   toxcore/tox.api.h)
 add_module(toxcore
-  toxcore/misc_tools.h
   toxcore/tox_api.c
   toxcore/tox.c
   toxcore/tox.h)
