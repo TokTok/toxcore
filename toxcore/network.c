@@ -31,6 +31,12 @@
 #include "config.h"
 #endif
 
+#ifdef __APPLE__
+#define _DARWIN_C_SOURCE
+#include <mach/clock.h>
+#include <mach/mach.h>
+#endif
+
 #include "network.h"
 
 #include "logger.h"
@@ -38,11 +44,6 @@
 
 #if !defined(_WIN32) && !defined(__WIN32__) && !defined (WIN32)
 #include <errno.h>
-#endif
-
-#ifdef __APPLE__
-#include <mach/clock.h>
-#include <mach/mach.h>
 #endif
 
 #if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
