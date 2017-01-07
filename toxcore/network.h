@@ -358,6 +358,9 @@ void networking_registerhandler(Networking_Core *net, uint8_t byte, packet_handl
 /* Call this several times a second. */
 void networking_poll(Networking_Core *net, void *userdata);
 
+/* Connect a socket to the address specified by the ip_port */
+int net_connect(Socket sock, IP_Port ip_port);
+
 /* Initialize networking.
  * bind to ip and port.
  * ip must be in network order EX: 127.0.0.1 = (7F000001).
