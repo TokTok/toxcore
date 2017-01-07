@@ -1202,3 +1202,10 @@ int net_connect(Socket sock, IP_Port ip_port)
     /* nonblocking socket, connect will never return success */
     connect(sock, (struct sockaddr *)&addr, addrsize);
 }
+
+char* net_ntoa(IP ip)
+{
+    struct in_addr addr;
+    memcpy(&addr, &ip, sizeof(ip));
+    return inet_ntoa(addr);
+}
