@@ -947,16 +947,18 @@ const char *ip_ntoa(const IP *ip, char *ip_str, size_t length)
     if (ip) {
         if (ip->family == AF_INET) {
             /* returns standard quad-dotted notation */
-            const struct in_addr *addr = (const struct in_addr *)&ip->ip4;
+            struct in_addr addr;
+            fill_addr4(ip->ip4, &addr);
 
             ip_str[0] = 0;
-            inet_ntop(ip->family, addr, ip_str, length);
+            inet_ntop(ip->family, &addr, ip_str, length);
         } else if (ip->family == AF_INET6) {
             /* returns hex-groups enclosed into square brackets */
-            const struct in6_addr *addr = (const struct in6_addr *)&ip->ip6;
+            struct in6_addr addr;
+            fill_addr6(ip->ip6, &addr);
 
             ip_str[0] = '[';
-            inet_ntop(ip->family, addr, &ip_str[1], length - 3);
+            inet_ntop(ip->family, &addr, &ip_str[1], length - 3);
             size_t len = strlen(ip_str);
             ip_str[len] = ']';
             ip_str[len + 1] = 0;
