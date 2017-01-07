@@ -124,7 +124,7 @@ static void fetch_broadcast_info(uint16_t port)
     broadcast_count = 0;
     Socket sock = 0;
 
-    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+    if ((sock = net_socket(TOX_AF_INET, TOX_SOCK_STREAM, 0)) < 0) {
         return;
     }
 
