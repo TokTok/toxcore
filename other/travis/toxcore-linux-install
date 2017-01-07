@@ -12,6 +12,7 @@ git clone --depth=1 https://github.com/TokTok/apidsl ../apidsl
 make -C ../apidsl -j$NPROC
 
 # Install cpp-coveralls to upload test coverage results.
+pip install --upgrade --user pip
 pip install git+git@github.com:eddyxu/cpp-coveralls.git
 
 # Install astyle (version in ubuntu-precise too old).
