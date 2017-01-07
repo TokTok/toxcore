@@ -456,6 +456,7 @@ if(BUILD_TOXAV)
 endif()
 if(BUILD_TQNL)
   auto_test(query)
+  auto_test(tqnl)
 endif()
 ################################################################################
 #

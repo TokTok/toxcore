@@ -34,24 +34,19 @@ typedef enum TOX_QNL_ERR_NEW {
     TOX_QNL_ERR_NEW_OK,
 
     /**
-     * TODO: Generate doc
+     * The passed tox instance was NULL
      */
-    TOX_QNL_ERR_NEW_NO_TOX,
+    TOX_QNL_ERR_NEW_TOX_NULL,
 
     /**
-     * TODO: Generate doc
+     * The passed tox instance was incompatible with Tox Quick Name Lookup (TQNL)
      */
-    TOX_QNL_ERR_NEW_INVALID_TOX,
+    TOX_QNL_ERR_NEW_TOX_INVALID,
 
     /**
-     * TODO: Generate doc
+     * TQNL was unable to allocate the needed memory
      */
     TOX_QNL_ERR_NEW_MALLOC,
-
-    /**
-     * TODO: Generate doc
-     */
-    TOX_QNL_ERR_NEW_NULL,
 
 } TOX_QNL_ERR_NEW;
 
