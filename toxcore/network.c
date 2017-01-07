@@ -1208,3 +1208,57 @@ char* net_ntoa(IP ip)
     memcpy(&addr, &ip, sizeof(ip));
     return inet_ntoa(addr);
 }
+
+unsigned int net_getipport(const char* node, IP_Port** res, int type)
+{
+    struct addrinfo *infos;
+    int ret = getaddrinfo(node, NULL, NULL, &infos);
+    if (ret != 0) {
+        return -1;
+    }
+
+    struct addrinfo *cur;
+    int count = 0;
+    for (cur = infos; cur != NULL; cur = cur->ai_next) {
+        if (cur->ai_socktype && type > 0 && cur->ai_socktype != type) {
+            continue;
+        }
+
+        if (cur->ai_family != AF_INET || cur->ai_family != AF_INET6) {
+            continue;
+        }
+
+        count++;
+    }
+
+    res = malloc(sizeof(IP_Port) * count);
+    IP_Port *ip_port = *res;
+    for (cur = infos; cur != NULL; cur = cur->ai_next) {
+        ip_port->ip.family = cur->ai_family;
+
+        if (cur->ai_socktype && type > 0 && cur->ai_socktype != type) {
+            continue;
+        }
+
+        if (cur->ai_family == AF_INET) {
+            struct sockaddr_in *addr = (struct sockaddr_in *)cur->ai_addr;
+            memcpy(&ip_port->ip.ip4, &addr->sin_addr, sizeof(IP4));
+        } else if (cur->ai_family == AF_INET6) {
+            struct sockaddr_in6 *addr = (struct sockaddr_in6 *)cur->ai_addr;
+            memcpy(&ip_port->ip.ip6, &addr->sin6_addr, sizeof(IP6));
+        } else {
+            continue;
+        }
+
+        ip_port++;
+    }
+
+    freeaddrinfo(infos);
+
+    return count;
+}
+
+void net_freeipport(IP_Port* ip_ports)
+{
+    free(ip_ports);
+}
