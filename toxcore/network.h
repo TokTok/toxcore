@@ -66,6 +66,7 @@ typedef short sa_family_t;
 
 struct in_addr;
 struct in6_addr;
+struct addrinfo;
 
 typedef int Socket;
 
@@ -360,6 +361,22 @@ void networking_poll(Networking_Core *net, void *userdata);
 
 /* Connect a socket to the address specified by the ip_port. */
 int net_connect(Socket sock, IP_Port ip_port);
+
+/* High-level getaddrinfo implementation.
+ * Given node, which identifies an Internet host. net_getipport() fills an array
+ * with one or more IP_Port structures, each of which contains an Internet
+ * address that can be specified by calling net_connect().
+ *
+ * Skip all addresses with socktype != type (use type = -1 to get all addresses)
+ * To correctly deallocate array memory use net_freeipport()
+ *
+ * return size of res array.
+ */
+unsigned int net_getipport(const char* node, IP_Port** res, int type);
+
+/* Deallocates memory allocated by net_getipport
+ */
+void net_freeipport(IP_Port* ip_ports);
 
 /* Initialize networking.
  * bind to ip and port.
