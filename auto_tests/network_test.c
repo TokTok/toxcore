@@ -21,7 +21,7 @@ START_TEST(test_addr_resolv_localhost)
      * normally this should happen automatically
      * cygwin doesn't do it for every network related function though
      * e.g. not for getaddrinfo... */
-    socket(0, 0, 0);
+    net_socket(0, 0, 0);
     errno = 0;
 #endif
 
