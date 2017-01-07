@@ -168,8 +168,8 @@ static Query q_make(IP_Port *ipp, const uint8_t key[CRYPTO_PUBLIC_KEY_SIZE], con
 {
     Query new_query = { *ipp };
     id_copy(new_query.key, key);
-    memcpy(new_query.name, name, length < QUERY_MAX_NAME_SIZE ? length : QUERY_MAX_NAME_SIZE);
     new_query.length = length < QUERY_MAX_NAME_SIZE ? length : QUERY_MAX_NAME_SIZE;
+    memcpy(new_query.name, name, new_query.length);
 
     // new_query.query_nonce = random_64b(); // TODO(grayhatter) readd nonce
 
