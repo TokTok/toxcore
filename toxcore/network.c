@@ -55,6 +55,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <netdb.h>
 #include <netinet/in.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -70,7 +71,7 @@
 #define EWOULDBLOCK WSAEWOULDBLOCK
 #endif
 
-static const char *inet_ntop(sa_family_t family, const void *addr, char *buf, size_t bufsize)
+static const char *inet_ntop(Family family, const void *addr, char *buf, size_t bufsize)
 {
     if (family == AF_INET) {
         struct sockaddr_in saddr;
@@ -105,7 +106,7 @@ static const char *inet_ntop(sa_family_t family, const void *addr, char *buf, si
     return NULL;
 }
 
-static int inet_pton(sa_family_t family, const char *addrString, void *addrbuf)
+static int inet_pton(Family family, const char *addrString, void *addrbuf)
 {
     if (family == AF_INET) {
         struct sockaddr_in saddr;
@@ -1069,7 +1070,7 @@ int addr_resolve(const char *address, IP *to, IP *extra)
         return 0;
     }
 
-    sa_family_t family = to->family;
+    Family family = to->family;
 
     struct addrinfo *server = NULL;
     struct addrinfo *walker = NULL;
