@@ -363,8 +363,11 @@ void networking_registerhandler(Networking_Core *net, uint8_t byte, packet_handl
 /* Call this several times a second. */
 void networking_poll(Networking_Core *net, void *userdata);
 
-/* Connect a socket to the address specified by the ip_port */
+/* Connect a socket to the address specified by the ip_port. */
 int net_connect(Socket sock, IP_Port ip_port);
+
+/* Converts the IP, to a string in IPv4 dotted-decimal notation */
+char* net_ntoa(IP ip);
 
 /* Initialize networking.
  * bind to ip and port.

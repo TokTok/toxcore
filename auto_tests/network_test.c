@@ -37,9 +37,7 @@ START_TEST(test_addr_resolv_localhost)
 
     if (res > 0) {
         ck_assert_msg(ip.family == AF_INET, "Expected family AF_INET, got %u.", ip.family);
-        struct in_addr addr;
-        fill_addr4(ip.ip4, &addr);
-        ck_assert_msg(ip.ip4.uint32 == htonl(0x7F000001), "Expected 127.0.0.1, got %s.", inet_ntoa(addr));
+        ck_assert_msg(ip.ip4.uint32 == htonl(0x7F000001), "Expected 127.0.0.1, got %s.", net_ntoa(ip));
     }
 
     ip_init(&ip, 1); // ipv6enabled = 1
@@ -73,10 +71,8 @@ START_TEST(test_addr_resolv_localhost)
             ck_assert_msg(!memcmp(&ip.ip6, &in6addr_loopback, sizeof(IP6)), "Expected ::1, got %s.",
                           ip_ntoa(&ip, ip_str, sizeof(ip_str)));
 
-            struct in_addr addr;
-            fill_addr4(ip.ip4, &addr);
             ck_assert_msg(extra.family == AF_INET, "Expected family AF_INET (%u), got %u.", AF_INET, extra.family);
-            ck_assert_msg(extra.ip4.uint32 == htonl(0x7F000001), "Expected 127.0.0.1, got %s.", inet_ntoa(addr));
+            ck_assert_msg(extra.ip4.uint32 == htonl(0x7F000001), "Expected 127.0.0.1, got %s.", net_ntoa(ip));
         }
     } else {
         printf("Localhost seems to be split in two.\n");

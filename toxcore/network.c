@@ -1201,3 +1201,10 @@ int net_connect(Socket sock, IP_Port ip_port)
 
     return connect(sock, (struct sockaddr *)&addr, addrsize);
 }
+
+char* net_ntoa(IP ip)
+{
+    struct in_addr addr;
+    memcpy(&addr, &ip, sizeof(ip));
+    return inet_ntoa(addr);
+}
