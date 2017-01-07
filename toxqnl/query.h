@@ -39,12 +39,15 @@ struct Tox_QNL {
     void (*callback)(struct Tox_QNL *tqnl, const uint8_t *request, size_t length, const uint8_t *tox_id, void *user_data);
 };
 
-typedef struct Tox_QNL TOX_QNL;
+#ifndef TOX_QNL_DEFINED
+#define TOX_QNL_DEFINED
+typedef struct Tox_QNL Tox_QNL;
+#endif /* TOX_QNL_DEFINED */
 
-int query_send_request(TOX_QNL *tqnl, const char *address, uint16_t port, const uint8_t *key,
+int query_send_request(Tox_QNL *tqnl, const char *address, uint16_t port, const uint8_t *key,
                        const uint8_t *name, size_t length);
 
-int query_handle_toxid_response(void *tqnl, IP_Port source, const uint8_t *pkt, uint16_t length, void *userdata);
+int query_handle_toxid_response(void *obj, IP_Port source, const uint8_t *pkt, uint16_t length, void *userdata);
 
 /**
  * Generate a new query object
@@ -55,6 +58,6 @@ Pending_Queries *query_new(void);
  * Process/iterate pending queries.
  *
  */
-void query_iterate(TOX_QNL *object);
+void query_iterate(Tox_QNL *tqnl);
 
 #endif

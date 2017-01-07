@@ -26,14 +26,21 @@ class tox_QNL {
   struct this;
 
   static this new(tox::this *tox) {
-    NO_TOX,
-    INVALID_TOX,
+    /**
+     * The passed tox instance was NULL
+     */
+    TOX_NULL,
+    /**
+     * The passed tox instance was incompatible with Tox Quick Name Lookup (TQNL)
+     */
+    TOX_INVALID,
+    /**
+     * TQNL was unable to allocate the needed memory
+     */
     MALLOC,
-    NULL,
   }
 
   void kill();
-
 
   /**
    * Main loop for the session. This function needs to be called in intervals of

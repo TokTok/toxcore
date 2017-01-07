@@ -14,7 +14,7 @@
 
 #include <assert.h>
 
-#define QUERY_PKT_ENCRYPTED_SIZE 1 + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE + CRYPTO_MAC_SIZE
+#define QUERY_PKT_ENCRYPTED_SIZE (1 + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE + CRYPTO_MAC_SIZE)
 
 /**
  * Increases the size of the query_list to count + 2.
@@ -179,10 +179,9 @@ static Query q_make(IP_Port *ipp, const uint8_t key[CRYPTO_PUBLIC_KEY_SIZE], con
 }
 
 
-int query_send_request(TOX_QNL *tqnl, const char *address, uint16_t port, const uint8_t *key,
+int query_send_request(Tox_QNL *tqnl, const char *address, uint16_t port, const uint8_t *key,
                        const uint8_t *name, size_t length)
 {
-
     struct addrinfo *root;
 
     if (getaddrinfo(address, NULL, NULL, &root) != 0) {
@@ -239,7 +238,6 @@ int query_send_request(TOX_QNL *tqnl, const char *address, uint16_t port, const 
 
 int query_handle_toxid_response(void *obj, IP_Port source, const uint8_t *pkt, uint16_t length, void *userdata)
 {
-
     if (pkt[0] != NET_PACKET_DATA_NAME_RESPONSE) {
         return -1;
     }
@@ -250,7 +248,7 @@ int query_handle_toxid_response(void *obj, IP_Port source, const uint8_t *pkt, u
 
     length -= 1; // drop the packet type
 
-    TOX_QNL *tqnl = (TOX_QNL *)obj;
+    Tox_QNL *tqnl = (Tox_QNL *)obj;
 
     // We verify the sender is in our list before we even try to decrypt anything
     for (size_t i = 0; i < tqnl->pending_list->count; ++i) {
@@ -311,11 +309,13 @@ Pending_Queries *query_new(void)
     return pending_list;
 }
 
-void query_iterate(TOX_QNL *tqnl)
+void query_iterate(Tox_QNL *tqnl)
 {
     if (tqnl->pending_list->count) {
         for (size_t i = 0; i < tqnl->pending_list->count; ++i) {
             q_send(tqnl->m->dht, &tqnl->pending_list->query_list[i]);
         }
+
+        // TODO(grayhatter) Expire and drop stale queries.
     }
 }
