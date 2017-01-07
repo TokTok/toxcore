@@ -1265,3 +1265,30 @@ void net_freeipport(IP_Port* ip_ports)
 {
     free(ip_ports);
 }
+
+/* return 1 on success
+ * return 0 on failure
+ */
+int bind_to_port(Socket sock, int family, uint16_t port)
+{
+    struct sockaddr_storage addr = {0};
+    size_t addrsize;
+
+    if (family == AF_INET) {
+        struct sockaddr_in *addr4 = (struct sockaddr_in *)&addr;
+
+        addrsize = sizeof(struct sockaddr_in);
+        addr4->sin_family = AF_INET;
+        addr4->sin_port = htons(port);
+    } else if (family == AF_INET6) {
+        struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *)&addr;
+
+        addrsize = sizeof(struct sockaddr_in6);
+        addr6->sin6_family = AF_INET6;
+        addr6->sin6_port = htons(port);
+    } else {
+        return 0;
+    }
+
+    return (bind(sock, (struct sockaddr *)&addr, addrsize) == 0);
+}
