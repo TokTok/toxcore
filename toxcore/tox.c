@@ -233,43 +233,24 @@ bool tox_bootstrap(Tox *tox, const char *address, uint16_t port, const uint8_t *
         return 0;
     }
 
-    struct addrinfo *root, *info;
+    IP_Port *root;
 
-    if (getaddrinfo(address, NULL, NULL, &root) != 0) {
+    int32_t count = net_getipport(address, &root, SOCK_DGRAM);
+    if (count == -1) {
         SET_ERROR_PARAMETER(error, TOX_ERR_BOOTSTRAP_BAD_HOST);
         return 0;
     }
 
-    info = root;
-
-    unsigned int count = 0;
-
-    do {
-        IP_Port ip_port;
-        ip_port.port = htons(port);
-        ip_port.ip.family = info->ai_family;
-
-        if (info->ai_socktype && info->ai_socktype != SOCK_DGRAM) {
-            continue;
-        }
-
-        if (info->ai_family == AF_INET) {
-            struct sockaddr_in *addr = (struct sockaddr_in *)info->ai_addr;
-            get_ip4(&ip_port.ip.ip4, &addr->sin_addr);
-        } else if (info->ai_family == AF_INET6) {
-            struct sockaddr_in6 *addr = (struct sockaddr_in6 *)info->ai_addr;
-            get_ip6(&ip_port.ip.ip6, &addr->sin6_addr);
-        } else {
-            continue;
-        }
+    unsigned int i;
+    for (i = 0; i < count; i++) {
+        root[i].port = htons(port);
 
         Messenger *m = tox;
-        onion_add_bs_path_node(m->onion_c, ip_port, public_key);
-        DHT_bootstrap(m->dht, ip_port, public_key);
-        ++count;
-    } while ((info = info->ai_next));
+        onion_add_bs_path_node(m->onion_c, root[i], public_key);
+        DHT_bootstrap(m->dht, root[i], public_key);
+    }
 
-    freeaddrinfo(root);
+	net_freeipport(root);
 
     if (count) {
         SET_ERROR_PARAMETER(error, TOX_ERR_BOOTSTRAP_OK);
@@ -293,42 +274,23 @@ bool tox_add_tcp_relay(Tox *tox, const char *address, uint16_t port, const uint8
         return 0;
     }
 
-    struct addrinfo *root, *info;
+    IP_Port *root;
 
-    if (getaddrinfo(address, NULL, NULL, &root) != 0) {
+    int32_t count = net_getipport(address, &root, SOCK_STREAM);
+    if (count == -1) {
         SET_ERROR_PARAMETER(error, TOX_ERR_BOOTSTRAP_BAD_HOST);
         return 0;
     }
 
-    info = root;
-
-    unsigned int count = 0;
-
-    do {
-        IP_Port ip_port;
-        ip_port.port = htons(port);
-        ip_port.ip.family = info->ai_family;
-
-        if (info->ai_socktype && info->ai_socktype != SOCK_STREAM) {
-            continue;
-        }
-
-        if (info->ai_family == AF_INET) {
-            struct sockaddr_in *addr = (struct sockaddr_in *)info->ai_addr;
-            get_ip4(&ip_port.ip.ip4, &addr->sin_addr);
-        } else if (info->ai_family == AF_INET6) {
-            struct sockaddr_in6 *addr = (struct sockaddr_in6 *)info->ai_addr;
-            get_ip6(&ip_port.ip.ip6, &addr->sin6_addr);
-        } else {
-            continue;
-        }
+    unsigned int i;
+    for (i = 0; i < count; i++) {
+        root[i].port = htons(port);
 
         Messenger *m = tox;
-        add_tcp_relay(m->net_crypto, ip_port, public_key);
-        ++count;
-    } while ((info = info->ai_next));
+        add_tcp_relay(m->net_crypto, root[i], public_key);
+    }
 
-    freeaddrinfo(root);
+    net_freeipport(root);
 
     if (count) {
         SET_ERROR_PARAMETER(error, TOX_ERR_BOOTSTRAP_OK);
