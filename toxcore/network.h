@@ -378,6 +378,11 @@ unsigned int net_getipport(const char* node, IP_Port** res, int type);
  */
 void net_freeipport(IP_Port* ip_ports);
 
+/* return 1 on success
+ * return 0 on failure
+ */
+int bind_to_port(Socket sock, int family, uint16_t port);
+
 /* Initialize networking.
  * bind to ip and port.
  * ip must be in network order EX: 127.0.0.1 = (7F000001).
