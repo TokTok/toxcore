@@ -71,7 +71,9 @@ struct in6_addr;
 struct addrinfo;
 
 typedef short Family;
+
 typedef int Socket;
+Socket net_socket(int domain, int type, int protocol);
 
 #define MAX_UDP_PACKET_SIZE 2048
 
@@ -110,6 +112,18 @@ typedef enum NET_PACKET_TYPE {
 #define TOX_PORTRANGE_FROM 33445
 #define TOX_PORTRANGE_TO   33545
 #define TOX_PORT_DEFAULT   TOX_PORTRANGE_FROM
+
+/* Redefinitions of variables for safe transfer over wire. */
+#define TOX_AF_INET 2
+#define TOX_AF_INET6 10
+#define TOX_TCP_INET 130
+#define TOX_TCP_INET6 138
+
+#define TOX_SOCK_STREAM 1
+#define TOX_SOCK_DGRAM 2
+
+#define TOX_PROTO_TCP 1
+#define TOX_PROTO_UDP 2
 
 /* TCP related */
 #define TCP_ONION_FAMILY (AF_INET6 + 1)

@@ -141,6 +141,10 @@ static int inet_pton(Family family, const char *addrString, void *addrbuf)
 
 #endif
 
+static int make_proto(int proto);
+static int make_socktype(int type);
+static int make_family(int family);
+
 /* Check if socket is valid.
  *
  * return 1 if valid
@@ -622,7 +626,7 @@ Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint1
 
     /* Initialize our socket. */
     /* add log message what we're creating */
-    temp->sock = socket(temp->family, SOCK_DGRAM, IPPROTO_UDP);
+    temp->sock = net_socket(temp->family, TOX_SOCK_DGRAM, TOX_PROTO_UDP);
 
     /* Check for socket error. */
     if (!sock_valid(temp->sock)) {
@@ -1289,4 +1293,48 @@ int bind_to_port(Socket sock, int family, uint16_t port)
     }
 
     return (bind(sock, (struct sockaddr *)&addr, addrsize) == 0);
+}
+
+static int make_family(int family)
+{
+    switch (family) {
+    case TOX_AF_INET:
+        return AF_INET;
+    case TOX_AF_INET6:
+        return AF_INET6;
+    default:
+        return family;
+    }
+}
+
+static int make_socktype(int type)
+{
+    switch (type) {
+    case TOX_SOCK_STREAM:
+        return SOCK_STREAM;
+    case TOX_SOCK_DGRAM:
+        return SOCK_DGRAM;
+    default:
+        return type;
+    }
+}
+
+static int make_proto(int proto)
+{
+    switch (proto) {
+    case TOX_PROTO_TCP:
+        return IPPROTO_TCP;
+    case TOX_PROTO_UDP:
+        return IPPROTO_UDP;
+    default:
+        return proto;
+    }
+}
+
+Socket net_socket(int domain, int type, int protocol)
+{
+    int platform_domain = make_family(domain);
+    int platform_type = make_socktype(type);
+    int platform_prot = make_proto(protocol);
+    return socket(platform_domain, platform_type, platform_prot);
 }
