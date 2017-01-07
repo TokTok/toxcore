@@ -978,7 +978,7 @@ static int accept_connection(TCP_Server *TCP_server, Socket sock)
 
 static Socket new_listening_TCP_socket(int family, uint16_t port)
 {
-    Socket sock = socket(family, SOCK_STREAM, IPPROTO_TCP);
+    Socket sock = net_socket(family, TOX_SOCK_STREAM, TOX_PROTO_TCP);
 
     if (!sock_valid(sock)) {
         return ~0;

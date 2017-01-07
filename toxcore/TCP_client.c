@@ -630,7 +630,7 @@ TCP_Client_Connection *new_TCP_connection(IP_Port ip_port, const uint8_t *public
         family = proxy_info->ip_port.ip.family;
     }
 
-    Socket sock = socket(family, SOCK_STREAM, IPPROTO_TCP);
+    Socket sock = net_socket(family, TOX_SOCK_STREAM, TOX_PROTO_TCP);
 
     if (!sock_valid(sock)) {
         return NULL;

@@ -38,7 +38,7 @@ START_TEST(test_basic)
     ck_assert_msg(tcp_s != NULL, "Failed to create TCP relay server");
     ck_assert_msg(tcp_server_listen_count(tcp_s) == NUM_PORTS, "Failed to bind to all ports");
 
-    Socket sock = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
+    Socket sock = net_socket(TOX_AF_INET6, TOX_SOCK_STREAM, TOX_PROTO_TCP);
     IP_Port ip_port_loopback;
     ip_port_loopback.ip.family = AF_INET6;
     ip_port_loopback.ip.ip6.uint64[0] = 0;
@@ -137,7 +137,7 @@ struct sec_TCP_con {
 static struct sec_TCP_con *new_TCP_con(TCP_Server *tcp_s)
 {
     struct sec_TCP_con *sec_c = (struct sec_TCP_con *)malloc(sizeof(struct sec_TCP_con));
-    Socket sock = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
+    Socket sock = net_socket(TOX_AF_INET6, TOX_SOCK_STREAM, TOX_PROTO_TCP);
 
     IP_Port ip_port_loopback;
     ip_port_loopback.ip.family = AF_INET6;
