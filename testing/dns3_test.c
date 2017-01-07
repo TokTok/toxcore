@@ -65,10 +65,8 @@ int main(int argc, char *argv[])
     size_t addrsize = sizeof(struct sockaddr_in);
 
     target.sin_family = AF_INET;
-
-    fill_addr4(ip.ip4, &target.sin_addr);
-
     target.sin_port = htons(53);
+    memcpy(&target.sin_addr, &ip.ip4, sizeof(IP4));
 
     uint8_t string[1024] = {0};
 

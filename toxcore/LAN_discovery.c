@@ -174,7 +174,7 @@ static void fetch_broadcast_info(uint16_t port)
 
         IP_Port *ip_port = &ip_ports[count];
         ip_port->ip.family = AF_INET;
-        get_ip4(&ip_port->ip.ip4, &sock4->sin_addr);
+        ip_port->ip.ip4.uint32 = sock4->sin_addr.s_addr;
 
         if (ip_port->ip.ip4.uint32 == 0) {
             continue;
