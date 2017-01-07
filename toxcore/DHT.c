@@ -687,7 +687,7 @@ static uint8_t hardening_correct(const Hardening *h)
  * helper for get_close_nodes(). argument list is a monster :D
  */
 static void get_close_nodes_inner(const uint8_t *public_key, Node_format *nodes_list,
-                                  sa_family_t sa_family, const Client_data *client_list, uint32_t client_list_length,
+                                  Family sa_family, const Client_data *client_list, uint32_t client_list_length,
                                   uint32_t *num_nodes_ptr, uint8_t is_LAN, uint8_t want_good)
 {
     if ((sa_family != AF_INET) && (sa_family != AF_INET6) && (sa_family != 0)) {
@@ -758,7 +758,7 @@ static void get_close_nodes_inner(const uint8_t *public_key, Node_format *nodes_
  * want_good : do we want only good nodes as checked with the hardening returned or not?
  */
 static int get_somewhat_close_nodes(const DHT *dht, const uint8_t *public_key, Node_format *nodes_list,
-                                    sa_family_t sa_family, uint8_t is_LAN, uint8_t want_good)
+                                    Family sa_family, uint8_t is_LAN, uint8_t want_good)
 {
     uint32_t num_nodes = 0, i;
     get_close_nodes_inner(public_key, nodes_list, sa_family,
@@ -784,7 +784,7 @@ static int get_somewhat_close_nodes(const DHT *dht, const uint8_t *public_key, N
     return num_nodes;
 }
 
-int get_close_nodes(const DHT *dht, const uint8_t *public_key, Node_format *nodes_list, sa_family_t sa_family,
+int get_close_nodes(const DHT *dht, const uint8_t *public_key, Node_format *nodes_list, Family sa_family,
                     uint8_t is_LAN, uint8_t want_good)
 {
     memset(nodes_list, 0, MAX_SENT_NODES * sizeof(Node_format));
@@ -2262,7 +2262,7 @@ static int send_hardening_getnode_res(const DHT *dht, const Node_format *sendto,
 }
 
 /* TODO(irungentoo): improve */
-static IPPTsPng *get_closelist_IPPTsPng(DHT *dht, const uint8_t *public_key, sa_family_t sa_family)
+static IPPTsPng *get_closelist_IPPTsPng(DHT *dht, const uint8_t *public_key, Family sa_family)
 {
     uint32_t i;
 
@@ -2393,7 +2393,7 @@ static int handle_hardening(void *object, IP_Port source, const uint8_t *source_
 /* Return a random node from all the nodes we are connected to.
  * TODO(irungentoo): improve this function.
  */
-static Node_format random_node(DHT *dht, sa_family_t sa_family)
+static Node_format random_node(DHT *dht, Family sa_family)
 {
     uint8_t id[CRYPTO_PUBLIC_KEY_SIZE];
     uint32_t i;
@@ -2499,7 +2499,7 @@ static void do_hardening(DHT *dht)
 
     for (i = 0; i < LCLIENT_LIST * 2; ++i) {
         IPPTsPng  *cur_iptspng;
-        sa_family_t sa_family;
+        Family sa_family;
         uint8_t   *public_key = dht->close_clientlist[i / 2].public_key;
 
         if (i % 2 == 0) {

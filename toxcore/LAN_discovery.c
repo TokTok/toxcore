@@ -228,7 +228,7 @@ static uint32_t send_broadcasts(Networking_Core *net, uint16_t port, const uint8
 }
 
 /* Return the broadcast ip. */
-static IP broadcast_ip(sa_family_t family_socket, sa_family_t family_broadcast)
+static IP broadcast_ip(Family family_socket, Family family_broadcast)
 {
     IP ip;
     ip_reset(&ip);
