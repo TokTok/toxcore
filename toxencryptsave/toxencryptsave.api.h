@@ -146,8 +146,8 @@ error for decryption {
  *
  * @param plaintext A byte array of length `plaintext_len`.
  * @param plaintext_len The length of the plain text array. Bigger than 0.
- * @param passphrase The user-provided password.
- * @param passphrase_len The length of the password.
+ * @param passphrase The user-provided password. Can be empty or NULL.
+ * @param passphrase_len The length of the password. Must be 0 if passphrase is NULL.
  * @param ciphertext The cipher text array to write the encrypted data to.
  *
  * @return true on success.
@@ -164,8 +164,8 @@ static bool pass_encrypt(const uint8_t[plaintext_len] plaintext, const uint8_t[p
  *
  * @param ciphertext A byte array of length `ciphertext_len`.
  * @param ciphertext_len The length of the cipher text array. At least $PASS_ENCRYPTION_EXTRA_LENGTH.
- * @param passphrase The user-provided password.
- * @param passphrase_len The length of the password.
+ * @param passphrase The user-provided password. Can be empty or NULL.
+ * @param passphrase_len The length of the password. Must be 0 if passphrase is NULL.
  * @param plaintext The plain text array to write the decrypted data to.
  *
  * @return true on success.
@@ -200,6 +200,8 @@ class pass_Key {
   /**
    * Create a new $this. The initial value of it is indeterminate. To
    * initialise it, use one of the derive_* functions below.
+   *
+   * In case of allocation failure, this function returns NULL.
    */
   static this new();
 
@@ -219,8 +221,9 @@ class pass_Key {
    * a password, you also must know the random salt that was used. A
    * deterministic version of this function is $derive_with_salt.
    *
-   * @param passphrase The user-provided password.
-   * @param passphrase_len The length of the password.
+   * @param passphrase The user-provided password. Can be empty or NULL.
+   * @param passphrase_len The length of the password. Must be 0 if passphrase
+   * is NULL.
    *
    * @return true on success.
    */
@@ -230,8 +233,9 @@ class pass_Key {
   /**
    * Same as above, except use the given salt for deterministic key derivation.
    *
-   * @param passphrase The user-provided password.
-   * @param passphrase_len The length of the password.
+   * @param passphrase The user-provided password. Can be empty or NULL.
+   * @param passphrase_len The length of the password. Must be 0 if passphrase
+   * is NULL.
    * @param salt An array of at least $PASS_SALT_LENGTH bytes.
    *
    * @return true on success.
