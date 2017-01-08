@@ -2048,7 +2048,7 @@ void kill_messenger(Messenger *m)
         clear_receipts(m, i);
     }
 
-#ifdef  HAVE_LIBEV
+#ifdef HAVE_LIBEV
     ev_loop_destroy(m->dispatcher);
 #elif HAVE_LIBEVENT
     event_base_free(m->dispatcher);

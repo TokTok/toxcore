@@ -404,9 +404,8 @@ void tox_callback_loop_end(Tox *tox, tox_loop_end_cb *callback)
 }
 
 #ifdef HAVE_LIBEV
-void tox_stop_loop_cb(struct ev_loop *dispatcher, ev_async *listener, int events)
+static void tox_stop_loop_cb(struct ev_loop *dispatcher, ev_async *listener, int events)
 {
-
     if ((dispatcher == NULL) || (listener == NULL)) {
         return;
     }
@@ -434,9 +433,8 @@ void tox_stop_loop_cb(struct ev_loop *dispatcher, ev_async *listener, int events
     ev_break(dispatcher, EVBREAK_ALL);
 }
 
-void tox_do_iterate(struct ev_loop *dispatcher, ev_io *sock_listener, int events)
+static void tox_do_iterate(struct ev_loop *dispatcher, ev_io *sock_listener, int events)
 {
-
     if ((dispatcher == NULL) || (sock_listener == NULL)) {
         return;
     }
@@ -476,9 +474,8 @@ void tox_do_iterate(struct ev_loop *dispatcher, ev_io *sock_listener, int events
     }
 }
 #elif HAVE_LIBEVENT
-void tox_do_iterate(evutil_socket_t fd, short events, void *arg)
+static void tox_do_iterate(evutil_socket_t fd, short events, void *arg)
 {
-
     if (arg == NULL) {
         return;
     }
@@ -494,8 +491,10 @@ void tox_do_iterate(evutil_socket_t fd, short events, void *arg)
 
     tox_iterate(tmp->tox, tmp->user_data);
 
-    timeout.tv_sec = 5;
-    timeout.tv_usec = 0;
+    timeout.tv_sec = 0;
+
+    // TODO(cleverca22): use a longer timeout.
+    timeout.tv_usec = tox_iteration_interval(tox) * 1000 * 2;
 
     if (!m->net->sock_listener) {
         m->net->sock_listener = event_new(m->dispatcher, m->net->sock, EV_READ | EV_PERSIST, tox_do_iterate, arg);
@@ -529,7 +528,7 @@ void tox_do_iterate(evutil_socket_t fd, short events, void *arg)
  *
  * @return false if errors occurred, true otherwise.
  */
-bool tox_fds(Messenger *m, sock_t **sockets, uint32_t *sockets_num)
+static bool tox_fds(Messenger *m, sock_t **sockets, uint32_t *sockets_num)
 {
     if ((m == NULL) || (sockets == NULL) || (sockets_num == NULL)) {
         return false;
@@ -594,14 +593,18 @@ bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error)
 
     // TODO(Ansa89): travis states that "ev_run" returns "void",
     // but "man 3 ev" states it returns "bool"
-    //ret = !ev_run(m->dispatcher, 0);
-    //if (error != NULL) {
-    //    if (ret) {
-    //        *error = TOX_ERR_LOOP_OK;
-    //    } else {
-    //        *error = TOX_ERR_LOOP_BREAK;
-    //    }
-    //}
+#if 0
+    ret = !ev_run(m->dispatcher, 0);
+
+    if (error != NULL) {
+        if (ret) {
+            *error = TOX_ERR_LOOP_OK;
+        } else {
+            *error = TOX_ERR_LOOP_BREAK;
+        }
+    }
+
+#endif
 
     ev_run(m->dispatcher, 0);
 
