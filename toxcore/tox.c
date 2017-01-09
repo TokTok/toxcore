@@ -31,8 +31,6 @@
 typedef struct Messenger Tox;
 #include "tox.h"
 
-#include <stdio.h>
-
 #include "Messenger.h"
 #include "group.h"
 #include "logger.h"
@@ -78,7 +76,7 @@ typedef struct Messenger Tox;
 typedef struct {
     Tox *tox;
     void *user_data;
-} event_arg_t;
+} Event_Arg;
 #endif
 
 bool tox_version_is_compatible(uint32_t major, uint32_t minor, uint32_t patch)
@@ -410,21 +408,21 @@ static void tox_stop_loop_cb(struct ev_loop *dispatcher, ev_async *listener, int
         return;
     }
 
-    event_arg_t *tmp = (event_arg_t *) listener->data;
+    Event_Arg *tmp = (Event_Arg *) listener->data;
     Messenger *m = (Messenger *) tmp->tox;
-    uint32_t i;
 
     if (ev_is_active(&m->net->sock_listener.listener) || ev_is_pending(&m->net->sock_listener.listener)) {
         ev_io_stop(dispatcher, &m->net->sock_listener.listener);
     }
 
-    TCP_Connections *conns = m->net_crypto->tcp_c;
+    uint32_t len = tcp_connections_length(m->net_crypto->tcp_c);
 
-    for (i = 0; i < conns->tcp_connections_length; i++) {
-        TCP_Client_Connection *conn = conns->tcp_connections[i].connection;
+    for (uint32_t i = 0; i < len; i++) {
+        const TCP_con *conn = tcp_connections_connection_at(m->net_crypto->tcp_c, i);
 
-        if (ev_is_active(&conn->sock_listener.listener) || ev_is_pending(&conn->sock_listener.listener)) {
-            ev_io_stop(dispatcher, &conn->sock_listener.listener);
+        if (ev_is_active(&conn->connection->sock_listener.listener)
+                || ev_is_pending(&conn->connection->sock_listener.listener)) {
+            ev_io_stop(dispatcher, &conn->connection->sock_listener.listener);
         }
     }
 
@@ -439,9 +437,8 @@ static void tox_do_iterate(struct ev_loop *dispatcher, ev_io *sock_listener, int
         return;
     }
 
-    event_arg_t *tmp = (event_arg_t *) sock_listener->data;
+    Event_Arg *tmp = (Event_Arg *) sock_listener->data;
     Messenger *m = (Messenger *) tmp->tox;
-    uint32_t i;
 
     if (m->loop_begin_cb) {
         m->loop_begin_cb(m, tmp->user_data);
@@ -456,16 +453,17 @@ static void tox_do_iterate(struct ev_loop *dispatcher, ev_io *sock_listener, int
         ev_io_start(dispatcher, &m->net->sock_listener.listener);
     }
 
-    TCP_Connections *conns = m->net_crypto->tcp_c;
+    uint32_t len = tcp_connections_length(m->net_crypto->tcp_c);
 
-    for (i = 0; i < conns->tcp_connections_length; i++) {
-        TCP_Client_Connection *conn = conns->tcp_connections[i].connection;
+    for (uint32_t i = 0; i < len; i++) {
+        const TCP_con *conn = tcp_connections_connection_at(m->net_crypto->tcp_c, i);
 
-        if (!ev_is_active(&conn->sock_listener.listener) && !ev_is_pending(&conn->sock_listener.listener)) {
-            conn->sock_listener.dispatcher = dispatcher;
-            ev_io_init(&conn->sock_listener.listener, tox_do_iterate, conn->sock, EV_READ);
-            conn->sock_listener.listener.data = sock_listener->data;
-            ev_io_start(m->dispatcher, &conn->sock_listener.listener);
+        if (!ev_is_active(&conn->connection->sock_listener.listener)
+                && !ev_is_pending(&conn->connection->sock_listener.listener)) {
+            conn->connection->sock_listener.dispatcher = dispatcher;
+            ev_io_init(&conn->connection->sock_listener.listener, tox_do_iterate, conn->connection->sock, EV_READ);
+            conn->connection->sock_listener.listener.data = sock_listener->data;
+            ev_io_start(m->dispatcher, &conn->connection->sock_listener.listener);
         }
     }
 
@@ -480,9 +478,8 @@ static void tox_do_iterate(evutil_socket_t fd, short events, void *arg)
         return;
     }
 
-    event_arg_t *tmp = (event_arg_t *) arg;
+    Event_Arg *tmp = (Event_Arg *) arg;
     Messenger *m = (Messenger *) tmp->tox;
-    uint32_t i;
     struct timeval timeout;
 
     if (m->loop_begin_cb) {
@@ -494,7 +491,7 @@ static void tox_do_iterate(evutil_socket_t fd, short events, void *arg)
     timeout.tv_sec = 0;
 
     // TODO(cleverca22): use a longer timeout.
-    timeout.tv_usec = tox_iteration_interval(tox) * 1000 * 2;
+    timeout.tv_usec = tox_iteration_interval(tmp->tox) * 1000 * 2;
 
     if (!m->net->sock_listener) {
         m->net->sock_listener = event_new(m->dispatcher, m->net->sock, EV_READ | EV_PERSIST, tox_do_iterate, arg);
@@ -502,16 +499,17 @@ static void tox_do_iterate(evutil_socket_t fd, short events, void *arg)
 
     event_add(m->net->sock_listener, &timeout);
 
-    TCP_Connections *conns = m->net_crypto->tcp_c;
+    uint32_t len = tcp_connections_length(m->net_crypto->tcp_c);
 
-    for (i = 0; i < conns->tcp_connections_length; i++) {
-        TCP_Client_Connection *conn = conns->tcp_connections[i].connection;
+    for (uint32_t i = 0; i < len; i++) {
+        const TCP_con *conn = tcp_connections_connection_at(m->net_crypto->tcp_c, i);
 
-        if (!conn->sock_listener) {
-            conn->sock_listener = event_new(m->dispatcher, conn->sock, EV_READ | EV_PERSIST, tox_do_iterate, arg);
+        if (!conn->connection->sock_listener) {
+            conn->connection->sock_listener = event_new(m->dispatcher, conn->connection->sock, EV_READ | EV_PERSIST, tox_do_iterate,
+                                              arg);
         }
 
-        event_add(conn->sock_listener, NULL);
+        event_add(conn->connection->sock_listener, NULL);
     }
 
     if (m->loop_end_cb) {
@@ -534,7 +532,7 @@ static bool tox_fds(Messenger *m, sock_t **sockets, uint32_t *sockets_num)
         return false;
     }
 
-    uint32_t i, fdcount;
+    uint32_t i, len, fdcount;
 
     fdcount = 1 + m->net_crypto->tcp_c->tcp_connections_length;
 
@@ -551,11 +549,11 @@ static bool tox_fds(Messenger *m, sock_t **sockets, uint32_t *sockets_num)
 
     (*sockets)[0] = m->net->sock;
 
-    TCP_Connections *conns = m->net_crypto->tcp_c;
     i = 0;
+    len = tcp_connections_length(m->net_crypto->tcp_c);
 
-    while ((i < (fdcount - 1)) && (i < conns->tcp_connections_length)) {
-        TCP_con *conn = &conns->tcp_connections[i];
+    while ((i < (fdcount - 1)) && (i < len)) {
+        const TCP_con *conn = tcp_connections_connection_at(m->net_crypto->tcp_c, i);
         (*sockets)[++i] = conn->connection->sock;
     }
 
@@ -577,7 +575,7 @@ bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error)
     bool ret = true;
 
 #ifdef HAVE_LIBEV
-    event_arg_t *tmp = calloc(1, sizeof(event_arg_t));
+    Event_Arg *tmp = calloc(1, sizeof(Event_Arg));
 
     tmp->tox = tox;
     tmp->user_data = user_data;
@@ -614,7 +612,7 @@ bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error)
 
     free(tmp);
 #elif HAVE_LIBEVENT
-    event_arg_t *tmp = calloc(1, sizeof(event_arg_t));
+    Event_Arg *tmp = calloc(1, sizeof(Event_Arg));
 
     tmp->tox = tox;
     tmp->user_data = user_data;
