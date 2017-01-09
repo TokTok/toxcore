@@ -68,6 +68,7 @@ static int q_check(const Pending_Queries *queries, const Query *pend, bool outgo
         const Query *test = &queries->query_list[i];
 
         if (!q_verify_server(&test->ipp, &pend->ipp)) {
+            // TODO(grayhatter) consider ip_equal in network.c
             continue;
         }
 
