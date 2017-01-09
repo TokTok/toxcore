@@ -534,7 +534,8 @@ static bool tox_fds(Messenger *m, sock_t **sockets, uint32_t *sockets_num)
 
     uint32_t i, len, fdcount;
 
-    fdcount = 1 + m->net_crypto->tcp_c->tcp_connections_length;
+    len = tcp_connections_length(m->net_crypto->tcp_c);
+    fdcount = 1 + len;
 
     if ((fdcount != *sockets_num) || (*sockets == NULL)) {
         sock_t *tmp_sockets = (sock_t *) realloc(*sockets, fdcount * sizeof(sock_t));
@@ -550,7 +551,6 @@ static bool tox_fds(Messenger *m, sock_t **sockets, uint32_t *sockets_num)
     (*sockets)[0] = m->net->sock;
 
     i = 0;
-    len = tcp_connections_length(m->net_crypto->tcp_c);
 
     while ((i < (fdcount - 1)) && (i < len)) {
         const TCP_con *conn = tcp_connections_connection_at(m->net_crypto->tcp_c, i);
