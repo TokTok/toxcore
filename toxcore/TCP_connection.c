@@ -32,9 +32,60 @@
 #include <assert.h>
 
 
+struct TCP_Connections {
+    DHT *dht;
+
+    uint8_t self_public_key[CRYPTO_PUBLIC_KEY_SIZE];
+    uint8_t self_secret_key[CRYPTO_SECRET_KEY_SIZE];
+
+    TCP_Connection_to *connections;
+    uint32_t connections_length; /* Length of connections array. */
+
+    TCP_con *tcp_connections;
+    uint32_t tcp_connections_length; /* Length of tcp_connections array. */
+
+    int (*tcp_data_callback)(void *object, int id, const uint8_t *data, uint16_t length, void *userdata);
+    void *tcp_data_callback_object;
+
+    int (*tcp_oob_callback)(void *object, const uint8_t *public_key, unsigned int tcp_connections_number,
+                            const uint8_t *data, uint16_t length, void *userdata);
+    void *tcp_oob_callback_object;
+
+    int (*tcp_onion_callback)(void *object, const uint8_t *data, uint16_t length, void *userdata);
+    void *tcp_onion_callback_object;
+
+    TCP_Proxy_Info proxy_info;
+
+    bool onion_status;
+    uint16_t onion_num_conns;
+};
+
+
 const uint8_t *tcp_connections_public_key(const TCP_Connections *tcp_c)
 {
     return tcp_c->self_public_key;
+}
+
+
+uint32_t tcp_connections_length(const TCP_Connections *tcp_c)
+{
+    return tcp_c->tcp_connections_length;
+}
+
+
+/**
+ * Return TCP connection stored at "idx" position.
+ *
+ * @param idx index of TCP connection to return (values from 0 to tcp_connections_length())
+ * @return TCP connection stored at "idx" position, or NULL if errors occurred
+ */
+const TCP_con *tcp_connections_connection_at(const TCP_Connections *tcp_c, uint32_t idx)
+{
+    if (idx >= tcp_c->tcp_connections_length) {
+        return NULL;
+    }
+
+    return &tcp_c->tcp_connections[idx];
 }
 
 
