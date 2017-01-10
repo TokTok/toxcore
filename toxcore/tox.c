@@ -404,7 +404,7 @@ void tox_callback_loop_end(Tox *tox, tox_loop_end_cb *callback)
 #ifdef HAVE_LIBEV
 static void tox_stop_loop_cb(struct ev_loop *dispatcher, ev_async *listener, int events)
 {
-    if ((dispatcher == NULL) || (listener == NULL)) {
+    if (dispatcher == NULL || listener == NULL) {
         return;
     }
 
@@ -433,7 +433,7 @@ static void tox_stop_loop_cb(struct ev_loop *dispatcher, ev_async *listener, int
 
 static void tox_do_iterate(struct ev_loop *dispatcher, ev_io *sock_listener, int events)
 {
-    if ((dispatcher == NULL) || (sock_listener == NULL)) {
+    if (dispatcher == NULL || sock_listener == NULL) {
         return;
     }
 
@@ -528,31 +528,29 @@ static void tox_do_iterate(evutil_socket_t fd, short events, void *arg)
  */
 static bool tox_fds(Messenger *m, sock_t **sockets, uint32_t *sockets_num)
 {
-    if ((m == NULL) || (sockets == NULL) || (sockets_num == NULL)) {
+    if (m == NULL || sockets == NULL || sockets_num == NULL) {
         return false;
     }
 
-    uint32_t i, len, fdcount;
+    uint32_t len = tcp_connections_length(m->net_crypto->tcp_c);
+    uint32_t fdcount = 1 + len;
 
-    len = tcp_connections_length(m->net_crypto->tcp_c);
-    fdcount = 1 + len;
-
-    if ((fdcount != *sockets_num) || (*sockets == NULL)) {
+    if (fdcount != *sockets_num || *sockets == NULL) {
         sock_t *tmp_sockets = (sock_t *) realloc(*sockets, fdcount * sizeof(sock_t));
 
         if (tmp_sockets == NULL) {
             return false;
-        } else {
-            *sockets = tmp_sockets;
-            *sockets_num = fdcount;
         }
+
+        *sockets = tmp_sockets;
+        *sockets_num = fdcount;
     }
 
     (*sockets)[0] = m->net->sock;
 
-    i = 0;
+    uint32_t i = 0;
 
-    while ((i < (fdcount - 1)) && (i < len)) {
+    while (i < fdcount - 1 && i < len) {
         const TCP_con *conn = tcp_connections_connection_at(m->net_crypto->tcp_c, i);
         (*sockets)[++i] = conn->connection->sock;
     }
@@ -651,7 +649,7 @@ bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error)
 
         // TODO(cleverca22): is it a good idea to reuse previous fdlist when
         //                   fdcount!=0 && tox_fds()==false?
-        if ((fdcount == 0) && (!tox_fds(m, &fdlist, &fdcount))) {
+        if (fdcount == 0 && !tox_fds(m, &fdlist, &fdcount)) {
             // We must stop because maxfd won't be set.
             // TODO(cleverca22): should we call loop_end_cb() on error?
             if (m->loop_end_cb) {
