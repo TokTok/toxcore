@@ -996,7 +996,7 @@ typedef enum TOX_ERR_LOOP {
     /**
      * Invalid arguments passed.
      */
-    TOX_ERR_LOOP_BAD_ARGS,
+    TOX_ERR_LOOP_NULL,
 
     /**
      * Failed running events dispatcher.
