@@ -413,7 +413,7 @@ static void tox_stop_loop_cb(struct ev_loop *dispatcher, ev_async *listener, int
     }
 
     Event_Arg *tmp = (Event_Arg *) listener->data;
-    Messenger *m = (Messenger *) tmp->tox;
+    Messenger *m = tmp->tox;
 
     if (ev_is_active(&m->net->sock_listener.listener) || ev_is_pending(&m->net->sock_listener.listener)) {
         ev_io_stop(dispatcher, &m->net->sock_listener.listener);
@@ -442,7 +442,7 @@ static void tox_do_iterate(struct ev_loop *dispatcher, ev_io *sock_listener, int
     }
 
     Event_Arg *tmp = (Event_Arg *) sock_listener->data;
-    Messenger *m = (Messenger *) tmp->tox;
+    Messenger *m = tmp->tox;
 
     if (m->loop_begin_cb) {
         m->loop_begin_cb(m, tmp->user_data);
@@ -483,7 +483,7 @@ static void tox_do_iterate(evutil_socket_t fd, short events, void *arg)
     }
 
     Event_Arg *tmp = (Event_Arg *) arg;
-    Messenger *m = (Messenger *) tmp->tox;
+    Messenger *m = tmp->tox;
     struct timeval timeout;
 
     if (m->loop_begin_cb) {
@@ -566,14 +566,12 @@ static bool tox_fds(Messenger *m, sock_t **sockets, uint32_t *sockets_num)
 bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error)
 {
     if (tox == NULL) {
-        if (error != NULL) {
-            *error = TOX_ERR_LOOP_BAD_ARGS;
-        }
+        SET_ERROR_PARAMETER(error, TOX_ERR_LOOP_NULL);
 
         return false;
     }
 
-    Messenger *m = (Messenger *) tox;
+    Messenger *m = tox;
     bool ret = true;
 
 #ifdef HAVE_LIBEV
@@ -596,21 +594,17 @@ bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error)
 #if 0
     ret = !ev_run(m->dispatcher, 0);
 
-    if (error != NULL) {
-        if (ret) {
-            *error = TOX_ERR_LOOP_OK;
-        } else {
-            *error = TOX_ERR_LOOP_BREAK;
-        }
+    if (ret) {
+        SET_ERROR_PARAMETER(error, TOX_ERR_LOOP_OK);
+    } else {
+        SET_ERROR_PARAMETER(error, TOX_ERR_LOOP_BREAK);
     }
 
 #endif
 
     ev_run(m->dispatcher, 0);
 
-    if (error != NULL) {
-        *error = TOX_ERR_LOOP_OK;
-    }
+    SET_ERROR_PARAMETER(error, TOX_ERR_LOOP_OK);
 
     free(tmp);
 #elif HAVE_LIBEVENT
@@ -622,12 +616,10 @@ bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error)
     tox_do_iterate(0, 0, tmp);
     ret = event_base_dispatch(m->dispatcher) < 0 ? false : true;
 
-    if (error != NULL) {
-        if (ret) {
-            *error = TOX_ERR_LOOP_OK;
-        } else {
-            *error = TOX_ERR_LOOP_BREAK;
-        }
+    if (ret) {
+        SET_ERROR_PARAMETER(error, TOX_ERR_LOOP_OK);
+    } else {
+        SET_ERROR_PARAMETER(error, TOX_ERR_LOOP_BREAK);
     }
 
     free(tmp);
@@ -660,9 +652,7 @@ bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error)
                 m->loop_end_cb(tox, user_data);
             }
 
-            if (error != NULL) {
-                *error = TOX_ERR_LOOP_GET_FDS;
-            }
+            SET_ERROR_PARAMETER(error, TOX_ERR_LOOP_GET_FDS);
 
             free(fdlist);
 
@@ -689,9 +679,7 @@ bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error)
         }
 
         if (select(maxfd, &readable, NULL, NULL, &timeout) < 0) {
-            if (error != NULL) {
-                *error = TOX_ERR_LOOP_SELECT;
-            }
+            SET_ERROR_PARAMETER(error, TOX_ERR_LOOP_SELECT);
 
             free(fdlist);
 
@@ -699,9 +687,7 @@ bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error)
         }
     }
 
-    if (error != NULL) {
-        *error = TOX_ERR_LOOP_OK;
-    }
+    SET_ERROR_PARAMETER(error, TOX_ERR_LOOP_OK);
 
     free(fdlist);
 #endif
@@ -715,7 +701,7 @@ void tox_loop_stop(Tox *tox)
         return;
     }
 
-    Messenger *m = (Messenger *) tox;
+    Messenger *m = tox;
 
 #ifdef HAVE_LIBEV
     ev_async_send(m->dispatcher, &m->stop_loop);
