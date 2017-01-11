@@ -841,7 +841,7 @@ error for loop {
   /**
    * Invalid arguments passed.
    */
-  BAD_ARGS,
+  NULL,
   /**
    * Failed running events dispatcher.
    */
