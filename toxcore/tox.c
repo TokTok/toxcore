@@ -534,9 +534,9 @@ bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error)
     }
 
     Messenger *m = tox;
-    bool ret = true;
 
 #ifdef HAVE_LIBEV
+    bool ret = true;
     Event_Arg *tmp = calloc(1, sizeof(Event_Arg));
 
     tmp->tox = tox;
@@ -576,7 +576,7 @@ bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error)
     tmp->user_data = user_data;
 
     tox_do_iterate(0, 0, tmp);
-    ret = event_base_dispatch(m->dispatcher) < 0 ? false : true;
+    bool ret = event_base_dispatch(m->dispatcher) < 0 ? false : true;
 
     if (ret) {
         SET_ERROR_PARAMETER(error, TOX_ERR_LOOP_OK);
@@ -586,6 +586,7 @@ bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error)
 
     free(tmp);
 #else
+    bool ret = true;
     uint32_t fdcount = 0;
     sock_t *fdlist = NULL;
 
