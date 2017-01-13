@@ -19,7 +19,7 @@
 
 #include <sys/ioctl.h>
 
-#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32) || defined(__MACH__)
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32) || defined(__MACH__) || defined(__FreeBSD__)
 #define MSG_NOSIGNAL 0
 #endif
 
