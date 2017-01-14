@@ -285,21 +285,22 @@ static uint32_t data_1(uint16_t buflen, const uint8_t *buffer)
 static void loglogdata(Logger *log, const char *message, const uint8_t *buffer,
                        uint16_t buflen, IP_Port ip_port, int res)
 {
+    char ip_str[IP_NTOA_LEN];
     if (res < 0) { /* Windows doesn't necessarily know %zu */
         LOGGER_TRACE(log, "[%2u] %s %3hu%c %s:%hu (%u: %s) | %04x%04x",
                      buffer[0], message, (buflen < 999 ? (uint16_t)buflen : 999), 'E',
-                     ip_ntoa(&ip_port.ip), ntohs(ip_port.port), errno, strerror(errno), data_0(buflen, buffer),
-                     data_1(buflen, buffer));
+                     ip_ntoa(&ip_port.ip, ip_str, sizeof(ip_str)), ntohs(ip_port.port), errno,
+                             strerror(errno), data_0(buflen, buffer), data_1(buflen, buffer));
     } else if ((res > 0) && ((size_t)res <= buflen)) {
         LOGGER_TRACE(log, "[%2u] %s %3zu%c %s:%hu (%u: %s) | %04x%04x",
                      buffer[0], message, (res < 999 ? (size_t)res : 999), ((size_t)res < buflen ? '<' : '='),
-                     ip_ntoa(&ip_port.ip), ntohs(ip_port.port), 0, "OK", data_0(buflen, buffer), data_1(buflen,
-                             buffer));
+                     ip_ntoa(&ip_port.ip, ip_str, sizeof(ip_str)), ntohs(ip_port.port), 0, "OK",
+                             data_0(buflen, buffer), data_1(buflen, buffer));
     } else { /* empty or overwrite */
         LOGGER_TRACE(log, "[%2u] %s %zu%c%zu %s:%hu (%u: %s) | %04x%04x",
                      buffer[0], message, (size_t)res, (!res ? '!' : '>'), buflen,
-                     ip_ntoa(&ip_port.ip), ntohs(ip_port.port), 0, "OK", data_0(buflen, buffer), data_1(buflen,
-                             buffer));
+                     ip_ntoa(&ip_port.ip, ip_str, sizeof(ip_str)), ntohs(ip_port.port), 0, "OK",
+                             data_0(buflen, buffer), data_1(buflen, buffer));
     }
 }
 
@@ -690,7 +691,9 @@ Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint1
         if (!res) {
             temp->port = *portptr;
 
-            LOGGER_DEBUG(log, "Bound successfully to %s:%u", ip_ntoa(&ip), ntohs(temp->port));
+            char ip_str[IP_NTOA_LEN];
+            LOGGER_DEBUG(log, "Bound successfully to %s:%u", ip_ntoa(&ip, ip_str, sizeof(ip_str)),
+                    ntohs(temp->port));
 
             /* errno isn't reset on success, only set on failure, the failed
              * binds with parallel clients yield a -EPERM to the outside if
@@ -715,8 +718,9 @@ Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint1
         *portptr = htons(port_to_try);
     }
 
+    char ip_str[IP_NTOA_LEN];
     LOGGER_ERROR(log, "Failed to bind socket: %u, %s IP: %s port_from: %u port_to: %u", errno, strerror(errno),
-                 ip_ntoa(&ip), port_from, port_to);
+                 ip_ntoa(&ip, ip_str, sizeof(ip_str)), port_from, port_to);
 
     kill_networking(temp);
 
@@ -867,41 +871,46 @@ void ipport_copy(IP_Port *target, const IP_Port *source)
 
 /* ip_ntoa
  *   converts ip into a string
- *   uses a static buffer, so mustn't used multiple times in the same output
+ *   buf must be of length at least IP_NTOA_LEN
  *
  *   IPv6 addresses are enclosed into square brackets, i.e. "[IPv6]"
  *   writes error message into the buffer on error
+ *
+ *   returns buf
  */
-/* there would be INET6_ADDRSTRLEN, but it might be too short for the error message */
-static char addresstext[96]; // TODO(irungentoo): magic number. Why not INET6_ADDRSTRLEN ?
-const char *ip_ntoa(const IP *ip)
+const char *ip_ntoa(const IP *ip, char *buf, size_t length)
 {
+    if (length < IP_NTOA_LEN) {
+        snprintf(buf, length, "Bad buf length");
+        return buf;
+    }
+
     if (ip) {
         if (ip->family == AF_INET) {
             /* returns standard quad-dotted notation */
             const struct in_addr *addr = (const struct in_addr *)&ip->ip4;
 
-            addresstext[0] = 0;
-            inet_ntop(ip->family, addr, addresstext, sizeof(addresstext));
+            buf[0] = 0;
+            inet_ntop(ip->family, addr, buf, length);
         } else if (ip->family == AF_INET6) {
             /* returns hex-groups enclosed into square brackets */
             const struct in6_addr *addr = (const struct in6_addr *)&ip->ip6;
 
-            addresstext[0] = '[';
-            inet_ntop(ip->family, addr, &addresstext[1], sizeof(addresstext) - 3);
-            size_t len = strlen(addresstext);
-            addresstext[len] = ']';
-            addresstext[len + 1] = 0;
+            buf[0] = '[';
+            inet_ntop(ip->family, addr, &buf[1], length - 3);
+            size_t len = strlen(buf);
+            buf[len] = ']';
+            buf[len + 1] = 0;
         } else {
-            snprintf(addresstext, sizeof(addresstext), "(IP invalid, family %u)", ip->family);
+            snprintf(buf, length, "(IP invalid, family %u)", ip->family);
         }
     } else {
-        snprintf(addresstext, sizeof(addresstext), "(IP invalid: NULL)");
+        snprintf(buf, length, "(IP invalid: NULL)");
     }
 
     /* brute force protection against lacking termination */
-    addresstext[sizeof(addresstext) - 1] = 0;
-    return addresstext;
+    buf[length - 1] = 0;
+    return buf;
 }
 
 /*
