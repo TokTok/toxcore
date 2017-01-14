@@ -2633,7 +2633,7 @@ void do_messenger(Messenger *m, void *userdata)
             } else {
                 char id_str[IDSTRING_LEN];
                 LOGGER_TRACE(m->log, "F[--:%2u] %s", friend_idx,
-                            id_to_string(dhtfptr->public_key, id_str, sizeof(id_str)));
+                             id_to_string(dhtfptr->public_key, id_str, sizeof(id_str)));
             }
 
             for (client = 0; client < MAX_FRIEND_CLIENTS; client++) {

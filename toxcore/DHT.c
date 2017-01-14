@@ -800,7 +800,7 @@ typedef struct {
 
 static int cmp_dht_entry(const void *a, const void *b)
 {
-    Cmp_data cmp1,cmp2;
+    Cmp_data cmp1, cmp2;
     memcpy(&cmp1, a, sizeof(Cmp_data));
     memcpy(&cmp2, b, sizeof(Cmp_data));
     Client_data entry1 = cmp1.entry;
@@ -870,6 +870,7 @@ static void sort_client_list(Client_data *list, unsigned int length, const uint8
     // Pass comp_public_key to qsort with each Client_data entry, so the
     // comparison function cmp_dht_entry can use it as the base of comparison.
     Cmp_data cmp_list[length];
+
     for (uint32_t i = 0; i < length; i++) {
         cmp_list[i].base_public_key = comp_public_key;
         cmp_list[i].entry = list[i];
