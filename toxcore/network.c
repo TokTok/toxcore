@@ -1339,3 +1339,14 @@ Socket net_socket(int domain, int type, int protocol)
     int platform_prot = make_proto(protocol);
     return socket(platform_domain, platform_type, platform_prot);
 }
+
+ssize_t net_sendto(Socket sock, const char* buf, size_t n, IP_Port ip_port)
+{
+    struct sockaddr_in target;
+    size_t addrsize = sizeof(target);
+    target.sin_family = make_family(ip_port.ip.family);
+    target.sin_port = htons(ip_port.port);
+    fill_addr4(ip_port.ip.ip4, &target.sin_addr);
+
+    return sendto(sock, (char *)buf, n, 0, (struct sockaddr *)&target, addrsize);
+}
