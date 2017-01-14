@@ -878,7 +878,7 @@ static void sort_client_list(Client_data *list, unsigned int length, const uint8
     qsort(cmp_list, length, sizeof(Cmp_data), cmp_dht_entry);
 
     for (uint32_t i = 0; i < length; i++) {
-        list[i].entry = cmp_list[i];
+        list[i] = cmp_list[i].entry;
     }
 }
 
