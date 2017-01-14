@@ -35,7 +35,6 @@ START_TEST(test_addr_resolv_localhost)
     ck_assert_msg(res > 0, "Resolver failed: %u, %s (%x, %x)", errno, strerror(errno));
 
     if (res > 0) {
-        char ip_str[IP_NTOA_LEN];
         ck_assert_msg(ip.family == AF_INET, "Expected family AF_INET, got %u.", ip.family);
         ck_assert_msg(ip.ip4.uint32 == htonl(0x7F000001), "Expected 127.0.0.1, got %s.",
                 inet_ntoa(ip.ip4.in_addr));
