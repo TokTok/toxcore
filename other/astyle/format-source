@@ -5,6 +5,7 @@ set -e
 SOURCE_DIR="$1"
 APIDSL="$2"
 ASTYLE="$3"
+CLANG_FORMAT="$4"
 
 # Go to the source root.
 if [ -z "$SOURCE_DIR" ]; then
@@ -19,6 +20,17 @@ fi
 if ! which "$ASTYLE"; then
   # If we couldn't find or install an astyle binary, don't do anything.
   echo "Could not find an astyle binary; please install astyle."
+  exit 1
+fi
+
+for version in "" -3.5 -3.6 -3.7 -3.8; do
+  if [ -z "$CLANG_FORMAT" ] || ! which "$CLANG_FORMAT"; then
+    CLANG_FORMAT=clang-format$version
+  fi
+done
+
+if ! which "$CLANG_FORMAT"; then
+  echo "Could not find a clang-format binary; please install clang-format"
   exit 1
 fi
 
@@ -48,5 +60,6 @@ fi
 SOURCES=`find . -name "*.[ch]" -and -not -name "*.api.h" -and -not -wholename "*crypto_pwhash*" -and -not -wholename "./super_donators/*"`
 
 $ASTYLE -n --options=other/astyle/astylerc $SOURCES
+$CLANG_FORMAT --style=file -i `find testing/hstox -name "*.[ch]"`
 
 git diff --exit-code

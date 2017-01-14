@@ -12,6 +12,14 @@ find_program(APIDSL NAMES
 find_program(ASTYLE NAMES
   astyle
   $ENV{ASTYLE})
+find_program(CLANG_FORMAT NAMES
+  clang-format
+  clang-format-3.8
+  clang-format-3.7
+  clang-format-3.6
+  clang-format-3.5
+  clang-format-3.4
+  $ENV{CLANG_FORMAT})
 
 function(apidsl)
   if(APIDSL AND ASTYLE)
