@@ -869,14 +869,17 @@ static void sort_client_list(Client_data *list, unsigned int length, const uint8
 {
     // Pass comp_public_key to qsort with each Client_data entry, so the
     // comparison function cmp_dht_entry can use it as the base of comparison.
-    uint32_t i;
     Cmp_data cmp_list[length];
-    for (i = 0; i < length; i++) {
-        cmp_list[i].entry = list[i];
+    for (uint32_t i = 0; i < length; i++) {
         cmp_list[i].base_public_key = comp_public_key;
+        cmp_list[i].entry = list[i];
     }
 
     qsort(cmp_list, length, sizeof(Cmp_data), cmp_dht_entry);
+
+    for (uint32_t i = 0; i < length; i++) {
+        list[i].entry = cmp_list[i];
+    }
 }
 
 /* Replace a first bad (or empty) node with this one

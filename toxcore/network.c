@@ -878,11 +878,11 @@ void ipport_copy(IP_Port *target, const IP_Port *source)
  *
  *   returns buf
  */
-const char *ip_ntoa(const IP *ip, char *buf, size_t length)
+const char *ip_ntoa(const IP *ip, char *ip_str, size_t length)
 {
     if (length < IP_NTOA_LEN) {
-        snprintf(buf, length, "Bad buf length");
-        return buf;
+        snprintf(ip_str, length, "Bad buf length");
+        return ip_str;
     }
 
     if (ip) {
@@ -890,27 +890,27 @@ const char *ip_ntoa(const IP *ip, char *buf, size_t length)
             /* returns standard quad-dotted notation */
             const struct in_addr *addr = (const struct in_addr *)&ip->ip4;
 
-            buf[0] = 0;
-            inet_ntop(ip->family, addr, buf, length);
+            ip_str[0] = 0;
+            inet_ntop(ip->family, addr, ip_str, length);
         } else if (ip->family == AF_INET6) {
             /* returns hex-groups enclosed into square brackets */
             const struct in6_addr *addr = (const struct in6_addr *)&ip->ip6;
 
-            buf[0] = '[';
-            inet_ntop(ip->family, addr, &buf[1], length - 3);
-            size_t len = strlen(buf);
-            buf[len] = ']';
-            buf[len + 1] = 0;
+            ip_str[0] = '[';
+            inet_ntop(ip->family, addr, &ip_str[1], length - 3);
+            size_t len = strlen(ip_str);
+            ip_str[len] = ']';
+            ip_str[len + 1] = 0;
         } else {
-            snprintf(buf, length, "(IP invalid, family %u)", ip->family);
+            snprintf(ip_str, length, "(IP invalid, family %u)", ip->family);
         }
     } else {
-        snprintf(buf, length, "(IP invalid: NULL)");
+        snprintf(ip_str, length, "(IP invalid: NULL)");
     }
 
     /* brute force protection against lacking termination */
-    buf[length - 1] = 0;
-    return buf;
+    ip_str[length - 1] = 0;
+    return ip_str;
 }
 
 /*
