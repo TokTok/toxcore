@@ -193,16 +193,16 @@ IP_Port;
 
 /* ip_ntoa
  *   converts ip into a string
- *   buf must be of length at least IP_NTOA_LEN
+ *   ip_str must be of length at least IP_NTOA_LEN
  *
  *   IPv6 addresses are enclosed into square brackets, i.e. "[IPv6]"
  *   writes error message into the buffer on error
  *
- *   returns buf
+ *   returns ip_str
  */
 /* this would be INET6_ADDRSTRLEN, but it might be too short for the error message */
 #define IP_NTOA_LEN 96 // TODO(irungentoo): magic number. Why not INET6_ADDRSTRLEN ?
-const char *ip_ntoa(const IP *ip, char *buf, size_t length);
+const char *ip_ntoa(const IP *ip, char *ip_str, size_t length);
 
 /*
  * ip_parse_addr

@@ -2475,7 +2475,7 @@ static void connection_status_cb(Messenger *m, void *userdata)
 #define DUMPING_CLIENTS_FRIENDS_EVERY_N_SECONDS 60UL
 
 #define IDSTRING_LEN (CRYPTO_PUBLIC_KEY_SIZE * 2 + 1)
-/* buf should be of length at least IDSTRING_LEN */
+/* id_str should be of length at least IDSTRING_LEN */
 static char *id_to_string(const uint8_t *pk, char *id_str, size_t length)
 {
     if (length < IDSTRING_LEN) {

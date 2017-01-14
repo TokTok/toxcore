@@ -872,12 +872,12 @@ void ipport_copy(IP_Port *target, const IP_Port *source)
 
 /* ip_ntoa
  *   converts ip into a string
- *   buf must be of length at least IP_NTOA_LEN
+ *   ip_str must be of length at least IP_NTOA_LEN
  *
  *   IPv6 addresses are enclosed into square brackets, i.e. "[IPv6]"
  *   writes error message into the buffer on error
  *
- *   returns buf
+ *   returns ip_str
  */
 const char *ip_ntoa(const IP *ip, char *ip_str, size_t length)
 {
