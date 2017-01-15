@@ -40,6 +40,7 @@
 static uint64_t unix_time_value;
 static uint64_t unix_base_time_value;
 
+/* note that this is thread-safe despite the use of static variables */
 void unix_time_update(void)
 {
     if (unix_base_time_value == 0) {
