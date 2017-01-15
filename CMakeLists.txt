@@ -56,6 +56,8 @@ macro(add_flag flag)
   add_cflag(${flag})
   add_cxxflag(${flag})
 endmacro()
+
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,defs")
   
 # Set standard version for compiler.
 add_cflag("-std=c99")
@@ -186,16 +188,6 @@ endif()
 #
 ################################################################################
 
-# toxcore_PKGCONFIG_LIBS is what's added to the Libs: line in toxcore.pc. It
-# needs to contain all the libraries a program using toxcore should link against
-# if it's statically linked. If it's dynamically linked, there is no need to
-# explicitly link against all the dependencies, but it doesn't harm much(*)
-# either.
-#
-# (*) It allows client code to use symbols from our dependencies without
-#    explicitly linking against them.
-set(toxcore_PKGCONFIG_LIBS)
-
 # LAYER 1: Crypto core
 # --------------------
 apidsl(
@@ -212,6 +204,8 @@ if(WIN32)
   target_link_modules(toxcrypto ws2_32) # for htonl
 endif()
 
+install_module(toxcrypto)
+
 # LAYER 2: Basic networking
 # -------------------------
 add_module(toxnetwork
@@ -225,18 +219,20 @@ target_link_modules(toxnetwork toxcrypto)
 
 if(CMAKE_THREAD_LIBS_INIT)
   target_link_modules(toxnetwork ${CMAKE_THREAD_LIBS_INIT})
-  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+  set(toxnetwork_PKGCONFIG_LIBS ${toxnetwork_PKGCONFIG_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 endif()
 
 if(RT_LIBRARIES)
   target_link_modules(toxnetwork ${RT_LIBRARIES})
-  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-lrt")
+  set(toxnetwork_PKGCONFIG_LIBS ${toxnetwork_PKGCONFIG_LIBS} "-lrt")
 endif()
 
 if(WIN32)
   target_link_modules(toxnetwork ws2_32 iphlpapi)
-  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-lws2_32 -liphlpapi")
+  set(toxnetwork_PKGCONFIG_LIBS ${toxnetwork_PKGCONFIG_LIBS} "-lws2_32 -liphlpapi")
 endif()
+
+install_module(toxnetwork)
 
 # LAYER 3: Distributed Hash Table
 # -------------------------------
@@ -250,6 +246,7 @@ add_module(toxdht
   toxcore/ping_array.c
   toxcore/ping_array.h)
 target_link_modules(toxdht toxnetwork)
+install_module(toxdht)
 
 # LAYER 4: Onion routing, TCP connections, crypto connections
 # -----------------------------------------------------------
@@ -271,6 +268,7 @@ add_module(toxnetcrypto
   toxcore/onion_client.c
   toxcore/onion_client.h)
 target_link_modules(toxnetcrypto toxdht)
+install_module(toxnetcrypto)
 
 # LAYER 5: Friend requests and connections
 # ----------------------------------------
@@ -280,6 +278,7 @@ add_module(toxfriends
   toxcore/friend_requests.c
   toxcore/friend_requests.h)
 target_link_modules(toxfriends toxnetcrypto)
+install_module(toxfriends)
 
 # LAYER 6: Tox messenger
 # ----------------------
@@ -287,6 +286,7 @@ add_module(toxmessenger
   toxcore/Messenger.c
   toxcore/Messenger.h)
 target_link_modules(toxmessenger toxfriends)
+install_module(toxmessenger)
 
 # LAYER 7: Group chats
 # --------------------
@@ -294,16 +294,49 @@ add_module(toxgroup
   toxcore/group.c
   toxcore/group.h)
 target_link_modules(toxgroup toxmessenger)
+install_module(toxgroup)
 
 # LAYER 8: Public API
 # -------------------
 apidsl(
   toxcore/tox.api.h)
-add_module(toxcore
+add_module(toxapi
   toxcore/tox_api.c
   toxcore/tox.c
   toxcore/tox.h)
-target_link_modules(toxcore toxgroup)
+target_link_modules(toxapi toxgroup)
+install_module(toxapi)
+
+# All layers together in one library for ease of use
+# --------------------------------------------------
+add_module(toxcore
+  ${toxapi_SOURCES}
+  ${toxcrypto_SOURCES}
+  ${toxdht_SOURCES}
+  ${toxfriends_SOURCES}
+  ${toxgroup_SOURCES}
+  ${toxmessenger_SOURCES}
+  ${toxnetcrypto_SOURCES}
+  ${toxnetwork_SOURCES})
+target_link_modules(toxcore
+  ${toxapi_LINK_MODULES}
+  ${toxcrypto_LINK_MODULES}
+  ${toxdht_LINK_MODULES}
+  ${toxfriends_LINK_MODULES}
+  ${toxgroup_LINK_MODULES}
+  ${toxmessenger_LINK_MODULES}
+  ${toxnetcrypto_LINK_MODULES}
+  ${toxnetwork_LINK_MODULES})
+set(toxcore_PKGCONFIG_LIBS
+  ${toxapi_PKGCONFIG_LIBS}
+  ${toxcrypto_PKGCONFIG_LIBS}
+  ${toxdht_PKGCONFIG_LIBS}
+  ${toxfriends_PKGCONFIG_LIBS}
+  ${toxgroup_PKGCONFIG_LIBS}
+  ${toxmessenger_PKGCONFIG_LIBS}
+  ${toxnetcrypto_PKGCONFIG_LIBS}
+  ${toxnetwork_PKGCONFIG_LIBS})
+install_module(toxcore)
 
 ################################################################################
 #
@@ -332,7 +365,7 @@ if(BUILD_TOXAV)
     toxav/toxav_old.c
     toxav/video.c
     toxav/video.h)
-  target_link_modules(toxav toxcore ${OPUS_LIBRARIES} ${VPX_LIBRARIES})
+  target_link_modules(toxav toxgroup ${OPUS_LIBRARIES} ${VPX_LIBRARIES})
 endif()
 
 ################################################################################
@@ -343,14 +376,14 @@ endif()
 
 add_module(toxdns
   toxdns/toxdns.c)
-target_link_modules(toxdns toxcore)
+target_link_modules(toxdns toxnetwork)
 
 apidsl(
   toxencryptsave/toxencryptsave.api.h)
 add_module(toxencryptsave
   toxencryptsave/toxencryptsave.c
   toxencryptsave/toxencryptsave.h)
-target_link_modules(toxencryptsave toxcore)
+target_link_modules(toxencryptsave toxcrypto)
 
 ################################################################################
 #
@@ -443,7 +476,7 @@ endif()
 add_c_executable(DHT_bootstrap
   other/DHT_bootstrap.c
   other/bootstrap_node_packets.c)
-target_link_modules(DHT_bootstrap toxnetcrypto)
+target_link_modules(DHT_bootstrap toxfriends)
 
 option(BOOTSTRAP_DAEMON "Enable building of tox-bootstrapd" ON)
 if(BOOTSTRAP_DAEMON)
@@ -463,7 +496,7 @@ if(BOOTSTRAP_DAEMON)
       other/bootstrap_daemon/src/global.h
       other/bootstrap_node_packets.c
       other/bootstrap_node_packets.h)
-    target_link_modules(tox-bootstrapd toxnetcrypto ${LIBCONFIG_LIBRARIES})
+    target_link_modules(tox-bootstrapd toxfriends ${LIBCONFIG_LIBRARIES})
   endif()
 endif()
 
@@ -517,7 +550,7 @@ endif()
 
 if(NOT WIN32)
   add_c_executable(irc_syncbot testing/irc_syncbot.c)
-  target_link_modules(irc_syncbot toxcore)
+  target_link_modules(irc_syncbot toxcore toxnetwork)
 endif()
 
 ################################################################################
@@ -526,48 +559,7 @@ endif()
 #
 ################################################################################
 
-string(REPLACE ";" " " toxcore_PKGCONFIG_LIBS "${toxcore_PKGCONFIG_LIBS}")
-
-if(BUILD_TOXAV)
-  configure_file(
-    "${toxcore_SOURCE_DIR}/other/pkgconfig/toxav.pc.in"
-    "${CMAKE_BINARY_DIR}/toxav.pc"
-    @ONLY
-  )
-endif()
-
-configure_file(
-  "${toxcore_SOURCE_DIR}/other/pkgconfig/toxcore.pc.in"
-  "${CMAKE_BINARY_DIR}/toxcore.pc"
-  @ONLY
-)
-
-configure_file(
-  "${toxcore_SOURCE_DIR}/other/pkgconfig/toxdns.pc.in"
-  "${CMAKE_BINARY_DIR}/toxdns.pc"
-  @ONLY
-)
-
-configure_file(
-  "${toxcore_SOURCE_DIR}/other/pkgconfig/toxencryptsave.pc.in"
-  "${CMAKE_BINARY_DIR}/toxencryptsave.pc"
-  @ONLY
-)
-
-configure_file(
-  "${toxcore_SOURCE_DIR}/other/pkgconfig/libtoxcore.pc.in"
-  "${CMAKE_BINARY_DIR}/libtoxcore.pc"
-  @ONLY
-)
-
-configure_file(
-  "${toxcore_SOURCE_DIR}/other/pkgconfig/libtoxav.pc.in"
-  "${CMAKE_BINARY_DIR}/libtoxav.pc"
-  @ONLY
-)
-
 install(FILES
-  ${CMAKE_BINARY_DIR}/libtoxcore.pc
   ${CMAKE_BINARY_DIR}/toxcore.pc
   ${CMAKE_BINARY_DIR}/toxdns.pc
   ${CMAKE_BINARY_DIR}/toxencryptsave.pc
@@ -580,7 +572,6 @@ install(FILES
 
 if(BUILD_TOXAV)
   install(FILES
-    ${CMAKE_BINARY_DIR}/libtoxav.pc
     ${CMAKE_BINARY_DIR}/toxav.pc
     DESTINATION "lib/pkgconfig")
   install(FILES

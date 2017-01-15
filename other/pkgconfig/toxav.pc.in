@@ -6,5 +6,5 @@ Name: toxav
 Description: Tox A/V library
 Requires: opus toxcore vpx
 Version: @PROJECT_VERSION@
-Libs: -L${libdir} @toxav_PKGCONFIG_LIBS@ -ltoxav
+Libs: -L${libdir} -ltoxav
 Cflags: -I${includedir}

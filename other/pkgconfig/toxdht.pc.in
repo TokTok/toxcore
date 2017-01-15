@@ -2,9 +2,9 @@ prefix=@CMAKE_INSTALL_PREFIX@
 libdir=${prefix}/lib
 includedir=${prefix}/include
 
-Name: toxcore
-Description: Tox protocol library
-Requires: libsodium
+Name: toxdht
+Description: Tox Distributed Hash Table
+Requires: toxnetwork
 Version: @PROJECT_VERSION@
-Libs: -L${libdir} -ltoxcore @toxcore_PKGCONFIG_LIBS@
+Libs: -L${libdir} -ltoxdht
 Cflags: -I${includedir}

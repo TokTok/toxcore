@@ -2,9 +2,9 @@ prefix=@CMAKE_INSTALL_PREFIX@
 libdir=${prefix}/lib
 includedir=${prefix}/include
 
-Name: toxencryptsave
-Description: Tox block encryption library
+Name: toxnetwork
+Description: Tox network abstraction library
 Requires: toxcrypto
 Version: @PROJECT_VERSION@
-Libs: -L${libdir} -ltoxencryptsave
+Libs: -L${libdir} -ltoxnetwork @toxnetwork_PKGCONFIG_LIBS@
 Cflags: -I${includedir}

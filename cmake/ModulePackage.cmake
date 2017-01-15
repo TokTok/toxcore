@@ -51,6 +51,7 @@ endfunction()
 
 function(add_module lib)
   set_source_language(${ARGN})
+  set(${lib}_SOURCES ${ARGN} PARENT_SCOPE)
 
   if(ENABLE_SHARED)
     add_library(${lib}_shared SHARED ${ARGN})
@@ -68,9 +69,31 @@ function(add_module lib)
     set_target_properties(${lib}_static PROPERTIES OUTPUT_NAME ${lib})
     install(TARGETS ${lib}_static DESTINATION "lib")
   endif()
+
+  # ${lib}_PKGCONFIG_LIBS is what's added to the Libs: line in ${lib}.pc. It
+  # needs to contain all the libraries a program using ${lib} should link against
+  # if it's statically linked. If it's dynamically linked, there is no need to
+  # explicitly link against all the dependencies, but it doesn't harm much(*)
+  # either.
+  #
+  # (*) It allows client code to use symbols from our dependencies without
+  #    explicitly linking against them.
+  set(${lib}_PKGCONFIG_LIBS PARENT_SCOPE)
+endfunction()
+
+function(install_module lib)
+  string(REPLACE ";" " " ${lib}_PKGCONFIG_LIBS "${${lib}_PKGCONFIG_LIBS}")
+
+  configure_file(
+    "${toxcore_SOURCE_DIR}/other/pkgconfig/${lib}.pc.in"
+    "${CMAKE_BINARY_DIR}/${lib}.pc"
+    @ONLY
+  )
 endfunction()
 
 function(target_link_modules target)
+  set(${target}_LINK_MODULES ${ARGN} PARENT_SCOPE)
+
   if(TARGET ${target}_shared)
     set(_targets ${_targets} ${target}_shared)
   endif()
