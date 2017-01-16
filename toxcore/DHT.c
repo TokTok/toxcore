@@ -2535,6 +2535,8 @@ static int cryptopacket_handle(void *object, IP_Port source, const uint8_t *pack
 {
     DHT *dht = (DHT *)object;
 
+    assert(packet[0] == NET_PACKET_CRYPTO);
+
     if (length <= CRYPTO_PUBLIC_KEY_SIZE * 2 + CRYPTO_NONCE_SIZE + 1 + CRYPTO_MAC_SIZE ||
             length > MAX_CRYPTO_REQUEST_SIZE + CRYPTO_MAC_SIZE) {
         return 1;
