@@ -24,7 +24,7 @@ static void group_invite_handler(Tox *tox, uint32_t friend_number, const uint8_t
 {
     printf("invite arrived; accepting\n");
     TOX_ERR_GROUP_INVITE_ACCEPT err_accept;
-    tox_group_invite_accept(tox, invite_data, length, nullptr, 0, &err_accept);
+    tox_group_invite_accept(tox, friend_number, invite_data, length, nullptr, 0, &err_accept);
     ck_assert(err_accept == TOX_ERR_GROUP_INVITE_ACCEPT_OK);
 }
 
