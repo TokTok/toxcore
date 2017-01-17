@@ -337,13 +337,9 @@ endif()
 
 ################################################################################
 #
-# :: ToxDNS and block encryption libraries
+# :: Tox Encrypted Save [TES] (block encryption libraries)
 #
 ################################################################################
-
-add_module(toxdns
-  toxdns/toxdns.c)
-target_link_modules(toxdns toxcore)
 
 apidsl(
   toxencryptsave/toxencryptsave.api.h)
@@ -505,9 +501,6 @@ target_link_modules(DHT_test toxdht)
 add_c_executable(Messenger_test testing/Messenger_test.c)
 target_link_modules(Messenger_test toxmessenger)
 
-add_c_executable(dns3_test testing/dns3_test.c)
-target_link_modules(dns3_test toxdns)
-
 if(NOT WIN32)
   add_c_executable(tox_sync testing/tox_sync.c)
   target_link_modules(tox_sync toxcore)
@@ -546,12 +539,6 @@ configure_file(
 )
 
 configure_file(
-  "${toxcore_SOURCE_DIR}/other/pkgconfig/toxdns.pc.in"
-  "${CMAKE_BINARY_DIR}/toxdns.pc"
-  @ONLY
-)
-
-configure_file(
   "${toxcore_SOURCE_DIR}/other/pkgconfig/toxencryptsave.pc.in"
   "${CMAKE_BINARY_DIR}/toxencryptsave.pc"
   @ONLY
@@ -572,12 +559,10 @@ configure_file(
 install(FILES
   ${CMAKE_BINARY_DIR}/libtoxcore.pc
   ${CMAKE_BINARY_DIR}/toxcore.pc
-  ${CMAKE_BINARY_DIR}/toxdns.pc
   ${CMAKE_BINARY_DIR}/toxencryptsave.pc
   DESTINATION "lib/pkgconfig")
 install(FILES
   toxcore/tox.h
-  toxdns/toxdns.h
   toxencryptsave/toxencryptsave.h
   DESTINATION "include/tox")
 

@@ -3,6 +3,6 @@ libdir=${prefix}/lib
 includedir=${prefix}/include
 
 Name: libtoxcore
-Description: Tox protocol library - compatibility module (use toxcore, toxdns, and toxencryptsave instead)
-Requires: toxcore toxdns toxencryptsave
+Description: Tox protocol library - compatibility module (use toxcore and toxencryptsave instead)
+Requires: toxcore toxencryptsave
 Version: @PROJECT_VERSION@
