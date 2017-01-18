@@ -5,6 +5,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * The abstract data type of a binary writer. Must be allocated using bin_w_new
@@ -168,5 +171,9 @@ bool bin_r_u64(struct Bin_R *r, uint64_t *v);
  * pointer are unspecified.
  */
 bool bin_r_arr(struct Bin_R *r, uint8_t *data, size_t length);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* BIN_IO_H */

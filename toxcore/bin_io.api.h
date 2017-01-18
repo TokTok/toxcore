@@ -6,6 +6,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 %}
 
 // TODO(iphydf): This should be namespace. Fix apidsl.
@@ -170,5 +173,9 @@ class r
 }
 
 %{
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* BIN_IO_H */
 %}
