@@ -540,9 +540,12 @@ static int client_or_ip_port_in_list(Logger *log, Client_data *list, uint16_t le
             if (ip_port.ip.family == AF_INET) {
 
                 if (!ipport_equal(&list[i].assoc4.ip_port, &ip_port)) {
+                    char ip_str[IP_NTOA_LEN];
                     LOGGER_TRACE(log, "coipil[%u]: switching ipv4 from %s:%u to %s:%u", i,
-                                 ip_ntoa(&list[i].assoc4.ip_port.ip), ntohs(list[i].assoc4.ip_port.port),
-                                 ip_ntoa(&ip_port.ip), ntohs(ip_port.port));
+                                 ip_ntoa(&list[i].assoc4.ip_port.ip, ip_str, sizeof(ip_str)),
+                                 ntohs(list[i].assoc4.ip_port.port),
+                                 ip_ntoa(&ip_port.ip, ip_str, sizeof(ip_str)),
+                                 ntohs(ip_port.port));
                 }
 
                 if (LAN_ip(list[i].assoc4.ip_port.ip) != 0 && LAN_ip(ip_port.ip) == 0) {
@@ -554,9 +557,12 @@ static int client_or_ip_port_in_list(Logger *log, Client_data *list, uint16_t le
             } else if (ip_port.ip.family == AF_INET6) {
 
                 if (!ipport_equal(&list[i].assoc6.ip_port, &ip_port)) {
+                    char ip_str[IP_NTOA_LEN];
                     LOGGER_TRACE(log, "coipil[%u]: switching ipv6 from %s:%u to %s:%u", i,
-                                 ip_ntoa(&list[i].assoc6.ip_port.ip), ntohs(list[i].assoc6.ip_port.port),
-                                 ip_ntoa(&ip_port.ip), ntohs(ip_port.port));
+                                 ip_ntoa(&list[i].assoc6.ip_port.ip, ip_str, sizeof(ip_str)),
+                                 ntohs(list[i].assoc6.ip_port.port),
+                                 ip_ntoa(&ip_port.ip, ip_str, sizeof(ip_str)),
+                                 ntohs(ip_port.port));
                 }
 
                 if (LAN_ip(list[i].assoc6.ip_port.ip) != 0 && LAN_ip(ip_port.ip) == 0) {

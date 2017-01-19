@@ -2563,9 +2563,11 @@ void do_messenger(Messenger *m, void *userdata)
                         last_pinged = 999;
                     }
 
+                    char ip_str[IP_NTOA_LEN];
                     LOGGER_TRACE(m->log, "C[%2u] %s:%u [%3u] %s",
-                                 client, ip_ntoa(&assoc->ip_port.ip), ntohs(assoc->ip_port.port),
-                                 last_pinged, ID2String(cptr->public_key));
+                                 client, ip_ntoa(&assoc->ip_port.ip, ip_str, sizeof(ip_str)),
+                                 ntohs(assoc->ip_port.port), last_pinged,
+                                 id_to_string(cptr->public_key, id_str, sizeof(id_str)));
                 }
             }
         }
@@ -2637,6 +2639,7 @@ void do_messenger(Messenger *m, void *userdata)
                             last_pinged = 999;
                         }
 
+                        char ip_str[IP_NTOA_LEN];
                         LOGGER_TRACE(m->log, "F[%2u] => C[%2u] %s:%u [%3u] %s",
                                      friend_idx, client, ip_ntoa(&assoc->ip_port.ip),
                                      ntohs(assoc->ip_port.port), last_pinged,
