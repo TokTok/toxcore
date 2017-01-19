@@ -2024,6 +2024,8 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
     set_nospam(&(m->fr), random_int());
     set_filter_function(&(m->fr), &friend_already_added, m);
 
+    m->lastdump = 0;
+
     if (error) {
         *error = MESSENGER_ERROR_NONE;
     }
@@ -2471,7 +2473,6 @@ static void connection_status_cb(Messenger *m, void *userdata)
 
 
 #define DUMPING_CLIENTS_FRIENDS_EVERY_N_SECONDS 60UL
-static time_t lastdump = 0;
 static char IDString[CRYPTO_PUBLIC_KEY_SIZE * 2 + 1];
 static char *ID2String(const uint8_t *pk)
 {
@@ -2546,8 +2547,8 @@ void do_messenger(Messenger *m, void *userdata)
     do_friends(m, userdata);
     connection_status_cb(m, userdata);
 
-    if (unix_time() > lastdump + DUMPING_CLIENTS_FRIENDS_EVERY_N_SECONDS) {
-        lastdump = unix_time();
+    if (unix_time() > m->lastdump + DUMPING_CLIENTS_FRIENDS_EVERY_N_SECONDS) {
+        m->lastdump = unix_time();
         uint32_t client, last_pinged;
 
         for (client = 0; client < LCLIENT_LIST; client++) {
@@ -2557,7 +2558,7 @@ void do_messenger(Messenger *m, void *userdata)
 
             for (a = 0, assoc = &cptr->assoc4; a < 2; a++, assoc = &cptr->assoc6) {
                 if (ip_isset(&assoc->ip_port.ip)) {
-                    last_pinged = lastdump - assoc->last_pinged;
+                    last_pinged = m->lastdump - assoc->last_pinged;
 
                     if (last_pinged > 999) {
                         last_pinged = 999;
@@ -2633,7 +2634,7 @@ void do_messenger(Messenger *m, void *userdata)
 
                 for (a = 0, assoc = &cptr->assoc4; a < 2; a++, assoc = &cptr->assoc6) {
                     if (ip_isset(&assoc->ip_port.ip)) {
-                        last_pinged = lastdump - assoc->last_pinged;
+                        last_pinged = m->lastdump - assoc->last_pinged;
 
                         if (last_pinged > 999) {
                             last_pinged = 999;
