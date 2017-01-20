@@ -30,6 +30,7 @@
 #include <libc.h>
 #endif
 
+#include "ccompat.h"
 #include "logger.h"
 
 #include <stdint.h>
