@@ -1,3 +1,4 @@
+#define _BSD_SOURCE
 #include "methods.h"
 
 #include "byteswap.h"
