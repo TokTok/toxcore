@@ -166,6 +166,8 @@ if(ASAN)
   set(CMAKE_REQUIRED_LIBRARIES "${SAFE_CMAKE_REQUIRED_LIBRARIES}")
 endif()
 
+option(BUILD_TQNL "Enable compilation of Tox Quick Name Lookup Features" ON)
+
 find_package(Threads   REQUIRED)
 
 find_library(NCURSES_LIBRARIES      ncurses       )
@@ -326,6 +328,23 @@ target_link_modules(toxcore toxgroup)
 
 ################################################################################
 #
+# :: Tox Quick Name Lookup Library
+#
+################################################################################
+if(BUILD_TQNL)
+  apidsl(
+    toxqnl/tqnl.api.h)
+
+  add_module(toxqnl
+    toxqnl/tqnl.c
+    toxqnl/query.h
+    toxqnl/query.c)
+
+  target_link_modules(toxqnl toxcore)
+endif()
+
+################################################################################
+#
 # :: Audio/Video Library
 #
 ################################################################################
@@ -426,6 +445,9 @@ function(auto_test target)
     if(BUILD_TOXAV)
       target_link_modules(auto_${target}_test toxav)
     endif()
+    if(BUILD_TQNL)
+      target_link_modules(auto_${target}_test toxqnl)
+    endif()
     add_test(NAME ${target} COMMAND auto_${target}_test)
     set_tests_properties(${target} PROPERTIES TIMEOUT "${TEST_TIMEOUT_SECONDS}")
   endif()
@@ -452,7 +474,10 @@ if(BUILD_TOXAV)
   auto_test(toxav_basic)
   auto_test(toxav_many)
 endif()
-
+if(BUILD_TQNL)
+  auto_test(query)
+  auto_test(tqnl)
+endif()
 ################################################################################
 #
 # :: Bootstrap daemon
@@ -607,6 +632,12 @@ if(BUILD_TOXAV)
     DESTINATION "lib/pkgconfig")
   install(FILES
     toxav/toxav.h
+    DESTINATION "include/tox")
+endif()
+
+if(BUILD_TQNL)
+  install(FILES
+    toxqnl/tqnl.h
     DESTINATION "include/tox")
 endif()
 
