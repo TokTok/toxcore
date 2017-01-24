@@ -1938,11 +1938,11 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
     evthread_use_windows_threads();
 #else
     evthread_use_pthreads();
-#endif
+#endif /* WIN32 || _WIN32 || __WIN32__ */
     m->dispatcher = event_base_new();
 #else
     m->loop_run = false;
-#endif
+#endif /* HAVE_LIBEV */
 
 #if defined(HAVE_LIBEV) || defined(HAVE_LIBEVENT)
 
@@ -1951,7 +1951,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
         return NULL;
     }
 
-#endif
+#endif /* HAVE_LIBEV || HAVE_LIBEVENT */
 
     Logger *log = NULL;
 
