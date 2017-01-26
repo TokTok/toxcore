@@ -162,7 +162,7 @@ Tox *tox_new(const struct Tox_Options *options, TOX_ERR_NEW *error)
                 return NULL;
             }
 
-            m_options.proxy_info.ip_port.port = htons(tox_options_get_proxy_port(options));
+            m_options.proxy_info.ip_port.port = net_htons(tox_options_get_proxy_port(options));
         }
     }
 
@@ -348,13 +348,13 @@ void tox_self_get_address(const Tox *tox, uint8_t *address)
 void tox_self_set_nospam(Tox *tox, uint32_t nospam)
 {
     Messenger *m = tox;
-    set_nospam(&(m->fr), htonl(nospam));
+    set_nospam(&(m->fr), net_htonl(nospam));
 }
 
 uint32_t tox_self_get_nospam(const Tox *tox)
 {
     const Messenger *m = tox;
-    return ntohl(get_nospam(&(m->fr)));
+    return net_ntohl(get_nospam(&(m->fr)));
 }
 
 void tox_self_get_public_key(const Tox *tox, uint8_t *public_key)
@@ -1519,7 +1519,7 @@ void tox_self_get_dht_id(const Tox *tox, uint8_t *dht_id)
 uint16_t tox_self_get_udp_port(const Tox *tox, TOX_ERR_GET_PORT *error)
 {
     const Messenger *m = tox;
-    uint16_t port = htons(m->net->port);
+    uint16_t port = net_htons(m->net->port);
 
     if (port) {
         SET_ERROR_PARAMETER(error, TOX_ERR_GET_PORT_OK);

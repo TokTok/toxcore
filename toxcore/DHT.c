@@ -541,9 +541,9 @@ static int client_or_ip_port_in_list(Logger *log, Client_data *list, uint16_t le
                     char ip_str[IP_NTOA_LEN];
                     LOGGER_TRACE(log, "coipil[%u]: switching ipv4 from %s:%u to %s:%u", i,
                                  ip_ntoa(&list[i].assoc4.ip_port.ip, ip_str, sizeof(ip_str)),
-                                 ntohs(list[i].assoc4.ip_port.port),
+								 net_ntohs(list[i].assoc4.ip_port.port),
                                  ip_ntoa(&ip_port.ip, ip_str, sizeof(ip_str)),
-                                 ntohs(ip_port.port));
+								 net_ntohs(ip_port.port));
                 }
 
                 if (LAN_ip(list[i].assoc4.ip_port.ip) != 0 && LAN_ip(ip_port.ip) == 0) {
@@ -558,9 +558,9 @@ static int client_or_ip_port_in_list(Logger *log, Client_data *list, uint16_t le
                     char ip_str[IP_NTOA_LEN];
                     LOGGER_TRACE(log, "coipil[%u]: switching ipv6 from %s:%u to %s:%u", i,
                                  ip_ntoa(&list[i].assoc6.ip_port.ip, ip_str, sizeof(ip_str)),
-                                 ntohs(list[i].assoc6.ip_port.port),
+								 net_ntohs(list[i].assoc6.ip_port.port),
                                  ip_ntoa(&ip_port.ip, ip_str, sizeof(ip_str)),
-                                 ntohs(ip_port.port));
+								 net_ntohs(ip_port.port));
                 }
 
                 if (LAN_ip(list[i].assoc6.ip_port.ip) != 0 && LAN_ip(ip_port.ip) == 0) {
@@ -2093,7 +2093,7 @@ static uint16_t NAT_getports(uint16_t *portlist, IP_Port *ip_portlist, uint16_t 
 
     for (i = 0; i < len; ++i) {
         if (ip_equal(&ip_portlist[i].ip, &ip)) {
-            portlist[num] = ntohs(ip_portlist[i].port);
+			portlist[num] = net_ntohs(ip_portlist[i].port);
             ++num;
         }
     }
@@ -2124,7 +2124,7 @@ static void punch_holes(DHT *dht, IP ip, uint16_t *port_list, uint16_t numports,
     if (i == numports) { /* If all ports are the same, only try that one port. */
         IP_Port pinging;
         ip_copy(&pinging.ip, &ip);
-        pinging.port = htons(firstport);
+		pinging.port = net_htons(firstport);
         send_ping_request(dht->ping, pinging, dht->friends_list[friend_num].public_key);
     } else {
         for (i = dht->friends_list[friend_num].nat.punching_index; i != top; ++i) {
@@ -2132,7 +2132,7 @@ static void punch_holes(DHT *dht, IP ip, uint16_t *port_list, uint16_t numports,
             uint16_t port = port_list[(i / 2) % numports] + (i / (2 * numports)) * ((i % 2) ? -1 : 1);
             IP_Port pinging;
             ip_copy(&pinging.ip, &ip);
-            pinging.port = htons(port);
+			pinging.port = net_htons(port);
             send_ping_request(dht->ping, pinging, dht->friends_list[friend_num].public_key);
         }
 
@@ -2146,7 +2146,7 @@ static void punch_holes(DHT *dht, IP ip, uint16_t *port_list, uint16_t numports,
         ip_copy(&pinging.ip, &ip);
 
         for (i = dht->friends_list[friend_num].nat.punching_index2; i != top; ++i) {
-            pinging.port = htons(port + i);
+			pinging.port = net_htons(port + i);
             send_ping_request(dht->ping, pinging, dht->friends_list[friend_num].public_key);
         }
 

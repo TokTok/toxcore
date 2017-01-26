@@ -238,7 +238,7 @@ uint16_t read_TCP_length(Socket sock)
             return 0;
         }
 
-        length = ntohs(length);
+        length = net_ntohs(length);
 
         if (length > MAX_PACKET_SIZE) {
             return ~0;
@@ -433,7 +433,7 @@ static int write_packet_TCP_secure_connection(TCP_Secure_Connection *con, const 
 
     uint8_t packet[sizeof(uint16_t) + length + CRYPTO_MAC_SIZE];
 
-    uint16_t c_length = htons(length + CRYPTO_MAC_SIZE);
+    uint16_t c_length = net_htons(length + CRYPTO_MAC_SIZE);
     memcpy(packet, &c_length, sizeof(uint16_t));
     int len = encrypt_data_symmetric(con->shared_key, con->sent_nonce, data, length, packet + sizeof(uint16_t));
 
