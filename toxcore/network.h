@@ -164,6 +164,13 @@ void get_ip6(IP6 *ip, const struct in6_addr *addr);
 void fill_addr4(IP4 ip, struct in_addr *addr);
 void fill_addr6(IP6 ip, struct in6_addr *addr);
 
+/* Convert values between host and network byte order.
+ */
+uint32_t net_htonl(uint32_t hostlong);
+uint16_t net_htons(uint16_t hostshort);
+uint32_t net_ntohl(uint32_t hostlong);
+uint16_t net_ntohs(uint16_t hostshort);
+
 /* Does the IP6 struct a contain an IPv4 address in an IPv6 one? */
 #define IPV6_IPV4_IN_V6(a) ((a.uint64[0] == 0) && (a.uint32[2] == htonl (0xffff)))
 
