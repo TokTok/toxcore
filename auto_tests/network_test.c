@@ -37,7 +37,7 @@ START_TEST(test_addr_resolv_localhost)
 
     char ip_str[IP_NTOA_LEN];
     ck_assert_msg(ip.family == AF_INET, "Expected family AF_INET, got %u.", ip.family);
-    ck_assert_msg(ip.ip4.uint32 == htonl(0x7F000001), "Expected 127.0.0.1, got %s.",
+    ck_assert_msg(ip.ip4.uint32 == net_htonl(0x7F000001), "Expected 127.0.0.1, got %s.",
                   ip_ntoa(&ip, ip_str, sizeof(ip_str)));
 
     ip_init(&ip, 1); // ipv6enabled = 1
@@ -68,11 +68,11 @@ START_TEST(test_addr_resolv_localhost)
 
     ck_assert_msg(ip.family == AF_INET6, "Expected family AF_INET6 (%u), got %u.", AF_INET6, ip.family);
     ck_assert_msg(!memcmp(&ip.ip6, &in6addr_loopback, sizeof(IP6)), "Expected ::1, got %s.",
-          ip_ntoa(&ip, ip_str, sizeof(ip_str)));
+                  ip_ntoa(&ip, ip_str, sizeof(ip_str)));
 
     ck_assert_msg(extra.family == AF_INET, "Expected family AF_INET (%u), got %u.", AF_INET, extra.family);
-    ck_assert_msg(extra.ip4.uint32 == htonl(0x7F000001), "Expected 127.0.0.1, got %s.",
-              ip_ntoa(&ip, ip_str, sizeof(ip_str)));
+    ck_assert_msg(extra.ip4.uint32 == net_htonl(0x7F000001), "Expected 127.0.0.1, got %s.",
+                  ip_ntoa(&ip, ip_str, sizeof(ip_str)));
 }
 END_TEST
 
@@ -93,18 +93,18 @@ START_TEST(test_ip_equal)
     ck_assert_msg(res == 0, "ip_equal(NULL, PTR): expected result 0, got %u.", res);
 
     ip1.family = AF_INET;
-    ip1.ip4.uint32 = htonl(0x7F000001);
+    ip1.ip4.uint32 = net_htonl(0x7F000001);
 
     res = ip_equal(&ip1, &ip2);
     ck_assert_msg(res == 0, "ip_equal( {AF_INET, 127.0.0.1}, {AF_UNSPEC, 0} ): expected result 0, got %u.", res);
 
     ip2.family = AF_INET;
-    ip2.ip4.uint32 = htonl(0x7F000001);
+    ip2.ip4.uint32 = net_htonl(0x7F000001);
 
     res = ip_equal(&ip1, &ip2);
     ck_assert_msg(res != 0, "ip_equal( {AF_INET, 127.0.0.1}, {AF_INET, 127.0.0.1} ): expected result != 0, got 0.");
 
-    ip2.ip4.uint32 = htonl(0x7F000002);
+    ip2.ip4.uint32 = net_htonl(0x7F000002);
 
     res = ip_equal(&ip1, &ip2);
     ck_assert_msg(res == 0, "ip_equal( {AF_INET, 127.0.0.1}, {AF_INET, 127.0.0.2} ): expected result 0, got %u.", res);
@@ -112,8 +112,8 @@ START_TEST(test_ip_equal)
     ip2.family = AF_INET6;
     ip2.ip6.uint32[0] = 0;
     ip2.ip6.uint32[1] = 0;
-    ip2.ip6.uint32[2] = htonl(0xFFFF);
-    ip2.ip6.uint32[3] = htonl(0x7F000001);
+    ip2.ip6.uint32[2] = net_htonl(0xFFFF);
+    ip2.ip6.uint32[3] = net_htonl(0x7F000001);
 
     ck_assert_msg(IPV6_IPV4_IN_V6(ip2.ip6) != 0,
                   "IPV6_IPV4_IN_V6(::ffff:127.0.0.1): expected != 0, got 0.");
