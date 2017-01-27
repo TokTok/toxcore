@@ -38,6 +38,14 @@ typedef struct Messenger Tox;
 
 #include "../toxencryptsave/defines.h"
 
+#if !defined(HAVE_LIBEV) && !defined(HAVE_LIBEVENT)
+#if defined (WIN32) || defined(_WIN32) || defined(__WIN32__)
+#include <winsock2.h>
+#else
+#include <sys/select.h>
+#endif /* WIN32 || _WIN32 || __WIN32__ */
+#endif /* !HAVE_LIBEV && !HAVE_LIBEVENT */
+
 #define SET_ERROR_PARAMETER(param, x) {if(param) {*param = x;}}
 
 #if TOX_HASH_LENGTH != CRYPTO_SHA256_SIZE
@@ -496,7 +504,7 @@ static void tox_do_iterate(evutil_socket_t fd, short events, void *arg)
  *
  * @return false if errors occurred, true otherwise.
  */
-static bool tox_fds(Messenger *m, sock_t **sockets, uint32_t *sockets_num)
+static bool tox_fds(Messenger *m, Socket **sockets, uint32_t *sockets_num)
 {
     if (m == NULL || sockets == NULL || sockets_num == NULL) {
         return false;
@@ -506,7 +514,7 @@ static bool tox_fds(Messenger *m, sock_t **sockets, uint32_t *sockets_num)
     uint32_t fdcount = 1 + len;
 
     if (fdcount != *sockets_num || *sockets == NULL) {
-        sock_t *tmp_sockets = (sock_t *) realloc(*sockets, fdcount * sizeof(sock_t));
+        Socket *tmp_sockets = (Socket *) realloc(*sockets, fdcount * sizeof(Socket));
 
         if (tmp_sockets == NULL) {
             return false;
@@ -592,13 +600,13 @@ bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error)
 #else
     bool ret = true;
     uint32_t fdcount = 0;
-    sock_t *fdlist = NULL;
+    Socket *fdlist = NULL;
 
     m->loop_run = true;
 
     while (m->loop_run) {
         uint32_t i;
-        sock_t maxfd;
+        Socket maxfd;
         fd_set readable;
 
         if (m->loop_begin_cb) {
