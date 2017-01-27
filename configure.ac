@@ -628,7 +628,7 @@ if test "x$LIBEV" = "xyes"; then
         CPPFLAGS="-I$LIBEV_SEARCH_HEADERS $CPPFLAGS"
         AC_CHECK_HEADER(ev.h,
             [
-                MINIUPNP_CFLAGS="-I$LIBEV_SEARCH_HEADERS"
+                LIBEV_CFLAGS="-I$LIBEV_SEARCH_HEADERS"
             ],
             [
                 AC_MSG_ERROR([header files for required library libev were not found in requested location $LIBEV_SEARCH_HEADERS])
@@ -656,7 +656,7 @@ if test "x$LIBEVENT" = "xyes"; then
         CPPFLAGS="-I$LIBEVENT_SEARCH_HEADERS $CPPFLAGS"
         AC_CHECK_HEADERS([event2/event.h event2/thread.h],
             [
-                MINIUPNP_CFLAGS="-I$LIBEVENT_SEARCH_HEADERS"
+                LIBEVENT_CFLAGS="-I$LIBEVENT_SEARCH_HEADERS"
             ],
             [
                 AC_MSG_ERROR([header files for required library libevent were not found in requested location $LIBEVENT_SEARCH_HEADERS])
