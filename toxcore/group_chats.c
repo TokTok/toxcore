@@ -4291,13 +4291,7 @@ static int handle_gc_handshake_request(Messenger *m, int groupnumber, IP_Port *i
 
     ++chat->connection_O_metre;
 
-    int peer_exists = get_peernum_of_enc_pk(chat, sender_pk);
-
-    if (peer_exists != -1) {
-        gc_peer_delete(m, groupnumber, peer_exists, nullptr, 0);
-    }
-
-    int peernumber = peer_add(m, groupnumber, ipp, sender_pk);
+    int peernumber = get_peernum_of_enc_pk(chat, sender_pk);
 
     if (peernumber < 0) {
         fprintf(stderr, "peer_add failed in handle_gc_handshake_request\n");
@@ -5740,6 +5734,17 @@ int handle_gc_invite_confirmed_packet(GC_Session *c, int friend_number, const ui
         add_tcp_relay_connection(chat->tcp_conn, gconn->tcp_connection_num, tcp_relays[i].ip_port,
                                  tcp_relays[i].public_key);
     }
+
+#if 0
+
+    // TODO: move handshake sending to callback
+    int index;
+    for (index = 0; index < 10; index++) {
+        usleep(50000);
+        do_tcp_connections(chat->tcp_conn);
+    }
+
+#endif
 
     if (send_gc_handshake_packet(chat, peer_id, GH_REQUEST, HS_INVITE_REQUEST, HJ_PRIVATE) == -1) {
         return -1;
