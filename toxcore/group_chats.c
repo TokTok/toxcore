@@ -1020,9 +1020,9 @@ static int send_gc_handshake_request(Messenger *m, int groupnumber, IP_Port ipp,
 static int handle_gc_sync_response(Messenger *m, int groupnumber, uint32_t peernumber, GC_Connection *gconn,
                                    const uint8_t *data, uint32_t length)
 {
-    if (length <= sizeof(uint32_t)) {
-        return -1;
-    }
+//    if (length <= sizeof(uint32_t)) {
+//        return -1;
+//    }
 
     GC_Session *c = m->group_handler;
     GC_Chat *chat = gc_get_group(c, groupnumber);
@@ -1152,13 +1152,17 @@ static int handle_gc_sync_request(const Messenger *m, int groupnumber, GC_Connec
 
     uint8_t response[MAX_GC_PACKET_SIZE];
     net_pack_u32(response, chat->self_public_key_hash);
-    uint32_t len = HASH_ID_BYTES + 1;
+    uint32_t len = HASH_ID_BYTES + 4;
 
     Node_format *tcp_relays = (Node_format *)malloc(sizeof(Node_format) * (chat->numpeers - 1));
 
     uint32_t i, num = 0;
 
     uint32_t *indexes = (uint32_t *)malloc(sizeof(uint32_t) * (chat->numpeers - 1));
+
+    if (!indexes || !tcp_relays) {
+        return -1;
+    }
 
     for (i = 1; i < chat->numpeers; i++) {
         if (chat->gcc[i].public_key_hash != gconn->public_key_hash && chat->gcc[i].confirmed) {
@@ -1177,7 +1181,7 @@ static int handle_gc_sync_request(const Messenger *m, int groupnumber, GC_Connec
         return -1;
     }
 
-    response[len - 1] = num;
+    net_pack_u32(response + len - 4, num);
 
     len += nodes_len;
 
