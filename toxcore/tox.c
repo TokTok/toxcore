@@ -249,7 +249,7 @@ bool tox_bootstrap(Tox *tox, const char *address, uint16_t port, const uint8_t *
         add_tcp_relay(m->net_crypto, root[i], public_key);
     }
 
-	net_freeipport(root);
+    net_freeipport(root);
 
     if (count) {
         SET_ERROR_PARAMETER(error, TOX_ERR_BOOTSTRAP_OK);
