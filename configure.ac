@@ -31,8 +31,8 @@ LIBCHECK_FOUND="no"
 WANT_NACL="no"
 ADD_NACL_OBJECTS_TO_PKGCONFIG="yes"
 SET_SO_VERSION="yes"
-LIBEV="no"
-LIBEVENT="no"
+WANT_LIBEV="no"
+WANT_LIBEVENT="no"
 
 AC_ARG_ENABLE([soname-versions],
     [AC_HELP_STRING([--enable-soname-versions], [enable soname versions (must be disabled for android) (default: enabled)]) ],
@@ -61,9 +61,9 @@ AC_ARG_ENABLE([libev],
     [AC_HELP_STRING([--enable-libev], [use libev to watch for events (default: disabled)]) ],
     [
         if test "x$enableval" = "xyes"; then
-            LIBEV="yes"
+            WANT_LIBEV="yes"
         elif test "x$enableval" = "xno"; then
-            LIBEV="no"
+            WANT_LIBEV="no"
         fi
     ]
 )
@@ -72,12 +72,16 @@ AC_ARG_ENABLE([libevent],
     [AC_HELP_STRING([--enable-libevent], [use libevent to watch for events (default: disabled)]) ],
     [
         if test "x$enableval" = "xyes"; then
-            LIBEVENT="yes"
+            WANT_LIBEVENT="yes"
         elif test "x$enableval" = "xno"; then
-            LIBEVENT="no"
+            WANT_LIBEVENT="no"
         fi
     ]
 )
+
+if test "x$WANT_LIBEV" = "xyes" && test "x$WANT_LIBEVENT" = "xyes"; then
+    AC_MSG_ERROR([cannot enable both libev and libevent, please choose one])
+fi
 
 AC_ARG_ENABLE([randombytes-stir],
     [AC_HELP_STRING([--enable-randombytes-stir], [use randombytes_stir() instead of sodium_init() for faster startup on android (default: disabled)]) ],
@@ -458,106 +462,121 @@ elif test "x$LIBSODIUM_FOUND" = "xno"; then
     AC_SUBST(LIBSODIUM_LDFLAGS)
 fi
 
-if test "x$LIBEV" = "xyes" -o "x$LIBEV" = "xauto"; then
-    LIBEV_LIBS=
-    LIBEV_LDFLAGS=
-    LDFLAGS_SAVE="$LDFLAGS"
-
-    if test -n "$LIBEV_SEARCH_LIBS"; then
-        LDFLAGS="-L$LIBEV_SEARCH_LIBS $LDFLAGS"
-        AC_CHECK_LIB(ev, ev_run,
+if test "x$WANT_LIBEV" = "xyes"; then
+    if test -n "$PKG_CONFIG"; then
+        PKG_CHECK_MODULES([LIBEV], [libev],
             [
-                LIBEV="yes"
-                LIBEV_LDFLAGS="-L$LIBEV_SEARCH_LIBS"
-                LIBEV_LIBS="-lev"
+                LIBEV_PKG_CONFIG="yes"
             ],
             [
-                if test "x$LIBEV" = "xyes"; then
-                    AC_MSG_ERROR([required library libev was not found in requested location $LIBEV_SEARCH_LIBS])
-                elif test "x$LIBEV" = "xauto"; then
-                    AC_MSG_WARN([disabling libev support])
-                    LIBEV="no"
-                fi
+                LIBEV_PKG_CONFIG="no"
             ]
         )
     else
-        AC_CHECK_LIB(ev, ev_run,
-            [
-                LIBEV="yes"
-                LIBEV_LIBS="-lev"
-            ],
-            [
-                if test "x$LIBEV" = "xyes"; then
-                    AC_MSG_ERROR([required library libev was not found in requested location $LIBEV_SEARCH_LIBS])
-                elif test "x$LIBEV" = "xauto"; then
-                    AC_MSG_WARN([disabling libev support])
-                    LIBEV="no"
-                fi
-            ]
-        )
+        LIBEV_PKG_CONFIG="no"
     fi
 
-    if test "x$LIBEV" = "xyes"; then
+    if test "x$LIBEV_PKG_CONFIG" = "xno"; then
+        LIBEV_LIBS=
+        LIBEV_LDFLAGS=
+        LDFLAGS_SAVE="$LDFLAGS"
+
+        if test -n "$LIBEV_SEARCH_LIBS"; then
+            LDFLAGS="-L$LIBEV_SEARCH_LIBS $LDFLAGS"
+            AC_CHECK_LIB(ev, ev_run,
+                [
+                    LIBEV_LDFLAGS="-L$LIBEV_SEARCH_LIBS"
+                    LIBEV_LIBS="-lev"
+                ],
+                [
+                    AC_MSG_ERROR([required library libev was not found in requested location $LIBEV_SEARCH_LIBS])
+                ]
+            )
+        else
+            AC_CHECK_LIB(ev, ev_run,
+                [
+                    LIBEV_LIBS="-lev"
+                ],
+                [
+                    AC_MSG_ERROR([required library libev was not found in requested location $LIBEV_SEARCH_LIBS])
+                ]
+            )
+        fi
+
         LDFLAGS="$LDFLAGS_SAVE"
-        AC_SUBST(LIBEV_LIBS)
-        AC_SUBST(LIBEV_LDFLAGS)
-        AC_DEFINE([HAVE_LIBEV], [1], [Define to 1 if you have the 'libev' library (-lev).])
     fi
+
+    AC_SUBST(LIBEV_LIBS)
+    AC_SUBST(LIBEV_LDFLAGS)
+    AC_DEFINE([HAVE_LIBEV], [1], [Define to 1 if you have the 'libev' library (-lev).])
 fi
 
-if test "x$LIBEV" = "xno" && test "x$LIBEVENT" = "xyes" -o "x$LIBEVENT" = "xauto"; then
-    LIBEVENT_LIBS=
-    LIBEVENT_LDFLAGS=
-    LDFLAGS_SAVE="$LDFLAGS"
-
-    if test -n "$LIBEVENT_SEARCH_LIBS"; then
-        LDFLAGS="-L$LIBEVENT_SEARCH_LIBS $LDFLAGS"
-        AC_CHECK_LIB(event, event_base_loop,
-            [
-                LIBEVENT="yes"
-                LIBEVENT_LDFLAGS="-L$LIBEVENT_SEARCH_LIBS"
-                if test "x$WIN32" = "xno"; then
-                    LIBEVENT_LIBS="-levent -levent_pthreads"
-                else
-                    LIBEVENT_LIBS="-levent"
-                fi
-            ],
-            [
-                if test "x$LIBEVENT" = "xyes"; then
-                    AC_MSG_ERROR([required library libevent was not found in requested location $LIBEVENT_SEARCH_LIBS])
-                elif test "x$LIBEVENT" = "xauto"; then
-                    AC_MSG_WARN([disabling libevent support])
-                    LIBEVENT="no"
-                fi
-            ]
-        )
+if test "x$WANT_LIBEVENT" = "xyes"; then
+    if test -n "$PKG_CONFIG"; then
+        if test "x$WIN32" = "xno"; then
+            PKG_CHECK_MODULES([LIBEVENT], [libevent_pthreads],
+                [
+                    LIBEVENT_PKG_CONFIG="yes"
+                ],
+                [
+                    LIBEVENT_PKG_CONFIG="no"
+                ],
+            )
+        else
+            PKG_CHECK_MODULES([LIBEVENT], [libevent],
+                [
+                    LIBEVENT_PKG_CONFIG="yes"
+                ],
+                [
+                    LIBEVENT_PKG_CONFIG="no"
+                ],
+            )
+        fi
     else
-        AC_CHECK_LIB(event, event_base_loop,
-            [
-                LIBEVENT="yes"
-                if test "x$WIN32" = "xno"; then
-                    LIBEVENT_LIBS="-levent -levent_pthreads"
-                else
-                    LIBEVENT_LIBS="-levent"
-                fi
-            ],
-            [
-                if test "x$LIBEVENT" = "xyes"; then
-                    AC_MSG_ERROR([required library libevent was not found in requested location $LIBEVENT_SEARCH_LIBS])
-                elif test "x$LIBEVENT" = "xauto"; then
-                    AC_MSG_WARN([disabling libevent support])
-                    LIBEVENT="no"
-                fi
-            ]
-        )
+        LIBEVENT_PKG_CONFIG="no"
     fi
 
-    if test "x$LIBEVENT" = "xyes"; then
+    if test "x$LIBEVENT_PKG_CONFIG" = "xno"; then
+        LIBEVENT_LIBS=
+        LIBEVENT_LDFLAGS=
+        LDFLAGS_SAVE="$LDFLAGS"
+
+        if test -n "$LIBEVENT_SEARCH_LIBS"; then
+            LDFLAGS="-L$LIBEVENT_SEARCH_LIBS $LDFLAGS"
+            AC_CHECK_LIB(event, event_base_loop,
+                [
+                    LIBEVENT_LDFLAGS="-L$LIBEVENT_SEARCH_LIBS"
+                    if test "x$WIN32" = "xno"; then
+                        LIBEVENT_LIBS="-levent -levent_pthreads"
+                    else
+                        LIBEVENT_LIBS="-levent"
+                    fi
+                ],
+                [
+                    AC_MSG_ERROR([required library libevent was not found in requested location $LIBEVENT_SEARCH_LIBS])
+                ]
+            )
+        else
+            AC_CHECK_LIB(event, event_base_loop,
+                [
+                    if test "x$WIN32" = "xno"; then
+                        LIBEVENT_LIBS="-levent -levent_pthreads"
+                    else
+                        LIBEVENT_LIBS="-levent"
+                    fi
+                ],
+                [
+                    AC_MSG_ERROR([required library libevent was not found in requested location $LIBEVENT_SEARCH_LIBS])
+                ]
+            )
+        fi
+
         LDFLAGS="$LDFLAGS_SAVE"
-        AC_SUBST(LIBEVENT_LIBS)
-        AC_SUBST(LIBEVENT_LDFLAGS)
-        AC_DEFINE([HAVE_LIBEVENT], [1], [Define to 1 if you have the 'libevent' library (-levent).])
     fi
+
+    AC_SUBST(LIBEVENT_LIBS)
+    AC_SUBST(LIBEVENT_LDFLAGS)
+    AC_DEFINE([HAVE_LIBEVENT], [1], [Define to 1 if you have the 'libevent' library (-levent).])
 fi
 
 # Checks for header files.
@@ -619,59 +638,69 @@ elif test "x$LIBSODIUM_FOUND" = "xno"; then
     AC_SUBST(LIBSODIUM_CFLAGS)
 fi
 
-if test "x$LIBEV" = "xyes"; then
-    LIBEV_CFLAGS=
-    CFLAGS_SAVE="$CFLAGS"
-    CPPFLAGS_SAVE="$CPPFLAGS"
-    if test -n "$LIBEV_SEARCH_HEADERS"; then
-        CFLAGS="-I$LIBEV_SEARCH_HEADERS $CFLAGS"
-        CPPFLAGS="-I$LIBEV_SEARCH_HEADERS $CPPFLAGS"
-        AC_CHECK_HEADER(ev.h,
-            [
-                LIBEV_CFLAGS="-I$LIBEV_SEARCH_HEADERS"
-            ],
-            [
-                AC_MSG_ERROR([header files for required library libev were not found in requested location $LIBEV_SEARCH_HEADERS])
-            ]
-        )
-    else
-        AC_CHECK_HEADER(ev.h,
-            [],
-            [
-                AC_MSG_ERROR([header files for required library libev was not found on your system, please check http://libev.schmorp.de/])
-            ]
-        )
+if test "x$WANT_LIBEV" = "xyes"; then
+    if test "x$LIBEV_PKG_CONFIG" = "xno"; then
+        LIBEV_CFLAGS=
+        CFLAGS_SAVE="$CFLAGS"
+        CPPFLAGS_SAVE="$CPPFLAGS"
+
+        if test -n "$LIBEV_SEARCH_HEADERS"; then
+            CFLAGS="-I$LIBEV_SEARCH_HEADERS $CFLAGS"
+            CPPFLAGS="-I$LIBEV_SEARCH_HEADERS $CPPFLAGS"
+            AC_CHECK_HEADER(ev.h,
+                [
+                    LIBEV_CFLAGS="-I$LIBEV_SEARCH_HEADERS"
+                ],
+                [
+                    AC_MSG_ERROR([header files for required library libev were not found in requested location $LIBEV_SEARCH_HEADERS])
+                ]
+            )
+        else
+            AC_CHECK_HEADER(ev.h,
+                [],
+                [
+                    AC_MSG_ERROR([header files for required library libev was not found on your system, please check http://libev.schmorp.de/])
+                ]
+            )
+        fi
+
+        CFLAGS="$CFLAGS_SAVE"
+        CPPFLAGS="$CPPFLAGS_SAVE"
     fi
-    CFLAGS="$CFLAGS_SAVE"
-    CPPFLAGS="$CPPFLAGS_SAVE"
+
     AC_SUBST(LIBEV_CFLAGS)
 fi
 
-if test "x$LIBEVENT" = "xyes"; then
-    LIBEVENT_CFLAGS=
-    CFLAGS_SAVE="$CFLAGS"
-    CPPFLAGS_SAVE="$CPPFLAGS"
-    if test -n "$LIBEVENT_SEARCH_HEADERS"; then
-        CFLAGS="-I$LIBEVENT_SEARCH_HEADERS $CFLAGS"
-        CPPFLAGS="-I$LIBEVENT_SEARCH_HEADERS $CPPFLAGS"
-        AC_CHECK_HEADERS([event2/event.h event2/thread.h],
-            [
-                LIBEVENT_CFLAGS="-I$LIBEVENT_SEARCH_HEADERS"
-            ],
-            [
-                AC_MSG_ERROR([header files for required library libevent were not found in requested location $LIBEVENT_SEARCH_HEADERS])
-            ]
-        )
-    else
-        AC_CHECK_HEADERS([event2/event.h event2/thread.h],
-            [],
-            [
-                AC_MSG_ERROR([header files for required library libevent was not found on your system, please check http://libevent.org/])
-            ]
-        )
+if test "x$WANT_LIBEVENT" = "xyes"; then
+    if test "x$LIBEVENT_PKG_CONFIG" = "xno"; then
+        LIBEVENT_CFLAGS=
+        CFLAGS_SAVE="$CFLAGS"
+        CPPFLAGS_SAVE="$CPPFLAGS"
+
+        if test -n "$LIBEVENT_SEARCH_HEADERS"; then
+            CFLAGS="-I$LIBEVENT_SEARCH_HEADERS $CFLAGS"
+            CPPFLAGS="-I$LIBEVENT_SEARCH_HEADERS $CPPFLAGS"
+            AC_CHECK_HEADERS([event2/event.h event2/thread.h],
+                [
+                    LIBEVENT_CFLAGS="-I$LIBEVENT_SEARCH_HEADERS"
+                ],
+                [
+                    AC_MSG_ERROR([header files for required library libevent were not found in requested location $LIBEVENT_SEARCH_HEADERS])
+                ]
+            )
+        else
+            AC_CHECK_HEADERS([event2/event.h event2/thread.h],
+                [],
+                [
+                    AC_MSG_ERROR([header files for required library libevent was not found on your system, please check http://libevent.org/])
+                ]
+            )
+        fi
+
+        CFLAGS="$CFLAGS_SAVE"
+        CPPFLAGS="$CPPFLAGS_SAVE"
     fi
-    CFLAGS="$CFLAGS_SAVE"
-    CPPFLAGS="$CPPFLAGS_SAVE"
+
     AC_SUBST(LIBEVENT_CFLAGS)
 fi
 
