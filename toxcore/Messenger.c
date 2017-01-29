@@ -2523,7 +2523,9 @@ static int m_handle_packet(void *object, int i, const uint8_t *temp, uint16_t le
             }
 
             if (m->group_invite  && data[1] == GROUP_INVITE) {
-                (*m->group_invite)(m, i, data + 2, data_length - 1, m->group_invite_userdata);
+                if (check_group_invite(m->group_handler, data + 2, data_length - 1)) {
+                    (*m->group_invite)(m, i, data + 2, data_length - 1, m->group_invite_userdata);
+                }
             } else if (data[1] == GROUP_INVITE_ACCEPTED) {
                 handle_gc_invite_accepted_packet(m->group_handler, i, data + 2, data_length - 2);
             } else if (data[1] == GROUP_INVITE_CONFIRMATION) {
