@@ -38,6 +38,7 @@ typedef struct Messenger Tox;
 
 #include "../toxencryptsave/defines.h"
 
+#include <errno.h>
 #if !defined(HAVE_LIBEV) && !defined(HAVE_LIBEVENT)
 #if defined (WIN32) || defined(_WIN32) || defined(__WIN32__)
 #include <winsock2.h>
@@ -564,7 +565,13 @@ static bool tox_fds(Messenger *m, Socket **sockets, uint32_t *sockets_num)
 
     while (i < fdcount - 1 && i < len) {
         const TCP_con *conn = tcp_connections_connection_at(m->net_crypto->tcp_c, i);
-        (*sockets)[++i] = conn->connection->sock;
+        i++;
+
+        if (conn != NULL) {
+            (*sockets)[i] = conn->connection->sock;
+        } else {
+            (*sockets)[i] = 0;
+        }
     }
 
     return true;
@@ -669,6 +676,10 @@ bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error)
         }
 
         for (i = 0; i < fdcount; i++) {
+            if (fdlist[i] == 0) {
+                continue;
+            }
+
             FD_SET(fdlist[i], &readable);
 
             if (fdlist[i] > maxfd) {
@@ -687,7 +698,7 @@ bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error)
             m->loop_end_cb(tox, user_data);
         }
 
-        if (select(maxfd, &readable, NULL, NULL, &timeout) < 0) {
+        if (select(maxfd, &readable, NULL, NULL, &timeout) < 0 && errno != EBADF) {
             SET_ERROR_PARAMETER(error, TOX_ERR_LOOP_SELECT);
 
             free(fdlist);
