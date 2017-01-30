@@ -113,7 +113,8 @@ typedef enum Group_Packet_Type {
     GP_TCP_RELAYS               = 4,
 
     /* lossless packets */
-    GP_CUSTOM_PACKET            = 242,
+    GP_CUSTOM_PACKET            = 241,
+    GP_PEER_ANNOUNCE            = 242,
     GP_BROADCAST                = 243,
     GP_PEER_INFO_REQUEST        = 244,
     GP_PEER_INFO_RESPONSE       = 245,
