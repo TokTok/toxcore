@@ -18,6 +18,7 @@
  * along with Tox.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "../toxcore/group.h"
+#include "toxav.h" // bit_rate
 
 /* Audio encoding/decoding */
 #include <opus.h>
@@ -51,3 +52,4 @@ int join_av_groupchat(Logger *log, Group_Chats *g_c, int32_t friendnumber, const
 int group_send_audio(Group_Chats *g_c, int groupnumber, const int16_t *pcm, unsigned int samples, uint8_t channels,
                      unsigned int sample_rate);
 
+int group_bit_rate_set(Group_Chats *g_c, int groupnumber, uint32_t audio_bit_rate);

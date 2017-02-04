@@ -83,3 +83,16 @@ int toxav_group_send_audio(struct Tox *tox, int groupnumber, const int16_t *pcm,
     Messenger *m = (Messenger *)tox;
     return group_send_audio((Group_Chats *)m->conferences_object, groupnumber, pcm, samples, channels, sample_rate);
 }
+
+/**
+ * Sets the Opus bit rate for a group call.
+ *
+ * return 0 on success.
+ * return -1 on failure.
+ */
+
+int toxav_group_bit_rate_set(struct Tox *tox, int groupnumber, int32_t audio_bit_rate)
+{
+    Messenger *m = (Messenger *)tox;
+    return group_bit_rate_set((Group_Chats *)m->conferences_object, groupnumber, audio_bit_rate);
+}

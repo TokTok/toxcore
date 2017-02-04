@@ -1,3 +1,4 @@
+
 /*
  * Copyright © 2016-2017 The TokTok team.
  * Copyright © 2013-2015 Tox project.
@@ -757,6 +758,17 @@ int toxav_join_av_groupchat(Tox *tox, int32_t friendnumber, const uint8_t *data,
 int toxav_group_send_audio(Tox *tox, int groupnumber, const int16_t *pcm, unsigned int samples, uint8_t channels,
                            unsigned int sample_rate);
 
+
+/**
+ * Sets the Opus bit rate for a group call.
+ *
+ * return 0 on success.
+ * return -1 on failure.
+ */
+
+int toxav_group_bit_rate_set(Tox *tox, int groupnumber, int32_t audio_bit_rate);
+
+bool audio_bit_rate_invalid(uint32_t bit_rate);
 #ifdef __cplusplus
 }
 #endif
