@@ -246,7 +246,7 @@ static Group_AV *new_group_av(Logger *log, Group_Chats *g_c, void (*audio_callba
     group_av->audio_data = audio_callback;
     group_av->userdata = userdata;
 
-    group_av->audio_bitrate = 16*1024;
+    group_av->audio_bitrate = 16000;
     
     return group_av;
 }
@@ -547,8 +547,8 @@ int group_bit_rate_set(Group_Chats *g_c, int groupnumber, uint32_t audio_bit_rat
 	return -1;
     }
     
-    if(group_av->audio_bitrate/1024 != audio_bit_rate) {
-        group_av->audio_bitrate = audio_bit_rate*1024;
+    if(group_av->audio_bitrate/1000 != audio_bit_rate) {
+        group_av->audio_bitrate = audio_bit_rate*1000;
 	if(recreate_encoder(group_av) == -1) {
             return -1;
 	}
