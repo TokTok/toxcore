@@ -244,6 +244,8 @@ static Group_AV *new_group_av(Logger *log, Group_Chats *g_c, void (*audio_callba
     group_av->audio_data = audio_callback;
     group_av->userdata = userdata;
 
+    group_av->audio_bitrate = 16000;
+
     return group_av;
 }
 
@@ -525,6 +527,33 @@ static int send_audio_packet(Group_Chats *g_c, int groupnumber, uint8_t *packet,
     return 0;
 }
 
+/**
+ * Sets the Opus bit rate for a group call.
+ *
+ * return 0 on success.
+ * return -1 on failure.
+ */
+int group_bit_rate_set(Group_Chats *g_c, int groupnumber, uint32_t audio_bit_rate)
+{
+    Group_AV *group_av = (Group_AV *)group_get_object(g_c, groupnumber);
+
+    if(!group_av) {
+        return -1;
+    }
+
+    if(INVALID_AUDIO_BITRATE(audio_bit_rate)) {
+        return -1;
+    }
+
+    if(group_av->audio_bitrate/1000 != audio_bit_rate) {
+        group_av->audio_bitrate = audio_bit_rate*1000;
+        if(recreate_encoder(group_av) == -1) {
+            return -1;
+        }
+    }
+    return 0;
+}
+
 /* Send audio to the group chat.
  *
  * return 0 on success.
@@ -551,12 +580,6 @@ int group_send_audio(Group_Chats *g_c, int groupnumber, const int16_t *pcm, unsi
     if (!group_av->audio_encoder || group_av->audio_channels != channels || group_av->audio_sample_rate != sample_rate) {
         group_av->audio_channels = channels;
         group_av->audio_sample_rate = sample_rate;
-
-        if (channels == 1) {
-            group_av->audio_bitrate = 32000; // TODO(mannol): add way of adjusting bitrate
-        } else {
-            group_av->audio_bitrate = 64000; // TODO(mannol): add way of adjusting bitrate
-        }
 
         if (recreate_encoder(group_av) == -1) {
             return -1;
