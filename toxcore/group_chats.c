@@ -1915,12 +1915,6 @@ static int handle_gc_peer_announcement(Messenger *m, int groupnumber, uint32_t p
     uint8_t chat_pk[ENC_PUBLIC_KEY];
     memcpy(chat_pk, data, ENC_PUBLIC_KEY);
 
-    GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
-
-    if (!memcmp(chat_pk, chat->self_public_key, ENC_PUBLIC_KEY)) {
-        return -1;
-    }
-
     int peer_id = peer_add(m, groupnumber, NULL, chat_pk);
 
     if (peer_id < 0) {
@@ -1936,6 +1930,7 @@ static int handle_gc_peer_announcement(Messenger *m, int groupnumber, uint32_t p
         return -1;
     }
 
+    GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
     GC_Connection *gconn = gcc_get_connection(chat, peer_id);
 
     if (!chat || !gconn) {
@@ -1946,7 +1941,7 @@ static int handle_gc_peer_announcement(Messenger *m, int groupnumber, uint32_t p
                              relays[0].public_key);
     save_tcp_relay(gconn, &relays[0]);
 
-    gconn->pending_handshake = unix_time() + HANDSHAKE_SENDING_TIMEOUT;
+    //gconn->pending_handshake = unix_time() + HANDSHAKE_SENDING_TIMEOUT;
 
     return 0;
 }
