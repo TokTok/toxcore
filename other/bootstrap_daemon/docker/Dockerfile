@@ -1,58 +1,75 @@
-FROM debian:jessie
+# Tox network node
+FROM alpine:latest
+LABEL Description="This image is used to run Tox network node" Vendor="n/a" Version="0.0.0"
+
+# Tox core code
+ADD https://github.com/TokTok/c-toxcore/archive/master.zip /tmp/tox/
 
 WORKDIR /tmp/tox
 
-RUN export BUILD_PACKAGES="\
-      build-essential \
-      libtool \
-      autotools-dev \
-      automake \
-      checkinstall \
-      check \
-      git \
-      yasm \
-      libsodium-dev \
-      libconfig-dev \
-      python3" && \
-    export RUNTIME_PACKAGES="\
-      libconfig9 \
-      libsodium13" && \
-# get all deps
-    apt-get update && apt-get install -y $BUILD_PACKAGES $RUNTIME_PACKAGES && \
-# install toxcore and daemon
-    git clone https://github.com/irungentoo/toxcore && \
-    cd toxcore && \
-    ./autogen.sh && \
-    ./configure --enable-daemon && \
-    make -j`nproc` && \
-    make install -j`nproc` && \
-    ldconfig && \
-# add new user
-    useradd --home-dir /var/lib/tox-bootstrapd --create-home \
-      --system --shell /sbin/nologin \
-      --comment "Account to run Tox's DHT bootstrap daemon" \
-      --user-group tox-bootstrapd && \
-    chmod 700 /var/lib/tox-bootstrapd && \
-    cp other/bootstrap_daemon/tox-bootstrapd.conf /etc/tox-bootstrapd.conf && \
-# remove all the example bootstrap nodes from the config file
-    sed -i '/^bootstrap_nodes = /,$d' /etc/tox-bootstrapd.conf && \
-# add bootstrap nodes from https://nodes.tox.chat/
-    python3 other/bootstrap_daemon/docker/get-nodes.py >> /etc/tox-bootstrapd.conf && \
-# perform cleanup
-    export AUTO_ADDED_PACKAGES="$(apt-mark showauto)" && \
-    apt-get remove --purge -y $BUILD_PACKAGES $AUTO_ADDED_PACKAGES && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* && \
-    cd / && \
-    rm -rf /tmp/*
+RUN set -x && \
+# Disable root
+	sed -i 's/^root::/root:!:/' /etc/shadow && \
+# Add tox user and group, create home directory
+	addgroup -S tox-bootstrapd && \
+	adduser -h /var/lib/tox-bootstrapd -g "Account to run Tox's DHT bootstrap daemon" -s /sbin/nologin -G tox-bootstrapd -S -D -H tox-bootstrapd && \
+	install -d -o tox-bootstrapd -g tox-bootstrapd -m 700 /var/lib/tox-bootstrapd && \
+	function su_wrapper () { su -s /bin/sh -c "$@" tox-bootstrapd; return $?; } && \
+# Install libs and build tools
+	apk --no-cache add libsodium libconfig && \
+	apk --no-cache add --virtual build-dependencies \
+	autoconf \
+	automake \
+	check-dev \
+	curl \
+	build-base \
+	libtool \
+	libconfig-dev \
+	libsodium-dev \
+	libvpx-dev \
+	linux-headers \
+	opus-dev \
+	python3 \
+	unzip && \
+# Unzip
+	chown tox-bootstrapd:tox-bootstrapd /tmp/tox && \
+	chmod 644 /tmp/tox/master.zip && \
+	su_wrapper "unzip -tq master.zip" && \
+	su_wrapper "unzip -aq master.zip" && \
+# Compile
+	cd c-toxcore-master && \
+	su_wrapper "./autogen.sh" && \
+	su_wrapper "./configure --prefix=/usr --enable-daemon --disable-av --disable-ntox" && \
+	su_wrapper "make" && \
+# Run tests (they FAIL mostly if you don't have enough compute resources)
+#	for i in $(seq 1 10); do echo "=== check attempt $i ==="; su_wrapper "make check"; ret=$?; echo "=== check returned $ret ==="; if [ $ret -eq 0 ]; then echo "=== check passed ==="; break; elif [ $i -eq 10 ]; then echo "=== too many failures, aborting ==="; exit 1; fi; done && \
+#
+# Install tox daemon and copy base network node configuration file
+	make install && \
+	install -o root -g root -m 644 other/bootstrap_daemon/tox-bootstrapd.conf /etc/tox-bootstrapd.conf && \
+# Remove all the example bootstrap nodes from the config file and add nodes to bootstrap from
+	sed -i '/^bootstrap_nodes = /,$d' /etc/tox-bootstrapd.conf && \
+	python3 other/bootstrap_daemon/docker/get-nodes.py >> /etc/tox-bootstrapd.conf && \
+# Clean build dependencies and build files
+	cd / && \
+	rm -rf /tmp/tox && \
+	apk del build-dependencies && \
+# Tox network node daemon configuration
+# Disable LAN discovery, because we are on a server
+	sed -i 's/enable_lan_discovery = true/enable_lan_discovery = false/' /etc/tox-bootstrapd.conf && \
+# Modify relay ports, 443/tcp is often already in use
+	sed -i 's/tcp_relay_ports = \[443, 3389, 33445\]/tcp_relay_ports = \[8080, 33445\]/' /etc/tox-bootstrapd.conf && \
+# MOTD
+	sed -i 's/motd = "tox-bootstrapd"/motd = "tox-bootstrapd docker"/' /etc/tox-bootstrapd.conf
 
+
+# Tox daemon home directory
 WORKDIR /var/lib/tox-bootstrapd
 
+# Ports
+EXPOSE 33445/tcp 33445/udp 8080/tcp 8080/udp
+
+# Run cmd
+#CMD ["/bin/bash"]
 USER tox-bootstrapd
-
-ENTRYPOINT /usr/local/bin/tox-bootstrapd \
-             --config /etc/tox-bootstrapd.conf \
-             --log-backend stdout \
-             --foreground
-
-EXPOSE 443/tcp 3389/tcp 33445/tcp 33445/udp
+CMD ["/usr/bin/tox-bootstrapd", "--config=/etc/tox-bootstrapd.conf", "--foreground", "--log-backend=stdout"]
