@@ -57,8 +57,6 @@ RUN set -x && \
 # Tox network node daemon configuration
 # Disable LAN discovery, because we are on a server
 	sed -i 's/enable_lan_discovery = true/enable_lan_discovery = false/' /etc/tox-bootstrapd.conf && \
-# Modify relay ports, 443/tcp is often already in use
-	sed -i 's/tcp_relay_ports = \[443, 3389, 33445\]/tcp_relay_ports = \[8080, 33445\]/' /etc/tox-bootstrapd.conf && \
 # MOTD
 	sed -i 's/motd = "tox-bootstrapd"/motd = "tox-bootstrapd docker"/' /etc/tox-bootstrapd.conf
 
@@ -67,7 +65,7 @@ RUN set -x && \
 WORKDIR /var/lib/tox-bootstrapd
 
 # Ports
-EXPOSE 33445/tcp 33445/udp 8080/tcp 8080/udp
+EXPOSE 443/tcp 443/udp 3389/tcp 3389/udp 33445/tcp 33445/udp 
 
 # Run cmd
 #CMD ["/bin/bash"]
