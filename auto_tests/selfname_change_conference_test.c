@@ -30,9 +30,9 @@
 #include "../toxcore/tox.h"
 #include "../toxencryptsave/toxencryptsave.h"
 
-char *newname = "chris";
+static const char *newname = "chris";
 
-void cbconfmembers(Tox *tox, uint32_t conference_number, uint32_t peer_number, TOX_CONFERENCE_STATE_CHANGE change,
+static void cbconfmembers(Tox *tox, uint32_t conference_number, uint32_t peer_number, TOX_CONFERENCE_STATE_CHANGE change,
                    void *user_data)
 {
     uint8_t new_peer_name[TOX_MAX_NAME_LENGTH + 1];
@@ -78,7 +78,7 @@ int main(void)
 
     nanosleep(&sleeptime, NULL);
 
-    if (!tox_self_set_name(t, (uint8_t *)newname, strlen(newname), &name_err)) {
+    if (!tox_self_set_name(t, (const uint8_t *)newname, strlen(newname), &name_err)) {
         tox_kill(t);
         fprintf(stderr, "error: could not set own name, error code %d\n", name_err);
         return 3;
