@@ -430,6 +430,7 @@ auto_test(tox_many_tcp)
 auto_test(tox_one)
 auto_test(tox_strncasecmp)
 auto_test(version)
+auto_test(selfname_change_conference)
 
 if(BUILD_TOXAV)
   auto_test(toxav_basic)

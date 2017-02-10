@@ -75,6 +75,12 @@ dht_autotest_CFLAGS = $(AUTOTEST_CFLAGS)
 dht_autotest_LDADD = $(AUTOTEST_LDADD)
 
 
+selfname_change_conference_SOURCE = ../auto_tests/selfname_change_conference_test.c
+
+selfname_change_conference_CFLAGS = $(AUTOTEST_CFLAGS)
+
+selfname_change_conference_LDADD = $(AUTOTEST_LDADD)
+
 if BUILD_AV
 toxav_basic_test_SOURCES = ../auto_tests/toxav_basic_test.c
 
