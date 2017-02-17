@@ -68,6 +68,6 @@ WORKDIR /var/lib/tox-bootstrapd
 EXPOSE 443/tcp 443/udp 3389/tcp 3389/udp 33445/tcp 33445/udp 
 
 # Run cmd
-#CMD ["/bin/bash"]
+#CMD ["/bin/sh"]
 USER tox-bootstrapd
 CMD ["/usr/bin/tox-bootstrapd", "--config=/etc/tox-bootstrapd.conf", "--foreground", "--log-backend=stdout"]
