@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-set -e -v -x
+set -e -x
 
 #=== Cross-Compile Dependencies ===
 
