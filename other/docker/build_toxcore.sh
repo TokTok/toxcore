@@ -73,6 +73,8 @@ build()
 
         winecfg
         export CTEST_OUTPUT_ON_FAILURE=1
+        # add libgcc_s_sjlj-1.dll libwinpthread-1.dll libcheck-0.dll into PATH env var of wine
+        export WINEPATH=`cd /usr/lib/gcc/${WINDOWS_TOOLCHAIN}/*posix/ ; winepath -w $(pwd)`\;`winepath -w /usr/${WINDOWS_TOOLCHAIN}/lib/`\;`winepath -w ${EXTRA_DEP_PREFIX_DIR}/bin`
 
         if [ "${ALLOW_TEST_FAILURE}" = "true" ]; then
             set +e
