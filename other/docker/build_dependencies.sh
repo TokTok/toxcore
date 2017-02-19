@@ -64,6 +64,7 @@ build()
         echo "=== Building Check ${VERSION_CHECK} ${ARCH} ==="
         git clone --depth=1 --branch="${VERSION_CHECK}" https://github.com/libcheck/check
         cd check
+        autoreconf --install
         ./configure --host="${WINDOWS_TOOLCHAIN}" --prefix="${EXTRA_PREFIX_DIR}"
         make
         make install
