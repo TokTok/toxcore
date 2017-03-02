@@ -97,7 +97,7 @@ static void test_addto_lists_update(DHT            *dht,
     int used, test, test1, test2, found;
     IP_Port test_ipp;
     uint8_t test_id[CRYPTO_PUBLIC_KEY_SIZE];
-    uint8_t ipv6 = ip_port->ip.family == AF_INET6 ? 1 : 0;
+    uint8_t ipv6 = ip_port->ip.family == TOX_AF_INET6 ? 1 : 0;
 
     // check id update for existing ip_port
     test = rand() % length;
@@ -172,7 +172,7 @@ static void test_addto_lists_bad(DHT            *dht,
     int used, test1, test2, test3;
     uint8_t public_key[CRYPTO_PUBLIC_KEY_SIZE], test_id1[CRYPTO_PUBLIC_KEY_SIZE], test_id2[CRYPTO_PUBLIC_KEY_SIZE],
             test_id3[CRYPTO_PUBLIC_KEY_SIZE];
-    uint8_t ipv6 = ip_port->ip.family == AF_INET6 ? 1 : 0;
+    uint8_t ipv6 = ip_port->ip.family == TOX_AF_INET6 ? 1 : 0;
 
     random_bytes(public_key, sizeof(public_key));
     mark_all_good(list, length, ipv6);
@@ -216,7 +216,7 @@ static void test_addto_lists_possible_bad(DHT            *dht,
     int used, test1, test2, test3;
     uint8_t public_key[CRYPTO_PUBLIC_KEY_SIZE], test_id1[CRYPTO_PUBLIC_KEY_SIZE], test_id2[CRYPTO_PUBLIC_KEY_SIZE],
             test_id3[CRYPTO_PUBLIC_KEY_SIZE];
-    uint8_t ipv6 = ip_port->ip.family == AF_INET6 ? 1 : 0;
+    uint8_t ipv6 = ip_port->ip.family == TOX_AF_INET6 ? 1 : 0;
 
     random_bytes(public_key, sizeof(public_key));
     mark_all_good(list, length, ipv6);
@@ -278,7 +278,7 @@ static void test_addto_lists_good(DHT            *dht,
                                   const uint8_t  *comp_client_id)
 {
     uint8_t public_key[CRYPTO_PUBLIC_KEY_SIZE];
-    uint8_t ipv6 = ip_port->ip.family == AF_INET6 ? 1 : 0;
+    uint8_t ipv6 = ip_port->ip.family == TOX_AF_INET6 ? 1 : 0;
 
     mark_all_good(list, length, ipv6);
 
