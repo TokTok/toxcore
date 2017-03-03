@@ -8,6 +8,7 @@
 #define c_sleep(x) Sleep(1*x)
 
 #else
+#include <sys/socket.h>
 #define c_sleep(x) usleep(1000*x)
 
 #endif

@@ -141,6 +141,14 @@ static int inet_pton(Family family, const char *addrString, void *addrbuf)
 
 #endif
 
+const IP4 ip4_loopback = {
+    { 127, 0, 0, 1 }
+};
+
+const IP6 ip6_loopback = {
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 }
+};
+
 static int make_proto(int proto);
 static int make_socktype(int type);
 static int make_family(int tox_family);
@@ -1213,7 +1221,7 @@ int net_connect(Socket sock, IP_Port ip_port)
     return connect(sock, (struct sockaddr *)&addr, addrsize);
 }
 
-int32_t net_getipport(const char *node, IP_Port **res, int type)
+int32_t net_getipport(const char *node, IP_Port **res, int tox_type)
 {
     struct addrinfo *infos;
     int ret = getaddrinfo(node, NULL, NULL, &infos);
@@ -1222,6 +1230,7 @@ int32_t net_getipport(const char *node, IP_Port **res, int type)
         return -1;
     }
 
+    int type = make_socktype(tox_type);
     struct addrinfo *cur;
 
     int count = 0;
