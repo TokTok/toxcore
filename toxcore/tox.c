@@ -556,7 +556,7 @@ bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error)
 
 #ifdef HAVE_LIBEV
     bool ret = true;
-    Event_Arg *tmp = calloc(1, sizeof(Event_Arg));
+    Event_Arg *tmp = (Event_Arg *) calloc(1, sizeof(Event_Arg));
 
     tmp->tox = tox;
     tmp->user_data = user_data;
@@ -589,7 +589,7 @@ bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error)
 
     free(tmp);
 #elif HAVE_LIBEVENT
-    Event_Arg *tmp = calloc(1, sizeof(Event_Arg));
+    Event_Arg *tmp = (Event_Arg *) calloc(1, sizeof(Event_Arg));
 
     tmp->tox = tox;
     tmp->user_data = user_data;
@@ -612,7 +612,6 @@ bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error)
     m->loop_run = true;
 
     while (m->loop_run) {
-        uint32_t i;
         Socket maxfd;
         fd_set readable;
 
@@ -641,7 +640,7 @@ bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error)
             return false;
         }
 
-        for (i = 0; i < fdcount; i++) {
+        for (uint32_t i = 0; i < fdcount; i++) {
             if (fdlist[i] == 0) {
                 continue;
             }
