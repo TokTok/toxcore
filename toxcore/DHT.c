@@ -289,49 +289,29 @@ static int pack_ip_port(uint8_t *data, uint16_t length, const IP_Port *ip_port)
         return -1;
     }
 
-    bool is_ipv4;
-    uint8_t net_family;
+    bool is_ipv4 = ip_port->ip.family == TOX_AF_INET ||
+                   ip_port->ip.family == TCP_INET;
 
-    if (ip_port->ip.family == TOX_AF_INET) {
-        // TODO(irungentoo): use functions to convert endianness
-        is_ipv4 = true;
-        net_family = TOX_AF_INET;
-    } else if (ip_port->ip.family == TCP_INET) {
-        is_ipv4 = true;
-        net_family = TOX_TCP_INET;
-    } else if (ip_port->ip.family == TOX_AF_INET6) {
-        is_ipv4 = false;
-        net_family = TOX_AF_INET6;
-    } else if (ip_port->ip.family == TCP_INET6) {
-        is_ipv4 = false;
-        net_family = TOX_TCP_INET6;
-    } else {
+    bool is_ipv6 = ip_port->ip.family == TOX_AF_INET6 ||
+                   ip_port->ip.family == TCP_INET6;
+
+    if (!is_ipv4 && !is_ipv6) {
         return -1;
     }
 
-    if (is_ipv4) {
-        uint32_t size = 1 + SIZE_IP4 + sizeof(uint16_t);
+    size_t ip_size = is_ipv4 ? SIZE_IP4 : SIZE_IP6;
+    void *ip = is_ipv4 ? (void *)&ip_port->ip.ip4 : (void *)&ip_port->ip.ip6;
+    uint32_t size = 1 + ip_size + sizeof(uint16_t);
 
-        if (size > length) {
-            return -1;
-        }
-
-        data[0] = net_family;
-        memcpy(data + 1, &ip_port->ip.ip4, SIZE_IP4);
-        memcpy(data + 1 + SIZE_IP4, &ip_port->port, sizeof(uint16_t));
-        return size;
-    } else {
-        uint32_t size = 1 + SIZE_IP6 + sizeof(uint16_t);
-
-        if (size > length) {
-            return -1;
-        }
-
-        data[0] = net_family;
-        memcpy(data + 1, &ip_port->ip.ip6, SIZE_IP6);
-        memcpy(data + 1 + SIZE_IP6, &ip_port->port, sizeof(uint16_t));
-        return size;
+    if (size > length) {
+        return -1;
     }
+
+    data[0] = ip_port->ip.family;
+
+    memcpy(data + 1, ip, ip_size);
+    memcpy(data + 1 + ip_size, &ip_port->port, sizeof(uint16_t));
+    return size;
 }
 
 static int DHT_create_packet(const uint8_t public_key[CRYPTO_PUBLIC_KEY_SIZE],
@@ -368,56 +348,31 @@ static int unpack_ip_port(IP_Port *ip_port, const uint8_t *data, uint16_t length
         return -1;
     }
 
-    bool is_ipv4;
-    uint8_t host_family;
+    bool is_ipv4 = data[0] == TOX_AF_INET ||
+                   data[0] == TCP_INET;
 
-    if (data[0] == TOX_AF_INET) {
-        is_ipv4 = true;
-        host_family = TOX_AF_INET;
-    } else if (data[0] == TOX_TCP_INET) {
-        if (!tcp_enabled) {
-            return -1;
-        }
+    bool is_ipv6 = data[0] == TOX_AF_INET6 ||
+                   data[0] == TCP_INET6;
 
-        is_ipv4 = true;
-        host_family = TCP_INET;
-    } else if (data[0] == TOX_AF_INET6) {
-        is_ipv4 = false;
-        host_family = TOX_AF_INET6;
-    } else if (data[0] == TOX_TCP_INET6) {
-        if (!tcp_enabled) {
-            return -1;
-        }
+    bool is_tcp = data[0] == TCP_INET ||
+                  data[0] == TCP_INET6;
 
-        is_ipv4 = false;
-        host_family = TCP_INET6;
-    } else {
+    if (!is_ipv4 && !is_ipv6 || !tcp_enabled && is_tcp) {
         return -1;
     }
 
-    if (is_ipv4) {
-        uint32_t size = 1 + SIZE_IP4 + sizeof(uint16_t);
+    size_t ip_size = is_ipv4 ? SIZE_IP4 : SIZE_IP6;
+    void *ip = is_ipv4 ? (void *)&ip_port->ip.ip4 : (void *)&ip_port->ip.ip6;
+    uint32_t size = 1 + ip_size + sizeof(uint16_t);
 
-        if (size > length) {
-            return -1;
-        }
-
-        ip_port->ip.family = host_family;
-        memcpy(&ip_port->ip.ip4, data + 1, SIZE_IP4);
-        memcpy(&ip_port->port, data + 1 + SIZE_IP4, sizeof(uint16_t));
-        return size;
-    } else {
-        uint32_t size = 1 + SIZE_IP6 + sizeof(uint16_t);
-
-        if (size > length) {
-            return -1;
-        }
-
-        ip_port->ip.family = host_family;
-        memcpy(&ip_port->ip.ip6, data + 1, SIZE_IP6);
-        memcpy(&ip_port->port, data + 1 + SIZE_IP6, sizeof(uint16_t));
-        return size;
+    if (size > length) {
+        return -1;
     }
+
+    ip_port->ip.family = data[0];
+    memcpy(ip, data + 1, ip_size);
+    memcpy(&ip_port->port, data + 1 + ip_size, sizeof(uint16_t));
+    return size;
 }
 
 /* Pack number of nodes into data of maxlength length.
@@ -511,41 +466,35 @@ static int client_or_ip_port_in_list(Logger *log, Client_data *list, uint16_t le
     for (i = 0; i < length; ++i) {
         if (id_equal(list[i].public_key, public_key)) {
             /* Refresh the client timestamp. */
+            IPPTsPng *assoc;
+            int ip_version;
+
             if (ip_port.ip.family == TOX_AF_INET) {
-
-                if (!ipport_equal(&list[i].assoc4.ip_port, &ip_port)) {
-                    char ip_str[IP_NTOA_LEN];
-                    LOGGER_TRACE(log, "coipil[%u]: switching ipv4 from %s:%u to %s:%u", i,
-                                 ip_ntoa(&list[i].assoc4.ip_port.ip, ip_str, sizeof(ip_str)),
-                                 net_ntohs(list[i].assoc4.ip_port.port),
-                                 ip_ntoa(&ip_port.ip, ip_str, sizeof(ip_str)),
-                                 net_ntohs(ip_port.port));
-                }
-
-                if (LAN_ip(list[i].assoc4.ip_port.ip) != 0 && LAN_ip(ip_port.ip) == 0) {
-                    return 1;
-                }
-
-                list[i].assoc4.ip_port = ip_port;
-                list[i].assoc4.timestamp = temp_time;
+                assoc = &list[i].assoc4;
+                ip_version = 4;
             } else if (ip_port.ip.family == TOX_AF_INET6) {
-
-                if (!ipport_equal(&list[i].assoc6.ip_port, &ip_port)) {
-                    char ip_str[IP_NTOA_LEN];
-                    LOGGER_TRACE(log, "coipil[%u]: switching ipv6 from %s:%u to %s:%u", i,
-                                 ip_ntoa(&list[i].assoc6.ip_port.ip, ip_str, sizeof(ip_str)),
-                                 net_ntohs(list[i].assoc6.ip_port.port),
-                                 ip_ntoa(&ip_port.ip, ip_str, sizeof(ip_str)),
-                                 net_ntohs(ip_port.port));
-                }
-
-                if (LAN_ip(list[i].assoc6.ip_port.ip) != 0 && LAN_ip(ip_port.ip) == 0) {
-                    return 1;
-                }
-
-                list[i].assoc6.ip_port = ip_port;
-                list[i].assoc6.timestamp = temp_time;
+                assoc = &list[i].assoc6;
+                ip_version = 6;
+            } else {
+                return -1;
             }
+
+            if (!ipport_equal(&assoc->ip_port, &ip_port)) {
+                char ip_str[IP_NTOA_LEN];
+                LOGGER_TRACE(log, "coipil[%u]: switching ipv%d from %s:%u to %s:%u",
+                             i, ip_version,
+                             ip_ntoa(&assoc->ip_port.ip, ip_str, sizeof(ip_str)),
+                             net_ntohs(assoc->ip_port.port),
+                             ip_ntoa(&ip_port.ip, ip_str, sizeof(ip_str)),
+                             net_ntohs(ip_port.port));
+            }
+
+            if (LAN_ip(assoc->ip_port.ip) != 0 && LAN_ip(ip_port.ip) == 0) {
+                return 1;
+            }
+
+            assoc->ip_port = ip_port;
+            assoc->timestamp = temp_time;
 
             return 1;
         }
@@ -557,27 +506,32 @@ static int client_or_ip_port_in_list(Logger *log, Client_data *list, uint16_t le
      * and the one who is the actual friend's public_key/address set? */
     for (i = 0; i < length; ++i) {
         /* MAYBE: check the other address, if valid, don't nuke? */
-        if ((ip_port.ip.family == TOX_AF_INET) && ipport_equal(&list[i].assoc4.ip_port, &ip_port)) {
-            /* Initialize client timestamp. */
-            list[i].assoc4.timestamp = temp_time;
-            memcpy(list[i].public_key, public_key, CRYPTO_PUBLIC_KEY_SIZE);
+        IPPTsPng *assoc;
+        IPPTsPng *reset;
+        int ip_version;
 
-            LOGGER_DEBUG(log, "coipil[%u]: switching public_key (ipv4)", i);
-
-            /* kill the other address, if it was set */
-            memset(&list[i].assoc6, 0, sizeof(list[i].assoc6));
-            return 1;
+        if (ip_port.ip.family == TOX_AF_INET) {
+            assoc = &list[i].assoc4;
+            reset = &list[i].assoc6;
+            ip_version = 4;
+        } else if (ip_port.ip.family == TOX_AF_INET6) {
+            assoc = &list[i].assoc6;
+            reset = &list[i].assoc4;
+            ip_version = 6;
+        } else {
+            continue;
         }
 
-        if ((ip_port.ip.family == TOX_AF_INET6) && ipport_equal(&list[i].assoc6.ip_port, &ip_port)) {
+        if (ipport_equal(&assoc->ip_port, &ip_port)) {
             /* Initialize client timestamp. */
-            list[i].assoc6.timestamp = temp_time;
+            assoc->timestamp = temp_time;
             memcpy(list[i].public_key, public_key, CRYPTO_PUBLIC_KEY_SIZE);
 
-            LOGGER_DEBUG(log, "coipil[%u]: switching public_key (ipv6)", i);
+            LOGGER_DEBUG(log, "coipil[%u]: switching public_key (ipv%d)", i, ip_version);
 
-            /* kill the other address, if it was set */
-            memset(&list[i].assoc4, 0, sizeof(list[i].assoc4));
+            /* Kill the other address, if it was set */
+            memset(reset, 0, sizeof(IPPTsPng));
+
             return 1;
         }
     }
@@ -876,11 +830,12 @@ static int replace_all(Client_data    *list,
                        IP_Port         ip_port,
                        const uint8_t  *comp_public_key)
 {
-    if ((ip_port.ip.family != TOX_AF_INET) && (ip_port.ip.family != TOX_AF_INET6)) {
+    if (ip_port.ip.family != TOX_AF_INET && ip_port.ip.family != TOX_AF_INET6) {
         return 0;
     }
 
-    if (store_node_ok(&list[1], public_key, comp_public_key) || store_node_ok(&list[0], public_key, comp_public_key)) {
+    if (store_node_ok(&list[1], public_key, comp_public_key) ||
+            store_node_ok(&list[0], public_key, comp_public_key)) {
         sort_client_list(list, length, comp_public_key);
 
         IPPTsPng *ipptp_write = NULL;
@@ -933,33 +888,38 @@ static int add_to_close(DHT *dht, const uint8_t *public_key, IP_Port ip_port, bo
     for (i = 0; i < LCLIENT_NODES; ++i) {
         Client_data *client = &dht->close_clientlist[(index * LCLIENT_NODES) + i];
 
-        if (is_timeout(client->assoc4.timestamp, BAD_NODE_TIMEOUT) && is_timeout(client->assoc6.timestamp, BAD_NODE_TIMEOUT)) {
-            if (!simulate) {
-                IPPTsPng *ipptp_write = NULL;
-                IPPTsPng *ipptp_clear = NULL;
+        if (!is_timeout(client->assoc4.timestamp, BAD_NODE_TIMEOUT) ||
+                !is_timeout(client->assoc6.timestamp, BAD_NODE_TIMEOUT)) {
+            continue;
+        }
 
-                if (ip_port.ip.family == TOX_AF_INET) {
-                    ipptp_write = &client->assoc4;
-                    ipptp_clear = &client->assoc6;
-                } else {
-                    ipptp_write = &client->assoc6;
-                    ipptp_clear = &client->assoc4;
-                }
-
-                id_copy(client->public_key, public_key);
-                ipptp_write->ip_port = ip_port;
-                ipptp_write->timestamp = unix_time();
-
-                ip_reset(&ipptp_write->ret_ip_port.ip);
-                ipptp_write->ret_ip_port.port = 0;
-                ipptp_write->ret_timestamp = 0;
-
-                /* zero out other address */
-                memset(ipptp_clear, 0, sizeof(*ipptp_clear));
-            }
-
+        if (simulate) {
             return 0;
         }
+
+        IPPTsPng *ipptp_write = NULL;
+        IPPTsPng *ipptp_clear = NULL;
+
+        if (ip_port.ip.family == TOX_AF_INET) {
+            ipptp_write = &client->assoc4;
+            ipptp_clear = &client->assoc6;
+        } else {
+            ipptp_write = &client->assoc6;
+            ipptp_clear = &client->assoc4;
+        }
+
+        id_copy(client->public_key, public_key);
+        ipptp_write->ip_port = ip_port;
+        ipptp_write->timestamp = unix_time();
+
+        ip_reset(&ipptp_write->ret_ip_port.ip);
+        ipptp_write->ret_ip_port.port = 0;
+        ipptp_write->ret_timestamp = 0;
+
+        /* zero out other address */
+        memset(ipptp_clear, 0, sizeof(*ipptp_clear));
+
+        return 0;
     }
 
     return -1;
@@ -982,8 +942,8 @@ static bool is_pk_in_client_list(Client_data *list, unsigned int client_list_len
     unsigned int i;
 
     for (i = 0; i < client_list_length; ++i) {
-        if ((ip_port.ip.family == TOX_AF_INET && !is_timeout(list[i].assoc4.timestamp, BAD_NODE_TIMEOUT))
-                || (ip_port.ip.family == TOX_AF_INET6 && !is_timeout(list[i].assoc6.timestamp, BAD_NODE_TIMEOUT))) {
+        if (ip_port.ip.family == TOX_AF_INET && !is_timeout(list[i].assoc4.timestamp, BAD_NODE_TIMEOUT)
+                || ip_port.ip.family == TOX_AF_INET6 && !is_timeout(list[i].assoc6.timestamp, BAD_NODE_TIMEOUT)) {
             if (public_key_cmp(list[i].public_key, public_key) == 0) {
                 return 1;
             }
@@ -1117,16 +1077,49 @@ int addto_lists(DHT *dht, IP_Port ip_port, const uint8_t *public_key)
     return used;
 }
 
+static int find_client_index(const Client_data *array, size_t size, const uint8_t *pk)
+{
+    uint32_t i;
+
+    for (i = 0; i < size; i++) {
+        if (id_equal(pk, array[i].public_key)) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+static bool update_client_data(Client_data *array, size_t size, IP_Port ip_port, const uint8_t *pk)
+{
+    uint64_t temp_time = unix_time();
+    int index = find_client_index(array, size, pk);
+
+    if (index == -1) {
+        return false;
+    }
+
+    Client_data *data = &array[index];
+    IPPTsPng *assoc;
+
+    if (ip_port.ip.family == TOX_AF_INET) {
+        assoc = &data->assoc4;
+    } else if (ip_port.ip.family == TOX_AF_INET6) {
+        assoc = &data->assoc6;
+    } else {
+        return true;
+    }
+
+    assoc->ret_ip_port = ip_port;
+    assoc->ret_timestamp = temp_time;
+    return true;
+}
+
 /* If public_key is a friend or us, update ret_ip_port
  * nodepublic_key is the id of the node that sent us this info.
  */
 static int returnedip_ports(DHT *dht, IP_Port ip_port, const uint8_t *public_key, const uint8_t *nodepublic_key)
 {
-    uint32_t i, j;
-    uint64_t temp_time = unix_time();
-
-    uint32_t used = 0;
-
     /* convert IPv4-in-IPv6 to IPv4 */
     if ((ip_port.ip.family == TOX_AF_INET6) && IPV6_IPV4_IN_V6(ip_port.ip.ip6)) {
         ip_port.ip.family = TOX_AF_INET;
@@ -1134,43 +1127,21 @@ static int returnedip_ports(DHT *dht, IP_Port ip_port, const uint8_t *public_key
     }
 
     if (id_equal(public_key, dht->self_public_key)) {
-        for (i = 0; i < LCLIENT_LIST; ++i) {
-            if (id_equal(nodepublic_key, dht->close_clientlist[i].public_key)) {
-                if (ip_port.ip.family == TOX_AF_INET) {
-                    dht->close_clientlist[i].assoc4.ret_ip_port = ip_port;
-                    dht->close_clientlist[i].assoc4.ret_timestamp = temp_time;
-                } else if (ip_port.ip.family == TOX_AF_INET6) {
-                    dht->close_clientlist[i].assoc6.ret_ip_port = ip_port;
-                    dht->close_clientlist[i].assoc6.ret_timestamp = temp_time;
-                }
+        update_client_data(dht->close_clientlist, LCLIENT_LIST, ip_port, nodepublic_key);
+        return 0;
+    }
 
-                ++used;
-                break;
-            }
-        }
-    } else {
-        for (i = 0; i < dht->num_friends; ++i) {
-            if (id_equal(public_key, dht->friends_list[i].public_key)) {
-                for (j = 0; j < MAX_FRIEND_CLIENTS; ++j) {
-                    if (id_equal(nodepublic_key, dht->friends_list[i].client_list[j].public_key)) {
-                        if (ip_port.ip.family == TOX_AF_INET) {
-                            dht->friends_list[i].client_list[j].assoc4.ret_ip_port = ip_port;
-                            dht->friends_list[i].client_list[j].assoc4.ret_timestamp = temp_time;
-                        } else if (ip_port.ip.family == TOX_AF_INET6) {
-                            dht->friends_list[i].client_list[j].assoc6.ret_ip_port = ip_port;
-                            dht->friends_list[i].client_list[j].assoc6.ret_timestamp = temp_time;
-                        }
+    uint32_t i;
 
-                        ++used;
-                        goto end;
-                    }
-                }
+    for (i = 0; i < dht->num_friends; ++i) {
+        if (id_equal(public_key, dht->friends_list[i].public_key)) {
+            Client_data *client_list = dht->friends_list[i].client_list;
+
+            if (update_client_data(client_list, MAX_FRIEND_CLIENTS, ip_port, nodepublic_key)) {
+                return 0;
             }
         }
     }
-
-end:
-    return 0;
 }
 
 /* Send a getnodes request.
@@ -2448,8 +2419,10 @@ uint16_t randfriends_nodes(DHT *dht, Node_format *nodes, uint16_t max_num)
     unsigned int i, r = rand();
 
     for (i = 0; i < DHT_FAKE_FRIEND_NUMBER; ++i) {
-        count += list_nodes(dht->friends_list[(i + r) % DHT_FAKE_FRIEND_NUMBER].client_list, MAX_FRIEND_CLIENTS, nodes + count,
-                            max_num - count);
+        int index = (i + r) % DHT_FAKE_FRIEND_NUMBER;
+        Client_data *client_list = dht->friends_list[index].client_list;
+        count += list_nodes(client_list, MAX_FRIEND_CLIENTS,
+                            nodes + count, max_num - count);
 
         if (count >= max_num) {
             break;
@@ -2523,8 +2496,6 @@ static void do_hardening(DHT *dht)
 }
 #endif
 
-/*----------------------------------------------------------------------------------*/
-
 void cryptopacket_registerhandler(DHT *dht, uint8_t byte, cryptopacket_handler_callback cb, void *object)
 {
     dht->cryptopackethandlers[byte].function = cb;
@@ -2569,8 +2540,6 @@ static int cryptopacket_handle(void *object, IP_Port source, const uint8_t *pack
 
     return 1;
 }
-
-/*----------------------------------------------------------------------------------*/
 
 DHT *new_DHT(Logger *log, Networking_Core *net, bool holepunching_enabled)
 {
@@ -2691,7 +2660,9 @@ uint32_t DHT_size(const DHT *dht)
 
     uint32_t size32 = sizeof(uint32_t), sizesubhead = size32 * 2;
 
-    return size32 + sizesubhead + (packed_node_size(TOX_AF_INET) * numv4) + (packed_node_size(TOX_AF_INET6) * numv6);
+    return size32 + sizesubhead +
+           (packed_node_size(TOX_AF_INET) * numv4) +
+           (packed_node_size(TOX_AF_INET6) * numv6);
 }
 
 static uint8_t *z_state_save_subheader(uint8_t *data, uint32_t len, uint16_t type)
