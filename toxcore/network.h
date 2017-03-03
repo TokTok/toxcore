@@ -134,6 +134,8 @@ typedef union {
 }
 IP4;
 
+extern const IP4 ip4_loopback;
+
 typedef union {
     uint8_t uint8[16];
     uint16_t uint16[8];
@@ -141,6 +143,8 @@ typedef union {
     uint64_t uint64[2];
 }
 IP6;
+
+extern const IP6 ip6_loopback;
 
 typedef struct {
     uint8_t family;
@@ -173,7 +177,7 @@ uint32_t net_ntohl(uint32_t hostlong);
 uint16_t net_ntohs(uint16_t hostshort);
 
 /* Does the IP6 struct a contain an IPv4 address in an IPv6 one? */
-#define IPV6_IPV4_IN_V6(a) ((a.uint64[0] == 0) && (a.uint32[2] == htonl (0xffff)))
+#define IPV6_IPV4_IN_V6(a) ((a.uint64[0] == 0) && (a.uint32[2] == net_htonl (0xffff)))
 
 #define SIZE_IP4 4
 #define SIZE_IP6 16
@@ -187,6 +191,9 @@ uint16_t net_ntohs(uint16_t hostshort);
 #define TOX_ADDR_RESOLVE_INET  1
 #define TOX_ADDR_RESOLVE_INET6 2
 
+#define TOX_INET_ADDRSTRLEN 16
+#define TOX_INET6_ADDRSTRLEN 46
+
 /* ip_ntoa
  *   converts ip into a string
  *   ip_str must be of length at least IP_NTOA_LEN
@@ -196,7 +203,7 @@ uint16_t net_ntohs(uint16_t hostshort);
  *
  *   returns ip_str
  */
-/* this would be INET6_ADDRSTRLEN, but it might be too short for the error message */
+/* this would be TOX_INET6_ADDRSTRLEN, but it might be too short for the error message */
 #define IP_NTOA_LEN 96 // TODO(irungentoo): magic number. Why not INET6_ADDRSTRLEN ?
 const char *ip_ntoa(const IP *ip, char *ip_str, size_t length);
 
@@ -392,7 +399,7 @@ int net_connect(Socket sock, IP_Port ip_port);
  *
  * return number of elements in res array.
  */
-int32_t net_getipport(const char *node, IP_Port **res, int type);
+int32_t net_getipport(const char *node, IP_Port **res, int tox_type);
 
 /* Deallocates memory allocated by net_getipport
  */
