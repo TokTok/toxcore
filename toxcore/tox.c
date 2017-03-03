@@ -254,12 +254,14 @@ bool tox_bootstrap(Tox *tox, const char *address, uint16_t port, const uint8_t *
     IP_Port *root;
 
     int32_t count = net_getipport(address, &root, SOCK_DGRAM);
+
     if (count == -1) {
         SET_ERROR_PARAMETER(error, TOX_ERR_BOOTSTRAP_BAD_HOST);
         return 0;
     }
 
     unsigned int i;
+
     for (i = 0; i < count; i++) {
         root[i].port = htons(port);
 
@@ -295,12 +297,14 @@ bool tox_add_tcp_relay(Tox *tox, const char *address, uint16_t port, const uint8
     IP_Port *root;
 
     int32_t count = net_getipport(address, &root, SOCK_STREAM);
+
     if (count == -1) {
         SET_ERROR_PARAMETER(error, TOX_ERR_BOOTSTRAP_BAD_HOST);
         return 0;
     }
 
     unsigned int i;
+
     for (i = 0; i < count; i++) {
         root[i].port = htons(port);
 
@@ -552,7 +556,7 @@ bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error)
 
 #ifdef HAVE_LIBEV
     bool ret = true;
-    Event_Arg *tmp = calloc(1, sizeof(Event_Arg));
+    Event_Arg *tmp = (Event_Arg *) calloc(1, sizeof(Event_Arg));
 
     tmp->tox = tox;
     tmp->user_data = user_data;
@@ -585,7 +589,7 @@ bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error)
 
     free(tmp);
 #elif HAVE_LIBEVENT
-    Event_Arg *tmp = calloc(1, sizeof(Event_Arg));
+    Event_Arg *tmp = (Event_Arg *) calloc(1, sizeof(Event_Arg));
 
     tmp->tox = tox;
     tmp->user_data = user_data;
@@ -608,7 +612,6 @@ bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error)
     m->loop_run = true;
 
     while (m->loop_run) {
-        uint32_t i;
         Socket maxfd;
         fd_set readable;
 
@@ -637,7 +640,7 @@ bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error)
             return false;
         }
 
-        for (i = 0; i < fdcount; i++) {
+        for (uint32_t i = 0; i < fdcount; i++) {
             if (fdlist[i] == 0) {
                 continue;
             }
