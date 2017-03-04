@@ -22,9 +22,23 @@ matrix:
     - env: JOB=toxcore ENV=windows ARCH=x86_64
       services:
         - docker
+    - env: JOB=installmd ENV=windows SUPPORT_ARCH_i686=true SUPPORT_ARCH_x86_64=false SUPPORT_TEST=true ENABLE_ARCH_i686=true ENABLE_ARCH_x86_64=false ENABLE_TEST=true ALLOW_TEST_FAILURE=true
+      services:
+        - docker
+    - env: JOB=installmd ENV=windows SUPPORT_ARCH_i686=false SUPPORT_ARCH_x86_64=true SUPPORT_TEST=true ENABLE_ARCH_i686=false ENABLE_ARCH_x86_64=true ENABLE_TEST=true ALLOW_TEST_FAILURE=true
+      services:
+        - docker
+    - env: JOB=installmd ENV=windows SUPPORT_ARCH_i686=true SUPPORT_ARCH_x86_64=false SUPPORT_TEST=true ENABLE_ARCH_i686=true ENABLE_ARCH_x86_64=false ENABLE_TEST=true ALLOW_TEST_FAILURE=false
+      services:
+        - docker
+    - env: JOB=installmd ENV=windows SUPPORT_ARCH_i686=false SUPPORT_ARCH_x86_64=true SUPPORT_TEST=true ENABLE_ARCH_i686=false ENABLE_ARCH_x86_64=true ENABLE_TEST=true ALLOW_TEST_FAILURE=false
+      services:
+        - docker
   fast_finish: true
   allow_failures:
     - env: JOB=toxcore ENV=osx RUN_TESTS=true
+    - env: JOB=installmd ENV=windows SUPPORT_ARCH_i686=true SUPPORT_ARCH_x86_64=false SUPPORT_TEST=true ENABLE_ARCH_i686=true ENABLE_ARCH_x86_64=false ENABLE_TEST=true ALLOW_TEST_FAILURE=false
+    - env: JOB=installmd ENV=windows SUPPORT_ARCH_i686=false SUPPORT_ARCH_x86_64=true SUPPORT_TEST=true ENABLE_ARCH_i686=false ENABLE_ARCH_x86_64=true ENABLE_TEST=true ALLOW_TEST_FAILURE=false
 
 addons:
   apt:
