@@ -149,7 +149,11 @@ if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   option(DEBUG "Enable assertions and other debugging facilities" OFF)
   if(DEBUG)
     set(MIN_LOGGER_LEVEL DEBUG)
-    add_cflag("-g3")
+    add_flag("-g3")
+    if(MINGW)
+      # Allows wine to display source code file names and line numbers on crash in its backtrace
+      add_flag("-gdwarf-2")
+    endif()
   endif()
 endif()
 
