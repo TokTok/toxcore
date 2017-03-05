@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.8.6)
 cmake_policy(VERSION 2.8.6)
 project(toxcore)
+include(CTest)
 
 set(CMAKE_MODULE_PATH ${toxcore_SOURCE_DIR}/cmake)
 
@@ -37,7 +38,7 @@ message("SOVERSION: ${SOVERSION}")
 #
 ################################################################################
 
-include(AddCompilerFlag)
+include(AddFlag)
 include(ApiDsl)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
@@ -47,6 +48,7 @@ include(StrictAbi)
 
 set(CMAKE_MACOSX_RPATH ON)
 
+  
 if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   # Set standard version for compiler.
   add_cflag("-std=c99")
@@ -54,59 +56,68 @@ if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 
   # Warn on non-ISO C.
   add_cflag("-pedantic")
+  
+  # Debug flag optimized for gdb
+  add_debug_flag("-ggdb")
+  
+  # Optimization flag
+  add_debug_flag("-O0")
+  if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
+    add_release_flag("-Ofast")
+  else()
+    add_release_flag("-O2")
+  endif()
+  
+  # Add all warning flags we can.
+  add_debug_flag("-Wall")
+  add_debug_flag("-Wextra")
+  add_debug_flag("-Weverything")
 
-  option(WARNINGS "Enable additional compiler warnings" ON)
+  option(WARNINGS "Disable some annoying compiler warnings" OFF)
   if(WARNINGS)
-    # Add all warning flags we can.
-    add_flag("-Wall")
-    add_flag("-Wextra")
-    add_flag("-Weverything")
-
     # Disable specific warning flags for both C and C++.
-    add_flag("-Wno-cast-align")
-    add_flag("-Wno-conversion")
-    add_flag("-Wno-covered-switch-default")
-    # Due to clang's tolower() macro being recursive https://github.com/TokTok/c-toxcore/pull/481
-    add_flag("-Wno-disabled-macro-expansion")
-    add_flag("-Wno-documentation-deprecated-sync")
-    add_flag("-Wno-format-nonliteral")
-    add_flag("-Wno-missing-field-initializers")
-    add_flag("-Wno-missing-prototypes")
-    add_flag("-Wno-padded")
-    add_flag("-Wno-parentheses")
-    add_flag("-Wno-return-type")
-    add_flag("-Wno-sign-compare")
-    add_flag("-Wno-sign-conversion")
-    add_flag("-Wno-tautological-constant-out-of-range-compare")
-    add_flag("-Wno-type-limits")
-    add_flag("-Wno-undef")
-    add_flag("-Wno-unreachable-code")
-    add_flag("-Wno-unused-macros")
-    add_flag("-Wno-unused-parameter")
-    add_flag("-Wno-vla")
+    add_debug_flag("-Wno-cast-align")
+    add_debug_flag("-Wno-conversion")
+    add_debug_flag("-Wno-covered-switch-default")
+    add_debug_flag("-Wno-documentation-deprecated-sync")
+    add_debug_flag("-Wno-format-nonliteral")
+    add_debug_flag("-Wno-missing-field-initializers")
+    add_debug_flag("-Wno-missing-prototypes")
+    add_debug_flag("-Wno-padded")
+    add_debug_flag("-Wno-parentheses")
+    add_debug_flag("-Wno-return-type")
+    add_debug_flag("-Wno-sign-compare")
+    add_debug_flag("-Wno-sign-conversion")
+    add_debug_flag("-Wno-tautological-constant-out-of-range-compare")
+    add_debug_flag("-Wno-type-limits")
+    add_debug_flag("-Wno-undef")
+    add_debug_flag("-Wno-unreachable-code")
+    add_debug_flag("-Wno-unused-macros")
+    add_debug_flag("-Wno-unused-parameter")
+    add_debug_flag("-Wno-vla")
 
     # Disable specific warning flags for C.
-    add_cflag("-Wno-assign-enum")
-    add_cflag("-Wno-bad-function-cast")
-    add_cflag("-Wno-double-promotion")
-    add_cflag("-Wno-gnu-zero-variadic-macro-arguments")
-    add_cflag("-Wno-packed")
-    add_cflag("-Wno-reserved-id-macro")
-    add_cflag("-Wno-shadow")
-    add_cflag("-Wno-shorten-64-to-32")
-    add_cflag("-Wno-unreachable-code-return")
-    add_cflag("-Wno-unused-but-set-variable")
-    add_cflag("-Wno-used-but-marked-unused")
+    add_debug_cflag("-Wno-assign-enum")
+    add_debug_cflag("-Wno-bad-function-cast")
+    add_debug_cflag("-Wno-double-promotion")
+    add_debug_cflag("-Wno-gnu-zero-variadic-macro-arguments")
+    add_debug_cflag("-Wno-packed")
+    add_debug_cflag("-Wno-reserved-id-macro")
+    add_debug_cflag("-Wno-shadow")
+    add_debug_cflag("-Wno-shorten-64-to-32")
+    add_debug_cflag("-Wno-unreachable-code-return")
+    add_debug_cflag("-Wno-unused-but-set-variable")
+    add_debug_cflag("-Wno-used-but-marked-unused")
 
     # Disable specific warning flags for C++.
-    add_cxxflag("-Wno-c++11-compat")
-    add_cxxflag("-Wno-c++11-extensions")
-    add_cxxflag("-Wno-c++11-narrowing")
-    add_cxxflag("-Wno-c99-extensions")
-    add_cxxflag("-Wno-narrowing")
-    add_cxxflag("-Wno-old-style-cast")
-    add_cxxflag("-Wno-variadic-macros")
-    add_cxxflag("-Wno-vla-extension")
+    add_debug_cxxflag("-Wno-c++11-compat")
+    add_debug_cxxflag("-Wno-c++11-extensions")
+    add_debug_cxxflag("-Wno-c++11-narrowing")
+    add_debug_cxxflag("-Wno-c99-extensions")
+    add_debug_cxxflag("-Wno-narrowing")
+    add_debug_cxxflag("-Wno-old-style-cast")
+    add_debug_cxxflag("-Wno-variadic-macros")
+    add_debug_cxxflag("-Wno-vla-extension")
   endif()
 
   option(ERROR_ON_WARNING "Make compilation error on a warning" OFF)
@@ -115,12 +126,6 @@ if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     # treating 'c' input as 'c++' when in C++ mode is deprecated in clang and
     # there is no way to turn off that warning.
     add_cflag("-Werror")
-  endif()
-
-  option(DEBUG "Enable assertions and other debugging facilities" OFF)
-  if(DEBUG)
-    set(MIN_LOGGER_LEVEL DEBUG)
-    add_cflag("-g3")
   endif()
 endif()
 
