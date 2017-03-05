@@ -1058,6 +1058,10 @@ bool audio_bit_rate_invalid(uint32_t bit_rate)
      */
     return bit_rate < 6 || bit_rate > 510;
 }
+bool toxav_audio_bit_rate_valid(uint32_t bit_rate)
+{
+    return !audio_bit_rate_invalid(bit_rate);
+}
 bool video_bit_rate_invalid(uint32_t bit_rate)
 {
     /* https://www.webmproject.org/docs/webm-sdk/structvpx__codec__enc__cfg.html shows the following:
