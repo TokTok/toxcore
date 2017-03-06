@@ -710,12 +710,10 @@ static void get_close_nodes_inner(const uint8_t *public_key, Node_format *nodes_
             ipptp = &client->assoc4;
         } else if (sa_family == AF_INET6) {
             ipptp = &client->assoc6;
+        } else if (client->assoc4.timestamp >= client->assoc6.timestamp) {
+            ipptp = &client->assoc4;
         } else {
-            if (client->assoc4.timestamp >= client->assoc6.timestamp) {
-                ipptp = &client->assoc4;
-            } else {
-                ipptp = &client->assoc6;
-            }
+            ipptp = &client->assoc6;
         }
 
         /* node not in a good condition? */
@@ -734,10 +732,7 @@ static void get_close_nodes_inner(const uint8_t *public_key, Node_format *nodes_
         }
 
         if (num_nodes < MAX_SENT_NODES) {
-            memcpy(nodes_list[num_nodes].public_key,
-                   client->public_key,
-                   CRYPTO_PUBLIC_KEY_SIZE);
-
+            memcpy(nodes_list[num_nodes].public_key, client->public_key, CRYPTO_PUBLIC_KEY_SIZE);
             nodes_list[num_nodes].ip_port = ipptp->ip_port;
             num_nodes++;
         } else {
@@ -824,14 +819,12 @@ static int cmp_dht_entry(const void *a, const void *b)
     t2 = hardening_correct(&entry2.assoc4.hardening) != HARDENING_ALL_OK
          && hardening_correct(&entry2.assoc6.hardening) != HARDENING_ALL_OK;
 
-    if (t1 != t2) {
-        if (t1) {
-            return -1;
-        }
+    if (t1 && !t2) {
+        return -1;
+    }
 
-        if (t2) {
-            return 1;
-        }
+    if (!t1 && t2) {
+        return 1;
     }
 
     int close = id_closest(cmp_public_key, entry1.public_key, entry2.public_key);
@@ -854,12 +847,9 @@ static int cmp_dht_entry(const void *a, const void *b)
  */
 static unsigned int store_node_ok(const Client_data *client, const uint8_t *public_key, const uint8_t *comp_public_key)
 {
-    if ((is_timeout(client->assoc4.timestamp, BAD_NODE_TIMEOUT) && is_timeout(client->assoc6.timestamp, BAD_NODE_TIMEOUT))
-            || (id_closest(comp_public_key, client->public_key, public_key) == 2)) {
-        return 1;
-    }
-
-    return 0;
+    return is_timeout(client->assoc4.timestamp, BAD_NODE_TIMEOUT) &&
+           is_timeout(client->assoc6.timestamp, BAD_NODE_TIMEOUT) ||
+           id_closest(comp_public_key, client->public_key, public_key) == 2;
 }
 
 static void sort_client_list(Client_data *list, unsigned int length, const uint8_t *comp_public_key)
