@@ -515,7 +515,81 @@ int unpack_nodes(Node_format *nodes, uint16_t max_num_nodes, uint16_t *processed
     return num;
 }
 
+/* Find index of ##type with public_key equal to pk.
+ *
+ *  return index or (uint32_t)(-1) if not found.
+ */
+#define INDEX_OF_PK(type) \
+static uint32_t index_of_##type##_pk(const type *array, uint32_t size, const uint8_t *pk) \
+{ \
+    uint32_t i; \
+    for (i = 0; i < size; i++) { \
+        if (id_equal(array[i].public_key, pk)) { \
+            return i; \
+        } \
+    } \
+ \
+    return -1; \
+}
 
+INDEX_OF_PK(Client_data)
+INDEX_OF_PK(DHT_Friend)
+INDEX_OF_PK(Node_format)
+
+/* Find index of ##type with ip_port equal to param ip_port.
+ *
+ *  return index or (uint32_t)(-1) if not found.
+ */
+#define INDEX_OF_IP_PORT(type) \
+static uint32_t index_of_##type##_ip_port(const type *array, uint32_t size, const IP_Port *ip_port) \
+{ \
+    uint32_t i; \
+    for (i = 0; i < size; ++i) { \
+        if (ip_port->ip.family == AF_INET  && ipport_equal(&array[i].assoc4.ip_port, ip_port) || \
+            ip_port->ip.family == AF_INET6 && ipport_equal(&array[i].assoc6.ip_port, ip_port)) { \
+            return i; \
+        } \
+    } \
+ \
+    return -1; \
+}
+
+INDEX_OF_IP_PORT(Client_data)
+
+/* Update ip_port of client if it's needed.
+ */
+static void update_client(Logger *log, int index, Client_data *client, IP_Port ip_port)
+{
+    IPPTsPng *assoc;
+    int ip_version;
+
+    if (ip_port.ip.family == AF_INET) {
+        assoc = &client->assoc4;
+        ip_version = 4;
+    } else if (ip_port.ip.family == AF_INET6) {
+        assoc = &client->assoc6;
+        ip_version = 6;
+    } else {
+        return;
+    }
+
+    if (!ipport_equal(&assoc->ip_port, &ip_port)) {
+        char ip_str[IP_NTOA_LEN];
+        LOGGER_TRACE(log, "coipil[%u]: switching ipv%d from %s:%u to %s:%u",
+                     index, ip_version,
+                     ip_ntoa(&assoc->ip_port.ip, ip_str, sizeof(ip_str)),
+                     net_ntohs(assoc->ip_port.port),
+                     ip_ntoa(&ip_port.ip, ip_str, sizeof(ip_str)),
+                     net_ntohs(ip_port.port));
+    }
+
+    if (LAN_ip(assoc->ip_port.ip) != 0 && LAN_ip(ip_port.ip) == 0) {
+        return;
+    }
+
+    assoc->ip_port = ip_port;
+    assoc->timestamp = unix_time();
+}
 
 /* Check if client with public_key is already in list of length length.
  * If it is then set its corresponding timestamp to current time.
@@ -527,119 +601,46 @@ int unpack_nodes(Node_format *nodes, uint16_t max_num_nodes, uint16_t *processed
 static int client_or_ip_port_in_list(Logger *log, Client_data *list, uint16_t length, const uint8_t *public_key,
                                      IP_Port ip_port)
 {
-    uint32_t i;
     uint64_t temp_time = unix_time();
+    uint32_t index = index_of_Client_data_pk(list, length, public_key);
 
     /* if public_key is in list, find it and maybe overwrite ip_port */
-    for (i = 0; i < length; ++i) {
-        if (id_equal(list[i].public_key, public_key)) {
-            /* Refresh the client timestamp. */
-            if (ip_port.ip.family == AF_INET) {
-
-                if (!ipport_equal(&list[i].assoc4.ip_port, &ip_port)) {
-                    char ip_str[IP_NTOA_LEN];
-                    LOGGER_TRACE(log, "coipil[%u]: switching ipv4 from %s:%u to %s:%u", i,
-                                 ip_ntoa(&list[i].assoc4.ip_port.ip, ip_str, sizeof(ip_str)),
-                                 net_ntohs(list[i].assoc4.ip_port.port),
-                                 ip_ntoa(&ip_port.ip, ip_str, sizeof(ip_str)),
-                                 net_ntohs(ip_port.port));
-                }
-
-                if (LAN_ip(list[i].assoc4.ip_port.ip) != 0 && LAN_ip(ip_port.ip) == 0) {
-                    return 1;
-                }
-
-                list[i].assoc4.ip_port = ip_port;
-                list[i].assoc4.timestamp = temp_time;
-            } else if (ip_port.ip.family == AF_INET6) {
-
-                if (!ipport_equal(&list[i].assoc6.ip_port, &ip_port)) {
-                    char ip_str[IP_NTOA_LEN];
-                    LOGGER_TRACE(log, "coipil[%u]: switching ipv6 from %s:%u to %s:%u", i,
-                                 ip_ntoa(&list[i].assoc6.ip_port.ip, ip_str, sizeof(ip_str)),
-                                 net_ntohs(list[i].assoc6.ip_port.port),
-                                 ip_ntoa(&ip_port.ip, ip_str, sizeof(ip_str)),
-                                 net_ntohs(ip_port.port));
-                }
-
-                if (LAN_ip(list[i].assoc6.ip_port.ip) != 0 && LAN_ip(ip_port.ip) == 0) {
-                    return 1;
-                }
-
-                list[i].assoc6.ip_port = ip_port;
-                list[i].assoc6.timestamp = temp_time;
-            }
-
-            return 1;
-        }
+    if (index != -1) {
+        update_client(log, index, &list[index], ip_port);
+        return 1;
     }
 
     /* public_key not in list yet: see if we can find an identical ip_port, in
      * that case we kill the old public_key by overwriting it with the new one
      * TODO(irungentoo): maybe we SHOULDN'T do that if that public_key is in a friend_list
-     * and the one who is the actual friend's public_key/address set? */
-    for (i = 0; i < length; ++i) {
-        /* MAYBE: check the other address, if valid, don't nuke? */
-        if ((ip_port.ip.family == AF_INET) && ipport_equal(&list[i].assoc4.ip_port, &ip_port)) {
-            /* Initialize client timestamp. */
-            list[i].assoc4.timestamp = temp_time;
-            memcpy(list[i].public_key, public_key, CRYPTO_PUBLIC_KEY_SIZE);
+     * and the one who is the actual friend's public_key/address set?
+     * MAYBE: check the other address, if valid, don't nuke? */
+    index = index_of_Client_data_ip_port(list, length, &ip_port);
 
-            LOGGER_DEBUG(log, "coipil[%u]: switching public_key (ipv4)", i);
-
-            /* kill the other address, if it was set */
-            memset(&list[i].assoc6, 0, sizeof(list[i].assoc6));
-            return 1;
-        }
-
-        if ((ip_port.ip.family == AF_INET6) && ipport_equal(&list[i].assoc6.ip_port, &ip_port)) {
-            /* Initialize client timestamp. */
-            list[i].assoc6.timestamp = temp_time;
-            memcpy(list[i].public_key, public_key, CRYPTO_PUBLIC_KEY_SIZE);
-
-            LOGGER_DEBUG(log, "coipil[%u]: switching public_key (ipv6)", i);
-
-            /* kill the other address, if it was set */
-            memset(&list[i].assoc4, 0, sizeof(list[i].assoc4));
-            return 1;
-        }
+    if (index == -1) {
+        return 0;
     }
 
-    return 0;
-}
+    IPPTsPng *assoc;
+    int ip_version;
 
-/* Check if client with public_key is already in node format list of length length.
- *
- *  return 1 if true.
- *  return 0 if false.
- */
-static int client_in_nodelist(const Node_format *list, uint16_t length, const uint8_t *public_key)
-{
-    uint32_t i;
-
-    for (i = 0; i < length; ++i) {
-        if (id_equal(list[i].public_key, public_key)) {
-            return 1;
-        }
+    if (ip_port.ip.family == AF_INET) {
+        assoc = &list[index].assoc4;
+        ip_version = 4;
+    } else {
+        assoc = &list[index].assoc6;
+        ip_version = 6;
     }
 
-    return 0;
-}
+    /* Initialize client timestamp. */
+    assoc->timestamp = temp_time;
+    memcpy(list[index].public_key, public_key, CRYPTO_PUBLIC_KEY_SIZE);
 
-/*  return friend number from the public_key.
- *  return -1 if a failure occurs.
- */
-static int friend_number(const DHT *dht, const uint8_t *public_key)
-{
-    uint32_t i;
+    LOGGER_DEBUG(log, "coipil[%u]: switching public_key (ipv%d)", index, ip_version);
 
-    for (i = 0; i < dht->num_friends; ++i) {
-        if (id_equal(dht->friends_list[i].public_key, public_key)) {
-            return i;
-        }
-    }
-
-    return -1;
+    /* kill the other address, if it was set */
+    memset(assoc, 0, sizeof(IPPTsPng));
+    return 1;
 }
 
 /* Add node to the node list making sure only the nodes closest to cmp_pk are in the list.
@@ -700,7 +701,7 @@ static void get_close_nodes_inner(const uint8_t *public_key, Node_format *nodes_
         const Client_data *client = &client_list[i];
 
         /* node already in list? */
-        if (client_in_nodelist(nodes_list, MAX_SENT_NODES, client->public_key)) {
+        if (index_of_Node_format_pk(nodes_list, MAX_SENT_NODES, client->public_key) != -1) {
             continue;
         }
 
@@ -710,12 +711,10 @@ static void get_close_nodes_inner(const uint8_t *public_key, Node_format *nodes_
             ipptp = &client->assoc4;
         } else if (sa_family == AF_INET6) {
             ipptp = &client->assoc6;
+        } else if (client->assoc4.timestamp >= client->assoc6.timestamp) {
+            ipptp = &client->assoc4;
         } else {
-            if (client->assoc4.timestamp >= client->assoc6.timestamp) {
-                ipptp = &client->assoc4;
-            } else {
-                ipptp = &client->assoc6;
-            }
+            ipptp = &client->assoc6;
         }
 
         /* node not in a good condition? */
@@ -734,10 +733,7 @@ static void get_close_nodes_inner(const uint8_t *public_key, Node_format *nodes_
         }
 
         if (num_nodes < MAX_SENT_NODES) {
-            memcpy(nodes_list[num_nodes].public_key,
-                   client->public_key,
-                   CRYPTO_PUBLIC_KEY_SIZE);
-
+            memcpy(nodes_list[num_nodes].public_key, client->public_key, CRYPTO_PUBLIC_KEY_SIZE);
             nodes_list[num_nodes].ip_port = ipptp->ip_port;
             num_nodes++;
         } else {
@@ -804,8 +800,10 @@ static int cmp_dht_entry(const void *a, const void *b)
     Client_data entry2 = cmp2.entry;
     const uint8_t *cmp_public_key = cmp1.base_public_key;
 
-    int t1 = is_timeout(entry1.assoc4.timestamp, BAD_NODE_TIMEOUT) && is_timeout(entry1.assoc6.timestamp, BAD_NODE_TIMEOUT);
-    int t2 = is_timeout(entry2.assoc4.timestamp, BAD_NODE_TIMEOUT) && is_timeout(entry2.assoc6.timestamp, BAD_NODE_TIMEOUT);
+#define ASSOC_TIMEOUT(assoc) is_timeout((assoc).timestamp, BAD_NODE_TIMEOUT)
+
+    int t1 = ASSOC_TIMEOUT(entry1.assoc4) && ASSOC_TIMEOUT(entry1.assoc6);
+    int t2 = ASSOC_TIMEOUT(entry2.assoc4) && ASSOC_TIMEOUT(entry2.assoc6);
 
     if (t1 && t2) {
         return 0;
@@ -819,10 +817,10 @@ static int cmp_dht_entry(const void *a, const void *b)
         return 1;
     }
 
-    t1 = hardening_correct(&entry1.assoc4.hardening) != HARDENING_ALL_OK
-         && hardening_correct(&entry1.assoc6.hardening) != HARDENING_ALL_OK;
-    t2 = hardening_correct(&entry2.assoc4.hardening) != HARDENING_ALL_OK
-         && hardening_correct(&entry2.assoc6.hardening) != HARDENING_ALL_OK;
+#define INCORRECT_HARDENING(assoc) hardening_correct(&(assoc).hardening) != HARDENING_ALL_OK
+
+    t1 = INCORRECT_HARDENING(entry1.assoc4) && INCORRECT_HARDENING(entry1.assoc6);
+    t2 = INCORRECT_HARDENING(entry2.assoc4) && INCORRECT_HARDENING(entry2.assoc6);
 
     if (t1 != t2) {
         if (t1) {
@@ -854,12 +852,9 @@ static int cmp_dht_entry(const void *a, const void *b)
  */
 static unsigned int store_node_ok(const Client_data *client, const uint8_t *public_key, const uint8_t *comp_public_key)
 {
-    if ((is_timeout(client->assoc4.timestamp, BAD_NODE_TIMEOUT) && is_timeout(client->assoc6.timestamp, BAD_NODE_TIMEOUT))
-            || (id_closest(comp_public_key, client->public_key, public_key) == 2)) {
-        return 1;
-    }
-
-    return 0;
+    return is_timeout(client->assoc4.timestamp, BAD_NODE_TIMEOUT) &&
+           is_timeout(client->assoc6.timestamp, BAD_NODE_TIMEOUT) ||
+           id_closest(comp_public_key, client->public_key, public_key) == 2;
 }
 
 static void sort_client_list(Client_data *list, unsigned int length, const uint8_t *comp_public_key)
