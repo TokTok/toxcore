@@ -1099,8 +1099,6 @@ static int handle_gc_sync_response(Messenger *m, int groupnumber, int peernumber
             save_tcp_relay(peer_conn, &tcp_relays[i]);
         }
 
-        int index;
-
         free(peer_numbers);
         free(tcp_relays);
 
