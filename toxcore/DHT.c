@@ -93,8 +93,10 @@ static unsigned int bit_by_bit_cmp(const uint8_t *pk1, const uint8_t *pk2)
             continue;
         }
 
-        for (j = 0; j < 8; ++j) {
-            if ((pk1[i] & (1 << (7 - j))) != (pk2[i] & (1 << (7 - j)))) {
+        for (j = 7; j >= 1; --j) {
+            uint8_t mask = 1 << j;
+
+            if ((pk1[i] & mask) != (pk2[i] & mask)) {
                 break;
             }
         }
@@ -102,7 +104,7 @@ static unsigned int bit_by_bit_cmp(const uint8_t *pk1, const uint8_t *pk2)
         break;
     }
 
-    return i * 8 + j;
+    return i * 8 + (7 - j);
 }
 
 /* Shared key generations are costly, it is therefor smart to store commonly used
@@ -113,44 +115,46 @@ static unsigned int bit_by_bit_cmp(const uint8_t *pk1, const uint8_t *pk2)
  */
 void get_shared_key(Shared_Keys *shared_keys, uint8_t *shared_key, const uint8_t *secret_key, const uint8_t *public_key)
 {
-    uint32_t i, num = ~0, curr = 0;
+    uint32_t i;
+    uint32_t num = ~0;
+    uint32_t curr = 0;
 
     for (i = 0; i < MAX_KEYS_PER_SLOT; ++i) {
         int index = public_key[30] * MAX_KEYS_PER_SLOT + i;
+        Shared_Key *key = &shared_keys->keys[index];
 
-        if (shared_keys->keys[index].stored) {
-            if (public_key_cmp(public_key, shared_keys->keys[index].public_key) == 0) {
-                memcpy(shared_key, shared_keys->keys[index].shared_key, CRYPTO_SHARED_KEY_SIZE);
-                ++shared_keys->keys[index].times_requested;
-                shared_keys->keys[index].time_last_requested = unix_time();
+        if (key->stored) {
+            if (public_key_cmp(public_key, key->public_key) == 0) {
+                memcpy(shared_key, key->shared_key, CRYPTO_SHARED_KEY_SIZE);
+                ++key->times_requested;
+                key->time_last_requested = unix_time();
                 return;
             }
 
             if (num != 0) {
-                if (is_timeout(shared_keys->keys[index].time_last_requested, KEYS_TIMEOUT)) {
+                if (is_timeout(key->time_last_requested, KEYS_TIMEOUT)) {
                     num = 0;
                     curr = index;
-                } else if (num > shared_keys->keys[index].times_requested) {
-                    num = shared_keys->keys[index].times_requested;
+                } else if (num > key->times_requested) {
+                    num = key->times_requested;
                     curr = index;
                 }
             }
-        } else {
-            if (num != 0) {
-                num = 0;
-                curr = index;
-            }
+        } else if (num != 0) {
+            num = 0;
+            curr = index;
         }
     }
 
     encrypt_precompute(public_key, secret_key, shared_key);
 
     if (num != (uint32_t)~0) {
-        shared_keys->keys[curr].stored = 1;
-        shared_keys->keys[curr].times_requested = 1;
-        memcpy(shared_keys->keys[curr].public_key, public_key, CRYPTO_PUBLIC_KEY_SIZE);
-        memcpy(shared_keys->keys[curr].shared_key, shared_key, CRYPTO_SHARED_KEY_SIZE);
-        shared_keys->keys[curr].time_last_requested = unix_time();
+        Shared_Key *key = &shared_keys->keys[curr];
+        key->stored = 1;
+        key->times_requested = 1;
+        memcpy(key->public_key, public_key, CRYPTO_PUBLIC_KEY_SIZE);
+        memcpy(key->shared_key, shared_key, CRYPTO_SHARED_KEY_SIZE);
+        key->time_last_requested = unix_time();
     }
 }
 
@@ -187,8 +191,9 @@ int create_request(const uint8_t *send_public_key, const uint8_t *send_secret_ke
         return -1;
     }
 
-    if (MAX_CRYPTO_REQUEST_SIZE < length + 1 + CRYPTO_PUBLIC_KEY_SIZE * 2 + CRYPTO_NONCE_SIZE + 1 +
-            CRYPTO_MAC_SIZE) {
+    uint32_t crypto_size = 1 + CRYPTO_PUBLIC_KEY_SIZE * 2 + CRYPTO_NONCE_SIZE;
+
+    if (MAX_CRYPTO_REQUEST_SIZE < length + crypto_size + 1 + CRYPTO_MAC_SIZE) {
         return -1;
     }
 
@@ -197,8 +202,8 @@ int create_request(const uint8_t *send_public_key, const uint8_t *send_secret_ke
     uint8_t temp[MAX_CRYPTO_REQUEST_SIZE];
     memcpy(temp + 1, data, length);
     temp[0] = request_id;
-    int len = encrypt_data(recv_public_key, send_secret_key, nonce, temp, length + 1,
-                           1 + CRYPTO_PUBLIC_KEY_SIZE * 2 + CRYPTO_NONCE_SIZE + packet);
+    int len = encrypt_data(recv_public_key, send_secret_key, nonce,
+                           temp, length + 1, crypto_size + packet);
 
     if (len == -1) {
         crypto_memzero(temp, MAX_CRYPTO_REQUEST_SIZE);
@@ -210,7 +215,7 @@ int create_request(const uint8_t *send_public_key, const uint8_t *send_secret_ke
     memcpy(packet + 1 + CRYPTO_PUBLIC_KEY_SIZE, send_public_key, CRYPTO_PUBLIC_KEY_SIZE);
 
     crypto_memzero(temp, MAX_CRYPTO_REQUEST_SIZE);
-    return len + 1 + CRYPTO_PUBLIC_KEY_SIZE * 2 + CRYPTO_NONCE_SIZE;
+    return len + crypto_size;
 }
 
 /* Puts the senders public key in the request in public_key, the data from the request
@@ -226,8 +231,9 @@ int handle_request(const uint8_t *self_public_key, const uint8_t *self_secret_ke
         return -1;
     }
 
-    if (length <= CRYPTO_PUBLIC_KEY_SIZE * 2 + CRYPTO_NONCE_SIZE + 1 + CRYPTO_MAC_SIZE ||
-            length > MAX_CRYPTO_REQUEST_SIZE) {
+    uint32_t crypto_size = 1 + CRYPTO_PUBLIC_KEY_SIZE * 2 + CRYPTO_NONCE_SIZE;
+
+    if (length <= crypto_size + CRYPTO_MAC_SIZE || length > MAX_CRYPTO_REQUEST_SIZE) {
         return -1;
     }
 
@@ -239,8 +245,7 @@ int handle_request(const uint8_t *self_public_key, const uint8_t *self_secret_ke
     const uint8_t *nonce = packet + 1 + CRYPTO_PUBLIC_KEY_SIZE * 2;
     uint8_t temp[MAX_CRYPTO_REQUEST_SIZE];
     int len1 = decrypt_data(public_key, self_secret_key, nonce,
-                            packet + 1 + CRYPTO_PUBLIC_KEY_SIZE * 2 + CRYPTO_NONCE_SIZE,
-                            length - (CRYPTO_PUBLIC_KEY_SIZE * 2 + CRYPTO_NONCE_SIZE + 1), temp);
+                            packet + crypto_size, length - crypto_size, temp);
 
     if (len1 == -1 || len1 == 0) {
         crypto_memzero(temp, MAX_CRYPTO_REQUEST_SIZE);
@@ -286,23 +291,18 @@ int to_host_family(IP *ip)
  */
 int packed_node_size(uint8_t ip_family)
 {
-    if (ip_family == AF_INET) {
-        return PACKED_NODE_SIZE_IP4;
-    }
+    switch (ip_family) {
+        case AF_INET:
+        case TCP_INET:
+            return PACKED_NODE_SIZE_IP4;
 
-    if (ip_family == TCP_INET) {
-        return PACKED_NODE_SIZE_IP4;
-    }
+        case AF_INET6:
+        case TCP_INET6:
+            return PACKED_NODE_SIZE_IP6;
 
-    if (ip_family == AF_INET6) {
-        return PACKED_NODE_SIZE_IP6;
+        default:
+            return -1;
     }
-
-    if (ip_family == TCP_INET6) {
-        return PACKED_NODE_SIZE_IP6;
-    }
-
-    return -1;
 }
 
 
@@ -370,8 +370,7 @@ static int DHT_create_packet(const uint8_t public_key[CRYPTO_PUBLIC_KEY_SIZE],
 
     random_nonce(nonce);
 
-    int encrypted_length = encrypt_data_symmetric(shared_key, nonce,
-                           plain, plain_length, encrypted);
+    int encrypted_length = encrypt_data_symmetric(shared_key, nonce, plain, plain_length, encrypted);
 
     if (encrypted_length == -1) {
         return -1;
