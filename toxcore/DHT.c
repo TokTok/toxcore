@@ -878,6 +878,30 @@ static void sort_client_list(Client_data *list, unsigned int length, const uint8
     }
 }
 
+static void update_client_with_reset(Client_data *client, const IP_Port *ip_port)
+{
+    IPPTsPng *ipptp_write = NULL;
+    IPPTsPng *ipptp_clear = NULL;
+
+    if (ip_port->ip.family == AF_INET) {
+        ipptp_write = &client->assoc4;
+        ipptp_clear = &client->assoc6;
+    } else {
+        ipptp_write = &client->assoc6;
+        ipptp_clear = &client->assoc4;
+    }
+
+    ipptp_write->ip_port = *ip_port;
+    ipptp_write->timestamp = unix_time();
+
+    ip_reset(&ipptp_write->ret_ip_port.ip);
+    ipptp_write->ret_ip_port.port = 0;
+    ipptp_write->ret_timestamp = 0;
+
+    /* zero out other address */
+    memset(ipptp_clear, 0, sizeof(*ipptp_clear));
+}
+
 /* Replace a first bad (or empty) node with this one
  *  or replace a possibly bad node (tests failed or not done yet)
  *  that is further than any other in the list
@@ -901,37 +925,18 @@ static int replace_all(Client_data    *list,
         return 0;
     }
 
-    if (store_node_ok(&list[1], public_key, comp_public_key) || store_node_ok(&list[0], public_key, comp_public_key)) {
-        sort_client_list(list, length, comp_public_key);
-
-        IPPTsPng *ipptp_write = NULL;
-        IPPTsPng *ipptp_clear = NULL;
-
-        Client_data *client = &list[0];
-
-        if (ip_port.ip.family == AF_INET) {
-            ipptp_write = &client->assoc4;
-            ipptp_clear = &client->assoc6;
-        } else {
-            ipptp_write = &client->assoc6;
-            ipptp_clear = &client->assoc4;
-        }
-
-        id_copy(client->public_key, public_key);
-        ipptp_write->ip_port = ip_port;
-        ipptp_write->timestamp = unix_time();
-
-        ip_reset(&ipptp_write->ret_ip_port.ip);
-        ipptp_write->ret_ip_port.port = 0;
-        ipptp_write->ret_timestamp = 0;
-
-        /* zero out other address */
-        memset(ipptp_clear, 0, sizeof(*ipptp_clear));
-
-        return 1;
+    if (!store_node_ok(&list[1], public_key, comp_public_key) &&
+            !store_node_ok(&list[0], public_key, comp_public_key)) {
+        return 0;
     }
 
-    return 0;
+    sort_client_list(list, length, comp_public_key);
+
+    Client_data *client = &list[0];
+    id_copy(client->public_key, public_key);
+
+    update_client_with_reset(client, &ip_port);
+    return 1;
 }
 
 /* Add node to close list.
@@ -954,33 +959,18 @@ static int add_to_close(DHT *dht, const uint8_t *public_key, IP_Port ip_port, bo
     for (i = 0; i < LCLIENT_NODES; ++i) {
         Client_data *client = &dht->close_clientlist[(index * LCLIENT_NODES) + i];
 
-        if (is_timeout(client->assoc4.timestamp, BAD_NODE_TIMEOUT) && is_timeout(client->assoc6.timestamp, BAD_NODE_TIMEOUT)) {
-            if (!simulate) {
-                IPPTsPng *ipptp_write = NULL;
-                IPPTsPng *ipptp_clear = NULL;
+        if (!is_timeout(client->assoc4.timestamp, BAD_NODE_TIMEOUT) ||
+                !is_timeout(client->assoc6.timestamp, BAD_NODE_TIMEOUT)) {
+            continue;
+        }
 
-                if (ip_port.ip.family == AF_INET) {
-                    ipptp_write = &client->assoc4;
-                    ipptp_clear = &client->assoc6;
-                } else {
-                    ipptp_write = &client->assoc6;
-                    ipptp_clear = &client->assoc4;
-                }
-
-                id_copy(client->public_key, public_key);
-                ipptp_write->ip_port = ip_port;
-                ipptp_write->timestamp = unix_time();
-
-                ip_reset(&ipptp_write->ret_ip_port.ip);
-                ipptp_write->ret_ip_port.port = 0;
-                ipptp_write->ret_timestamp = 0;
-
-                /* zero out other address */
-                memset(ipptp_clear, 0, sizeof(*ipptp_clear));
-            }
-
+        if (simulate) {
             return 0;
         }
+
+        id_copy(client->public_key, public_key);
+        update_client_with_reset(client, &ip_port);
+        return 0;
     }
 
     return -1;
@@ -990,28 +980,23 @@ static int add_to_close(DHT *dht, const uint8_t *public_key, IP_Port ip_port, bo
  */
 bool node_addable_to_close_list(DHT *dht, const uint8_t *public_key, IP_Port ip_port)
 {
-    if (add_to_close(dht, public_key, ip_port, 1) == 0) {
-        return 1;
-    }
-
-    return 0;
+    return add_to_close(dht, public_key, ip_port, 1) == 0;
 }
 
 static bool is_pk_in_client_list(Client_data *list, unsigned int client_list_length, const uint8_t *public_key,
                                  IP_Port ip_port)
 {
-    unsigned int i;
+    uint32_t index = index_of_Client_data_pk(list, client_list_length, public_key);
 
-    for (i = 0; i < client_list_length; ++i) {
-        if ((ip_port.ip.family == AF_INET && !is_timeout(list[i].assoc4.timestamp, BAD_NODE_TIMEOUT))
-                || (ip_port.ip.family == AF_INET6 && !is_timeout(list[i].assoc6.timestamp, BAD_NODE_TIMEOUT))) {
-            if (public_key_cmp(list[i].public_key, public_key) == 0) {
-                return 1;
-            }
-        }
+    if (index == -1) {
+        return 0;
     }
 
-    return 0;
+    const IPPTsPng *assoc = ip_port.ip.family == AF_INET ?
+                            &list[index].assoc4 :
+                            &list[index].assoc6;
+
+    return !is_timeout(assoc->timestamp, BAD_NODE_TIMEOUT);
 }
 
 /* Check if the node obtained with a get_nodes with public_key should be pinged.
@@ -1028,11 +1013,14 @@ static unsigned int ping_node_from_getnodes_ok(DHT *dht, const uint8_t *public_k
         ret = 1;
     }
 
-    if (ret && !client_in_nodelist(dht->to_bootstrap, dht->num_to_bootstrap, public_key)) {
-        if (dht->num_to_bootstrap < MAX_CLOSE_TO_BOOTSTRAP_NODES) {
-            memcpy(dht->to_bootstrap[dht->num_to_bootstrap].public_key, public_key, CRYPTO_PUBLIC_KEY_SIZE);
-            dht->to_bootstrap[dht->num_to_bootstrap].ip_port = ip_port;
-            ++dht->num_to_bootstrap;
+    unsigned int *num = &dht->num_to_bootstrap;
+    uint32_t index = index_of_Node_format_pk(dht->to_bootstrap, *num, public_key);
+
+    if (ret && index == -1) {
+        if (*num < MAX_CLOSE_TO_BOOTSTRAP_NODES) {
+            memcpy(dht->to_bootstrap[*num].public_key, public_key, CRYPTO_PUBLIC_KEY_SIZE);
+            dht->to_bootstrap[*num].ip_port = ip_port;
+            ++*num;
         } else {
             // TODO(irungentoo): ipv6 vs v4
             add_to_list(dht->to_bootstrap, MAX_CLOSE_TO_BOOTSTRAP_NODES, public_key, ip_port, dht->self_public_key);
@@ -1045,6 +1033,7 @@ static unsigned int ping_node_from_getnodes_ok(DHT *dht, const uint8_t *public_k
         bool store_ok = 0;
 
         DHT_Friend *dht_friend = &dht->friends_list[i];
+        unsigned int *friend_num = &dht_friend->num_to_bootstrap;
 
         if (store_node_ok(&dht_friend->client_list[1], public_key, dht_friend->public_key)) {
             store_ok = 1;
@@ -1054,12 +1043,15 @@ static unsigned int ping_node_from_getnodes_ok(DHT *dht, const uint8_t *public_k
             store_ok = 1;
         }
 
-        if (store_ok && !client_in_nodelist(dht_friend->to_bootstrap, dht_friend->num_to_bootstrap, public_key)
-                && !is_pk_in_client_list(dht_friend->client_list, MAX_FRIEND_CLIENTS, public_key, ip_port)) {
-            if (dht_friend->num_to_bootstrap < MAX_SENT_NODES) {
-                memcpy(dht_friend->to_bootstrap[dht_friend->num_to_bootstrap].public_key, public_key, CRYPTO_PUBLIC_KEY_SIZE);
-                dht_friend->to_bootstrap[dht_friend->num_to_bootstrap].ip_port = ip_port;
-                ++dht_friend->num_to_bootstrap;
+        const uint32_t index = index_of_Node_format_pk(dht_friend->to_bootstrap, *friend_num, public_key);
+        const bool pk_in_list = is_pk_in_client_list(dht_friend->client_list, MAX_FRIEND_CLIENTS, public_key, ip_port);
+
+        if (store_ok && index == -1 && !pk_in_list) {
+            if (*friend_num < MAX_SENT_NODES) {
+                Node_format *format = &dht_friend->to_bootstrap[*friend_num];
+                memcpy(format->public_key, public_key, CRYPTO_PUBLIC_KEY_SIZE);
+                format->ip_port = ip_port;
+                ++*friend_num;
             } else {
                 add_to_list(dht_friend->to_bootstrap, MAX_SENT_NODES, public_key, ip_port, dht_friend->public_key);
             }
@@ -1076,7 +1068,7 @@ static unsigned int ping_node_from_getnodes_ok(DHT *dht, const uint8_t *public_k
  *
  *  returns 1+ if the item is used in any list, 0 else
  */
-int addto_lists(DHT *dht, IP_Port ip_port, const uint8_t *public_key)
+uint32_t addto_lists(DHT *dht, IP_Port ip_port, const uint8_t *public_key)
 {
     uint32_t i, used = 0;
 
@@ -1148,6 +1140,27 @@ static int returnedip_ports(DHT *dht, IP_Port ip_port, const uint8_t *public_key
 
     uint32_t used = 0;
 
+    Client_data *data = &array[index];
+    IPPTsPng *assoc;
+
+    if (ip_port.ip.family == TOX_AF_INET) {
+        assoc = &data->assoc4;
+    } else if (ip_port.ip.family == TOX_AF_INET6) {
+        assoc = &data->assoc6;
+    } else {
+        return true;
+    }
+
+    assoc->ret_ip_port = ip_port;
+    assoc->ret_timestamp = temp_time;
+    return true;
+}
+
+/* If public_key is a friend or us, update ret_ip_port
+ * nodepublic_key is the id of the node that sent us this info.
+ */
+static void returnedip_ports(DHT *dht, IP_Port ip_port, const uint8_t *public_key, const uint8_t *nodepublic_key)
+{
     /* convert IPv4-in-IPv6 to IPv4 */
     if ((ip_port.ip.family == AF_INET6) && IPV6_IPV4_IN_V6(ip_port.ip.ip6)) {
         ip_port.ip.family = AF_INET;
