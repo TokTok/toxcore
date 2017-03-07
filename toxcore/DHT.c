@@ -523,9 +523,7 @@ int unpack_nodes(Node_format *nodes, uint16_t max_num_nodes, uint16_t *processed
  *
  *  return index or (uint32_t)(-1) if not found.
  */
-#define INDEX_OF_PK(type) \
-static uint32_t index_of_##type##_pk(const type *array, uint32_t size, const uint8_t *pk) \
-{ \
+#define INDEX_OF_PK \
     uint32_t i; \
     for (i = 0; i < size; i++) { \
         if (id_equal(array[i].public_key, pk)) { \
@@ -533,20 +531,28 @@ static uint32_t index_of_##type##_pk(const type *array, uint32_t size, const uin
         } \
     } \
  \
-    return -1; \
+    return -1;
+
+static uint32_t index_of_client_pk(const Client_data *array, uint32_t size, const uint8_t *pk)
+{
+    INDEX_OF_PK
 }
 
-INDEX_OF_PK(Client_data)
-INDEX_OF_PK(DHT_Friend)
-INDEX_OF_PK(Node_format)
+static uint32_t index_of_friend_pk(const DHT_Friend *array, uint32_t size, const uint8_t *pk)
+{
+    INDEX_OF_PK
+}
+
+static uint32_t index_of_node_pk(const Node_format *array, uint32_t size, const uint8_t *pk)
+{
+    INDEX_OF_PK
+}
 
 /* Find index of ##type with ip_port equal to param ip_port.
  *
  *  return index or (uint32_t)(-1) if not found.
  */
-#define INDEX_OF_IP_PORT(type) \
-static uint32_t index_of_##type##_ip_port(const type *array, uint32_t size, const IP_Port *ip_port) \
-{ \
+#define INDEX_OF_IP_PORT \
     uint32_t i; \
     for (i = 0; i < size; ++i) { \
         if (ip_port->ip.family == AF_INET  && ipport_equal(&array[i].assoc4.ip_port, ip_port) || \
@@ -555,10 +561,12 @@ static uint32_t index_of_##type##_ip_port(const type *array, uint32_t size, cons
         } \
     } \
  \
-    return -1; \
-}
+    return -1;
 
-INDEX_OF_IP_PORT(Client_data)
+static uint32_t index_of_client_ip_port(const Client_data *array, uint32_t size, const IP_Port *ip_port) \
+{
+    INDEX_OF_IP_PORT
+}
 
 /* Update ip_port of client if it's needed.
  */
@@ -606,7 +614,7 @@ static int client_or_ip_port_in_list(Logger *log, Client_data *list, uint16_t le
                                      IP_Port ip_port)
 {
     uint64_t temp_time = unix_time();
-    uint32_t index = index_of_Client_data_pk(list, length, public_key);
+    uint32_t index = index_of_client_pk(list, length, public_key);
 
     /* if public_key is in list, find it and maybe overwrite ip_port */
     if (index != -1) {
@@ -619,7 +627,7 @@ static int client_or_ip_port_in_list(Logger *log, Client_data *list, uint16_t le
      * TODO(irungentoo): maybe we SHOULDN'T do that if that public_key is in a friend_list
      * and the one who is the actual friend's public_key/address set?
      * MAYBE: check the other address, if valid, don't nuke? */
-    index = index_of_Client_data_ip_port(list, length, &ip_port);
+    index = index_of_client_ip_port(list, length, &ip_port);
 
     if (index == -1) {
         return 0;
@@ -705,7 +713,7 @@ static void get_close_nodes_inner(const uint8_t *public_key, Node_format *nodes_
         const Client_data *client = &client_list[i];
 
         /* node already in list? */
-        if (index_of_Node_format_pk(nodes_list, MAX_SENT_NODES, client->public_key) != -1) {
+        if (index_of_node_pk(nodes_list, MAX_SENT_NODES, client->public_key) != -1) {
             continue;
         }
 
@@ -987,7 +995,7 @@ bool node_addable_to_close_list(DHT *dht, const uint8_t *public_key, IP_Port ip_
 static bool is_pk_in_client_list(Client_data *list, unsigned int client_list_length, const uint8_t *public_key,
                                  IP_Port ip_port)
 {
-    uint32_t index = index_of_Client_data_pk(list, client_list_length, public_key);
+    uint32_t index = index_of_client_pk(list, client_list_length, public_key);
 
     if (index == -1) {
         return 0;
@@ -1019,7 +1027,7 @@ static unsigned int ping_node_from_getnodes_ok(DHT *dht, const uint8_t *public_k
     }
 
     unsigned int *num = &dht->num_to_bootstrap;
-    uint32_t index = index_of_Node_format_pk(dht->to_bootstrap, *num, public_key);
+    uint32_t index = index_of_node_pk(dht->to_bootstrap, *num, public_key);
 
     if (ret && index == -1) {
         if (*num < MAX_CLOSE_TO_BOOTSTRAP_NODES) {
@@ -1048,7 +1056,7 @@ static unsigned int ping_node_from_getnodes_ok(DHT *dht, const uint8_t *public_k
             store_ok = 1;
         }
 
-        uint32_t index = index_of_Node_format_pk(dht_friend->to_bootstrap, *friend_num, public_key);
+        uint32_t index = index_of_node_pk(dht_friend->to_bootstrap, *friend_num, public_key);
         bool pk_in_list = is_pk_in_client_list(dht_friend->client_list, MAX_FRIEND_CLIENTS, public_key, ip_port);
 
         if (store_ok && index == -1 && !pk_in_list) {
@@ -1131,7 +1139,7 @@ int addto_lists(DHT *dht, IP_Port ip_port, const uint8_t *public_key)
 static bool update_client_data(Client_data *array, size_t size, IP_Port ip_port, const uint8_t *pk)
 {
     uint64_t temp_time = unix_time();
-    int index = index_of_Client_data_pk(array, size, pk);
+    int index = index_of_client_pk(array, size, pk);
 
     if (index == -1) {
         return false;
@@ -1444,7 +1452,7 @@ static int handle_sendnodes_ipv6(void *object, IP_Port source, const uint8_t *pa
 int DHT_addfriend(DHT *dht, const uint8_t *public_key, void (*ip_callback)(void *data, int32_t number, IP_Port),
                   void *data, int32_t number, uint16_t *lock_count)
 {
-    int friend_num = index_of_DHT_Friend_pk(dht->friends_list, dht->num_friends, public_key);
+    int friend_num = index_of_friend_pk(dht->friends_list, dht->num_friends, public_key);
 
     uint16_t lock_num;
 
@@ -1499,7 +1507,7 @@ int DHT_addfriend(DHT *dht, const uint8_t *public_key, void (*ip_callback)(void 
 
 int DHT_delfriend(DHT *dht, const uint8_t *public_key, uint16_t lock_count)
 {
-    int friend_num = index_of_DHT_Friend_pk(dht->friends_list, dht->num_friends, public_key);
+    int friend_num = index_of_friend_pk(dht->friends_list, dht->num_friends, public_key);
 
     if (friend_num == -1) {
         return -1;
@@ -1546,14 +1554,14 @@ int DHT_getfriendip(const DHT *dht, const uint8_t *public_key, IP_Port *ip_port)
     ip_reset(&ip_port->ip);
     ip_port->port = 0;
 
-    int index = index_of_DHT_Friend_pk(dht->friends_list, dht->num_friends, public_key);
+    int index = index_of_friend_pk(dht->friends_list, dht->num_friends, public_key);
 
     if (index == -1) {
         return -1;
     }
 
     DHT_Friend *frnd = &dht->friends_list[index];
-    index = index_of_Client_data_pk(frnd->client_list, MAX_FRIEND_CLIENTS, public_key);
+    index = index_of_client_pk(frnd->client_list, MAX_FRIEND_CLIENTS, public_key);
     Client_data *client = &frnd->client_list[index];
 
     if (!is_timeout(client->assoc4.timestamp, BAD_NODE_TIMEOUT)) {
@@ -1847,7 +1855,7 @@ static int friend_iplist(const DHT *dht, IP_Port *ip_portlist, uint16_t friend_n
  */
 int route_tofriend(const DHT *dht, const uint8_t *friend_id, const uint8_t *packet, uint16_t length)
 {
-    int num = index_of_DHT_Friend_pk(dht->friends_list, dht->num_friends, friend_id);
+    int num = index_of_friend_pk(dht->friends_list, dht->num_friends, friend_id);
 
     if (num == -1) {
         return 0;
@@ -1907,7 +1915,7 @@ int route_tofriend(const DHT *dht, const uint8_t *friend_id, const uint8_t *pack
  */
 static int routeone_tofriend(DHT *dht, const uint8_t *friend_id, const uint8_t *packet, uint16_t length)
 {
-    int num = index_of_DHT_Friend_pk(dht->friends_list, dht->num_friends, friend_id);
+    int num = index_of_friend_pk(dht->friends_list, dht->num_friends, friend_id);
 
     if (num == -1) {
         return 0;
@@ -2001,7 +2009,7 @@ static int handle_NATping(void *object, IP_Port source, const uint8_t *source_pu
     uint64_t ping_id;
     memcpy(&ping_id, packet + 1, sizeof(uint64_t));
 
-    int friendnumber = index_of_DHT_Friend_pk(dht->friends_list, dht->num_friends, source_pubkey);
+    int friendnumber = index_of_friend_pk(dht->friends_list, dht->num_friends, source_pubkey);
 
     if (friendnumber == -1) {
         return 1;
