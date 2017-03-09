@@ -106,5 +106,11 @@ tox_strncasecmp_test_CFLAGS = $(AUTOTEST_CFLAGS)
 
 tox_strncasecmp_test_LDADD = $(AUTOTEST_LDADD)
 
+self_conference_title_change_SOURCE = ../auto_tests/self_conference_title_change_test.c
+
+self_conference_title_change_CFLAGS = $(AUTOTEST_CFLAGS)
+
+self_conference_title_change_LDADD = $(AUTOTEST_LDADD)
+
 
 EXTRA_DIST += $(top_srcdir)/auto_tests/helpers.h
