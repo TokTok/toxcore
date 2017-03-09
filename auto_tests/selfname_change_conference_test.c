@@ -1,4 +1,4 @@
-/* file_saving_test.c
+/* selfname_change_conference_test.c
  *
  * Small test for checking if obtaining savedata, saving it to disk and using
  * works correctly.
