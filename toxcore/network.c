@@ -1213,16 +1213,18 @@ int32_t net_getipport(const char *node, IP_Port **res, int type)
 {
     struct addrinfo *infos;
     int ret = getaddrinfo(node, NULL, NULL, &infos);
+    *res = NULL;
 
     if (ret != 0) {
         return -1;
     }
 
+    // Used to avoid malloc parameter overflow
+    const size_t MAX_COUNT = SIZE_MAX / sizeof(IP_Port);
     struct addrinfo *cur;
+    int32_t count = 0;
 
-    int count = 0;
-
-    for (cur = infos; count < INT32_MAX && cur != NULL; cur = cur->ai_next) {
+    for (cur = infos; count < MAX_COUNT && cur != NULL; cur = cur->ai_next) {
         if (cur->ai_socktype && type > 0 && cur->ai_socktype != type) {
             continue;
         }
@@ -1234,8 +1236,12 @@ int32_t net_getipport(const char *node, IP_Port **res, int type)
         count++;
     }
 
-    if (count == INT32_MAX) {
+    if (count > MAX_COUNT) {
         return -1;
+    }
+
+    if (count == 0) {
+        return 0;
     }
 
     *res = (IP_Port *)malloc(sizeof(IP_Port) * count);
