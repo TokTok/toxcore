@@ -1213,6 +1213,7 @@ int32_t net_getipport(const char *node, IP_Port **res, int type)
 {
     struct addrinfo *infos;
     int ret = getaddrinfo(node, NULL, NULL, &infos);
+    *res = NULL;
 
     if (ret != 0) {
         return -1;
@@ -1236,6 +1237,10 @@ int32_t net_getipport(const char *node, IP_Port **res, int type)
 
     if (count == INT32_MAX) {
         return -1;
+    }
+
+    if (count == 0) {
+        return 0;
     }
 
     *res = (IP_Port *)malloc(sizeof(IP_Port) * count);
