@@ -117,6 +117,12 @@ static int find(const BS_LIST *list, const uint8_t *data)
  */
 static int resize(BS_LIST *list, uint32_t new_size)
 {
+    if (new_size == 0) {
+        list->data = NULL;
+        list->ids = NULL;
+        return 1;
+    }
+
     uint8_t *data = (uint8_t *)realloc(list->data, list->element_size * new_size);
 
     if (!data) {
