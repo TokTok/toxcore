@@ -137,7 +137,7 @@ static void fetch_broadcast_info(uint16_t port)
     ifconf.ifc_len = sizeof(i_faces);
 
     if (ioctl(sock, SIOCGIFCONF, &ifconf) < 0) {
-        close(sock);
+        kill_sock(sock);
         return;
     }
 
@@ -184,7 +184,7 @@ static void fetch_broadcast_info(uint16_t port)
         count++;
     }
 
-    close(sock);
+    kill_sock(sock);
 
     broadcast_count = count;
 

@@ -55,8 +55,6 @@
 
 #else // Linux includes
 
-#include <unistd.h>
-
 #endif
 
 struct in_addr;
