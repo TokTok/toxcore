@@ -72,6 +72,13 @@
 #define EWOULDBLOCK WSAEWOULDBLOCK
 #endif
 
+#endif
+
+#ifndef MSG_NOSIGNAL
+#define MSG_NOSIGNAL 0x0
+#endif
+
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 static const char *inet_ntop(Family family, const void *addr, char *buf, size_t bufsize)
 {
     if (family == TOX_AF_INET) {
@@ -1424,4 +1431,14 @@ uint16_t net_ntohs(uint16_t hostshort)
 Socket net_accept(Socket socket)
 {
     return accept(socket, NULL, NULL);
+}
+
+size_t net_send(Socket sock, const char *buf, size_t size)
+{
+    return send(sock, buf, size, MSG_NOSIGNAL);
+}
+
+size_t net_recv(Socket sock, char *buf, size_t size)
+{
+    return recv(sock, buf, size, MSG_NOSIGNAL);
 }
