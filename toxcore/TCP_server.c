@@ -32,6 +32,8 @@
 #if !defined(_WIN32) && !defined(__WIN32__) && !defined (WIN32)
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#else
+#include <winsock2.h>
 #endif
 
 struct TCP_Server {

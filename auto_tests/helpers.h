@@ -7,6 +7,10 @@
 #include <check.h>
 #include <stdio.h>
 
+#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
+#include <windows.h>  // Sleep
+#endif
+
 #define DEFTESTCASE(NAME)                   \
     TCase *tc_##NAME = tcase_create(#NAME); \
     tcase_add_test(tc_##NAME, test_##NAME); \

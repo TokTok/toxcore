@@ -46,6 +46,12 @@ static IP_Port broadcast_ip_ports[MAX_INTERFACES];
 
 #if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
 
+#ifndef WINVER
+//Windows XP
+#define WINVER 0x0501
+#endif
+
+#include <winsock2.h>
 #include <iphlpapi.h>
 
 static void fetch_broadcast_info(uint16_t port)

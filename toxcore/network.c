@@ -64,6 +64,11 @@
 
 #else
 
+#ifndef WINVER
+//Windows XP
+#define WINVER 0x0501
+#endif
+
 #ifndef IPV6_V6ONLY
 #define IPV6_V6ONLY 27
 #endif
@@ -71,6 +76,14 @@
 #ifndef EWOULDBLOCK
 #define EWOULDBLOCK WSAEWOULDBLOCK
 #endif
+
+// The mingw32/64 Windows library warns about including winsock2.h after
+// windows.h even though with the above it's a valid thing to do. So, to make
+// mingw32 headers happy, we include winsock2.h first.
+#include <winsock2.h>
+
+#include <windows.h>
+#include <ws2tcpip.h>
 
 static const char *inet_ntop(Family family, const void *addr, char *buf, size_t bufsize)
 {

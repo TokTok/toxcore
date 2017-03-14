@@ -33,24 +33,6 @@
 #include <string.h>
 #include <time.h>
 
-#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32) /* Put win32 includes here */
-#ifndef WINVER
-//Windows XP
-#define WINVER 0x0501
-#endif
-
-// The mingw32/64 Windows library warns about including winsock2.h after
-// windows.h even though with the above it's a valid thing to do. So, to make
-// mingw32 headers happy, we include winsock2.h first.
-#include <winsock2.h>
-
-#include <windows.h>
-#include <ws2tcpip.h>
-
-#else // Linux includes
-
-#endif
-
 struct in_addr;
 struct in6_addr;
 struct addrinfo;
