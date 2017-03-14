@@ -24,12 +24,6 @@
 #ifndef NETWORK_H
 #define NETWORK_H
 
-#ifdef PLAN9
-#include <u.h> // Plan 9 requires this is imported first
-// Comment line here to avoid reordering by source code formatters.
-#include <libc.h>
-#endif
-
 #include "ccompat.h"
 #include "logger.h"
 
