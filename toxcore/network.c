@@ -43,14 +43,30 @@
 #include <mach/mach.h>
 #endif
 
-#ifndef IPV6_ADD_MEMBERSHIP
-#ifdef  IPV6_JOIN_GROUP
-#define IPV6_ADD_MEMBERSHIP IPV6_JOIN_GROUP
-#define IPV6_DROP_MEMBERSHIP IPV6_LEAVE_GROUP
-#endif
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+
+#ifndef WINVER
+//Windows XP
+#define WINVER 0x0501
 #endif
 
-#if !(defined(_WIN32) || defined(__WIN32__) || defined(WIN32))
+#ifndef IPV6_V6ONLY
+#define IPV6_V6ONLY 27
+#endif
+
+#ifndef EWOULDBLOCK
+#define EWOULDBLOCK WSAEWOULDBLOCK
+#endif
+
+// The mingw32/64 Windows library warns about including winsock2.h after
+// windows.h even though with the above it's a valid thing to do. So, to make
+// mingw32 headers happy, we include winsock2.h first.
+#include <winsock2.h>
+
+#include <windows.h>
+#include <ws2tcpip.h>
+
+#else
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -62,16 +78,13 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#else
-
-#ifndef IPV6_V6ONLY
-#define IPV6_V6ONLY 27
 #endif
 
-#ifndef EWOULDBLOCK
-#define EWOULDBLOCK WSAEWOULDBLOCK
+#ifndef IPV6_ADD_MEMBERSHIP
+#ifdef  IPV6_JOIN_GROUP
+#define IPV6_ADD_MEMBERSHIP IPV6_JOIN_GROUP
+#define IPV6_DROP_MEMBERSHIP IPV6_LEAVE_GROUP
 #endif
-
 #endif
 
 #ifndef MSG_NOSIGNAL
@@ -79,6 +92,7 @@
 #endif
 
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+
 static const char *inet_ntop(Family family, const void *addr, char *buf, size_t bufsize)
 {
     if (family == TOX_AF_INET) {

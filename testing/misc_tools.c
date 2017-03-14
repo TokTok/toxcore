@@ -31,6 +31,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
+#include <windows.h> // Sleep()
+#endif
+
 // You are responsible for freeing the return value!
 uint8_t *hex_string_to_bin(const char *hex_string)
 {
