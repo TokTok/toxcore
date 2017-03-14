@@ -232,7 +232,7 @@ uint16_t read_TCP_length(Socket sock)
 
     if (count >= sizeof(uint16_t)) {
         uint16_t length;
-        int len = recv(sock, (char *)&length, sizeof(uint16_t), MSG_NOSIGNAL);
+        int len = net_recv(sock, (char *)&length, sizeof(uint16_t));
 
         if (len != sizeof(uint16_t)) {
             fprintf(stderr, "FAIL recv packet\n");
@@ -261,7 +261,7 @@ int read_TCP_packet(Socket sock, uint8_t *data, uint16_t length)
     unsigned int count = TCP_socket_data_recv_buffer(sock);
 
     if (count >= length) {
-        int len = recv(sock, (char *)data, length, MSG_NOSIGNAL);
+        int len = net_recv(sock, (char *)data, length);
 
         if (len != length) {
             fprintf(stderr, "FAIL recv packet\n");
@@ -329,7 +329,7 @@ static int send_pending_data_nonpriority(TCP_Secure_Connection *con)
     }
 
     uint16_t left = con->last_packet_length - con->last_packet_sent;
-    int len = send(con->sock, (const char *)(con->last_packet + con->last_packet_sent), left, MSG_NOSIGNAL);
+    int len = net_send(con->sock, (const char *)(con->last_packet + con->last_packet_sent), left);
 
     if (len <= 0) {
         return -1;
@@ -359,7 +359,7 @@ static int send_pending_data(TCP_Secure_Connection *con)
 
     while (p) {
         uint16_t left = p->size - p->sent;
-        int len = send(con->sock, (const char *)(p->data + p->sent), left, MSG_NOSIGNAL);
+        int len = net_send(con->sock, (const char *)(p->data + p->sent), left);
 
         if (len != left) {
             if (len > 0) {
@@ -443,7 +443,7 @@ static int write_packet_TCP_secure_connection(TCP_Secure_Connection *con, const 
     }
 
     if (priority) {
-        len = sendpriority ? send(con->sock, (const char *)packet, SIZEOF_VLA(packet), MSG_NOSIGNAL) : 0;
+        len = sendpriority ? net_send(con->sock, (const char *)packet, SIZEOF_VLA(packet)) : 0;
 
         if (len <= 0) {
             len = 0;
@@ -458,7 +458,7 @@ static int write_packet_TCP_secure_connection(TCP_Secure_Connection *con, const 
         return add_priority(con, packet, SIZEOF_VLA(packet), len);
     }
 
-    len = send(con->sock, (const char *)packet, SIZEOF_VLA(packet), MSG_NOSIGNAL);
+    len = net_send(con->sock, (const char *)packet, SIZEOF_VLA(packet));
 
     if (len <= 0) {
         return 0;
@@ -555,7 +555,7 @@ static int handle_TCP_handshake(TCP_Secure_Connection *con, const uint8_t *data,
         return -1;
     }
 
-    if (TCP_SERVER_HANDSHAKE_SIZE != send(con->sock, (const char *)response, TCP_SERVER_HANDSHAKE_SIZE, MSG_NOSIGNAL)) {
+    if (TCP_SERVER_HANDSHAKE_SIZE != net_send(con->sock, (const char *)response, TCP_SERVER_HANDSHAKE_SIZE)) {
         return -1;
     }
 

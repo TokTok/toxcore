@@ -412,6 +412,17 @@ Socket net_accept(Socket socket);
  */
 int bind_to_port(Socket sock, int family, uint16_t port);
 
+/* Send SIZE bytes of BUF to socket SOCK. Returns the number sent or -1.
+ * Note: Always use MSG_NOSIGNAL.
+ */
+size_t net_send(Socket sock, const char *buf, size_t size);
+
+/* Read SIZE bytes into BUF from socket SOCK.
+ * Returns the number read or (size_t)(-1) for errors.
+ * Note: Always use MSG_NOSIGNAL.
+ */
+size_t net_recv(Socket sock, char *buf, size_t size);
+
 size_t net_sendto_ip4(Socket sock, const char *buf, size_t n, IP_Port ip_port);
 
 /* Initialize networking.

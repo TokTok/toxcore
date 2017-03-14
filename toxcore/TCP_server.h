@@ -32,10 +32,6 @@
 #include <sys/epoll.h>
 #endif
 
-#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32) || defined(__MACH__)
-#define MSG_NOSIGNAL 0
-#endif
-
 #define MAX_INCOMMING_CONNECTIONS 256
 
 #define TCP_MAX_BACKLOG MAX_INCOMMING_CONNECTIONS
