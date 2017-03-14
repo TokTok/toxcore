@@ -401,6 +401,12 @@ int32_t net_getipport(const char *node, IP_Port **res, int tox_type);
  */
 void net_freeipport(IP_Port *ip_ports);
 
+/* Await a connection on socket FD.
+ * When a connection arrives, open a new socket to communicate with it.
+ * return the new socket's descriptor, or -1 for errors.
+ */
+Socket net_accept(Socket socket);
+
 /* return 1 on success
  * return 0 on failure
  */
