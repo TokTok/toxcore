@@ -1421,3 +1421,7 @@ uint16_t net_ntohs(uint16_t hostshort)
     return ntohs(hostshort);
 }
 
+Socket net_accept(Socket socket)
+{
+    return accept(socket, NULL, NULL);
+}
