@@ -43,13 +43,6 @@
 #include <mach/mach.h>
 #endif
 
-#ifndef IPV6_ADD_MEMBERSHIP
-#ifdef  IPV6_JOIN_GROUP
-#define IPV6_ADD_MEMBERSHIP IPV6_JOIN_GROUP
-#define IPV6_DROP_MEMBERSHIP IPV6_LEAVE_GROUP
-#endif
-#endif
-
 #if !(defined(_WIN32) || defined(__WIN32__) || defined(WIN32))
 
 #include <arpa/inet.h>
@@ -70,6 +63,17 @@
 #ifndef EWOULDBLOCK
 #define EWOULDBLOCK WSAEWOULDBLOCK
 #endif
+
+#endif
+
+#ifndef IPV6_ADD_MEMBERSHIP
+#ifdef  IPV6_JOIN_GROUP
+#define IPV6_ADD_MEMBERSHIP IPV6_JOIN_GROUP
+#define IPV6_DROP_MEMBERSHIP IPV6_LEAVE_GROUP
+#endif
+#endif
+
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 
 static const char *inet_ntop(Family family, const void *addr, char *buf, size_t bufsize)
 {
