@@ -130,11 +130,14 @@ typedef enum NET_PACKET_TYPE {
 #define TCP_FAMILY (TOX_AF_INET6 + 4)
 
 typedef union {
-    uint8_t uint8[4];
-    uint16_t uint16[2];
     uint32_t uint32;
+    uint16_t uint16[2];
+    uint8_t uint8[4];
 }
 IP4;
+
+extern const IP4 IP4_LOOPBACK;
+extern const IP4 IP4_BROADCAST;
 
 typedef union {
     uint8_t uint8[16];
@@ -143,6 +146,9 @@ typedef union {
     uint64_t uint64[2];
 }
 IP6;
+
+extern const IP6 IP6_LOOPBACK;
+extern const IP6 IP6_BROADCAST;
 
 typedef struct {
     uint8_t family;

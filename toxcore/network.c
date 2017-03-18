@@ -138,6 +138,18 @@ static int inet_pton(Family family, const char *addrString, void *addrbuf)
 
 #endif
 
+const IP4 IP4_LOOPBACK = { INADDR_LOOPBACK };
+const IP6 IP6_LOOPBACK = {
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 }
+};
+
+
+const IP4 IP4_BROADCAST = { INADDR_BROADCAST };
+const IP6 IP6_BROADCAST = {
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff }
+};
+
+
 static int make_proto(int proto);
 static int make_socktype(int type);
 static int make_family(int tox_family);
