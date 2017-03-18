@@ -135,6 +135,7 @@ typedef union {
 IP4;
 
 extern const IP4 ip4_loopback;
+extern const IP4 ip4_broadcast;
 
 typedef union {
     uint8_t uint8[16];
@@ -145,6 +146,7 @@ typedef union {
 IP6;
 
 extern const IP6 ip6_loopback;
+extern const IP6 ip6_broadcast;
 
 typedef struct {
     uint8_t family;
