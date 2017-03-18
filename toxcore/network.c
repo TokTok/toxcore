@@ -138,6 +138,10 @@ static int inet_pton(Family family, const char *addrString, void *addrbuf)
 
 #endif
 
+#if !defined(INADDR_LOOPBACK)
+#define INADDR_LOOPBACK 0x7f000001
+#endif
+
 const IP4 IP4_LOOPBACK = { INADDR_LOOPBACK };
 const IP6 IP6_LOOPBACK = {
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 }
