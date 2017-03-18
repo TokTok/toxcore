@@ -51,7 +51,7 @@ START_TEST(test_addr_resolv_localhost)
     ck_assert_msg(res > 0, "Resolver failed: %u, %s (%x, %x)", errno, strerror(errno));
 
     ck_assert_msg(ip.family == TOX_AF_INET6, "Expected family TOX_AF_INET6 (%u), got %u.", TOX_AF_INET6, ip.family);
-    ck_assert_msg(!memcmp(&ip.ip6, &in6addr_loopback, sizeof(IP6)), "Expected ::1, got %s.",
+    ck_assert_msg(!memcmp(&ip.ip6, &ip6_loopback, sizeof(IP6)), "Expected ::1, got %s.",
                   ip_ntoa(&ip, ip_str, sizeof(ip_str)));
 
     if (localhost_split) {
@@ -67,7 +67,7 @@ START_TEST(test_addr_resolv_localhost)
     ck_assert_msg(res > 0, "Resolver failed: %u, %s (%x, %x)", errno, strerror(errno));
 
     ck_assert_msg(ip.family == TOX_AF_INET6, "Expected family TOX_AF_INET6 (%u), got %u.", TOX_AF_INET6, ip.family);
-    ck_assert_msg(!memcmp(&ip.ip6, &in6addr_loopback, sizeof(IP6)), "Expected ::1, got %s.",
+    ck_assert_msg(!memcmp(&ip.ip6, &ip6_loopback, sizeof(IP6)), "Expected ::1, got %s.",
                   ip_ntoa(&ip, ip_str, sizeof(ip_str)));
 
     ck_assert_msg(extra.family == TOX_AF_INET, "Expected family TOX_AF_INET (%u), got %u.", TOX_AF_INET, extra.family);
@@ -125,7 +125,7 @@ START_TEST(test_ip_equal)
     ck_assert_msg(res != 0, "ip_equal( {TOX_AF_INET, 127.0.0.1}, {TOX_AF_INET6, ::ffff:127.0.0.1} ): "
                   "expected result != 0, got 0.");
 
-    memcpy(&ip2.ip6, &in6addr_loopback, sizeof(IP6));
+    memcpy(&ip2.ip6, &ip6_loopback, sizeof(IP6));
     res = ip_equal(&ip1, &ip2);
     ck_assert_msg(res == 0, "ip_equal( {TOX_AF_INET, 127.0.0.1}, {TOX_AF_INET6, ::1} ): expected result 0, got %u.", res);
 

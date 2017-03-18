@@ -141,6 +141,14 @@ static int inet_pton(Family family, const char *addrString, void *addrbuf)
 
 #endif
 
+const IP4 ip4_loopback = {
+    { 127, 0, 0, 1 }
+};
+
+const IP6 ip6_loopback = {
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 }
+};
+
 static int make_proto(int proto);
 static int make_socktype(int type);
 static int make_family(int tox_family);
