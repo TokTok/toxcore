@@ -149,6 +149,16 @@ const IP6 ip6_loopback = {
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 }
 };
 
+
+const IP4 ip4_broadcast = {
+    { 0xff, 0xff, 0xff, 0xff }
+};
+
+const IP6 ip6_broadcast = {
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff }
+};
+
+
 static int make_proto(int proto);
 static int make_socktype(int type);
 static int make_family(int tox_family);
