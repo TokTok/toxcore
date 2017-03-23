@@ -950,7 +950,7 @@ static int add_to_close(DHT *dht, const uint8_t *public_key, IP_Port ip_port, bo
 
     unsigned int index = bit_by_bit_cmp(public_key, dht->self_public_key);
 
-    if (index > LCLIENT_LENGTH) {
+    if (index >= LCLIENT_LENGTH) {
         index = LCLIENT_LENGTH - 1;
     }
 
@@ -1021,7 +1021,7 @@ static bool is_pk_in_close_list(DHT *dht, const uint8_t *public_key, IP_Port ip_
 {
     unsigned int index = bit_by_bit_cmp(public_key, dht->self_public_key);
 
-    if (index > LCLIENT_LENGTH) {
+    if (index >= LCLIENT_LENGTH) {
         index = LCLIENT_LENGTH - 1;
     }
 
