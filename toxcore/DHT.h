@@ -59,12 +59,6 @@
 #define PING_ROUNDTRIP 2
 #define BAD_NODE_TIMEOUT (PING_INTERVAL + PINGS_MISSED_NODE_GOES_BAD * (PING_INTERVAL + PING_ROUNDTRIP))
 
-/* Redefinitions of variables for safe transfer over wire. */
-#define TOX_AF_INET 2
-#define TOX_AF_INET6 10
-#define TOX_TCP_INET 130
-#define TOX_TCP_INET6 138
-
 /* The number of "fake" friends to add (for optimization purposes and so our paths for the onion part are more random) */
 #define DHT_FAKE_FRIEND_NUMBER 2
 
@@ -94,12 +88,6 @@ int create_request(const uint8_t *send_public_key, const uint8_t *send_secret_ke
    return -1 if not valid request. */
 int handle_request(const uint8_t *self_public_key, const uint8_t *self_secret_key, uint8_t *public_key, uint8_t *data,
                    uint8_t *request_id, const uint8_t *packet, uint16_t length);
-
-/* Functions to transfer ips safely across wire. */
-void to_net_family(IP *ip);
-
-/* return 0 on success, -1 on failure. */
-int to_host_family(IP *ip);
 
 typedef struct {
     IP_Port     ip_port;

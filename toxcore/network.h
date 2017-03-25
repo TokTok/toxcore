@@ -24,12 +24,6 @@
 #ifndef NETWORK_H
 #define NETWORK_H
 
-#ifdef PLAN9
-#include <u.h> // Plan 9 requires this is imported first
-// Comment line here to avoid reordering by source code formatters.
-#include <libc.h>
-#endif
-
 #include "ccompat.h"
 #include "logger.h"
 
@@ -38,28 +32,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-
-#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32) /* Put win32 includes here */
-#ifndef WINVER
-//Windows XP
-#define WINVER 0x0501
-#endif
-
-// The mingw32/64 Windows library warns about including winsock2.h after
-// windows.h even though with the above it's a valid thing to do. So, to make
-// mingw32 headers happy, we include winsock2.h first.
-#include <winsock2.h>
-
-#include <windows.h>
-#include <ws2tcpip.h>
-
-#else // Linux includes
-
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <unistd.h>
-
-#endif
 
 struct in_addr;
 struct in6_addr;
@@ -109,6 +81,7 @@ typedef enum NET_PACKET_TYPE {
 #define TOX_PORT_DEFAULT   TOX_PORTRANGE_FROM
 
 /* Redefinitions of variables for safe transfer over wire. */
+#define TOX_AF_UNSPEC 0
 #define TOX_AF_INET 2
 #define TOX_AF_INET6 10
 #define TOX_TCP_INET 130
@@ -121,10 +94,10 @@ typedef enum NET_PACKET_TYPE {
 #define TOX_PROTO_UDP 2
 
 /* TCP related */
-#define TCP_ONION_FAMILY (AF_INET6 + 1)
-#define TCP_INET (AF_INET6 + 2)
-#define TCP_INET6 (AF_INET6 + 3)
-#define TCP_FAMILY (AF_INET6 + 4)
+#define TCP_ONION_FAMILY (TOX_AF_INET6 + 1)
+#define TCP_INET (TOX_AF_INET6 + 2)
+#define TCP_INET6 (TOX_AF_INET6 + 3)
+#define TCP_FAMILY (TOX_AF_INET6 + 4)
 
 typedef union {
     uint8_t uint8[4];
@@ -133,6 +106,8 @@ typedef union {
 }
 IP4;
 
+extern const IP4 ip4_loopback;
+
 typedef union {
     uint8_t uint8[16];
     uint16_t uint16[8];
@@ -140,6 +115,8 @@ typedef union {
     uint64_t uint64[2];
 }
 IP6;
+
+extern const IP6 ip6_loopback;
 
 typedef struct {
     uint8_t family;
@@ -172,7 +149,7 @@ uint32_t net_ntohl(uint32_t hostlong);
 uint16_t net_ntohs(uint16_t hostshort);
 
 /* Does the IP6 struct a contain an IPv4 address in an IPv6 one? */
-#define IPV6_IPV4_IN_V6(a) ((a.uint64[0] == 0) && (a.uint32[2] == htonl (0xffff)))
+#define IPV6_IPV4_IN_V6(a) ((a.uint64[0] == 0) && (a.uint32[2] == net_htonl (0xffff)))
 
 #define SIZE_IP4 4
 #define SIZE_IP6 16
@@ -186,6 +163,9 @@ uint16_t net_ntohs(uint16_t hostshort);
 #define TOX_ADDR_RESOLVE_INET  1
 #define TOX_ADDR_RESOLVE_INET6 2
 
+#define TOX_INET_ADDRSTRLEN 16
+#define TOX_INET6_ADDRSTRLEN 46
+
 /* ip_ntoa
  *   converts ip into a string
  *   ip_str must be of length at least IP_NTOA_LEN
@@ -195,7 +175,7 @@ uint16_t net_ntohs(uint16_t hostshort);
  *
  *   returns ip_str
  */
-/* this would be INET6_ADDRSTRLEN, but it might be too short for the error message */
+/* this would be TOX_INET6_ADDRSTRLEN, but it might be too short for the error message */
 #define IP_NTOA_LEN 96 // TODO(irungentoo): magic number. Why not INET6_ADDRSTRLEN ?
 const char *ip_ntoa(const IP *ip, char *ip_str, size_t length);
 
@@ -204,10 +184,10 @@ const char *ip_ntoa(const IP *ip, char *ip_str, size_t length);
  *  parses IP structure into an address string
  *
  * input
- *  ip: ip of AF_INET or AF_INET6 families
+ *  ip: ip of TOX_AF_INET or TOX_AF_INET6 families
  *  length: length of the address buffer
- *          Must be at least INET_ADDRSTRLEN for AF_INET
- *          and INET6_ADDRSTRLEN for AF_INET6
+ *          Must be at least INET_ADDRSTRLEN for TOX_AF_INET
+ *          and INET6_ADDRSTRLEN for TOX_AF_INET6
  *
  * output
  *  address: dotted notation (IPv4: quad, IPv6: 16) or colon notation (IPv6)
@@ -268,13 +248,13 @@ void ipport_copy(IP_Port *target, const IP_Port *source);
  * input
  *  address: a hostname (or something parseable to an IP address)
  *  to: to.family MUST be initialized, either set to a specific IP version
- *     (AF_INET/AF_INET6) or to the unspecified AF_UNSPEC (= 0), if both
+ *     (TOX_AF_INET/TOX_AF_INET6) or to the unspecified TOX_AF_UNSPEC (= 0), if both
  *     IP versions are acceptable
  *  extra can be NULL and is only set in special circumstances, see returns
  *
  * returns in *to a valid IPAny (v4/v6),
- *     prefers v6 if ip.family was AF_UNSPEC and both available
- * returns in *extra an IPv4 address, if family was AF_UNSPEC and *to is AF_INET6
+ *     prefers v6 if ip.family was TOX_AF_UNSPEC and both available
+ * returns in *extra an IPv4 address, if family was TOX_AF_UNSPEC and *to is TOX_AF_INET6
  * returns 0 on failure
  */
 int addr_resolve(const char *address, IP *to, IP *extra);
@@ -285,12 +265,12 @@ int addr_resolve(const char *address, IP *to, IP *extra);
  *
  *  address: a hostname (or something parseable to an IP address)
  *  to: to.family MUST be initialized, either set to a specific IP version
- *     (AF_INET/AF_INET6) or to the unspecified AF_UNSPEC (= 0), if both
+ *     (TOX_AF_INET/TOX_AF_INET6) or to the unspecified TOX_AF_UNSPEC (= 0), if both
  *     IP versions are acceptable
  *  extra can be NULL and is only set in special circumstances, see returns
  *
  *  returns in *tro a matching address (IPv6 or IPv4)
- *  returns in *extra, if not NULL, an IPv4 address, if to->family was AF_UNSPEC
+ *  returns in *extra, if not NULL, an IPv4 address, if to->family was TOX_AF_UNSPEC
  *  returns 1 on success
  *  returns 0 on failure
  */
@@ -391,16 +371,34 @@ int net_connect(Socket sock, IP_Port ip_port);
  *
  * return number of elements in res array.
  */
-int32_t net_getipport(const char *node, IP_Port **res, int type);
+int32_t net_getipport(const char *node, IP_Port **res, int tox_type);
 
 /* Deallocates memory allocated by net_getipport
  */
 void net_freeipport(IP_Port *ip_ports);
 
+/* Await a connection on socket FD.
+ * When a connection arrives, open a new socket to communicate with it.
+ * return the new socket's descriptor, or -1 for errors.
+ */
+Socket net_accept(Socket socket);
+
 /* return 1 on success
  * return 0 on failure
  */
 int bind_to_port(Socket sock, int family, uint16_t port);
+
+/* Send SIZE bytes of BUF to socket SOCK. 
+ * Returns the number of bytes sent or (size_t)(-1) for errors.
+ * Note: Always use MSG_NOSIGNAL.
+ */
+size_t net_send(Socket sock, const char *buf, size_t size);
+
+/* Read SIZE bytes into BUF from socket SOCK.
+ * Returns the number of bytes read or (size_t)(-1) for errors.
+ * Note: Always use MSG_NOSIGNAL.
+ */
+size_t net_recv(Socket sock, char *buf, size_t size);
 
 size_t net_sendto_ip4(Socket sock, const char *buf, size_t n, IP_Port ip_port);
 

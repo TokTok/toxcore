@@ -8,6 +8,7 @@
 #define c_sleep(x) Sleep(1*x)
 
 #else
+#include <sys/socket.h>
 #define c_sleep(x) usleep(1000*x)
 
 #endif
@@ -49,7 +50,7 @@ int main(int argc, char *argv[])
     }
 
     IP ip = {0};
-    ip.family = AF_INET;
+    ip.family = TOX_AF_INET;
     Socket sock = net_socket(ip.family, TOX_SOCK_DGRAM, TOX_PROTO_UDP);
 
     if (!sock_valid(sock)) {
