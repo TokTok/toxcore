@@ -30,6 +30,7 @@
 #define GC_PING_INTERVAL 12
 #define GC_CONFIRMED_PEER_TIMEOUT (GC_PING_INTERVAL * 4 + 10)
 #define GC_UNCONFIRMED_PEER_TIMEOUT GC_PING_INTERVAL
+#define GC_MAX_SAVED_INVITES 10
 
 typedef enum Group_Privacy_State {
     GI_PUBLIC,
@@ -237,6 +238,9 @@ typedef struct GC_Chat {
     GC_PeerAddress addr_list[MAX_GC_PEER_ADDRS];
     uint16_t    num_addrs;
     uint16_t    addrs_idx;
+
+    int32_t saved_invites[GC_MAX_SAVED_INVITES];
+    uint8_t saved_invites_index;
 } GC_Chat;
 
 #ifndef MESSENGER_DEFINED
