@@ -95,6 +95,8 @@ if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     add_flag("-Wno-cast-align")
     add_flag("-Wno-conversion")
     add_flag("-Wno-covered-switch-default")
+    # Due to clang's tolower() macro being recursive https://github.com/TokTok/c-toxcore/pull/481
+    add_flag("-Wno-disabled-macro-expansion")
     add_flag("-Wno-documentation-deprecated-sync")
     add_flag("-Wno-format-nonliteral")
     add_flag("-Wno-missing-field-initializers")
@@ -168,12 +170,17 @@ if(ASAN)
   set(CMAKE_REQUIRED_LIBRARIES "${SAFE_CMAKE_REQUIRED_LIBRARIES}")
 endif()
 
+option(BUILD_TOXAV "Whether to build the tox AV library" ON)
+
 include(Dependencies)
 
-if(OPUS_FOUND AND VPX_FOUND)
-  set(BUILD_TOXAV TRUE)
-else()
-  set(BUILD_TOXAV FALSE)
+if (BUILD_TOXAV)
+  if(NOT OPUS_FOUND)
+    message(SEND_ERROR "Option BUILD_TOXAV is enabled but required library OPUS was not found.")
+  endif()
+  if(NOT VPX_FOUND)
+    message(SEND_ERROR "Option BUILD_TOXAV is enabled but required library VPX was not found.")
+  endif()
 endif()
 
 ################################################################################
@@ -205,9 +212,6 @@ include(CheckFunctionExists)
 check_function_exists(explicit_bzero HAVE_EXPLICIT_BZERO)
 check_function_exists(memset_s HAVE_MEMSET_S)
 target_link_modules(toxcrypto ${LIBSODIUM_LIBRARIES})
-if(WIN32)
-  target_link_modules(toxcrypto ws2_32) # for htonl
-endif()
 
 # LAYER 2: Basic networking
 # -------------------------
@@ -424,6 +428,7 @@ auto_test(tox)
 auto_test(tox_many)
 auto_test(tox_many_tcp)
 auto_test(tox_one)
+auto_test(tox_strncasecmp)
 auto_test(version)
 
 if(BUILD_TOXAV)

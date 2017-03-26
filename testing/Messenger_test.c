@@ -47,15 +47,8 @@
 #include "../toxcore/Messenger.h"
 #include "misc_tools.c"
 
-#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
-
-#define c_sleep(x) Sleep(1*x)
-
-#else
+#if !defined(_WIN32) && !defined(__WIN32__) && !defined (WIN32)
 #include <arpa/inet.h>
-#include <unistd.h>
-#define c_sleep(x) usleep(1000*x)
-#define PORT 33445
 
 #endif
 
@@ -126,7 +119,7 @@ int main(int argc, char *argv[])
     }
 
     if (argc == argvoffset + 4) {
-        uint16_t port = htons(atoi(argv[argvoffset + 2]));
+        uint16_t port = net_htons(atoi(argv[argvoffset + 2]));
         uint8_t *bootstrap_key = hex_string_to_bin(argv[argvoffset + 3]);
         int res = DHT_bootstrap_from_address(m->dht, argv[argvoffset + 1],
                                              ipv6enabled, port, bootstrap_key);

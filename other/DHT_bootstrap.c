@@ -50,15 +50,6 @@
 #define DHT_MOTD "This is a test motd"
 #endif
 
-/* Sleep function (x = milliseconds) */
-#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
-#define c_sleep(x) Sleep(1*x)
-#else
-#include <arpa/inet.h>
-#include <unistd.h>
-#define c_sleep(x) usleep(1000*x)
-#endif
-
 #define PORT 33445
 
 
@@ -105,7 +96,7 @@ static void manage_keys(DHT *dht)
 
 int main(int argc, char *argv[])
 {
-    if (argc == 2 && !strncasecmp(argv[1], "-h", 3)) {
+    if (argc == 2 && !tox_strncasecmp(argv[1], "-h", 3)) {
         printf("Usage (connected)  : %s [--ipv4|--ipv6] IP PORT KEY\n", argv[0]);
         printf("Usage (unconnected): %s [--ipv4|--ipv6]\n", argv[0]);
         exit(0);
@@ -166,11 +157,11 @@ int main(int argc, char *argv[])
     fclose(file);
 
     printf("\n");
-    printf("Port: %u\n", ntohs(dht->net->port));
+    printf("Port: %u\n", net_ntohs(dht->net->port));
 
     if (argc > argvoffset + 3) {
         printf("Trying to bootstrap into the network...\n");
-        uint16_t port = htons(atoi(argv[argvoffset + 2]));
+        uint16_t port = net_htons(atoi(argv[argvoffset + 2]));
         uint8_t *bootstrap_key = hex_string_to_bin(argv[argvoffset + 3]);
         int res = DHT_bootstrap_from_address(dht, argv[argvoffset + 1],
                                              ipv6enabled, port, bootstrap_key);
@@ -196,7 +187,7 @@ int main(int argc, char *argv[])
         do_DHT(dht);
 
         if (is_timeout(last_LANdiscovery, is_waiting_for_dht_connection ? 5 : LAN_DISCOVERY_INTERVAL)) {
-            send_LANdiscovery(htons(PORT), dht);
+            send_LANdiscovery(net_htons(PORT), dht);
             last_LANdiscovery = unix_time();
         }
 

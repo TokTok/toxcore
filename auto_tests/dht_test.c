@@ -571,14 +571,6 @@ static void ip_callback(void *data, int32_t number, IP_Port ip_port)
 {
 }
 
-
-#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
-#define c_sleep(x) Sleep(1*x)
-#else
-#include <unistd.h>
-#define c_sleep(x) usleep(1000*x)
-#endif
-
 #define NUM_DHT_FRIENDS 20
 
 START_TEST(test_DHT_test)
@@ -623,7 +615,7 @@ loop_top:
         IP_Port ip_port;
         ip_init(&ip_port.ip, 1);
         ip_port.ip.ip6.uint8[15] = 1;
-        ip_port.port = htons(DHT_DEFAULT_PORT + i);
+        ip_port.port = net_htons(DHT_DEFAULT_PORT + i);
         DHT_bootstrap(dhts[(i - 1) % NUM_DHT], ip_port, dhts[i]->self_public_key);
     }
 
