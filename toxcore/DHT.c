@@ -959,6 +959,8 @@ static int add_to_close(DHT *dht, const uint8_t *public_key, IP_Port ip_port, bo
     }
 
     for (i = 0; i < LCLIENT_NODES; ++i) {
+        /* TODO(iphydf): write bounds checking test to catch the case that
+         * index is left as >= LCLIENT_LENGTH */
         Client_data *client = &dht->close_clientlist[(index * LCLIENT_NODES) + i];
 
         if (is_timeout(client->assoc4.timestamp, BAD_NODE_TIMEOUT) && is_timeout(client->assoc6.timestamp, BAD_NODE_TIMEOUT)) {
