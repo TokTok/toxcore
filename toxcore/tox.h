@@ -1828,10 +1828,28 @@ enum TOX_FILE_KIND {
      * later reference. Because stickers are expected to be saved, receiving clients should send TOX_FILE_CONTROL_CANCEL
      * when they already have the sticker indicated by the file_id; and because of this sending clients can't make any
      * assumptions when these file transfers are canceled with no data transferred.
-     *
-     * @see https://wiki.tox.chat/developers/feature_ideas/stickers
      */
-    TOX_FILE_KIND_STICKER
+    TOX_FILE_KIND_STICKER,
+
+    /**
+     * File type for an image that the sending client elects to display 'inline' with other messages. It is up to the
+     * receiving client to decide how to handle this file kind, but at the minimum the receiver should include some
+     * reminder/notice that this is an inline image, and not just a normal file transfer of an image.
+     */
+    TOX_FILE_KIND_INLINE_IMAGE,
+
+    /**
+     * Short audio file, expected to be a voicemail message from a contact. Clients should offer a way to play the audio
+     * clip in client, but at the very least need to treat this like how they would otherwise treat a standard textual
+     * message.
+     *
+     * Senders should expect that files for this filetype will be renamed by the receiving client.
+     *
+     * If clients wish to stream the voicemail message live to try to act like traditional tape recorded voicemail
+     * systems for call screening, they may set file_size to 0 for a live stream. Receiving clients are suggested to
+     * enforce a max length to avoid abuse. 30 seconds of voice audio at 32kb/s is roughly 1MB on disk.
+     */
+    TOX_FILE_KIND_VOICEMAIL,
 };
 
 
