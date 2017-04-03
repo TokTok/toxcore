@@ -4,7 +4,8 @@ includedir=${prefix}/include
 
 Name: toxdns
 Description: Tox DNS3 library
-Requires: toxcore
+Requires.private: toxcore
 Version: @PROJECT_VERSION@
-Libs: -L${libdir} @toxdns_PKGCONFIG_LIBS@ -ltoxdns
+Libs: -L${libdir} -ltoxdns
+Libs.private: @toxdns_PKGCONFIG_LIBS@
 Cflags: -I${includedir}

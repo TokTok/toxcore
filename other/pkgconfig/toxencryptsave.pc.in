@@ -4,7 +4,8 @@ includedir=${prefix}/include
 
 Name: toxencryptsave
 Description: Tox block encryption library
-Requires: toxcore
+Requires.private: toxcore
 Version: @PROJECT_VERSION@
-Libs: -L${libdir} @toxencryptsave_PKGCONFIG_LIBS@ -ltoxencryptsave
+Libs: -L${libdir} -ltoxencryptsave
+Libs.private: @toxencryptsave_PKGCONFIG_LIBS@
 Cflags: -I${includedir}
