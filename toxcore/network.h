@@ -33,6 +33,11 @@
 #include "ccompat.h"
 #include "logger.h"
 
+#ifdef HAVE_LIBEV
+#include <ev.h>
+#elif HAVE_LIBEVENT
+#include <event2/event.h>
+#endif
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -316,6 +321,14 @@ typedef struct {
     uint16_t port;
     /* Our UDP socket. */
     Socket sock;
+#ifdef HAVE_LIBEV
+    struct {
+        ev_io listener;
+        struct ev_loop *dispatcher;
+    } sock_listener;
+#elif HAVE_LIBEVENT
+    struct event *sock_listener;
+#endif
 } Networking_Core;
 
 /* Run this before creating sockets.
@@ -389,7 +402,8 @@ int net_connect(Socket sock, IP_Port ip_port);
  * Skip all addresses with socktype != type (use type = -1 to get all addresses)
  * To correctly deallocate array memory use net_freeipport()
  *
- * return number of elements in res array.
+ * return number of elements in res array
+ * and -1 on error.
  */
 int32_t net_getipport(const char *node, IP_Port **res, int type);
 

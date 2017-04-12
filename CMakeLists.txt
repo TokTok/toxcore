@@ -15,7 +15,7 @@ set(CMAKE_MODULE_PATH ${toxcore_SOURCE_DIR}/cmake)
 # versions in a synchronised way.
 set(PROJECT_VERSION_MAJOR "0")
 set(PROJECT_VERSION_MINOR "1")
-set(PROJECT_VERSION_PATCH "6")
+set(PROJECT_VERSION_PATCH "7")
 set(PROJECT_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
 
 # set .so library version / following libtool scheme
@@ -75,7 +75,7 @@ macro(add_flag flag)
   add_cflag(${flag})
   add_cxxflag(${flag})
 endmacro()
-  
+
 if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   # Set standard version for compiler.
   add_cflag("-std=c99")
@@ -170,12 +170,23 @@ if(ASAN)
   set(CMAKE_REQUIRED_LIBRARIES "${SAFE_CMAKE_REQUIRED_LIBRARIES}")
 endif()
 
+option(BUILD_TOXAV "Whether to build the tox AV library" ON)
+
 include(Dependencies)
 
-if(OPUS_FOUND AND VPX_FOUND)
-  set(BUILD_TOXAV TRUE)
-else()
-  set(BUILD_TOXAV FALSE)
+if (BUILD_TOXAV)
+  if(NOT OPUS_FOUND)
+    message(SEND_ERROR "Option BUILD_TOXAV is enabled but required library OPUS was not found.")
+  endif()
+  if(NOT VPX_FOUND)
+    message(SEND_ERROR "Option BUILD_TOXAV is enabled but required library VPX was not found.")
+  endif()
+endif()
+
+if(LIBEV_FOUND)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_LIBEV")
+elseif(LIBEVENT_FOUND)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_LIBEVENT")
 endif()
 
 ################################################################################
@@ -227,6 +238,18 @@ endif()
 if(RT_LIBRARIES)
   target_link_modules(toxnetwork ${RT_LIBRARIES})
   set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-lrt")
+endif()
+
+if(LIBEV_FOUND)
+  target_link_modules(toxnetwork ${LIBEV_LIBRARIES})
+  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-lev")
+elseif(LIBEVENT_FOUND)
+  target_link_modules(toxnetwork ${LIBEVENT_LIBRARIES})
+  if(NOT WIN32)
+    set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-levent -levent_pthreads")
+  else()
+    set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-levent")
+  endif()
 endif()
 
 if(WIN32)
@@ -420,6 +443,7 @@ auto_test(resource_leak)
 auto_test(save_friend)
 auto_test(skeleton)
 auto_test(tox)
+auto_test(tox_loop)
 auto_test(tox_many)
 auto_test(tox_many_tcp)
 auto_test(tox_one)
@@ -464,6 +488,7 @@ if(BOOTSTRAP_DAEMON)
       other/bootstrap_node_packets.c
       other/bootstrap_node_packets.h)
     target_link_modules(tox-bootstrapd toxnetcrypto ${LIBCONFIG_LIBRARIES})
+    install(TARGETS tox-bootstrapd RUNTIME DESTINATION bin)
   endif()
 endif()
 

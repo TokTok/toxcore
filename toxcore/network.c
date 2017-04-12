@@ -797,6 +797,16 @@ void kill_networking(Networking_Core *net)
         kill_sock(net->sock);
     }
 
+#ifdef HAVE_LIBEV
+    ev_io_stop(net->sock_listener.dispatcher, &net->sock_listener.listener);
+#elif HAVE_LIBEVENT
+
+    if (net->sock_listener) {
+        event_free(net->sock_listener);
+    }
+
+#endif
+
     free(net);
 }
 
@@ -1213,16 +1223,18 @@ int32_t net_getipport(const char *node, IP_Port **res, int type)
 {
     struct addrinfo *infos;
     int ret = getaddrinfo(node, NULL, NULL, &infos);
+    *res = NULL;
 
     if (ret != 0) {
         return -1;
     }
 
+    // Used to avoid malloc parameter overflow
+    const size_t MAX_COUNT = MIN(SIZE_MAX, INT32_MAX) / sizeof(IP_Port);
     struct addrinfo *cur;
+    int32_t count = 0;
 
-    int count = 0;
-
-    for (cur = infos; count < INT32_MAX && cur != NULL; cur = cur->ai_next) {
+    for (cur = infos; count < MAX_COUNT && cur != NULL; cur = cur->ai_next) {
         if (cur->ai_socktype && type > 0 && cur->ai_socktype != type) {
             continue;
         }
@@ -1234,8 +1246,10 @@ int32_t net_getipport(const char *node, IP_Port **res, int type)
         count++;
     }
 
-    if (count == INT32_MAX) {
-        return -1;
+    assert(count <= MAX_COUNT);
+
+    if (count == 0) {
+        return 0;
     }
 
     *res = (IP_Port *)malloc(sizeof(IP_Port) * count);
