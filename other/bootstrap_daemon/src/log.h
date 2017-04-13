@@ -28,8 +28,8 @@
 #include <stdbool.h>
 
 typedef enum LOG_BACKEND {
-    LOG_BACKEND_SYSLOG,
-    LOG_BACKEND_STDOUT
+    LOG_BACKEND_STDOUT,
+    LOG_BACKEND_SYSLOG
 } LOG_BACKEND;
 
 typedef enum LOG_LEVEL {

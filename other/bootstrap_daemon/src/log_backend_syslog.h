@@ -26,7 +26,6 @@
 #define LOG_BACKEND_SYSLOG_H
 
 #include "log.h"
-#include "log_backend.h"
 
 #include <stdarg.h>
 

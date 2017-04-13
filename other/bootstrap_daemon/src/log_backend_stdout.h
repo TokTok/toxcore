@@ -26,12 +26,9 @@
 #define LOG_STDOUT_H
 
 #include "log.h"
-#include "log_backend.h"
 
 #include <stdarg.h>
 
-void log_backend_stdout_open(void);
-void log_backend_stdout_close(void);
 void log_backend_stdout_write(LOG_LEVEL level, const char *format, va_list args);
 
 #endif // LOG_BACKEND_STDOUT_H

@@ -26,14 +26,6 @@
 
 #include <stdio.h>
 
-void log_backend_stdout_open(void)
-{
-}
-
-void log_backend_stdout_close(void)
-{
-}
-
 static FILE *log_backend_stdout_level(LOG_LEVEL level)
 {
     switch (level) {
