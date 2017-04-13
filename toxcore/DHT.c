@@ -54,6 +54,8 @@
 /* Number of get node requests to send to quickly find close nodes. */
 #define MAX_BOOTSTRAP_TIMES 5
 
+#define ASSOC_COUNT 2
+
 /* Compares pk1 and pk2 with pk.
  *
  *  return 0 if both are same distance.
@@ -1591,8 +1593,11 @@ static uint8_t do_ping_and_sendnode_requests(DHT *dht, uint64_t *lastgetnode, co
         /* If node is not dead. */
         Client_data *client = &list[i];
 
-        /* WARNING: Client_data should store assoc in exectly this order: assoc4, assoc6 */
-        for (IPPTsPng *assoc = &client->assoc6; assoc >= &client->assoc4; assoc--) {
+        IPPTsPng *assocs[ASSOC_COUNT] = { &client->assoc6, &client->assoc4 };
+
+        for (size_t i = 0; i < ASSOC_COUNT; i++) {
+            IPPTsPng *assoc = assocs[i];
+
             if (!is_timeout(assoc->timestamp, KILL_NODE_TIMEOUT)) {
                 sort = 0;
                 not_kill++;
@@ -1686,8 +1691,11 @@ static void do_Close(DHT *dht)
         for (size_t i = 0; i < LCLIENT_LIST; i++) {
             Client_data *client = &dht->close_clientlist[i];
 
-            /* WARNING: Client_data should store assoc in exectly this order: assoc4, assoc6 */
-            for (IPPTsPng *assoc = &client->assoc6; assoc >= &client->assoc4; assoc--) {
+            IPPTsPng *assocs[ASSOC_COUNT] = { &client->assoc6, &client->assoc4 };
+
+            for (size_t j = 0; j < ASSOC_COUNT; j++) {
+                IPPTsPng *assoc = assocs[j];
+
                 if (assoc->timestamp) {
                     assoc->timestamp = badonly;
                 }
@@ -1744,13 +1752,14 @@ int route_packet(const DHT *dht, const uint8_t *public_key, const uint8_t *packe
     for (uint32_t i = 0; i < LCLIENT_LIST; ++i) {
         if (id_equal(public_key, dht->close_clientlist[i].public_key)) {
             const Client_data *client = &dht->close_clientlist[i];
+            const IPPTsPng *assocs[ASSOC_COUNT] = { &client->assoc6, &client->assoc4 };
 
-            if (ip_isset(&client->assoc6.ip_port.ip)) {
-                return sendpacket(dht->net, client->assoc6.ip_port, packet, length);
-            }
+            for (size_t j = 0; j < ASSOC_COUNT; j++) {
+                const IPPTsPng *assoc = assocs[j];
 
-            if (ip_isset(&client->assoc4.ip_port.ip)) {
-                return sendpacket(dht->net, client->assoc4.ip_port, packet, length);
+                if (ip_isset(&assoc->ip_port.ip)) {
+                    return sendpacket(dht->net, assoc->ip_port, packet, length);
+                }
             }
 
             break;
@@ -1871,8 +1880,11 @@ int route_tofriend(const DHT *dht, const uint8_t *friend_id, const uint8_t *pack
 
         client = &dht_friend->client_list[i];
 
-        /* WARNING: Client_data should store assoc in exectly this order: assoc4, assoc6 */
-        for (IPPTsPng *assoc = &client->assoc4; assoc <= &client->assoc6; assoc++) {
+        const IPPTsPng *assocs[ASSOC_COUNT] = { &client->assoc4, &client->assoc6 };
+
+        for (size_t j = 0; j < ASSOC_COUNT; j++) {
+            const IPPTsPng *assoc = assocs[j];
+
             /* If ip is not zero and node is good. */
             if (ip_isset(&assoc->ret_ip_port.ip) && !is_timeout(assoc->ret_timestamp, BAD_NODE_TIMEOUT)) {
                 int retval = sendpacket(dht->net, assoc->ip_port, packet, length);
@@ -1912,8 +1924,11 @@ static int routeone_tofriend(DHT *dht, const uint8_t *friend_id, const uint8_t *
     for (uint32_t i = 0; i < MAX_FRIEND_CLIENTS; ++i) {
         client = &dht_friend->client_list[i];
 
-        /* WARNING: Client_data should store assoc in exectly this order: assoc4, assoc6 */
-        for (IPPTsPng *assoc = &client->assoc4; assoc <= &client->assoc6; assoc++) {
+        const IPPTsPng *assocs[ASSOC_COUNT] = { &client->assoc4, &client->assoc6 };
+
+        for (size_t j = 0; j < ASSOC_COUNT; j++) {
+            const IPPTsPng *assoc = assocs[j];
+
             /* If ip is not zero and node is good. */
             if (ip_isset(&assoc->ret_ip_port.ip) && !is_timeout(assoc->ret_timestamp, BAD_NODE_TIMEOUT)) {
                 ip_list[n] = assoc->ip_port;

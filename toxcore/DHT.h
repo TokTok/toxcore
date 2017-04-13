@@ -135,9 +135,6 @@ typedef struct {
     uint64_t    ret_timestamp;
 } IPPTsPng;
 
-/* WARNING: Client_data should store assoc in exectly this order: assoc4, assoc6.
- * Because this order used to apply assoc changes using `for` loop.
- */
 typedef struct {
     uint8_t     public_key[CRYPTO_PUBLIC_KEY_SIZE];
     IPPTsPng    assoc4;
