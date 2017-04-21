@@ -521,6 +521,10 @@ static int delpeer(Group_Chats *g_c, int groupnumber, int peer_index, void *user
         remove_close_conn(g_c, groupnumber, friendcon_id);
     }
 
+    if (g_c->group_namelistchange) {
+        g_c->group_namelistchange(g_c->m, groupnumber, peer_index, CHAT_CHANGE_PEER_DEL, userdata);
+    }
+
     --g->numpeers;
 
     void *peer_object = g->group[peer_index].object;
@@ -540,10 +544,6 @@ static int delpeer(Group_Chats *g_c, int groupnumber, int peer_index, void *user
         }
 
         g->group = temp;
-    }
-
-    if (g_c->group_namelistchange) {
-        g_c->group_namelistchange(g_c->m, groupnumber, peer_index, CHAT_CHANGE_PEER_DEL, userdata);
     }
 
     if (g->peer_on_leave) {
