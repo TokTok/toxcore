@@ -416,6 +416,11 @@ elseif(FORMAT_TEST)
   message(FATAL_ERROR "format_test can not be run, because either APIDSL (${APIDSL}) or ASTYLE (${ASTYLE}) could not be found")
 endif()
 
+# Test support library
+# --------------------
+add_library(fakenet SHARED
+  auto_tests/fakenet.cc)
+
 function(auto_test target)
   if(CHECK_FOUND)
     add_c_executable(auto_${target}_test auto_tests/${target}_test.c)
