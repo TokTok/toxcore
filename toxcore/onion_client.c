@@ -922,7 +922,7 @@ int send_onion_data(Onion_Client *onion_c, int friend_num, const uint8_t *data, 
         }
     }
 
-    if (num_good < (num_nodes / 4) + 1) {
+    if (num_good < (num_nodes - 1) / 4 + 1) {
         return -1;
     }
 
