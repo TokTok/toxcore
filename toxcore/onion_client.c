@@ -1513,7 +1513,7 @@ static void do_announce(Onion_Client *onion_c)
             path_nodes = onion_c->path_nodes;
         }
 
-        if (count < (uint32_t)rand() % MAX_ONION_CLIENTS_ANNOUNCE) {
+        if (count <= (uint32_t)rand() % MAX_ONION_CLIENTS_ANNOUNCE) {
             if (num_nodes != 0) {
                 for (i = 0; i < (MAX_ONION_CLIENTS_ANNOUNCE / 2); ++i) {
                     unsigned int num = rand() % num_nodes;
