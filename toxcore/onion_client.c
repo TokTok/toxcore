@@ -1428,16 +1428,18 @@ static void do_friend(Onion_Client *onion_c, uint16_t friendnum)
                 n = (MAX_ONION_CLIENTS / 2);
             }
 
-            if (num_nodes != 0) {
-                unsigned int j;
+            if (count <= (uint32_t)rand() % MAX_ONION_CLIENTS) {
+                if (num_nodes != 0) {
+                    unsigned int j;
 
-                for (j = 0; j < n; ++j) {
-                    unsigned int num = rand() % num_nodes;
-                    client_send_announce_request(onion_c, friendnum + 1, onion_c->path_nodes[num].ip_port,
-                                                 onion_c->path_nodes[num].public_key, 0, ~0);
+                    for (j = 0; j < n; ++j) {
+                        unsigned int num = rand() % num_nodes;
+                        client_send_announce_request(onion_c, friendnum + 1, onion_c->path_nodes[num].ip_port,
+                                onion_c->path_nodes[num].public_key, 0, ~0);
+                    }
+
+                    ++onion_c->friends_list[friendnum].run_count;
                 }
-
-                ++onion_c->friends_list[friendnum].run_count;
             }
         } else {
             ++onion_c->friends_list[friendnum].run_count;
