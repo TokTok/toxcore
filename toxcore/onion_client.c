@@ -584,6 +584,7 @@ static int client_add_to_list(Onion_Client *onion_c, uint32_t num, const uint8_t
     }
 
     if (index == -1) {
+        set_path_timeouts(onion_c, num, path_num);
         return 0;
     }
 
