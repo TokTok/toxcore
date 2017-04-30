@@ -32,7 +32,7 @@
 #define MAX_ONION_CLIENTS 8
 #define MAX_ONION_CLIENTS_ANNOUNCE 12 /* Number of nodes to announce ourselves to. */
 #define ONION_NODE_PING_INTERVAL 15
-#define ONION_NODE_TIMEOUT (ONION_NODE_PING_INTERVAL * 3)
+#define ONION_NODE_TIMEOUT ONION_NODE_PING_INTERVAL
 
 /* The interval in seconds at which to tell our friends where we are */
 #define ONION_DHTPK_SEND_INTERVAL 30
@@ -49,6 +49,8 @@
 
 #define MAX_STORED_PINGED_NODES 9
 #define MIN_NODE_PING_TIME 10
+
+#define ONION_NODE_MAX_PINGS 3
 
 #define MAX_PATH_NODES 32
 
@@ -71,6 +73,9 @@ typedef struct {
     uint64_t    timestamp;
 
     uint64_t    last_pinged;
+
+    /* number of times pinged without success. */
+    unsigned int last_pinged_times;
 
     uint32_t    path_used;
 } Onion_Node;
