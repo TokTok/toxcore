@@ -1407,6 +1407,17 @@ static void do_friend(Onion_Client *onion_c, uint16_t friendnum)
     Onion_Node *list_nodes = onion_c->friends_list[friendnum].clients_list;
 
     if (!onion_c->friends_list[friendnum].is_online) {
+        // ensure we get a response from some node roughly once per
+        // (interval / MAX_ONION_CLIENTS)
+        bool ping_random = true;
+        for (i = 0; i < MAX_ONION_CLIENTS; ++i) {
+            if (!(is_timeout(list_nodes[i].timestamp, interval / MAX_ONION_CLIENTS)
+                        && is_timeout(list_nodes[i].last_pinged, ONION_NODE_PING_INTERVAL))) {
+                ping_random = false;
+                break;
+            }
+        }
+
         for (i = 0; i < MAX_ONION_CLIENTS; ++i) {
             if (onion_node_timed_out(&list_nodes[i])) {
                 continue;
@@ -1420,10 +1431,16 @@ static void do_friend(Onion_Client *onion_c, uint16_t friendnum)
                 continue;
             }
 
-            if (is_timeout(list_nodes[i].last_pinged, interval)) {
+            if (list_nodes[i].last_pinged_times >= ONION_NODE_MAX_PINGS) {
+                continue;
+            }
+
+            if (is_timeout(list_nodes[i].last_pinged, interval)
+                || (ping_random && rand() % (MAX_ONION_CLIENTS-i) == 0 )) {
                 if (client_send_announce_request(onion_c, friendnum + 1, list_nodes[i].ip_port, list_nodes[i].public_key, 0, ~0) == 0) {
                     list_nodes[i].last_pinged = unix_time();
                     ++list_nodes[i].last_pinged_times;
+                    ping_random = false;
                 }
             }
         }
