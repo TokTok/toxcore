@@ -613,6 +613,7 @@ static int client_add_to_list(Onion_Client *onion_c, uint32_t num, const uint8_t
 
     if (!stored) {
         list_nodes[index].last_pinged = 0;
+        list_nodes[index].added_time = unix_time();
     }
 
     list_nodes[index].path_used = set_path_timeouts(onion_c, num, path_num);
@@ -1479,6 +1480,9 @@ void oniondata_registerhandler(Onion_Client *onion_c, uint8_t byte, oniondata_ha
 #define ANNOUNCE_INTERVAL_NOT_ANNOUNCED 3
 #define ANNOUNCE_INTERVAL_ANNOUNCED ONION_NODE_PING_INTERVAL
 
+#define TIME_TO_STABLE (ONION_NODE_PING_INTERVAL * 6)
+#define ANNOUNCE_INTERVAL_STABLE (ONION_NODE_PING_INTERVAL * 8)
+
 static void do_announce(Onion_Client *onion_c)
 {
     unsigned int i, count = 0;
@@ -1506,13 +1510,31 @@ static void do_announce(Onion_Client *onion_c)
 
         if (list_nodes[i].is_stored && path_exists(&onion_c->onion_paths_self, list_nodes[i].path_used)) {
             interval = ANNOUNCE_INTERVAL_ANNOUNCED;
+
+            uint32_t pathnum = list_nodes[i].path_used % NUMBER_ONION_PATHS;
+
+            /* A node/path is considered 'stable', and can be pinged less
+             * aggressively, if it has survived for at least TIME_TO_STABLE
+             * and the latest packets sent to it are not timing out.
+             */
+            if (is_timeout(list_nodes[i].added_time, TIME_TO_STABLE)
+                    && ! (list_nodes[i].last_pinged_times > 0
+                        && is_timeout(list_nodes[i].last_pinged, ANNOUNCE_INTERVAL_ANNOUNCED / 2))
+                    && is_timeout(onion_c->onion_paths_self.path_creation_time[pathnum], TIME_TO_STABLE)
+                    && ! (onion_c->onion_paths_self.last_path_used_times[pathnum] > 0
+                        && is_timeout(onion_c->onion_paths_self.last_path_used[pathnum], ONION_PATH_TIMEOUT))) {
+                interval = ANNOUNCE_INTERVAL_STABLE;
+            }
         }
 
-        if (is_timeout(list_nodes[i].last_pinged, interval)) {
+        if (is_timeout(list_nodes[i].last_pinged, interval)
+                || (is_timeout(onion_c->last_announce, ONION_NODE_PING_INTERVAL)
+                    && rand() % (MAX_ONION_CLIENTS_ANNOUNCE-i) == 0 )) {
             if (client_send_announce_request(onion_c, 0, list_nodes[i].ip_port, list_nodes[i].public_key,
                                              list_nodes[i].ping_id, list_nodes[i].path_used) == 0) {
                 list_nodes[i].last_pinged = unix_time();
                 ++list_nodes[i].last_pinged_times;
+                onion_c->last_announce = unix_time();
             }
         }
     }

@@ -54,10 +54,12 @@
 
 #define MAX_PATH_NODES 32
 
-/* If no packets are received within that interval tox will
- * be considered offline.
+/* If no announce response packets are received within this interval tox will
+ * be considered offline. We give time for a node to be pinged often enough
+ * that it times out, which leads to the network being thoroughly tested as it
+ * is replaced.
  */
-#define ONION_OFFLINE_TIMEOUT (ONION_NODE_PING_INTERVAL * 1.25)
+#define ONION_OFFLINE_TIMEOUT (ONION_NODE_PING_INTERVAL * (ONION_NODE_MAX_PINGS+2))
 
 /* Onion data packet ids. */
 #define ONION_DATA_FRIEND_REQ CRYPTO_PACKET_FRIEND_REQ
@@ -69,6 +71,8 @@ typedef struct {
     uint8_t     ping_id[ONION_PING_ID_SIZE];
     uint8_t     data_public_key[CRYPTO_PUBLIC_KEY_SIZE];
     uint8_t     is_stored;
+
+    uint64_t    added_time;
 
     uint64_t    timestamp;
 
@@ -138,6 +142,7 @@ typedef struct {
     uint16_t       num_friends;
 
     Onion_Node clients_announce_list[MAX_ONION_CLIENTS_ANNOUNCE];
+    uint64_t last_announce;
 
     Onion_Client_Paths onion_paths_self;
     Onion_Client_Paths onion_paths_friends;
