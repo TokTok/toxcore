@@ -567,6 +567,10 @@ static int client_add_to_list(Onion_Client *onion_c, uint32_t num, const uint8_t
             return -1;
         }
 
+        if (is_stored == 1) {
+            onion_c->friends_list[num - 1].last_reported_announced = unix_time();
+        }
+
         list_nodes = onion_c->friends_list[num - 1].clients_list;
         reference_id = onion_c->friends_list[num - 1].real_public_key;
         list_length = MAX_ONION_CLIENTS;
@@ -1387,6 +1391,9 @@ static void populate_path_nodes_tcp(Onion_Client *onion_c)
 
 #define RUN_COUNT_FRIEND_ANNOUNCE_BEGINNING 17
 
+#define ONION_FRIEND_BACKOFF_FACTOR 4
+#define ONION_FRIEND_MAX_PING_INTERVAL (5*60*MAX_ONION_CLIENTS)
+
 static void do_friend(Onion_Client *onion_c, uint16_t friendnum)
 {
     if (friendnum >= onion_c->num_friends) {
@@ -1401,6 +1408,19 @@ static void do_friend(Onion_Client *onion_c, uint16_t friendnum)
 
     if (onion_c->friends_list[friendnum].run_count < RUN_COUNT_FRIEND_ANNOUNCE_BEGINNING) {
         interval = ANNOUNCE_FRIEND_BEGINNING;
+    }
+    else {
+        if (onion_c->friends_list[friendnum].last_reported_announced == 0)
+            onion_c->friends_list[friendnum].last_reported_announced = unix_time();
+
+        uint64_t backoff_interval = (unix_time() - onion_c->friends_list[friendnum].last_reported_announced)
+            / ONION_FRIEND_BACKOFF_FACTOR;
+        if (backoff_interval > ONION_FRIEND_MAX_PING_INTERVAL) {
+            backoff_interval = ONION_FRIEND_MAX_PING_INTERVAL;
+        }
+        if (interval < backoff_interval) {
+            interval = backoff_interval;
+        }
     }
 
     unsigned int i, count = 0;

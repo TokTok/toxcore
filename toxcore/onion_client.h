@@ -110,6 +110,8 @@ typedef struct {
     uint8_t temp_public_key[CRYPTO_PUBLIC_KEY_SIZE];
     uint8_t temp_secret_key[CRYPTO_SECRET_KEY_SIZE];
 
+    uint64_t last_reported_announced;
+
     uint64_t last_dht_pk_onion_sent;
     uint64_t last_dht_pk_dht_sent;
 
