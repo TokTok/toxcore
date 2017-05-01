@@ -1530,8 +1530,15 @@ static void do_announce(Onion_Client *onion_c)
         if (is_timeout(list_nodes[i].last_pinged, interval)
                 || (is_timeout(onion_c->last_announce, ONION_NODE_PING_INTERVAL)
                     && rand() % (MAX_ONION_CLIENTS_ANNOUNCE-i) == 0 )) {
+            uint32_t path_to_use = list_nodes[i].path_used;
+            if (list_nodes[i].last_pinged_times == ONION_NODE_MAX_PINGS - 1
+                    && is_timeout(list_nodes[i].added_time, TIME_TO_STABLE)) {
+                /* Last chance for a long-lived node - try a random path */
+                path_to_use = ~0;
+            }
+
             if (client_send_announce_request(onion_c, 0, list_nodes[i].ip_port, list_nodes[i].public_key,
-                                             list_nodes[i].ping_id, list_nodes[i].path_used) == 0) {
+                                             list_nodes[i].ping_id, path_to_use) == 0) {
                 list_nodes[i].last_pinged = unix_time();
                 ++list_nodes[i].last_pinged_times;
                 onion_c->last_announce = unix_time();
