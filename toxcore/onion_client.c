@@ -219,8 +219,8 @@ static bool path_timed_out(Onion_Client_Paths *onion_paths, uint32_t pathnum)
 {
     pathnum = pathnum % NUMBER_ONION_PATHS;
 
-    bool new = onion_paths->last_path_success[pathnum] == onion_paths->path_creation_time[pathnum];
-    uint64_t timeout = new ? ONION_PATH_FIRST_TIMEOUT : ONION_PATH_TIMEOUT;
+    bool is_new = onion_paths->last_path_success[pathnum] == onion_paths->path_creation_time[pathnum];
+    uint64_t timeout = is_new ? ONION_PATH_FIRST_TIMEOUT : ONION_PATH_TIMEOUT;
 
     return ((onion_paths->last_path_used_times[pathnum] >= ONION_PATH_MAX_NO_RESPONSE_USES
                 && is_timeout(onion_paths->last_path_used[pathnum], timeout))
