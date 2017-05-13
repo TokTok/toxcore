@@ -32,7 +32,7 @@
 
 static const char *newtitle = "kitten over darknet";
 
-static void cbtitlechange(Tox *tox, uint32_t conference_number, uint32_t peer_number, uint8_t *title, size_t length,
+static void cbtitlechange(Tox *tox, uint32_t conference_number, uint32_t peer_number, const uint8_t *title, size_t length,
                           void *user_data)
 {
     if (!memcmp(title, newtitle, tox_conference_get_title_size(tox, conference_number, NULL))) {
@@ -53,7 +53,7 @@ int main(void)
     tox_options_default(&to);
     t = tox_new(&to, NULL);
 
-    tox_callback_conference_title(t, cbtitlechange);
+    tox_callback_conference_title(t, &cbtitlechange);
 
     if ((conference_number = tox_conference_new(t, &conference_err)) == UINT32_MAX) {
         tox_kill(t);
