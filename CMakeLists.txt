@@ -48,6 +48,13 @@ include(StrictAbi)
 
 set(CMAKE_MACOSX_RPATH ON)
 
+# Default compile options for target none, DEBUG and RELEASE
+set(CMAKE_C_FLAGS "-g")
+set(CMAKE_CXX_FLAGS "-g")
+set(CMAKE_C_FLAGS_DEBUG "-g3")
+set(CMAKE_CXX_FLAGS_DEBUG "-g3")
+set(CMAKE_C_FLAGS_RELEASE "")
+set(CMAKE_CXX_FLAGS_RELEASE "")
   
 if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   # Set standard version for compiler.
