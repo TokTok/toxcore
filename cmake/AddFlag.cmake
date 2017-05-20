@@ -28,6 +28,12 @@ macro(add_x_cxxflag flag mode)
   endif()
 endmacro()
 
+##
+ # Allows adding compile flags to different compile modes for c++ 
+ # 
+ # @flag Flag that will be added as compile instructions for c++
+ # @mode Specifies a compile mode like debug or release.
+ #
 macro(add_x_cflag flag mode)
   string(REGEX REPLACE "[^a-zA-Z0-9_]" "_" var ${flag})
   if(NOT DEFINED HAVE_C_${flag})
@@ -45,6 +51,13 @@ macro(add_x_cflag flag mode)
   endif()
 endmacro()
 
+##
+ # Allows adding a debug compile flag for c and c++.
+ #
+ # This flag will be used for debug build
+ # 
+ # @flag Flag that will be added as debug compile instruction for c and c++.
+ #
 macro(add_debug_flag flag)
 	if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
     add_x_cxxflag(${flag} "DEBUG")
@@ -52,39 +65,95 @@ macro(add_debug_flag flag)
     endif()
 endmacro()
 
+##
+ # Allows adding a debug compile flag for c.
+ #
+ # This flag will be used for debug build
+ # 
+ # @flag Flag that will be added as debug compile instruction for c.
+ #
 macro(add_debug_cflag flag)
-	if(${CMAKE_BUILD_TYPE} EQUAL Debug)
+	if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
     add_x_cflag(${flag} "DEBUG")
     endif()
 endmacro()
 
+##
+ # Allows adding a debug compile flag for c++.
+ #
+ # This flag will be used for debug build
+ # 
+ # @flag Flag that will be added as debug compile instruction for c++.
+ #
 macro(add_debug_cxxflag flag)
-	if(${CMAKE_BUILD_TYPE} EQUAL Debug)
+	if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
     add_x_cxxflag(${flag} "DEBUG")
     endif()
 endmacro()
 
+##
+ # Allows adding a release compile flag for c and c++.
+ #
+ # This flag will be used for release build
+ # 
+ # @flag Flag that will be added as release compile instruction for c++.
+ #
 macro(add_release_flag flag)
     add_x_cxxflag(${flag} "RELEASE")
     add_x_cflag(${flag} "RELEASE")
 endmacro()
 
+##
+ # Allows adding a release compile flag for c.
+ #
+ # This flag will be used for release build
+ # 
+ # @flag Flag that will be added as release compile instruction for c.
+ #
 macro(add_release_cflag flag)
     add_x_cflag(${flag} "RELEASE")
 endmacro()
 
+##
+ # Allows adding a release compile flag for c++.
+ #
+ # This flag will be used for release build.
+ # 
+ # @flag Flag that will be added as release compile instruction for c++.
+ #
 macro(add_release_cxxflag flag)
     add_x_cxxflag(${flag} "RELEASE")
 endmacro()
 
+##
+ # Allows adding a default compile flag for c++.
+ #
+ # This flag will be used for every build
+ # 
+ # @flag Flag that will be added as default compile instruction for c++.
+ #
 macro(add_cxxflag flag)
     add_x_cxxflag(${flag} "")
 endmacro()
 
+##
+ # Allows adding a default compile flag for c.
+ # 
+ # This flag will be used for every build
+ #
+ # @flag Flag that will be added as default compile instruction for c.
+ #
 macro(add_cflag flag)
     add_x_cflag(${flag} "")
 endmacro()
 
+##
+ # Allows adding a default compile flag for c and c++.
+ #
+ # This flag will be used for every build
+ #
+ # @flag Flag that will be added as default compile instruction.
+ #
 macro(add_flag flag)
   add_x_cflag(${flag} "")
   add_x_cxxflag(${flag} "")
