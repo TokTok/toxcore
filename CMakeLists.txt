@@ -81,6 +81,8 @@ if(NOT MSVC)
     add_release_flag("-O2")
   endif()
   
+  # Disable all warnings for release
+  add_release_flag("-w")
   # Add all warning flags we can.
   add_debug_flag("-Weverything" every_exist)
   if(NOT ${every_exist})
