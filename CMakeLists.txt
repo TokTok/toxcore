@@ -63,6 +63,7 @@ else()
 endif()
 
 
+if(NOT MSVC)
   # Set standard version for compiler.
   add_cflag("-std=c99")
   add_cxxflag("-std=c++11")
@@ -131,7 +132,6 @@ endif()
     add_debug_cxxflag("-Wno-old-style-cast")
     add_debug_cxxflag("-Wno-variadic-macros")
     add_debug_cxxflag("-Wno-vla-extension")
-  endif()
 
   option(ERROR_ON_WARNING "Make compilation error on a warning" OFF)
   if(ERROR_ON_WARNING)
