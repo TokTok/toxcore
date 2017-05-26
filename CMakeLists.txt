@@ -76,9 +76,8 @@ if(NOT MSVC)
   
   # Optimization flag
   add_debug_flag("-O0")
-  if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
-    add_release_flag("-Ofast")
-  else()
+  add_release_flag("-Ofast" fast_exist)
+  if(NOT fast_exist)
     add_release_flag("-O2")
   endif()
   
