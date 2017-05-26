@@ -82,12 +82,12 @@ if(NOT MSVC)
   endif()
   
   # Add all warning flags we can.
-  add_debug_flag("-Wall")
-  add_debug_flag("-Wextra")
-  add_debug_flag("-Weverything")
+  add_debug_flag("-Weverything" every_exist)
+  if(NOT ${every_exist})
+        add_debug_flag("-Wall")
+        add_debug_flag("-Wextra")
+  endif()
 
-  option(WARNINGS "Disable some annoying compiler warnings" OFF)
-  if(WARNINGS)
     # Disable specific warning flags for both C and C++.
     add_debug_flag("-Wno-cast-align")
     add_debug_flag("-Wno-conversion")
