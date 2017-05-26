@@ -127,7 +127,28 @@ autoreconf -i
 make
 sudo make install
 ```
+or
 
+```bash
+git clone https://github.com/TokTok/c-toxcore.git c-toxcore
+cd c-toxcore
+mkdir build
+cd build
+cmake ..
+make
+sudo make install
+```
+For release build use:
+
+```bash
+cmake -DCMAKE_BUILD_TYPE=Release ..
+```
+
+For Debug build use:
+
+```bash
+cmake -DCMAKE_BUILD_TYPE=Debug ..
+```
 
 ### OS X:
 
