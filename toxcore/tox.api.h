@@ -179,7 +179,7 @@ const VERSION_MINOR                = 1;
  * The patch or revision number. Incremented when bugfixes are applied without
  * changing any functionality or API or ABI.
  */
-const VERSION_PATCH                = 7;
+const VERSION_PATCH                = 8;
 
 /**
  * A macro to check at preprocessing time whether the client code is compatible
@@ -837,64 +837,6 @@ const uint32_t iteration_interval();
  * milliseconds.
  */
 void iterate(any user_data);
-
-
-/**
- * Error codes for $loop().
- */
-error for loop {
-  /**
-   * Invalid arguments passed.
-   */
-  NULL,
-  /**
-   * Failed running events dispatcher.
-   */
-  BREAK,
-  /**
-   * Failed running select().
-   */
-  SELECT,
-  /**
-   * Failed getting sockets file descriptors.
-   */
-  GET_FDS,
-}
-
-
-/**
- * Run $iterate() any time a packet arrives, returns after ${loop.stop}() or ${kill}().
- */
-bool loop(any user_data) with error for loop;
-
-
-namespace loop {
-
-  /**
-   * Tell $loop() to return.
-   */
-  void stop();
-
-  /**
-   * This callback is invoked when $loop() calls into $iterate(), the client can lock a mutex here.
-   */
-  event begin const {
-    /**
-     * No extra parameters.
-     */
-    typedef void();
-  }
-
-  /**
-   * This callback is invoked when $loop() is finished with $iterate(), the client can unlock the mutex here.
-   */
-  event end const {
-    /**
-     * No extra parameters.
-     */
-    typedef void();
-  }
-}
 
 
 /*******************************************************************************

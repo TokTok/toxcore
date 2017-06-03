@@ -794,16 +794,6 @@ void kill_networking(Networking_Core *net)
         kill_sock(net->sock);
     }
 
-#ifdef HAVE_LIBEV
-    ev_io_stop(net->sock_listener.dispatcher, &net->sock_listener.listener);
-#elif HAVE_LIBEVENT
-
-    if (net->sock_listener) {
-        event_free(net->sock_listener);
-    }
-
-#endif
-
     free(net);
 }
 
@@ -822,7 +812,7 @@ int ip_equal(const IP *a, const IP *b)
 
     /* same family */
     if (a->family == b->family) {
-        if (a->family == AF_INET) {
+        if (a->family == AF_INET || a->family == TCP_INET) {
             struct in_addr addr_a;
             struct in_addr addr_b;
             fill_addr4(a->ip4, &addr_a);
@@ -830,7 +820,7 @@ int ip_equal(const IP *a, const IP *b)
             return addr_a.s_addr == addr_b.s_addr;
         }
 
-        if (a->family == AF_INET6) {
+        if (a->family == AF_INET6 || a->family == TCP_INET6) {
             return a->ip6.uint64[0] == b->ip6.uint64[0] &&
                    a->ip6.uint64[1] == b->ip6.uint64[1];
         }

@@ -180,7 +180,7 @@ uint32_t tox_version_minor(void);
  * The patch or revision number. Incremented when bugfixes are applied without
  * changing any functionality or API or ABI.
  */
-#define TOX_VERSION_PATCH              7
+#define TOX_VERSION_PATCH              8
 
 uint32_t tox_version_patch(void);
 
@@ -989,75 +989,6 @@ uint32_t tox_iteration_interval(const Tox *tox);
  * milliseconds.
  */
 void tox_iterate(Tox *tox, void *user_data);
-
-/**
- * Error codes for tox_loop().
- */
-typedef enum TOX_ERR_LOOP {
-
-    /**
-     * The function returned successfully.
-     */
-    TOX_ERR_LOOP_OK,
-
-    /**
-     * Invalid arguments passed.
-     */
-    TOX_ERR_LOOP_NULL,
-
-    /**
-     * Failed running events dispatcher.
-     */
-    TOX_ERR_LOOP_BREAK,
-
-    /**
-     * Failed running select().
-     */
-    TOX_ERR_LOOP_SELECT,
-
-    /**
-     * Failed getting sockets file descriptors.
-     */
-    TOX_ERR_LOOP_GET_FDS,
-
-} TOX_ERR_LOOP;
-
-
-/**
- * Run tox_iterate() any time a packet arrives, returns after tox_loop_stop() or tox_kill().
- */
-bool tox_loop(Tox *tox, void *user_data, TOX_ERR_LOOP *error);
-
-/**
- * Tell tox_loop() to return.
- */
-void tox_loop_stop(Tox *tox);
-
-/**
- * No extra parameters.
- */
-typedef void tox_loop_begin_cb(Tox *tox, void *user_data);
-
-
-/**
- * Set the callback for the `loop_begin` event. Pass NULL to unset.
- *
- * This callback is invoked when tox_loop() calls into tox_iterate(), the client can lock a mutex here.
- */
-void tox_callback_loop_begin(Tox *tox, tox_loop_begin_cb *callback);
-
-/**
- * No extra parameters.
- */
-typedef void tox_loop_end_cb(Tox *tox, void *user_data);
-
-
-/**
- * Set the callback for the `loop_end` event. Pass NULL to unset.
- *
- * This callback is invoked when tox_loop() is finished with tox_iterate(), the client can unlock the mutex here.
- */
-void tox_callback_loop_end(Tox *tox, tox_loop_end_cb *callback);
 
 
 /*******************************************************************************

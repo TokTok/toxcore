@@ -15,7 +15,7 @@ set(CMAKE_MODULE_PATH ${toxcore_SOURCE_DIR}/cmake)
 # versions in a synchronised way.
 set(PROJECT_VERSION_MAJOR "0")
 set(PROJECT_VERSION_MINOR "1")
-set(PROJECT_VERSION_PATCH "7")
+set(PROJECT_VERSION_PATCH "8")
 set(PROJECT_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
 
 # set .so library version / following libtool scheme
@@ -183,12 +183,6 @@ if (BUILD_TOXAV)
   endif()
 endif()
 
-if(LIBEV_FOUND)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_LIBEV")
-elseif(LIBEVENT_FOUND)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_LIBEVENT")
-endif()
-
 ################################################################################
 #
 # :: Tox Core Library
@@ -238,18 +232,6 @@ endif()
 if(RT_LIBRARIES)
   target_link_modules(toxnetwork ${RT_LIBRARIES})
   set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-lrt")
-endif()
-
-if(LIBEV_FOUND)
-  target_link_modules(toxnetwork ${LIBEV_LIBRARIES})
-  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-lev")
-elseif(LIBEVENT_FOUND)
-  target_link_modules(toxnetwork ${LIBEVENT_LIBRARIES})
-  if(NOT WIN32)
-    set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-levent -levent_pthreads")
-  else()
-    set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-levent")
-  endif()
 endif()
 
 if(WIN32)
@@ -379,6 +361,15 @@ target_link_modules(toxencryptsave toxcore)
 
 find_program(SPECTEST NAMES tox-spectest)
 
+if(NOT SPECTEST)
+  find_program(STACK NAMES stack)
+  if(STACK)
+    set(SPECTEST
+      ${STACK} --stack-yaml ${toxcore_SOURCE_DIR}/../stack.yaml exec --
+      tox-spectest)
+  endif()
+endif()
+
 if(SPECTEST AND MSGPACK_FOUND)
   add_c_executable(toxcore-sut
     testing/hstox/binary_decode.c
@@ -443,7 +434,6 @@ auto_test(resource_leak)
 auto_test(save_friend)
 auto_test(skeleton)
 auto_test(tox)
-auto_test(tox_loop)
 auto_test(tox_many)
 auto_test(tox_many_tcp)
 auto_test(tox_one)
