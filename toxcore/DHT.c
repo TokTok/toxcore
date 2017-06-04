@@ -83,7 +83,8 @@ int id_closest(const uint8_t *pk, const uint8_t *pk1, const uint8_t *pk2)
  */
 static unsigned int bit_by_bit_cmp(const uint8_t *pk1, const uint8_t *pk2)
 {
-    unsigned int i, j = 0;
+    unsigned int i;
+    unsigned int j = 0;
 
     for (i = 0; i < CRYPTO_PUBLIC_KEY_SIZE; ++i) {
         if (pk1[i] == pk2[i]) {
@@ -112,7 +113,8 @@ static unsigned int bit_by_bit_cmp(const uint8_t *pk1, const uint8_t *pk2)
  */
 void get_shared_key(Shared_Keys *shared_keys, uint8_t *shared_key, const uint8_t *secret_key, const uint8_t *public_key)
 {
-    uint32_t num = ~0, curr = 0;
+    uint32_t num = ~0;
+    uint32_t curr = 0;
 
     for (uint32_t i = 0; i < MAX_KEYS_PER_SLOT; ++i) {
         int index = public_key[30] * MAX_KEYS_PER_SLOT + i;
@@ -135,11 +137,9 @@ void get_shared_key(Shared_Keys *shared_keys, uint8_t *shared_key, const uint8_t
                     curr = index;
                 }
             }
-        } else {
-            if (num != 0) {
-                num = 0;
-                curr = index;
-            }
+        } else if (num != 0) {
+            num = 0;
+            curr = index;
         }
     }
 
@@ -286,23 +286,18 @@ int to_host_family(IP *ip)
  */
 int packed_node_size(uint8_t ip_family)
 {
-    if (ip_family == AF_INET) {
-        return PACKED_NODE_SIZE_IP4;
-    }
+    switch (ip_family) {
+        case AF_INET:
+        case TCP_INET:
+            return PACKED_NODE_SIZE_IP4;
 
-    if (ip_family == TCP_INET) {
-        return PACKED_NODE_SIZE_IP4;
-    }
+        case AF_INET6:
+        case TCP_INET6:
+            return PACKED_NODE_SIZE_IP6;
 
-    if (ip_family == AF_INET6) {
-        return PACKED_NODE_SIZE_IP6;
+        default:
+            return -1;
     }
-
-    if (ip_family == TCP_INET6) {
-        return PACKED_NODE_SIZE_IP6;
-    }
-
-    return -1;
 }
 
 
@@ -370,8 +365,7 @@ static int DHT_create_packet(const uint8_t public_key[CRYPTO_PUBLIC_KEY_SIZE],
 
     random_nonce(nonce);
 
-    int encrypted_length = encrypt_data_symmetric(shared_key, nonce,
-                           plain, plain_length, encrypted);
+    int encrypted_length = encrypt_data_symmetric(shared_key, nonce, plain, plain_length, encrypted);
 
     if (encrypted_length == -1) {
         return -1;
