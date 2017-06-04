@@ -52,14 +52,11 @@
 
 #if !(defined(_WIN32) || defined(__WIN32__) || defined(WIN32))
 
-#include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <netdb.h>
-#include <netinet/in.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include <sys/socket.h>
 
 #else
 
@@ -815,7 +812,7 @@ int ip_equal(const IP *a, const IP *b)
 
     /* same family */
     if (a->family == b->family) {
-        if (a->family == AF_INET) {
+        if (a->family == AF_INET || a->family == TCP_INET) {
             struct in_addr addr_a;
             struct in_addr addr_b;
             fill_addr4(a->ip4, &addr_a);
@@ -823,7 +820,7 @@ int ip_equal(const IP *a, const IP *b)
             return addr_a.s_addr == addr_b.s_addr;
         }
 
-        if (a->family == AF_INET6) {
+        if (a->family == AF_INET6 || a->family == TCP_INET6) {
             return a->ip6.uint64[0] == b->ip6.uint64[0] &&
                    a->ip6.uint64[1] == b->ip6.uint64[1];
         }

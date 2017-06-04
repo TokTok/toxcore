@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 2.8.6)
 cmake_policy(VERSION 2.8.6)
 project(toxcore)
-include(CTest)
 
 set(CMAKE_MODULE_PATH ${toxcore_SOURCE_DIR}/cmake)
 
@@ -15,7 +14,7 @@ set(CMAKE_MODULE_PATH ${toxcore_SOURCE_DIR}/cmake)
 # versions in a synchronised way.
 set(PROJECT_VERSION_MAJOR "0")
 set(PROJECT_VERSION_MINOR "1")
-set(PROJECT_VERSION_PATCH "6")
+set(PROJECT_VERSION_PATCH "8")
 set(PROJECT_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
 
 # set .so library version / following libtool scheme
@@ -38,44 +37,16 @@ message("SOVERSION: ${SOVERSION}")
 #
 ################################################################################
 
+include(AddCompilerFlag)
 include(ApiDsl)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
+include(CTest)
 include(MacRpath)
+include(StrictAbi)
 
 set(CMAKE_MACOSX_RPATH ON)
 
-function(add_cflag flag)
-  string(REGEX REPLACE "[^a-zA-Z0-9_]" "_" var ${flag})
-  if(NOT DEFINED HAVE_C${var})
-    message(STATUS "checking for C compiler flag: ${flag}")
-  endif()
-  set(CMAKE_REQUIRED_QUIET TRUE)
-
-  check_c_compiler_flag("${flag}" HAVE_C${var} QUIET)
-  if(HAVE_C${var})
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${flag}" PARENT_SCOPE)
-  endif()
-endfunction()
-
-function(add_cxxflag flag)
-  string(REGEX REPLACE "[^a-zA-Z0-9_]" "_" var ${flag})
-  if(NOT DEFINED HAVE_CXX${var})
-    message(STATUS "checking for C++ compiler flag: ${flag}")
-  endif()
-  set(CMAKE_REQUIRED_QUIET TRUE)
-
-  check_cxx_compiler_flag("${flag}" HAVE_CXX${var} QUIET)
-  if(HAVE_CXX${var})
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${flag}" PARENT_SCOPE)
-  endif()
-endfunction()
-
-macro(add_flag flag)
-  add_cflag(${flag})
-  add_cxxflag(${flag})
-endmacro()
-  
 if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   # Set standard version for compiler.
   add_cflag("-std=c99")
@@ -168,6 +139,10 @@ if(ASAN)
   set(CMAKE_REQUIRED_LIBRARIES "-fsanitize=address")
   add_cflag("-fsanitize=address")
   set(CMAKE_REQUIRED_LIBRARIES "${SAFE_CMAKE_REQUIRED_LIBRARIES}")
+else()
+  # Forbid undefined symbols in shared libraries. This is incompatible with
+  # asan, so it's in the else branch here.
+  add_dllflag("-Wl,-z,defs")
 endif()
 
 option(BUILD_TOXAV "Whether to build the tox AV library" ON)
@@ -201,8 +176,7 @@ set(toxcore_PKGCONFIG_LIBS)
 
 # LAYER 1: Crypto core
 # --------------------
-apidsl(
-  toxcore/crypto_core.api.h)
+apidsl(toxcore/crypto_core.api.h)
 add_module(toxcrypto
   toxcore/ccompat.h
   toxcore/crypto_core.c
@@ -298,8 +272,7 @@ target_link_modules(toxgroup toxmessenger)
 
 # LAYER 8: Public API
 # -------------------
-apidsl(
-  toxcore/tox.api.h)
+apidsl(toxcore/tox.api.h)
 add_module(toxcore
   toxcore/tox_api.c
   toxcore/tox.c
@@ -313,8 +286,7 @@ target_link_modules(toxcore toxgroup)
 ################################################################################
 
 if(BUILD_TOXAV)
-  apidsl(
-    toxav/toxav.api.h)
+  apidsl(toxav/toxav.api.h)
   add_module(toxav
     toxav/audio.c
     toxav/audio.h
@@ -346,8 +318,7 @@ add_module(toxdns
   toxdns/toxdns.c)
 target_link_modules(toxdns toxcore)
 
-apidsl(
-  toxencryptsave/toxencryptsave.api.h)
+apidsl(toxencryptsave/toxencryptsave.api.h)
 add_module(toxencryptsave
   toxencryptsave/toxencryptsave.c
   toxencryptsave/toxencryptsave.h)
@@ -361,7 +332,16 @@ target_link_modules(toxencryptsave toxcore)
 
 find_program(SPECTEST NAMES tox-spectest)
 
-if(SPECTEST AND MSGPACK_FOUND)
+if(NOT SPECTEST)
+  find_program(STACK NAMES stack)
+  if(STACK)
+    set(SPECTEST
+      ${STACK} --stack-yaml ${toxcore_SOURCE_DIR}/../stack.yaml exec --
+      tox-spectest)
+  endif()
+endif()
+
+if(MSGPACK_FOUND)
   add_c_executable(toxcore-sut
     testing/hstox/binary_decode.c
     testing/hstox/binary_encode.c
@@ -373,7 +353,9 @@ if(SPECTEST AND MSGPACK_FOUND)
   target_link_modules(toxcore-sut
     toxcore
     ${MSGPACK_LIBRARIES})
-  add_test(NAME spectest COMMAND ${SPECTEST} $<TARGET_FILE:toxcore-sut>)
+  if(SPECTEST)
+    add_test(NAME spectest COMMAND ${SPECTEST} $<TARGET_FILE:toxcore-sut>)
+  endif()
 endif()
 
 ################################################################################
@@ -430,6 +412,9 @@ auto_test(tox_many_tcp)
 auto_test(tox_one)
 auto_test(tox_strncasecmp)
 auto_test(version)
+# TODO(iphydf): This test is broken. The code needs to be fixed, as the test
+# itself is correct.
+#auto_test(selfname_change_conference)
 
 if(BUILD_TOXAV)
   auto_test(toxav_basic)
@@ -469,6 +454,7 @@ if(BOOTSTRAP_DAEMON)
       other/bootstrap_node_packets.c
       other/bootstrap_node_packets.h)
     target_link_modules(tox-bootstrapd toxnetcrypto ${LIBCONFIG_LIBRARIES})
+    install(TARGETS tox-bootstrapd RUNTIME DESTINATION bin)
   endif()
 endif()
 
@@ -591,45 +577,6 @@ if(BUILD_TOXAV)
   install(FILES
     toxav/toxav.h
     DESTINATION "include/tox")
-endif()
-
-################################################################################
-#
-# :: Strict ABI
-#
-# Enabling the STRICT_ABI flag will generate and use an LD version script.
-# It ensures that the dynamic libraries (libtoxcore.so, libtoxav.so) only
-# export the symbols that are defined in their public API (tox.h and toxav.h,
-# respectively).
-#
-################################################################################
-
-function(make_version_script header ns lib)
-  execute_process(
-    COMMAND ${SHELL} -c "egrep '^\\w' ${header} | grep '${ns}_[a-z0-9_]*(' | grep -v '^typedef' | grep -o '${ns}_[a-z0-9_]*(' | egrep -o '\\w+' | sort -u"
-    OUTPUT_VARIABLE ${lib}_SYMS
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
-  string(REPLACE "\n" ";" ${lib}_SYMS ${${lib}_SYMS})
-
-  set(${lib}_VERSION_SCRIPT "${CMAKE_BINARY_DIR}/${lib}.ld")
-
-  file(WRITE ${${lib}_VERSION_SCRIPT}
-    "{ global:\n")
-  foreach(sym ${${lib}_SYMS})
-    file(APPEND ${${lib}_VERSION_SCRIPT}
-      "${sym};\n")
-  endforeach(sym)
-  file(APPEND ${${lib}_VERSION_SCRIPT}
-    "local: *; };\n")
-
-  set_target_properties(${lib}_shared PROPERTIES
-    LINK_FLAGS -Wl,--version-script,${${lib}_VERSION_SCRIPT})
-endfunction()
-
-option(STRICT_ABI "Enforce strict ABI export in dynamic libraries" OFF)
-if(WIN32 OR APPLE)
-  # Windows and OSX don't have this linker functionality.
-  set(STRICT_ABI OFF)
 endif()
 
 if(STRICT_ABI AND SHELL AND ENABLE_SHARED)

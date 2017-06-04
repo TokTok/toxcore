@@ -194,13 +194,14 @@ int create_request(const uint8_t *send_public_key, const uint8_t *send_secret_ke
 
     uint8_t *nonce = packet + 1 + CRYPTO_PUBLIC_KEY_SIZE * 2;
     random_nonce(nonce);
-    uint8_t temp[MAX_CRYPTO_REQUEST_SIZE]; // TODO(irungentoo): crypto_memzero before exit function
+    uint8_t temp[MAX_CRYPTO_REQUEST_SIZE];
     memcpy(temp + 1, data, length);
     temp[0] = request_id;
     int len = encrypt_data(recv_public_key, send_secret_key, nonce, temp, length + 1,
                            1 + CRYPTO_PUBLIC_KEY_SIZE * 2 + CRYPTO_NONCE_SIZE + packet);
 
     if (len == -1) {
+        crypto_memzero(temp, MAX_CRYPTO_REQUEST_SIZE);
         return -1;
     }
 
@@ -208,6 +209,7 @@ int create_request(const uint8_t *send_public_key, const uint8_t *send_secret_ke
     memcpy(packet + 1, recv_public_key, CRYPTO_PUBLIC_KEY_SIZE);
     memcpy(packet + 1 + CRYPTO_PUBLIC_KEY_SIZE, send_public_key, CRYPTO_PUBLIC_KEY_SIZE);
 
+    crypto_memzero(temp, MAX_CRYPTO_REQUEST_SIZE);
     return len + 1 + CRYPTO_PUBLIC_KEY_SIZE * 2 + CRYPTO_NONCE_SIZE;
 }
 
@@ -235,18 +237,20 @@ int handle_request(const uint8_t *self_public_key, const uint8_t *self_secret_ke
 
     memcpy(public_key, packet + 1 + CRYPTO_PUBLIC_KEY_SIZE, CRYPTO_PUBLIC_KEY_SIZE);
     const uint8_t *nonce = packet + 1 + CRYPTO_PUBLIC_KEY_SIZE * 2;
-    uint8_t temp[MAX_CRYPTO_REQUEST_SIZE]; // TODO(irungentoo): crypto_memzero before exit function
+    uint8_t temp[MAX_CRYPTO_REQUEST_SIZE];
     int len1 = decrypt_data(public_key, self_secret_key, nonce,
                             packet + 1 + CRYPTO_PUBLIC_KEY_SIZE * 2 + CRYPTO_NONCE_SIZE,
                             length - (CRYPTO_PUBLIC_KEY_SIZE * 2 + CRYPTO_NONCE_SIZE + 1), temp);
 
     if (len1 == -1 || len1 == 0) {
+        crypto_memzero(temp, MAX_CRYPTO_REQUEST_SIZE);
         return -1;
     }
 
     request_id[0] = temp[0];
     --len1;
     memcpy(data, temp + 1, len1);
+    crypto_memzero(temp, MAX_CRYPTO_REQUEST_SIZE);
     return len1;
 }
 
@@ -950,11 +954,13 @@ static int add_to_close(DHT *dht, const uint8_t *public_key, IP_Port ip_port, bo
 
     unsigned int index = bit_by_bit_cmp(public_key, dht->self_public_key);
 
-    if (index > LCLIENT_LENGTH) {
+    if (index >= LCLIENT_LENGTH) {
         index = LCLIENT_LENGTH - 1;
     }
 
     for (i = 0; i < LCLIENT_NODES; ++i) {
+        /* TODO(iphydf): write bounds checking test to catch the case that
+         * index is left as >= LCLIENT_LENGTH */
         Client_data *client = &dht->close_clientlist[(index * LCLIENT_NODES) + i];
 
         if (is_timeout(client->assoc4.timestamp, BAD_NODE_TIMEOUT) && is_timeout(client->assoc6.timestamp, BAD_NODE_TIMEOUT)) {
@@ -1017,6 +1023,17 @@ static bool is_pk_in_client_list(Client_data *list, unsigned int client_list_len
     return 0;
 }
 
+static bool is_pk_in_close_list(DHT *dht, const uint8_t *public_key, IP_Port ip_port)
+{
+    unsigned int index = bit_by_bit_cmp(public_key, dht->self_public_key);
+
+    if (index >= LCLIENT_LENGTH) {
+        index = LCLIENT_LENGTH - 1;
+    }
+
+    return is_pk_in_client_list(dht->close_clientlist + index * LCLIENT_NODES, LCLIENT_NODES, public_key, ip_port);
+}
+
 /* Check if the node obtained with a get_nodes with public_key should be pinged.
  * NOTE: for best results call it after addto_lists;
  *
@@ -1031,7 +1048,8 @@ static unsigned int ping_node_from_getnodes_ok(DHT *dht, const uint8_t *public_k
         ret = 1;
     }
 
-    if (ret && !client_in_nodelist(dht->to_bootstrap, dht->num_to_bootstrap, public_key)) {
+    if (ret && !client_in_nodelist(dht->to_bootstrap, dht->num_to_bootstrap, public_key)
+            && !is_pk_in_close_list(dht, public_key, ip_port)) {
         if (dht->num_to_bootstrap < MAX_CLOSE_TO_BOOTSTRAP_NODES) {
             memcpy(dht->to_bootstrap[dht->num_to_bootstrap].public_key, public_key, CRYPTO_PUBLIC_KEY_SIZE);
             dht->to_bootstrap[dht->num_to_bootstrap].ip_port = ip_port;
