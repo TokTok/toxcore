@@ -650,22 +650,6 @@ static int client_or_ip_port_in_list(Logger *log, Client_data *list, uint16_t le
     return 0;
 }
 
-/* Check if client with public_key is already in node format list of length length.
- *
- *  return 1 if true.
- *  return 0 if false.
- */
-static int client_in_nodelist(const Node_format *list, uint16_t length, const uint8_t *public_key)
-{
-    for (uint32_t i = 0; i < length; ++i) {
-        if (id_equal(list[i].public_key, public_key)) {
-            return 1;
-        }
-    }
-
-    return 0;
-}
-
 /* Add node to the node list making sure only the nodes closest to cmp_pk are in the list.
  */
 bool add_to_list(Node_format *nodes_list, unsigned int length, const uint8_t *pk, IP_Port ip_port,
@@ -721,7 +705,7 @@ static void get_close_nodes_inner(const uint8_t *public_key, Node_format *nodes_
         const Client_data *client = &client_list[i];
 
         /* node already in list? */
-        if (client_in_nodelist(nodes_list, MAX_SENT_NODES, client->public_key)) {
+        if (index_of_node_pk(nodes_list, MAX_SENT_NODES, client->public_key) != UINT32_MAX) {
             continue;
         }
 
@@ -1062,7 +1046,7 @@ static unsigned int ping_node_from_getnodes_ok(DHT *dht, const uint8_t *public_k
         ret = 1;
     }
 
-    if (ret && !client_in_nodelist(dht->to_bootstrap, dht->num_to_bootstrap, public_key)
+    if (ret && index_of_node_pk(dht->to_bootstrap, dht->num_to_bootstrap, public_key) == UINT32_MAX
             && !is_pk_in_close_list(dht, public_key, ip_port)) {
         if (dht->num_to_bootstrap < MAX_CLOSE_TO_BOOTSTRAP_NODES) {
             memcpy(dht->to_bootstrap[dht->num_to_bootstrap].public_key, public_key, CRYPTO_PUBLIC_KEY_SIZE);
@@ -1087,7 +1071,7 @@ static unsigned int ping_node_from_getnodes_ok(DHT *dht, const uint8_t *public_k
             store_ok = 1;
         }
 
-        if (store_ok && !client_in_nodelist(dht_friend->to_bootstrap, dht_friend->num_to_bootstrap, public_key)
+        if (store_ok && index_of_node_pk(dht->to_bootstrap, dht->num_to_bootstrap, public_key) == UINT32_MAX
                 && !is_pk_in_client_list(dht_friend->client_list, MAX_FRIEND_CLIENTS, public_key, ip_port)) {
             if (dht_friend->num_to_bootstrap < MAX_SENT_NODES) {
                 memcpy(dht_friend->to_bootstrap[dht_friend->num_to_bootstrap].public_key, public_key, CRYPTO_PUBLIC_KEY_SIZE);
