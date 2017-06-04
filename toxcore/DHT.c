@@ -666,20 +666,6 @@ static int client_in_nodelist(const Node_format *list, uint16_t length, const ui
     return 0;
 }
 
-/*  return friend number from the public_key.
- *  return -1 if a failure occurs.
- */
-static int friend_number(const DHT *dht, const uint8_t *public_key)
-{
-    for (uint32_t i = 0; i < dht->num_friends; ++i) {
-        if (id_equal(dht->friends_list[i].public_key, public_key)) {
-            return i;
-        }
-    }
-
-    return -1;
-}
-
 /* Add node to the node list making sure only the nodes closest to cmp_pk are in the list.
  */
 bool add_to_list(Node_format *nodes_list, unsigned int length, const uint8_t *pk, IP_Port ip_port,
@@ -1497,11 +1483,11 @@ static int handle_sendnodes_ipv6(void *object, IP_Port source, const uint8_t *pa
 int DHT_addfriend(DHT *dht, const uint8_t *public_key, void (*ip_callback)(void *data, int32_t number, IP_Port),
                   void *data, int32_t number, uint16_t *lock_count)
 {
-    int friend_num = friend_number(dht, public_key);
+    uint32_t friend_num = index_of_friend_pk(dht->friends_list, dht->num_friends, public_key);
 
     uint16_t lock_num;
 
-    if (friend_num != -1) { /* Is friend already in DHT? */
+    if (friend_num != UINT32_MAX) { /* Is friend already in DHT? */
         DHT_Friend *dht_friend = &dht->friends_list[friend_num];
 
         if (dht_friend->lock_count == DHT_FRIEND_MAX_LOCKS) {
@@ -1552,9 +1538,9 @@ int DHT_addfriend(DHT *dht, const uint8_t *public_key, void (*ip_callback)(void 
 
 int DHT_delfriend(DHT *dht, const uint8_t *public_key, uint16_t lock_count)
 {
-    int friend_num = friend_number(dht, public_key);
+    uint32_t friend_num = index_of_friend_pk(dht->friends_list, dht->num_friends, public_key);
 
-    if (friend_num == -1) {
+    if (friend_num == UINT32_MAX) {
         return -1;
     }
 
@@ -1896,9 +1882,9 @@ static int friend_iplist(const DHT *dht, IP_Port *ip_portlist, uint16_t friend_n
  */
 int route_tofriend(const DHT *dht, const uint8_t *friend_id, const uint8_t *packet, uint16_t length)
 {
-    int num = friend_number(dht, friend_id);
+    uint32_t num = index_of_friend_pk(dht->friends_list, dht->num_friends, friend_id);
 
-    if (num == -1) {
+    if (num == UINT32_MAX) {
         return 0;
     }
 
@@ -1955,9 +1941,9 @@ int route_tofriend(const DHT *dht, const uint8_t *friend_id, const uint8_t *pack
  */
 static int routeone_tofriend(DHT *dht, const uint8_t *friend_id, const uint8_t *packet, uint16_t length)
 {
-    int num = friend_number(dht, friend_id);
+    uint32_t num = index_of_friend_pk(dht->friends_list, dht->num_friends, friend_id);
 
-    if (num == -1) {
+    if (num == UINT32_MAX) {
         return 0;
     }
 
@@ -2047,9 +2033,9 @@ static int handle_NATping(void *object, IP_Port source, const uint8_t *source_pu
     uint64_t ping_id;
     memcpy(&ping_id, packet + 1, sizeof(uint64_t));
 
-    int friendnumber = friend_number(dht, source_pubkey);
+    uint32_t friendnumber = index_of_friend_pk(dht->friends_list, dht->num_friends, source_pubkey);
 
-    if (friendnumber == -1) {
+    if (friendnumber == UINT32_MAX) {
         return 1;
     }
 
