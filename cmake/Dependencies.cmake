@@ -24,6 +24,7 @@ pkg_use_module(LIBCONFIG            libconfig    )
 
 # For auto tests.
 pkg_use_module(CHECK                check        )
+pkg_use_module(LIBTUT               libtut       )
 
 # For tox-spectest.
 pkg_use_module(MSGPACK              msgpack      )

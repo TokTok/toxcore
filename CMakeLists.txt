@@ -162,6 +162,19 @@ endif()
 #
 # :: Tox Core Library
 #
+# The toxcore library is split into several smaller libraries. The libraries
+# are layered such that any library in a layer N can only link to libraries in
+# layers below it. The layers are as follows:
+#
+# 1. Basic data structures and algorithms (such as crypto).
+# 2. Platform abstraction (network, time, etc.).
+# 3. DHT, the Distributed Hash Table, for basic node finding.
+# 4. Code for establishing direct connections via TCP or UDP. Includes onion.
+# 5. A layer on top of direct connections, adding the concept of a "friend".
+# 6. Application level protocols such as file transfer and instant messaging.
+# 7. Group chats (conferences) built on top of the messenger.
+# 8. The public tox.h API. This is a thin wrapper of application protocol code.
+#
 ################################################################################
 
 # toxcore_PKGCONFIG_LIBS is what's added to the Libs: line in toxcore.pc. It
@@ -173,6 +186,14 @@ endif()
 # (*) It allows client code to use symbols from our dependencies without
 #    explicitly linking against them.
 set(toxcore_PKGCONFIG_LIBS)
+
+# LAYER 1: Binary readers/writers
+# -------------------------------
+apidsl(
+  toxcore/bin_io.api.h)
+add_module(toxbinio
+  toxcore/bin_io.c
+  toxcore/bin_io.h)
 
 # LAYER 1: Crypto core
 # --------------------
@@ -196,7 +217,7 @@ add_module(toxnetwork
   toxcore/network.h
   toxcore/util.c
   toxcore/util.h)
-target_link_modules(toxnetwork toxcrypto)
+target_link_modules(toxnetwork toxbinio toxcrypto)
 
 if(CMAKE_THREAD_LIBS_INIT)
   target_link_modules(toxnetwork ${CMAKE_THREAD_LIBS_INIT})
@@ -375,18 +396,25 @@ if(APIDSL AND ASTYLE)
       "${toxcore_SOURCE_DIR}"
       "${APIDSL}"
       "${ASTYLE}")
-  set_tests_properties(format_test PROPERTIES TIMEOUT "${TEST_TIMEOUT_SECONDS}")
 elseif(FORMAT_TEST)
   message(FATAL_ERROR "format_test can not be run, because either APIDSL (${APIDSL}) or ASTYLE (${ASTYLE}) could not be found")
 endif()
 
 function(auto_test target)
-  if(CHECK_FOUND)
-    add_c_executable(auto_${target}_test auto_tests/${target}_test.c)
+  if("${ARGN}" STREQUAL "CXX")
+    set(suffix cc)
+    set(testlib LIBTUT)
+  else()
+    set(suffix c)
+    set(testlib CHECK)
+  endif()
+
+  if(${testlib}_FOUND)
+    add_c_executable(auto_${target}_test auto_tests/${target}_test.${suffix})
     target_link_modules(auto_${target}_test
       toxcore
       toxencryptsave
-      ${CHECK_LIBRARIES})
+      ${${testlib}_LIBRARIES})
     if(BUILD_TOXAV)
       target_link_modules(auto_${target}_test toxav)
     endif()
@@ -395,7 +423,7 @@ function(auto_test target)
   endif()
 endfunction()
 
-auto_test(TCP)
+auto_test(bin_io CXX)
 auto_test(conference)
 auto_test(crypto)
 auto_test(dht)
@@ -406,6 +434,7 @@ auto_test(onion)
 auto_test(resource_leak)
 auto_test(save_friend)
 auto_test(skeleton)
+auto_test(TCP)
 auto_test(tox)
 auto_test(tox_many)
 auto_test(tox_many_tcp)
