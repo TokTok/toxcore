@@ -1880,8 +1880,7 @@ int route_tofriend(const DHT *dht, const uint8_t *friend_id, const uint8_t *pack
             const IPPTsPng *assoc = assocs[j];
 
             /* If ip is not zero and node is good. */
-            if (ip_isset(&assoc->ret_ip_port.ip) &&
-                    !is_timeout(assoc->ret_timestamp, BAD_NODE_TIMEOUT)) {
+            if (ip_isset(&assoc->ret_ip_port.ip) && !is_timeout(assoc->ret_timestamp, BAD_NODE_TIMEOUT)) {
                 int retval = sendpacket(dht->net, assoc->ip_port, packet, length);
 
                 if ((unsigned int)retval == length) {
