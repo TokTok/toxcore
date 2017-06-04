@@ -35,36 +35,67 @@ pkg_use_module(SNDFILE              sndfile      )
 
 ###############################################################################
 #
-# :: For Windows and other systems lacking pkg-config.
+# :: For MSVC Windows builds.
+#
+# These require specific installation paths of dependencies:
+# - libsodium in libsodium/Win32/Release/v140/static
+# - pthreads in pthreads-win32/Pre-built.2
+# - check in C:/Program Files (x86)/check
 #
 ###############################################################################
 
-if(NOT LIBSODIUM_FOUND)
-  include_directories(libsodium/include)
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+  # libsodium
+  # ---------
   find_library(LIBSODIUM_LIBRARIES
-    NAMES
-      sodium
-      libsodium
+    NAMES sodium libsodium
     PATHS
-      libsodium/Win32/Release/v140/static
-      libsodium/x64/Release/v140/static
+      "libsodium/Win32/Release/v140/static"
+      "libsodium/x64/Release/v140/static"
   )
   if(LIBSODIUM_LIBRARIES)
+    include_directories("libsodium/include")
     set(LIBSODIUM_FOUND TRUE)
+    add_definitions(-DSODIUM_STATIC)
+    message("libsodium: ${LIBSODIUM_LIBRARIES}")
+  else()
+    message(FATAL_ERROR "libsodium libraries not found")
   endif()
-  add_definitions(-DSODIUM_STATIC)
-  message("libsodium: ${LIBSODIUM_LIBRARIES}")
-endif()
 
-if(("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC") AND CMAKE_USE_WIN32_THREADS_INIT)
-  include_directories(pthreads-win32/Pre-built.2/include)
-  find_library(CMAKE_THREAD_LIBS_INIT
-    NAMES
-      pthreadVC2
-    PATHS
-      pthreads-win32/Pre-built.2/lib/x86
-      pthreads-win32/Pre-built.2/lib/x64
+  # check
+  # -----
+  find_library(LIBCHECK_LIBRARIES
+    NAMES check libcheck
+    PATHS "C:/Program Files (x86)/check/lib"
   )
-  add_definitions(-DHAVE_STRUCT_TIMESPEC)
-  message("libpthreads: ${CMAKE_THREAD_LIBS_INIT}")
+  find_library(LIBCOMPAT_LIBRARIES
+    NAMES compat libcompat
+    PATHS "C:/Program Files (x86)/check/lib"
+  )
+  if(LIBCHECK_LIBRARIES AND LIBCOMPAT_LIBRARIES)
+    include_directories("C:/Program Files (x86)/check/include")
+    set(CHECK_FOUND TRUE)
+    set(CHECK_LIBRARIES ${LIBCHECK_LIBRARIES} ${LIBCOMPAT_LIBRARIES})
+    message("check: ${CHECK_LIBRARIES}")
+  else()
+    message(FATAL_ERROR "check libraries not found")
+  endif()
+
+  # pthreads
+  # --------
+  if(CMAKE_USE_WIN32_THREADS_INIT)
+    find_library(CMAKE_THREAD_LIBS_INIT
+      NAMES pthreadVC2
+      PATHS
+        "pthreads-win32/Pre-built.2/lib/x86"
+        "pthreads-win32/Pre-built.2/lib/x64"
+    )
+    if(CMAKE_THREAD_LIBS_INIT)
+      include_directories("pthreads-win32/Pre-built.2/include")
+      add_definitions(-DHAVE_STRUCT_TIMESPEC)
+      message("libpthreads: ${CMAKE_THREAD_LIBS_INIT}")
+    else()
+      message(FATAL_ERROR "libpthreads libraries not found")
+    endif()
+  endif()
 endif()
