@@ -1,0 +1,31 @@
+#!/bin/sh
+
+# Set up opam.
+opam init -y
+eval `opam config env`
+
+# Install required opam packages.
+opam install -y ocamlfind ppx_deriving menhir
+
+# Build apidsl.
+git clone --depth=1 https://github.com/TokTok/apidsl ../apidsl
+make -C ../apidsl -j$NPROC
+
+
+# Install astyle (version in ubuntu-precise too old).
+[ -f $ASTYLE ] || {
+  wget -O ../astyle.tar.gz https://launchpad.net/ubuntu/+archive/primary/+files/astyle_2.05.1.orig.tar.gz
+  tar -xf ../astyle.tar.gz -C $CACHE_DIR
+  make -C $CACHE_DIR/astyle/build/gcc -j$NPROC
+}
+
+# Install libsodium (not in ubuntu-precise).
+[ -f $CACHE_DIR/lib/libsodium.a ] || {
+  git clone --depth=1 --branch=stable https://github.com/jedisct1/libsodium ../libsodium
+  cd ../libsodium # pushd
+  ./autogen.sh
+  ./configure --prefix=$CACHE_DIR
+  make install -j$NPROC
+  cd - # popd
+}
+

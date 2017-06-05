@@ -1,0 +1,10 @@
+
+cmake -B$BUILD_DIR      \
+      -H.               \
+      -DFORMAT_TEST=ON  \
+      $CMAKE_EXTRA_FLAGS
+
+export CTEST_OUTPUT_ON_FAILURE=1
+
+cd $BUILD_DIR
+ctest -R format_test
