@@ -150,6 +150,11 @@ For Debug build use:
 cmake -DCMAKE_BUILD_TYPE=Debug ..
 ```
 
+Small build configuration (not recommended):
+
+```bash
+cmake ..
+```
 ### OS X:
 
 You need the latest XCode with the Developer Tools (Preferences -> Downloads -> Command Line Tools).
