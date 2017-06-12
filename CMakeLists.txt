@@ -70,8 +70,7 @@ if(NOT MSVC)
   add_cxxflag("-std=c++11")
 
   # Warn on non-ISO C.
-  add_cflag("-pedantic")
-  
+  add_debug_cflag("-pedantic")
   
   # Optimization flag
   add_debug_flag("-O0")
