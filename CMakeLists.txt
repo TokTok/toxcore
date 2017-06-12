@@ -72,8 +72,6 @@ if(NOT MSVC)
   # Warn on non-ISO C.
   add_cflag("-pedantic")
   
-  # Debug flag optimized for gdb
-  add_debug_flag("-ggdb")
   
   # Optimization flag
   add_debug_flag("-O0")
