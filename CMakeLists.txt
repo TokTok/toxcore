@@ -38,7 +38,7 @@ message("SOVERSION: ${SOVERSION}")
 #
 ################################################################################
 
-include(AddFlag)
+include(AddCompilerFlag)
 include(ApiDsl)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
