@@ -48,18 +48,20 @@ include(StrictAbi)
 
 set(CMAKE_MACOSX_RPATH ON)
 
-# Default compile options for target Release, Debug, none
-if(DEFINED CMAKE_BUILD_TYPE)
-    set(CMAKE_C_FLAGS "-g")
-    set(CMAKE_CXX_FLAGS "-g")
-elseif(${CMAKE_BUILD_TYPE} STREQUAL "Release")
-    set(CMAKE_C_FLAGS_RELEASE "")
-    set(CMAKE_CXX_FLAGS_RELEASE "")
-elseif(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-    set(CMAKE_C_FLAGS_DEBUG "-g3")
-    set(CMAKE_CXX_FLAGS_DEBUG "-g3")
-else()
-    message(FATAL_ERROR "Undefined build type: ${CMAKE_BUILD_TYPE}")
+## Default compile options for target Release, Debug, none
+# Clears all default Flags
+set(CMAKE_C_FLAGS "")
+set(CMAKE_CXX_FLAGS "")
+if(DEFINED ${CMAKE_BUILD_TYPE})
+    if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
+        set(CMAKE_C_FLAGS_RELEASE "")
+        set(CMAKE_CXX_FLAGS_RELEASE "")
+    elseif(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+        set(CMAKE_C_FLAGS_DEBUG "-g3")
+        set(CMAKE_CXX_FLAGS_DEBUG "-g3")
+    else()
+        message(FATAL_ERROR "Undefined build type: ${CMAKE_BUILD_TYPE}")
+    endif()
 endif()
 
 if(NOT MSVC)
