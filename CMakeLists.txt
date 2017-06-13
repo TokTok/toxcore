@@ -52,7 +52,8 @@ set(CMAKE_MACOSX_RPATH ON)
 # Clears all default Flags
 set(CMAKE_C_FLAGS "")
 set(CMAKE_CXX_FLAGS "")
-if(DEFINED ${CMAKE_BUILD_TYPE})
+
+if(CMAKE_BUILD_TYPE)
     if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
         set(CMAKE_C_FLAGS_RELEASE "")
         set(CMAKE_CXX_FLAGS_RELEASE "")
