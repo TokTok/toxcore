@@ -546,7 +546,7 @@ static void sort_onion_node_list(Onion_Node *list, unsigned int length, const ui
 }
 
 static int client_add_to_list(Onion_Client *onion_c, uint32_t num, const uint8_t *public_key, IP_Port ip_port,
-                              uint8_t is_stored, const uint8_t *pingid_or_key, uint32_t path_num)
+                              uint8_t is_stored, const uint8_t *pingid_or_key, uint32_t path_used)
 {
     if (num > onion_c->num_friends) {
         return -1;
@@ -597,7 +597,6 @@ static int client_add_to_list(Onion_Client *onion_c, uint32_t num, const uint8_t
     }
 
     if (index == -1) {
-        set_path_timeouts(onion_c, num, path_num);
         return 0;
     }
 
@@ -622,7 +621,7 @@ static int client_add_to_list(Onion_Client *onion_c, uint32_t num, const uint8_t
         list_nodes[index].added_time = unix_time();
     }
 
-    list_nodes[index].path_used = set_path_timeouts(onion_c, num, path_num);
+    list_nodes[index].path_used = path_used;
     return 0;
 }
 
@@ -749,7 +748,9 @@ static int handle_announce_response(void *object, IP_Port source, const uint8_t 
         return 1;
     }
 
-    if (client_add_to_list(onion_c, num, public_key, ip_port, plain[0], plain + 1, path_num) == -1) {
+    uint32_t path_used = set_path_timeouts(onion_c, num, path_num);
+
+    if (client_add_to_list(onion_c, num, public_key, ip_port, plain[0], plain + 1, path_used) == -1) {
         return 1;
     }
 
