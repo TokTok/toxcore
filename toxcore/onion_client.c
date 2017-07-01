@@ -1562,7 +1562,7 @@ static void do_announce(Onion_Client *onion_c)
              */
             if (is_timeout(list_nodes[i].added_time, TIME_TO_STABLE)
                     && !(list_nodes[i].last_pinged_times > 0
-                         && is_timeout(list_nodes[i].last_pinged, ONION_NODE_TIMEOUT ))
+                         && is_timeout(list_nodes[i].last_pinged, ONION_NODE_TIMEOUT))
                     && is_timeout(onion_c->onion_paths_self.path_creation_time[pathnum], TIME_TO_STABLE)
                     && !(onion_c->onion_paths_self.last_path_used_times[pathnum] > 0
                          && is_timeout(onion_c->onion_paths_self.last_path_used[pathnum], ONION_PATH_TIMEOUT))) {
