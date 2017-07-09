@@ -78,8 +78,7 @@ typedef struct {
 
     uint64_t    last_pinged;
 
-    /* number of times pinged without success. */
-    unsigned int last_pinged_times;
+    uint8_t     unsuccessful_pings;
 
     uint32_t    path_used;
 } Onion_Node;

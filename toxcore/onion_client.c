@@ -231,7 +231,7 @@ static bool path_timed_out(Onion_Client_Paths *onion_paths, uint32_t pathnum)
 static bool onion_node_timed_out(const Onion_Node *node)
 {
     return (node->timestamp == 0
-            || (node->last_pinged_times >= ONION_NODE_MAX_PINGS
+            || (node->unsuccessful_pings >= ONION_NODE_MAX_PINGS
                 && is_timeout(node->last_pinged, ONION_NODE_TIMEOUT)));
 }
 
@@ -614,7 +614,7 @@ static int client_add_to_list(Onion_Client *onion_c, uint32_t num, const uint8_t
 
     list_nodes[index].is_stored = is_stored;
     list_nodes[index].timestamp = unix_time();
-    list_nodes[index].last_pinged_times = 0;
+    list_nodes[index].unsuccessful_pings = 0;
 
     if (!stored) {
         list_nodes[index].last_pinged = 0;
@@ -1457,7 +1457,7 @@ static void do_friend(Onion_Client *onion_c, uint16_t friendnum)
                 continue;
             }
 
-            if (list_nodes[i].last_pinged_times >= ONION_NODE_MAX_PINGS) {
+            if (list_nodes[i].unsuccessful_pings >= ONION_NODE_MAX_PINGS) {
                 continue;
             }
 
@@ -1465,7 +1465,7 @@ static void do_friend(Onion_Client *onion_c, uint16_t friendnum)
                     || (ping_random && rand() % (MAX_ONION_CLIENTS - i) == 0)) {
                 if (client_send_announce_request(onion_c, friendnum + 1, list_nodes[i].ip_port, list_nodes[i].public_key, 0, ~0) == 0) {
                     list_nodes[i].last_pinged = unix_time();
-                    ++list_nodes[i].last_pinged_times;
+                    ++list_nodes[i].unsuccessful_pings;
                     ping_random = false;
                 }
             }
@@ -1544,7 +1544,7 @@ static void do_announce(Onion_Client *onion_c)
             continue;
         }
 
-        if (list_nodes[i].last_pinged_times >= ONION_NODE_MAX_PINGS) {
+        if (list_nodes[i].unsuccessful_pings >= ONION_NODE_MAX_PINGS) {
             continue;
         }
 
@@ -1561,7 +1561,7 @@ static void do_announce(Onion_Client *onion_c)
              * and the latest packets sent to it are not timing out.
              */
             if (is_timeout(list_nodes[i].added_time, TIME_TO_STABLE)
-                    && !(list_nodes[i].last_pinged_times > 0
+                    && !(list_nodes[i].unsuccessful_pings > 0
                          && is_timeout(list_nodes[i].last_pinged, ONION_NODE_TIMEOUT))
                     && is_timeout(onion_c->onion_paths_self.path_creation_time[pathnum], TIME_TO_STABLE)
                     && !(onion_c->onion_paths_self.last_path_used_times[pathnum] > 0
@@ -1575,7 +1575,7 @@ static void do_announce(Onion_Client *onion_c)
                     && rand() % (MAX_ONION_CLIENTS_ANNOUNCE - i) == 0)) {
             uint32_t path_to_use = list_nodes[i].path_used;
 
-            if (list_nodes[i].last_pinged_times == ONION_NODE_MAX_PINGS - 1
+            if (list_nodes[i].unsuccessful_pings == ONION_NODE_MAX_PINGS - 1
                     && is_timeout(list_nodes[i].added_time, TIME_TO_STABLE)) {
                 /* Last chance for a long-lived node - try a random path */
                 path_to_use = ~0;
@@ -1584,7 +1584,7 @@ static void do_announce(Onion_Client *onion_c)
             if (client_send_announce_request(onion_c, 0, list_nodes[i].ip_port, list_nodes[i].public_key,
                                              list_nodes[i].ping_id, path_to_use) == 0) {
                 list_nodes[i].last_pinged = unix_time();
-                ++list_nodes[i].last_pinged_times;
+                ++list_nodes[i].unsuccessful_pings;
                 onion_c->last_announce = unix_time();
             }
         }
