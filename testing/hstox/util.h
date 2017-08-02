@@ -1,6 +1,7 @@
 #pragma once
 
 #include <msgpack.h>
+#include <stdarg.h>
 
 #define check_return(err, expr)                                                                    \
   __extension__({                                                                                  \

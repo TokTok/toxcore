@@ -4,7 +4,8 @@
 #include "config.h"
 #endif
 
-#include <check.h>
+#include "check_compat.h"
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,13 +18,6 @@
 #include "../toxcore/util.h"
 
 #include "helpers.h"
-
-#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
-#define c_sleep(x) Sleep(1*x)
-#else
-#include <unistd.h>
-#define c_sleep(x) usleep(1000*x)
-#endif
 
 #define NUM_PORTS 3
 

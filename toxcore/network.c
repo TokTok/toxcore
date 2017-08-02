@@ -52,14 +52,11 @@
 
 #if !(defined(_WIN32) || defined(__WIN32__) || defined(WIN32))
 
-#include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <netdb.h>
-#include <netinet/in.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include <sys/socket.h>
 
 #else
 
@@ -815,7 +812,7 @@ int ip_equal(const IP *a, const IP *b)
 
     /* same family */
     if (a->family == b->family) {
-        if (a->family == AF_INET) {
+        if (a->family == AF_INET || a->family == TCP_INET) {
             struct in_addr addr_a;
             struct in_addr addr_b;
             fill_addr4(a->ip4, &addr_a);
@@ -823,7 +820,7 @@ int ip_equal(const IP *a, const IP *b)
             return addr_a.s_addr == addr_b.s_addr;
         }
 
-        if (a->family == AF_INET6) {
+        if (a->family == AF_INET6 || a->family == TCP_INET6) {
             return a->ip6.uint64[0] == b->ip6.uint64[0] &&
                    a->ip6.uint64[1] == b->ip6.uint64[1];
         }
@@ -1213,16 +1210,18 @@ int32_t net_getipport(const char *node, IP_Port **res, int type)
 {
     struct addrinfo *infos;
     int ret = getaddrinfo(node, NULL, NULL, &infos);
+    *res = NULL;
 
     if (ret != 0) {
         return -1;
     }
 
+    // Used to avoid malloc parameter overflow
+    const size_t MAX_COUNT = MIN(SIZE_MAX, INT32_MAX) / sizeof(IP_Port);
     struct addrinfo *cur;
+    int32_t count = 0;
 
-    int count = 0;
-
-    for (cur = infos; count < INT32_MAX && cur != NULL; cur = cur->ai_next) {
+    for (cur = infos; count < MAX_COUNT && cur != NULL; cur = cur->ai_next) {
         if (cur->ai_socktype && type > 0 && cur->ai_socktype != type) {
             continue;
         }
@@ -1234,8 +1233,10 @@ int32_t net_getipport(const char *node, IP_Port **res, int type)
         count++;
     }
 
-    if (count == INT32_MAX) {
-        return -1;
+    assert(count <= MAX_COUNT);
+
+    if (count == 0) {
+        return 0;
     }
 
     *res = (IP_Port *)malloc(sizeof(IP_Port) * count);

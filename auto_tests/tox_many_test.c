@@ -7,7 +7,8 @@
 #include "config.h"
 #endif
 
-#include <check.h>
+#include "check_compat.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -16,14 +17,6 @@
 #include "../toxcore/util.h"
 
 #include "helpers.h"
-
-#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
-#include <windows.h>
-#define c_sleep(x) Sleep(1*x)
-#else
-#include <unistd.h>
-#define c_sleep(x) usleep(1000*x)
-#endif
 
 static void accept_friend_request(Tox *m, const uint8_t *public_key, const uint8_t *data, size_t length, void *userdata)
 {

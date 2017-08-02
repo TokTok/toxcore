@@ -214,14 +214,17 @@ int unpack_nodes(Node_format *nodes, uint16_t max_num_nodes, uint16_t *processed
 /* struct to store some shared keys so we don't have to regenerate them for each request. */
 #define MAX_KEYS_PER_SLOT 4
 #define KEYS_TIMEOUT 600
+
 typedef struct {
-    struct {
-        uint8_t public_key[CRYPTO_PUBLIC_KEY_SIZE];
-        uint8_t shared_key[CRYPTO_SHARED_KEY_SIZE];
-        uint32_t times_requested;
-        uint8_t  stored; /* 0 if not, 1 if is */
-        uint64_t time_last_requested;
-    } keys[256 * MAX_KEYS_PER_SLOT];
+    uint8_t public_key[CRYPTO_PUBLIC_KEY_SIZE];
+    uint8_t shared_key[CRYPTO_SHARED_KEY_SIZE];
+    uint32_t times_requested;
+    uint8_t  stored; /* 0 if not, 1 if is */
+    uint64_t time_last_requested;
+} Shared_Key;
+
+typedef struct {
+    Shared_Key keys[256 * MAX_KEYS_PER_SLOT];
 } Shared_Keys;
 
 /*----------------------------------------------------------------------------------*/
@@ -452,6 +455,6 @@ int DHT_isconnected(const DHT *dht);
 int DHT_non_lan_connected(const DHT *dht);
 
 
-int addto_lists(DHT *dht, IP_Port ip_port, const uint8_t *public_key);
+uint32_t addto_lists(DHT *dht, IP_Port ip_port, const uint8_t *public_key);
 
 #endif

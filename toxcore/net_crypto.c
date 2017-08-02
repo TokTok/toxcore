@@ -1609,6 +1609,12 @@ static int create_crypto_connection(Net_Crypto *c)
         id = c->crypto_connections_length;
         ++c->crypto_connections_length;
         memset(&(c->crypto_connections[id]), 0, sizeof(Crypto_Connection));
+        // Memsetting float/double to 0 is non-portable, so we explicitly set them to 0
+        c->crypto_connections[id].packet_recv_rate = 0;
+        c->crypto_connections[id].packet_send_rate = 0;
+        c->crypto_connections[id].last_packets_left_rem = 0;
+        c->crypto_connections[id].packet_send_rate_requested = 0;
+        c->crypto_connections[id].last_packets_left_requested_rem = 0;
 
         if (pthread_mutex_init(&c->crypto_connections[id].mutex, NULL) != 0) {
             pthread_mutex_unlock(&c->connections_mutex);
@@ -1957,6 +1963,8 @@ static int tcp_data_callback(void *object, int id, const uint8_t *data, uint16_t
         return tcp_handle_cookie_request(c, conn->connection_number_tcp, data, length);
     }
 
+    // This unlocks the mutex that at this point is locked by do_tcp before
+    // calling do_tcp_connections.
     pthread_mutex_unlock(&c->tcp_mutex);
     int ret = handle_packet_connection(c, id, data, length, 0, userdata);
     pthread_mutex_lock(&c->tcp_mutex);

@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include <errno.h>
 #include <fcntl.h>
 #include <netdb.h>
@@ -19,7 +20,7 @@
 
 static void __attribute__((__noreturn__)) handle_interrupt(int signum)
 {
-    printf("Caught signal %d; exiting cleanly.\n", signum);
+    fprintf(stderr, "caught signal %d; exiting cleanly.\n", signum);
     exit(0);
 }
 
@@ -92,6 +93,12 @@ static int write_sample_input(msgpack_object req)
 
 static int handle_request(struct settings cfg, int write_fd, msgpack_object req)
 {
+    if (cfg.trace) {
+        fprintf(stderr, "input:  ");
+        msgpack_object_print(stderr, req);
+        fprintf(stderr, "\n");
+    }
+
     msgpack_sbuffer sbuf __attribute__((__cleanup__(msgpack_sbuffer_destroy))); /* buffer */
     msgpack_sbuffer_init(&sbuf); /* initialize buffer */
 
@@ -121,7 +128,7 @@ static int handle_request(struct settings cfg, int write_fd, msgpack_object req)
         if (name.size == (sizeof "rpc.capabilities") - 1 &&
                 memcmp(name.ptr, "rpc.capabilities", name.size) == 0) {
             // 3. Error.
-            msgpack_pack_string(&pk, "Capabilities negiotiation not implemented");
+            msgpack_pack_string(&pk, "capabilities negiotiation not implemented");
             // 4. No result.
             msgpack_pack_nil(&pk);
         } else {
@@ -131,9 +138,9 @@ static int handle_request(struct settings cfg, int write_fd, msgpack_object req)
 
             if (error) {
                 if (cfg.debug) {
-                    printf("Error '%s' in request: ", error);
-                    msgpack_object_print(stdout, req);
-                    printf("\n");
+                    fprintf(stderr, "error '%s' in request: ", error);
+                    msgpack_object_print(stderr, req);
+                    fprintf(stderr, "\n");
                 }
 
                 msgpack_pack_string(&pk, error);
@@ -143,6 +150,15 @@ static int handle_request(struct settings cfg, int write_fd, msgpack_object req)
     }
 
     check_return(E_WRITE, write(write_fd, sbuf.data, sbuf.size));
+
+    if (cfg.trace) {
+        fprintf(stderr, "result: ");
+        msgpack_unpacked res __attribute__((__cleanup__(msgpack_unpacked_destroy)));
+        msgpack_unpacked_init(&res);
+        msgpack_unpack_next(&res, sbuf.data, sbuf.size, NULL);
+        msgpack_object_print(stderr, res.data);
+        fprintf(stderr, "\n");
+    }
 
     return E_OK;
 }
@@ -177,7 +193,7 @@ int communicate(struct settings cfg, int read_fd, int write_fd)
                 break;
 
             case MSGPACK_UNPACK_EXTRA_BYTES:
-                printf("EXTRA_BYTES\n");
+                fprintf(stderr, "EXTRA_BYTES\n");
                 break;
 
             case MSGPACK_UNPACK_CONTINUE:
