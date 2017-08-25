@@ -827,6 +827,7 @@ Friend_Connections *new_friend_connections(Onion_Client *onion_c, bool local_dis
     temp->net_crypto = onion_c->c;
     temp->onion_c = onion_c;
     temp->local_discovery_enabled = local_discovery_enabled;
+    temp->next_LANport = TOX_PORT_DEFAULT;
 
     new_connection_handler(temp->net_crypto, &handle_new_connections, temp);
 
@@ -840,8 +841,13 @@ Friend_Connections *new_friend_connections(Onion_Client *onion_c, bool local_dis
 /* Send a LAN discovery packet every LAN_DISCOVERY_INTERVAL seconds. */
 static void LANdiscovery(Friend_Connections *fr_c)
 {
+    if (fr_c->next_LANport > TOX_PORTRANGE_TO) {
+        fr_c->next_LANport = TOX_PORTRANGE_FROM;
+    }
+
     if (fr_c->last_LANdiscovery + LAN_DISCOVERY_INTERVAL < unix_time()) {
-        send_LANdiscovery(net_htons(TOX_PORT_DEFAULT), fr_c->dht);
+        send_LANdiscovery(net_htons(fr_c->next_LANport), fr_c->dht);
+        fr_c->next_LANport++;
         fr_c->last_LANdiscovery = unix_time();
     }
 }
