@@ -107,7 +107,6 @@ typedef struct {
     void *fr_request_object;
 
     uint64_t last_LANdiscovery;
-    uint16_t next_LANport;
 
     bool local_discovery_enabled;
 } Friend_Connections;
