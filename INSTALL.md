@@ -74,7 +74,7 @@ Note, if you install from ports select NaCl for performance, and sodium if you w
 
 **For A/V support, also install the dependences listed in the [libtoxav](#libtoxav) section.** Note that you have to install those dependencies **before** compiling `toxcore`.
 
-You should get and install [libsodium](https://github.com/jedisct1/libsodium). If you have installed `libsodium` from repo, ommit this step, and jump directly to [compiling toxcore](#compile-toxcore):
+You should get and install [libsodium](https://github.com/jedisct1/libsodium). If you have installed `libsodium` from repo, omit this step, and jump directly to [compiling toxcore](#compile-toxcore):
 ```bash
 git clone https://github.com/jedisct1/libsodium.git
 cd libsodium
@@ -267,7 +267,7 @@ export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
 
 #### Cross-compile
 
-It's a bit challenging to build Tox and all of its dependencies nativly on Windows, so we will show an easier, less error and headache prone method of building it -- cross-compiling.
+It's a bit challenging to build Tox and all of its dependencies natively on Windows, so we will show an easier, less error and headache prone method of building it -- cross-compiling.
 
 ##### Setting up a VM
 

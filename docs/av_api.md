@@ -10,7 +10,7 @@ phone_t* initPhone(uint16_t _listen_port, uint16_t _send_port);
 
 function initializes sample phone. _listen_port and _send_port are variables only meant
 for local testing. You will not have to do anything regarding to that since
-everything will be started within a mesenger.
+everything will be started within a messenger.
 
 
 Phone requires one msi session and two rtp sessions ( one for audio and one for
@@ -143,12 +143,12 @@ _core_handler is the same network handler as in msi_session_s struct.
 ```
 int init_receive_audio(codec_state *cs);
 int init_receive_video(codec_state *cs);
-Initialises the A/V decoders. On failure it will print the reason and return 0. On success it will return 1.
+Initializes the A/V decoders. On failure it will print the reason and return 0. On success it will return 1.
 
 int init_send_audio(codec_state *cs);
 int init_send_video(codec_state *cs);
-Initialises the A/V encoders. On failure it will print the reason and return 0. On success it will return 1.
-init_send_audio will also let the user select an input device. init_send_video will determine the webcam's output codec and initialise the appropriate decoder.
+Initializes the A/V encoders. On failure it will print the reason and return 0. On success it will return 1.
+init_send_audio will also let the user select an input device. init_send_video will determine the webcam's output codec and initialize the appropriate decoder.
 
 int video_encoder_refresh(codec_state *cs, int bps);
 Reinitialises the video encoder with a new bitrate. ffmpeg does not expose the needed VP8 feature to change the bitrate on the fly, so this serves as a workaround.
