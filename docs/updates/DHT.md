@@ -8,7 +8,7 @@ Follows pretty much the principle of the torrent DHT: http://www.bittorrent.org/
 But:
 Vastly simplified packet format and encryption.
 
-Boostrapping:
+Bootstrapping:
 The first time you install the client we bootstrap it with a node. (bandwidth should not be a problem as the client only needs to be sent one reply.)
 
 

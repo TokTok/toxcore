@@ -222,7 +222,7 @@ sudo chmod 700 /var/lib/tox-bootstrapd
 sudo docker run -d --name tox-bootstrapd --restart always -v /var/lib/tox-bootstrapd/:/var/lib/tox-bootstrapd/ -p 443:443 -p 3389:3389 -p 33445:33445 -p 33445:33445/udp tox-bootstrapd
 ```
 
-We create a new user and protect its home directory in order to mount it in the Docker image, so that the kyepair the daemon uses would be stored on the host system, which makes it less likely that you would loose the keypair while playing with or updating the Docker container.
+We create a new user and protect its home directory in order to mount it in the Docker image, so that the keypair the daemon uses would be stored on the host system, which makes it less likely that you would loose the keypair while playing with or updating the Docker container.
 
 You can check logs for your public key or any errors:
 ```sh
