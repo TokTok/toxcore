@@ -79,7 +79,7 @@ Here, we simply exit the program, but in a real client you will probably want
 to do some error handling and proper error reporting to the user. The `NULL`
 argument given to the first parameter of `tox_new` is the `Tox_Options`. It
 contains various write-once network settings and allows you to load a
-previously serialised instance. See [toxcore/tox.h](tox.h) for details.
+previously serialized instance. See [tox.h](toxcore/tox.h) for details.
 
 ### Setting up callbacks
 
@@ -167,7 +167,7 @@ We glossed over a lot of details, such as the user data which we passed to
 will work in the LAN, but not on an internet server) and the fact that we now
 have no clean way of stopping the bot (`while (true)`). If you want to write a
 real bot, you will probably want to read up on all the API functions. Consult
-the API documentation in [toxcore/tox.h](tox.h) for more information.
+the API documentation in [tox.h](toxcore/tox.h) for more information.
 
 ### Other resources
 
