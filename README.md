@@ -35,6 +35,7 @@ on the website, where they are updated at least once every 24 hours:
 
 -   Changelog: https://toktok.ltd/changelog/c-toxcore
 -   Roadmap: https://toktok.ltd/roadmap/c-toxcore
+-   Projects: https://github.com/TokTok/c-toxcore/projects
 
 ## Installing toxcore
 
