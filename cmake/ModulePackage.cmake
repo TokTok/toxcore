@@ -61,12 +61,12 @@ function(add_module lib)
       VERSION ${SOVERSION}
       SOVERSION ${SOVERSION_MAJOR}
     )
-    install(TARGETS ${lib}_shared DESTINATION "lib")
+    install(TARGETS ${lib}_shared DESTINATION ${CMAKE_INSTALL_LIBDIR})
   endif()
   if(ENABLE_STATIC)
     add_library(${lib}_static STATIC ${ARGN})
     set_target_properties(${lib}_static PROPERTIES OUTPUT_NAME ${lib})
-    install(TARGETS ${lib}_static DESTINATION "lib")
+    install(TARGETS ${lib}_static DESTINATION ${CMAKE_INSTALL_LIBDIR})
   endif()
 endfunction()
 

@@ -41,8 +41,12 @@ include(AddCompilerFlag)
 include(ApiDsl)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
-include(MacRpath)
 include(StrictAbi)
+include(GNUInstallDirs)
+
+if(APPLE)
+  include(MacRpath)
+endif()
 
 enable_testing()
 
@@ -582,26 +586,32 @@ configure_file(
   @ONLY
 )
 
+configure_file(
+  "${toxcore_SOURCE_DIR}/other/rpm/toxcore.spec.in"
+  "${CMAKE_BINARY_DIR}/toxcore.spec"
+  @ONLY
+)
+
 install(FILES
   ${CMAKE_BINARY_DIR}/libtoxcore.pc
   ${CMAKE_BINARY_DIR}/toxcore.pc
   ${CMAKE_BINARY_DIR}/toxdns.pc
   ${CMAKE_BINARY_DIR}/toxencryptsave.pc
-  DESTINATION "lib/pkgconfig")
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 install(FILES
   toxcore/tox.h
   toxdns/toxdns.h
   toxencryptsave/toxencryptsave.h
-  DESTINATION "include/tox")
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/tox)
 
 if(BUILD_TOXAV)
   install(FILES
     ${CMAKE_BINARY_DIR}/libtoxav.pc
     ${CMAKE_BINARY_DIR}/toxav.pc
-    DESTINATION "lib/pkgconfig")
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
   install(FILES
     toxav/toxav.h
-    DESTINATION "include/tox")
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/tox)
 endif()
 
 if(STRICT_ABI AND SHELL AND ENABLE_SHARED)
