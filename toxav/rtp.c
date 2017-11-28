@@ -118,7 +118,37 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length_v3, 
         return -1;
     }
 
+    // here the highest bits gets stripped anyway, no need to do keyframe bit magic here!
     uint16_t length = (uint16_t)length_v3;
+
+    uint8_t is_keyframe = 0;
+    uint8_t is_video_payload = 0;
+
+    if (session->payload_type == rtp_TypeVideo)
+    {
+        is_video_payload = 1;
+    }
+
+    if (is_video_payload == 1)
+    {
+        // TOX RTP V3 --- hack to get frame type ---
+        //
+        // use the highest bit (bit 31) to spec. keyframe = 1 / no keyframe = 0
+        // if length(31 bits) > 1FFFFFFF then use all bits for length
+        // and assume its a keyframe (most likely is anyway)
+
+        if (LOWER_31_BITS(length_v3) > 0x1FFFFFFF)
+        {
+            is_keyframe = 1;
+        }
+        else
+        {
+            is_keyframe = (length_v3 & (1 << 31)) != 0; // 1-> is keyframe, 0-> no keyframe
+            length_v3 = LOWER_31_BITS(length_v3);
+        }
+
+        // TOX RTP V3 --- hack to get frame type ---
+    }
 
     VLA(uint8_t, rdata, length_v3 + sizeof(struct RTPHeader) + 1);
     memset(rdata, 0, SIZEOF_VLA(rdata));
@@ -159,6 +189,8 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length_v3, 
 
     // header_v3->offset_lower = net_htons((uint16_t)(0 && 0xFFFF));
     header_v3->offset_full = net_htonl(0);
+
+    header_v3->is_keyframe = is_keyframe;
     // TODO: bigendian ??
 
 // Zoff -- new stuff --
@@ -268,6 +300,48 @@ static struct RTPMessage *new_message(size_t allocate_len, const uint8_t *data, 
 
     return msg;
 }
+
+int handle_rtp_packet_v3(Messenger *m, uint32_t friendnumber, const uint8_t *data, uint16_t length, void *object)
+{
+    (void) m;
+    (void) friendnumber;
+
+    RTPSession *session = (RTPSession *)object;
+
+    /*
+     *
+     * session->mcb == vc_queue_message() // this function is called from here! arrgh **
+     * session->mp == struct *RTPMessage
+     * session->cs == call->video.second // == VCSession created by vc_new() call!
+     *
+     * next time please make it even more confusing!?!? arrgh **
+     *
+     */
+
+    // here the magical packet ID byte gets stripped, why? -----------
+    const uint8_t *data_orig = data;
+    data++;
+    length--; // this is the length of only this part of the message
+    // here the magical packet ID byte gets stripped, why? -----------
+
+
+    const struct RTPHeaderV3 *header_v3 = (void *)data;
+
+    uint32_t length_v3 = net_htonl(header_v3->data_length_full);
+    uint32_t offset_v3 = net_htonl(header_v3->offset_full);
+
+    LOGGER_WARNING(m->log, "-- handle_rtp_packet_v3 -- full len=%d is_keyframe=%s", (int)length_v3, ((int)header_v3->is_keyframe) ? "K" : ".");
+
+    if (offset_v3 >= length_v3) {
+        /* Never allow this case to happen */
+		LOGGER_WARNING(m->log, "Never allow this case to happen");
+        return -1;
+    }
+
+
+}
+
+
 int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, uint16_t length, void *object)
 {
     (void) m;
@@ -275,13 +349,36 @@ int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, 
 
     RTPSession *session = (RTPSession *)object;
 
-    data ++;
+    // here the packet ID byte gets stripped, why? -----------
+    const uint8_t *data_orig = data;
+    const uint32_t length_orig = length;
+    data++;
     length--;
+    // here the packet ID byte gets stripped, why? -----------
 
     if (!session || length < sizeof(struct RTPHeader)) {
         LOGGER_WARNING(m->log, "No session or invalid length of received buffer!");
         return -1;
     }
+
+
+// Zoff -- new stuff --
+
+    const struct RTPHeaderV3 *header_v3 = (void *)data;
+    if ( ((uint8_t)header_v3->protocol_version) == 3)
+    {
+        return handle_rtp_packet_v3(m, friendnumber, data_orig, length_orig, object);
+    }
+
+// Zoff -- new stuff --
+
+
+
+
+    // everything below here is protocol version 2 ------------------
+    // everything below here is protocol version 2 ------------------
+    // everything below here is protocol version 2 ------------------
+
 
     const struct RTPHeader *header = (const struct RTPHeader *) data;
 
@@ -442,3 +539,5 @@ NEW_MULTIPARTED:
 
     return 0;
 }
+
+

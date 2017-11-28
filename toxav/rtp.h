@@ -32,7 +32,7 @@
  */
 enum {
     rtp_TypeAudio = 192,
-    rtp_TypeVideo,
+    rtp_TypeVideo, // = 193
 };
 
 struct RTPHeader {
@@ -69,11 +69,14 @@ struct RTPHeader {
 typedef char __fail_if_misaligned_1 [ sizeof(struct RTPHeader) == 80 ? 1 : -1 ];
 
 
+// #define LOWER_31_BITS(x) (x & ((int)(1L << 31) - 1))
+#define LOWER_31_BITS(x) (x & 0x7fffffff)
+
 
 struct RTPHeaderV3 {
 #ifndef WORDS_BIGENDIAN
     uint16_t cc: 4; /* Contributing sources count */
-    uint16_t xe: 1; /* Extra header */
+    uint16_t is_keyframe: 1;
     uint16_t pe: 1; /* Padding */
     uint16_t protocol_version: 2; /* Version has only 2 bits! */
 
@@ -82,7 +85,7 @@ struct RTPHeaderV3 {
 #else
     uint16_t protocol_version: 2; /* Version has only 2 bits! */
     uint16_t pe: 1; /* Padding */
-    uint16_t xe: 1; /* Extra header */
+    uint16_t is_keyframe: 1;
     uint16_t cc: 4; /* Contributing sources count */
 
     uint16_t ma: 1; /* Marker */
