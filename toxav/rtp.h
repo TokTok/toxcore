@@ -68,8 +68,50 @@ struct RTPHeader {
 /* Check alignment */
 typedef char __fail_if_misaligned_1 [ sizeof(struct RTPHeader) == 80 ? 1 : -1 ];
 
+
+
+struct RTPHeaderV3 {
+#ifndef WORDS_BIGENDIAN
+    uint16_t cc: 4; /* Contributing sources count */
+    uint16_t xe: 1; /* Extra header */
+    uint16_t pe: 1; /* Padding */
+    uint16_t protocol_version: 2; /* Version has only 2 bits! */
+
+    uint16_t pt: 7; /* Payload type */
+    uint16_t ma: 1; /* Marker */
+#else
+    uint16_t protocol_version: 2; /* Version has only 2 bits! */
+    uint16_t pe: 1; /* Padding */
+    uint16_t xe: 1; /* Extra header */
+    uint16_t cc: 4; /* Contributing sources count */
+
+    uint16_t ma: 1; /* Marker */
+    uint16_t pt: 7; /* Payload type */
+#endif
+
+    uint16_t sequnum;
+    uint32_t timestamp;
+    uint32_t ssrc;
+    uint32_t offset_full; /* Data offset of the current part */
+    uint32_t data_length_full; /* data length without header, and without packet id */
+    uint32_t handled_length_full; /* only the receiver uses this field */
+    uint32_t csrc[13];
+
+    uint16_t offset_lower;      /* Data offset of the current part */
+    uint16_t data_length_lower; /* data length without header, and without packet id */
+} __attribute__((packed));
+
+/* Check struct size */
+typedef char __fail_if_size_wrong_1 [ sizeof(struct RTPHeaderV3) == 80 ? 1 : -1 ];
+
+
+/* Check that V3 header is the same size as previous header */
+typedef char __fail_if_size_wrong_2 [ sizeof(struct RTPHeader) == sizeof(struct RTPHeaderV3) ? 1 : -1 ];
+
+
+
 struct RTPMessage {
-    uint16_t len;
+    uint16_t len; // Zoff: this is actually only the length of the current part of this message!
 
     struct RTPHeader header;
     uint8_t data[];
@@ -105,6 +147,6 @@ RTPSession *rtp_new(int payload_type, Messenger *m, uint32_t friendnumber,
 void rtp_kill(RTPSession *session);
 int rtp_allow_receiving(RTPSession *session);
 int rtp_stop_receiving(RTPSession *session);
-int rtp_send_data(RTPSession *session, const uint8_t *data, uint16_t length, Logger *log);
+int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length, Logger *log);
 
 #endif /* RTP_H */

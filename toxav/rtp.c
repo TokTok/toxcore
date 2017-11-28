@@ -109,21 +109,25 @@ int rtp_stop_receiving(RTPSession *session)
     LOGGER_DEBUG(session->m->log, "Stopped receiving on session: %p", session);
     return 0;
 }
-int rtp_send_data(RTPSession *session, const uint8_t *data, uint16_t length, Logger *log)
+
+
+int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length_v3, Logger *log)
 {
     if (!session) {
         LOGGER_ERROR(log, "No session!");
         return -1;
     }
 
-    VLA(uint8_t, rdata, length + sizeof(struct RTPHeader) + 1);
+    uint16_t length = (uint16_t)length_v3;
+
+    VLA(uint8_t, rdata, length_v3 + sizeof(struct RTPHeader) + 1);
     memset(rdata, 0, SIZEOF_VLA(rdata));
 
     rdata[0] = session->payload_type;
 
     struct RTPHeader *header = (struct RTPHeader *)(rdata + 1);
 
-    header->ve = 2;
+    header->ve = 2; // version
     header->pe = 0;
     header->xe = 0;
     header->cc = 0;
@@ -138,14 +142,37 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint16_t length, Log
     header->cpart = 0;
     header->tlen = net_htons(length);
 
-    if (MAX_CRYPTO_DATA_SIZE > length + sizeof(struct RTPHeader) + 1) {
+
+// Zoff -- new stuff --
+
+    struct RTPHeaderV3 *header_v3 = (void *)header;
+
+    header_v3->protocol_version = 3; // TOX RTP V3
+
+    uint16_t length_safe = (uint16_t)(length_v3 && 0xFFFF);
+    if (length > UINT16_MAX)
+    {
+        length_safe = UINT16_MAX;
+    }
+    // header_v3->data_length_lower = net_htons(length_safe);
+    header_v3->data_length_full = net_htonl(length_v3);
+
+    // header_v3->offset_lower = net_htons((uint16_t)(0 && 0xFFFF));
+    header_v3->offset_full = net_htonl(0);
+    // TODO: bigendian ??
+
+// Zoff -- new stuff --
+
+
+
+    if (MAX_CRYPTO_DATA_SIZE > (length_v3 + sizeof(struct RTPHeader) + 1)) {
 
         /**
          * The length is lesser than the maximum allowed length (including header)
          * Send the packet in single piece.
          */
 
-        memcpy(rdata + 1 + sizeof(struct RTPHeader), data, length);
+        memcpy(rdata + 1 + sizeof(struct RTPHeader), data, length_v3);
 
         if (-1 == m_send_custom_lossy_packet(session->m, session->friend_number, rdata, SIZEOF_VLA(rdata))) {
             LOGGER_WARNING(session->m->log, "RTP send failed (len: %d)! std error: %s", SIZEOF_VLA(rdata), strerror(errno));
@@ -157,10 +184,10 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint16_t length, Log
          * Send the packet in multiple pieces.
          */
 
-        uint16_t sent = 0;
+        uint32_t sent = 0;
         uint16_t piece = MAX_CRYPTO_DATA_SIZE - (sizeof(struct RTPHeader) + 1);
 
-        while ((length - sent) + sizeof(struct RTPHeader) + 1 > MAX_CRYPTO_DATA_SIZE) {
+        while ((length_v3 - sent) + sizeof(struct RTPHeader) + 1 > MAX_CRYPTO_DATA_SIZE) {
             memcpy(rdata + 1 + sizeof(struct RTPHeader), data + sent, piece);
 
             if (-1 == m_send_custom_lossy_packet(session->m, session->friend_number,
@@ -170,7 +197,15 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint16_t length, Log
             }
 
             sent += piece;
-            header->cpart = net_htons(sent);
+            header->cpart = net_htons((uint16_t)sent);
+
+// Zoff -- new stuff --
+
+            header_v3->offset_full = net_htonl(sent);
+            // TODO: bigendian ??
+
+// Zoff -- new stuff --
+
         }
 
         /* Send remaining */

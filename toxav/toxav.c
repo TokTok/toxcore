@@ -809,30 +809,41 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 
     ++call->video.second->frame_counter;
 
+
+
     { /* Send frames */
         vpx_codec_iter_t iter = NULL;
         const vpx_codec_cx_pkt_t *pkt;
 
-        while ((pkt = vpx_codec_get_cx_data(call->video.second->encoder, &iter))) {
-            if (pkt->kind == VPX_CODEC_CX_FRAME_PKT) {
-                const uint8_t *buf = (const uint8_t *)pkt->data.frame.buf;
-                const uint8_t *end = buf + pkt->data.frame.sz;
+        while ((pkt = vpx_codec_get_cx_data(call->video.second->encoder, &iter)) != NULL)
+        {
+            if (pkt->kind == VPX_CODEC_CX_FRAME_PKT)
+            {
+                const int keyframe = (pkt->data.frame.flags & VPX_FRAME_IS_KEY) != 0;
 
-                while (buf < end) {
-                    uint16_t size = MIN(UINT16_MAX, end - buf);
+                int res = rtp_send_data
+                        (
+                            call->video.first,
+                            (const uint8_t *)pkt->data.frame.buf,
+                            pkt->data.frame.sz,
+                            av->m->log
+                        );
 
-                    if (rtp_send_data(call->video.first, buf, size, av->m->log) < 0) {
-                        pthread_mutex_unlock(call->mutex_video);
-                        LOGGER_WARNING(av->m->log, "Could not send video frame: %s\n", strerror(errno));
-                        rc = TOXAV_ERR_SEND_FRAME_RTP_FAILED;
-                        goto END;
-                    }
 
-                    buf += size;
+                LOGGER_ERROR(av->m->log, "+ _sending_FRAME_TYPE_==%s bytes=%d", keyframe ? "K" : ".", (int)pkt->data.frame.sz);
+
+                if (res < 0)
+                {
+                    pthread_mutex_unlock(call->mutex_video);
+                    LOGGER_WARNING(av->m->log, "Could not send video frame: %s", strerror(errno));
+                    rc = TOXAV_ERR_SEND_FRAME_RTP_FAILED;
+                    goto END;
                 }
             }
         }
     }
+
+
 
     pthread_mutex_unlock(call->mutex_video);
 
