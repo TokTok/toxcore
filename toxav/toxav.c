@@ -821,16 +821,37 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
             {
                 const int keyframe = (pkt->data.frame.flags & VPX_FRAME_IS_KEY) != 0;
 
+                // TOX RTP V3 --- hack to give frame type to function ---
+                //
+                // use the highest bit (bit 31) to spec. keyframe = 1 / no keyframe = 0
+                // if length(31 bits) > 1FFFFFFF then use all bits for length
+                // and assume its a keyframe (most likely is anyway)
+
+                // https://www.webmproject.org/docs/webm-sdk/structvpx__codec__cx__pkt.html
+                // pkt->data.frame.sz -> size_t
+                uint32_t frame_length_in_bytes = pkt->data.frame.sz;
+                if (LOWER_31_BITS(frame_length_in_bytes) > 0x1FFFFFFF)
+                {
+                }
+                else
+                {
+                    if (keyframe == 1)
+                    {
+                        frame_length_in_bytes = (1 << 31) | LOWER_31_BITS(frame_length_in_bytes);
+                    }
+                }
+
+                // TOX RTP V3 --- hack to give frame type to function ---
+
                 int res = rtp_send_data
                         (
                             call->video.first,
                             (const uint8_t *)pkt->data.frame.buf,
-                            pkt->data.frame.sz,
+                            frame_length_in_bytes,
                             av->m->log
                         );
 
-
-                LOGGER_ERROR(av->m->log, "+ _sending_FRAME_TYPE_==%s bytes=%d", keyframe ? "K" : ".", (int)pkt->data.frame.sz);
+                LOGGER_ERROR(av->m->log, "+ _sending_FRAME_TYPE_==%s bytes=%d frame_len=%d", keyframe ? "K" : ".", (int)pkt->data.frame.sz, (int)frame_length_in_bytes);
 
                 if (res < 0)
                 {
