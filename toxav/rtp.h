@@ -123,6 +123,23 @@ struct RTPMessage {
 /* Check alignment */
 typedef char __fail_if_misaligned_2 [ sizeof(struct RTPMessage) == 82 ? 1 : -1 ];
 
+
+#define USED_RTP_WORKBUFFER_COUNT (3)
+
+struct RTPWorkBuffer {
+    uint8_t frame_type;
+    uint32_t received_len;
+    uint32_t data_len;
+    uint32_t timestamp;
+    uint8_t *buf;
+};
+
+struct RTPWorkBufferList {
+    uint8_t in_progress_count;
+    struct RTPWorkBuffer work_buffer[USED_RTP_WORKBUFFER_COUNT];
+};
+
+
 /**
  * RTP control session.
  */
@@ -144,6 +161,34 @@ typedef struct {
 } RTPSession;
 
 
+/**
+ * RTP control session V3
+ */
+typedef struct {
+    uint8_t  payload_type;
+    uint16_t sequnum;      /* Sending sequence number */
+    uint16_t rsequnum;     /* Receiving sequence number */
+    uint32_t rtimestamp;
+    uint32_t ssrc;
+
+    struct RTPWorkBufferList *work_buffer_list;
+
+    Messenger *m;
+    uint32_t friend_number;
+
+    BWController *bwc;
+    void *cs;
+    int (*mcb)(void *, struct RTPMessage *msg);
+} RTPSessionV3;
+
+
+
+/* Check that RTPSessionV3 is the same size as RTPSession */
+typedef char __fail_if_size_wrong_3 [ sizeof(RTPSession) == sizeof(RTPSessionV3) ? 1 : -1 ];
+
+
+
+
 RTPSession *rtp_new(int payload_type, Messenger *m, uint32_t friendnumber,
                     BWController *bwc, void *cs,
                     int (*mcb)(void *, struct RTPMessage *));
@@ -153,3 +198,5 @@ int rtp_stop_receiving(RTPSession *session);
 int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length, Logger *log);
 
 #endif /* RTP_H */
+
+
