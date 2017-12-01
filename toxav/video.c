@@ -160,14 +160,26 @@ void vc_iterate(VCSession *vc)
     pthread_mutex_lock(vc->queue_mutex);
     uint8_t data_type;
 
+    uint32_t full_data_len;
+
     if (rb_read((RingBuffer *)vc->vbuf_raw, (void **)&p, &data_type))
     {
         pthread_mutex_unlock(vc->queue_mutex);
 
-        LOGGER_DEBUG(vc->log, "vc_iterate: rb_read p->len=%d data_type=%d", (int)p->len, (int)data_type);
+        const struct RTPHeaderV3 *header_v3 = (void *)&(p->header);
+        if ( ((uint8_t)header_v3->protocol_version) == 3)
+        {
+            full_data_len = header_v3->data_length_full;
+        }
+        else
+        {
+            full_data_len = p->len;
+        }
+
+        LOGGER_DEBUG(vc->log, "vc_iterate: rb_read p->len=%d data_type=%d", (int)full_data_len, (int)data_type);
         LOGGER_DEBUG(vc->log, "vc_iterate: rb_read rb size=%d", (int)rb_size((RingBuffer *)vc->vbuf_raw));
 
-        rc = vpx_codec_decode(vc->decoder, p->data, p->len, NULL, MAX_DECODE_TIME_US);
+        rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, NULL, MAX_DECODE_TIME_US);
         if (rc != VPX_CODEC_OK)
         {
             if (rc == 5) // Bitstream not supported by this decoder
@@ -178,14 +190,14 @@ void vc_iterate(VCSession *vc)
             else if (rc == 7)
             {
                 LOGGER_WARNING(vc->log, "Corrupt frame detected: data size=%d start byte=%d end byte=%d",
-                    (int)p->len, (int)p->data[0], (int)p->data[p->len - 1]);
+                    (int)full_data_len, (int)p->data[0], (int)p->data[full_data_len - 1]);
             }
             else
             {
                 LOGGER_ERROR(vc->log, "Error decoding video: %d %s", (int)rc, vpx_codec_err_to_string(rc));
             }
 
-            rc = vpx_codec_decode(vc->decoder, p->data, p->len, NULL, MAX_DECODE_TIME_US);
+            rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, NULL, MAX_DECODE_TIME_US);
 			if (rc != 5)
 			{
 				LOGGER_ERROR(vc->log, "There is still an error decoding video: %d %s", (int)rc, vpx_codec_err_to_string(rc));
