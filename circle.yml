@@ -121,4 +121,4 @@ compile:
 
 test:
   override:
-  - make VERBOSE=1 test || make VERBOSE=1 ARGS="--rerun-failed" test
+  - make test ARGS="-V" ; ex1=$? ; if [ $ex1 -ne 0 ]; then sleep 60; make test ARGS="-V" ; exit $? ; fi
