@@ -72,6 +72,7 @@ RTPSession *rtp_new(int payload_type, Messenger *m, uint32_t friendnumber,
 
     return retu;
 }
+
 void rtp_kill(RTPSession *session)
 {
     if (!session) {
@@ -83,6 +84,7 @@ void rtp_kill(RTPSession *session)
     rtp_stop_receiving(session);
     free(session);
 }
+
 int rtp_allow_receiving(RTPSession *session)
 {
     if (session == NULL) {
@@ -98,6 +100,7 @@ int rtp_allow_receiving(RTPSession *session)
     LOGGER_DEBUG(session->m->log, "Started receiving on session: %p", session);
     return 0;
 }
+
 int rtp_stop_receiving(RTPSession *session)
 {
     if (session == NULL) {
@@ -270,9 +273,10 @@ static bool chloss(const RTPSession *session, const struct RTPHeader *header)
                (session->rsequnum + 65535) - hosq :
                session->rsequnum - hosq;
 
-        fprintf(stderr, "Lost packet\n");
+        LOGGER_WARNING(session->m->log, "Lost packet");
 
-        while (lost --) {
+        while (lost --)
+        {
             bwc_add_lost(session->bwc , 0);
         }
 
@@ -281,6 +285,8 @@ static bool chloss(const RTPSession *session, const struct RTPHeader *header)
 
     return false;
 }
+
+
 static struct RTPMessage *new_message(size_t allocate_len, const uint8_t *data, uint16_t data_length)
 {
     assert(allocate_len >= data_length);
@@ -301,6 +307,7 @@ static struct RTPMessage *new_message(size_t allocate_len, const uint8_t *data, 
     return msg;
 }
 
+
 int handle_rtp_packet_v3(Messenger *m, uint32_t friendnumber, const uint8_t *data, uint16_t length, void *object)
 {
     (void) m;
@@ -318,11 +325,11 @@ int handle_rtp_packet_v3(Messenger *m, uint32_t friendnumber, const uint8_t *dat
      *
      */
 
-    // here the magical packet ID byte gets stripped, why? -----------
+    // here the packet ID byte gets stripped, why? -----------
     const uint8_t *data_orig = data;
     data++;
-    length--; // this is the length of only this part of the message
-    // here the magical packet ID byte gets stripped, why? -----------
+    length--; // this is the length of only this part of the message (brutto)
+    // here the packet ID byte gets stripped, why? -----------
 
 
     const struct RTPHeaderV3 *header_v3 = (void *)data;
@@ -338,8 +345,20 @@ int handle_rtp_packet_v3(Messenger *m, uint32_t friendnumber, const uint8_t *dat
         return -1;
     }
 
+    if (length_v3 == (length - sizeof(struct RTPHeader)))
+    {
+        /* The message was sent in single part */
+
+
+    }
+    else
+    {
+        /* Multipart-message */
+    }
+
 
 }
+
 
 
 int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, uint16_t length, void *object)
@@ -365,8 +384,11 @@ int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, 
 // Zoff -- new stuff --
 
     const struct RTPHeaderV3 *header_v3 = (void *)data;
-    if ( ((uint8_t)header_v3->protocol_version) == 3)
+    if (( ((uint8_t)header_v3->protocol_version) == 3) &&
+        ( ((uint8_t)header_v3->pt) == rtp_TypeVideo)
+        )
     {
+        // use V3 only for Video payload (at the moment)
         return handle_rtp_packet_v3(m, friendnumber, data_orig, length_orig, object);
     }
 

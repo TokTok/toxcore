@@ -25,6 +25,9 @@
 
 struct RingBuffer {
     uint16_t size; /* Max size */
+// Zoff --
+    uint8_t data_type;
+// Zoff --
     uint16_t start;
     uint16_t end;
     void   **data;
@@ -34,17 +37,27 @@ bool rb_full(const RingBuffer *b)
 {
     return (b->end + 1) % b->size == b->start;
 }
+
 bool rb_empty(const RingBuffer *b)
 {
     return b->end == b->start;
 }
-void *rb_write(RingBuffer *b, void *p)
+
+/*
+ * returns: NULL on success
+            start address of ?? on FAILURE
+ */
+void *rb_write(RingBuffer *b, void *p, uint8_t data_type_)
 {
     void *rc = NULL;
 
     if ((b->end + 1) % b->size == b->start) { /* full */
         rc = b->data[b->start];
     }
+
+// Zoff --
+    b->data_type = data_type_;
+// Zoff --
 
     b->data[b->end] = p;
     b->end = (b->end + 1) % b->size;
@@ -55,7 +68,8 @@ void *rb_write(RingBuffer *b, void *p)
 
     return rc;
 }
-bool rb_read(RingBuffer *b, void **p)
+
+bool rb_read(RingBuffer *b, void **p, uint8_t *data_type_)
 {
     if (b->end == b->start) { /* Empty */
         *p = NULL;
@@ -63,9 +77,15 @@ bool rb_read(RingBuffer *b, void **p)
     }
 
     *p = b->data[b->start];
+ 
+// Zoff --
+    *data_type_ = b->data_type;
+// Zoff --
+
     b->start = (b->start + 1) % b->size;
     return true;
 }
+
 RingBuffer *rb_new(int size)
 {
     RingBuffer *buf = (RingBuffer *)calloc(sizeof(RingBuffer), 1);
@@ -83,6 +103,7 @@ RingBuffer *rb_new(int size)
 
     return buf;
 }
+
 void rb_kill(RingBuffer *b)
 {
     if (b) {
@@ -90,6 +111,7 @@ void rb_kill(RingBuffer *b)
         free(b);
     }
 }
+
 uint16_t rb_size(const RingBuffer *b)
 {
     if (rb_empty(b)) {
@@ -101,6 +123,7 @@ uint16_t rb_size(const RingBuffer *b)
         b->end - b->start :
         (b->size - b->start) + b->end;
 }
+
 uint16_t rb_data(const RingBuffer *b, void **dest)
 {
     uint16_t i = 0;
@@ -111,3 +134,6 @@ uint16_t rb_data(const RingBuffer *b, void **dest)
 
     return i;
 }
+
+
+

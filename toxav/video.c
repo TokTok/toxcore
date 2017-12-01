@@ -120,6 +120,7 @@ BASE_CLEANUP:
     free(vc);
     return NULL;
 }
+
 void vc_kill(VCSession *vc)
 {
     if (!vc) {
@@ -130,8 +131,9 @@ void vc_kill(VCSession *vc)
     vpx_codec_destroy(vc->decoder);
 
     void *p;
+    uint8_t dummy;
 
-    while (rb_read((RingBuffer *)vc->vbuf_raw, &p)) {
+    while (rb_read((RingBuffer *)vc->vbuf_raw, &p, &dummy)) {
         free(p);
     }
 
@@ -142,9 +144,12 @@ void vc_kill(VCSession *vc)
     LOGGER_DEBUG(vc->log, "Terminated video handler: %p", vc);
     free(vc);
 }
+
+
 void vc_iterate(VCSession *vc)
 {
-    if (!vc) {
+    if (!vc)
+    {
         return;
     }
 
@@ -153,46 +158,101 @@ void vc_iterate(VCSession *vc)
     vpx_codec_err_t rc;
 
     pthread_mutex_lock(vc->queue_mutex);
+    uint8_t data_type;
 
-    if (rb_read((RingBuffer *)vc->vbuf_raw, (void **)&p)) {
+    if (rb_read((RingBuffer *)vc->vbuf_raw, (void **)&p, &data_type))
+    {
         pthread_mutex_unlock(vc->queue_mutex);
 
-        rc = vpx_codec_decode(vc->decoder, p->data, p->len, NULL, MAX_DECODE_TIME_US);
-        free(p);
+        LOGGER_DEBUG(vc->log, "vc_iterate: rb_read p->len=%d data_type=%d", (int)p->len, (int)data_type);
+        LOGGER_DEBUG(vc->log, "vc_iterate: rb_read rb size=%d", (int)rb_size((RingBuffer *)vc->vbuf_raw));
 
-        if (rc != VPX_CODEC_OK) {
-            LOGGER_ERROR(vc->log, "Error decoding video: %s", vpx_codec_err_to_string(rc));
-        } else {
+        rc = vpx_codec_decode(vc->decoder, p->data, p->len, NULL, MAX_DECODE_TIME_US);
+        if (rc != VPX_CODEC_OK)
+        {
+            if (rc == 5) // Bitstream not supported by this decoder
+            {
+                LOGGER_WARNING(vc->log, "Switching VPX Decoder");
+                // video_switch_decoder(vc);
+            }
+            else if (rc == 7)
+            {
+                LOGGER_WARNING(vc->log, "Corrupt frame detected: data size=%d start byte=%d end byte=%d",
+                    (int)p->len, (int)p->data[0], (int)p->data[p->len - 1]);
+            }
+            else
+            {
+                LOGGER_ERROR(vc->log, "Error decoding video: %d %s", (int)rc, vpx_codec_err_to_string(rc));
+            }
+
+            rc = vpx_codec_decode(vc->decoder, p->data, p->len, NULL, MAX_DECODE_TIME_US);
+			if (rc != 5)
+			{
+				LOGGER_ERROR(vc->log, "There is still an error decoding video: %d %s", (int)rc, vpx_codec_err_to_string(rc));
+			}
+        }
+
+        if (rc == VPX_CODEC_OK)
+        {
+            free(p);
+
             vpx_codec_iter_t iter = NULL;
             vpx_image_t *dest = vpx_codec_get_frame(vc->decoder, &iter);
+            LOGGER_DEBUG(vc->log, "vpx_codec_get_frame=%p", dest);
 
-            /* Play decoded images */
-            for (; dest; dest = vpx_codec_get_frame(vc->decoder, &iter)) {
+
+            if (dest != NULL)
+	        {
                 if (vc->vcb.first) {
                     vc->vcb.first(vc->av, vc->friend_number, dest->d_w, dest->d_h,
                                   (const uint8_t *)dest->planes[0], (const uint8_t *)dest->planes[1], (const uint8_t *)dest->planes[2],
                                   dest->stride[0], dest->stride[1], dest->stride[2], vc->vcb.second);
                 }
+				// vpx_img_free(dest);
+	        }
 
-                vpx_img_free(dest);
+            /* Play decoded images */
+            for (; dest; dest = vpx_codec_get_frame(vc->decoder, &iter))
+			{
+                if (vc->vcb.first)
+				{
+                    vc->vcb.first(vc->av, vc->friend_number, dest->d_w, dest->d_h,
+                                  (const uint8_t *)dest->planes[0], (const uint8_t *)dest->planes[1], (const uint8_t *)dest->planes[2],
+                                  dest->stride[0], dest->stride[1], dest->stride[2], vc->vcb.second);
+                }
+                // vpx_img_free(dest);
             }
+        }
+        else
+        {
+            free(p);
         }
 
         return;
     }
+    else
+    {
+        LOGGER_DEBUG(vc->log, "Error decoding video: rb_read");
+    }
 
     pthread_mutex_unlock(vc->queue_mutex);
 }
+
+
 int vc_queue_message(void *vcp, struct RTPMessage *msg)
 {
-    /* This function does the reconstruction of video packets.
-     * See more info about video splitting in docs
+    /* This function is called with complete messages
+     * they have already been assembled.
+     * this function gets called from handle_rtp_packet() and handle_rtp_packet_v3() 
      */
     if (!vcp || !msg) {
         return -1;
     }
 
     VCSession *vc = (VCSession *)vcp;
+
+    // const struct RTPHeader *header = (void *)&(msg->header);
+    const struct RTPHeaderV3 *header_v3 = (void *)&(msg->header);
 
     if (msg->header.pt == (rtp_TypeVideo + 2) % 128) {
         LOGGER_WARNING(vc->log, "Got dummy!");
@@ -207,17 +267,29 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
     }
 
     pthread_mutex_lock(vc->queue_mutex);
-    free(rb_write((RingBuffer *)vc->vbuf_raw, msg));
+
+    if (( ((uint8_t)header_v3->protocol_version) == 3) &&
+        ( ((uint8_t)header_v3->pt) == rtp_TypeVideo)
+        )
     {
-        /* Calculate time took for peer to send us this frame */
-        uint32_t t_lcfd = current_time_monotonic() - vc->linfts;
-        vc->lcfd = t_lcfd > 100 ? vc->lcfd : t_lcfd;
-        vc->linfts = current_time_monotonic();
+        free(rb_write((RingBuffer *)vc->vbuf_raw, msg, (uint8_t)header_v3->is_keyframe));
     }
+    else
+    {
+        free(rb_write((RingBuffer *)vc->vbuf_raw, msg, 0));
+    }
+
+
+    /* Calculate time it took for peer to send us this frame */
+    uint32_t t_lcfd = current_time_monotonic() - vc->linfts;
+    vc->lcfd = t_lcfd > 100 ? vc->lcfd : t_lcfd;
+    vc->linfts = current_time_monotonic();
+
     pthread_mutex_unlock(vc->queue_mutex);
 
     return 0;
 }
+
 int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height)
 {
     if (!vc) {
