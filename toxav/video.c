@@ -247,7 +247,8 @@ void vc_iterate(VCSession *vc)
     }
     else
     {
-        LOGGER_WARNING(vc->log, "Error decoding video: rb_read");
+        // no frame data available
+        // LOGGER_WARNING(vc->log, "Error decoding video: rb_read");
     }
 
     pthread_mutex_unlock(vc->queue_mutex);
