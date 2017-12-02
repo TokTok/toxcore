@@ -131,11 +131,12 @@ struct RTPWorkBuffer {
     uint32_t received_len;
     uint32_t data_len;
     uint32_t timestamp;
+    uint16_t sequnum;
     uint8_t *buf;
 };
 
 struct RTPWorkBufferList {
-    uint8_t in_progress_count;
+    int8_t next_free_entry;
     struct RTPWorkBuffer work_buffer[USED_RTP_WORKBUFFER_COUNT];
 };
 

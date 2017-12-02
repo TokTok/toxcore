@@ -167,17 +167,20 @@ void vc_iterate(VCSession *vc)
         pthread_mutex_unlock(vc->queue_mutex);
 
         const struct RTPHeaderV3 *header_v3 = (void *)&(p->header);
+        LOGGER_WARNING(vc->log, "vc_iterate:00:pv=%d", (uint8_t)header_v3->protocol_version);
         if ( ((uint8_t)header_v3->protocol_version) == 3)
         {
+            LOGGER_WARNING(vc->log, "vc_iterate:001");
             full_data_len = header_v3->data_length_full;
         }
         else
         {
+            LOGGER_WARNING(vc->log, "vc_iterate:002");
             full_data_len = p->len;
         }
 
-        LOGGER_DEBUG(vc->log, "vc_iterate: rb_read p->len=%d data_type=%d", (int)full_data_len, (int)data_type);
-        LOGGER_DEBUG(vc->log, "vc_iterate: rb_read rb size=%d", (int)rb_size((RingBuffer *)vc->vbuf_raw));
+        LOGGER_WARNING(vc->log, "vc_iterate: rb_read p->len=%d data_type=%d", (int)full_data_len, (int)data_type);
+        LOGGER_WARNING(vc->log, "vc_iterate: rb_read rb size=%d", (int)rb_size((RingBuffer *)vc->vbuf_raw));
 
         rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, NULL, MAX_DECODE_TIME_US);
         if (rc != VPX_CODEC_OK)
@@ -210,7 +213,7 @@ void vc_iterate(VCSession *vc)
 
             vpx_codec_iter_t iter = NULL;
             vpx_image_t *dest = vpx_codec_get_frame(vc->decoder, &iter);
-            LOGGER_DEBUG(vc->log, "vpx_codec_get_frame=%p", dest);
+            LOGGER_WARNING(vc->log, "vpx_codec_get_frame=%p", dest);
 
 
             if (dest != NULL)
@@ -244,7 +247,7 @@ void vc_iterate(VCSession *vc)
     }
     else
     {
-        LOGGER_DEBUG(vc->log, "Error decoding video: rb_read");
+        LOGGER_WARNING(vc->log, "Error decoding video: rb_read");
     }
 
     pthread_mutex_unlock(vc->queue_mutex);
@@ -273,7 +276,7 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
     }
 
     if (msg->header.pt != rtp_TypeVideo % 128) {
-        LOGGER_WARNING(vc->log, "Invalid payload type!");
+        LOGGER_WARNING(vc->log, "Invalid payload type! pt=%d", (int)msg->header.pt);
         free(msg);
         return -1;
     }
@@ -281,9 +284,10 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
     pthread_mutex_lock(vc->queue_mutex);
 
     if (( ((uint8_t)header_v3->protocol_version) == 3) &&
-        ( ((uint8_t)header_v3->pt) == rtp_TypeVideo)
+        ( ((uint8_t)header_v3->pt) == (rtp_TypeVideo % 128))
         )
     {
+        LOGGER_WARNING(vc->log, "rb_write msg->len=%d b0=%d b1=%d", (int)msg->len, (int)msg->data[0], (int)msg->data[1]);
         free(rb_write((RingBuffer *)vc->vbuf_raw, msg, (uint8_t)header_v3->is_keyframe));
     }
     else
