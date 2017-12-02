@@ -48,6 +48,8 @@
 #define VIDEO_SEND_X_KEYFRAMES_FIRST (8)
 #define VPX_MAX_ENCODER_THREADS (4)
 #define VPX_MAX_DECODER_THREADS (4)
+#define VPX_MAX_DIST_NORMAL (48)
+#define VPX_MAX_DIST_START (48)
 
 
 #include <pthread.h>

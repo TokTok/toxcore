@@ -127,7 +127,7 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t* cfg, int16_t kf_max_
     }
     else
     {
-        cfg->kf_max_dist = 1;
+        cfg->kf_max_dist = VPX_MAX_DIST_START;
         LOGGER_WARNING(log, "kf_max_dist=%d (2)", cfg->kf_max_dist);
     }
     cfg->g_threads = VPX_MAX_ENCODER_THREADS; // Maximum number of threads to use
