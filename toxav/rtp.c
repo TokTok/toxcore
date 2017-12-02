@@ -92,9 +92,9 @@ void rtp_kill(RTPSession *session)
 
     if (session_v3->work_buffer_list)
     {
-        LOGGER_DEBUG(session->m->log, "Terminated RTP session V3 in_progress_count: %d", (int)session_v3->work_buffer_list->in_progress_count);
+        LOGGER_DEBUG(session->m->log, "Terminated RTP session V3 next_free_entry: %d", (int)session_v3->work_buffer_list->next_free_entry);
 
-        if (session_v3->work_buffer_list->in_progress_count > 0)
+        if (session_v3->work_buffer_list->next_free_entry > 0)
         {
         }
 
@@ -134,6 +134,9 @@ int rtp_stop_receiving(RTPSession *session)
 }
 
 
+/*
+ * input is raw vpx data. length_v3 is the length of the raw data
+ */
 int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length_v3, Logger *log)
 {
     if (!session) {
@@ -256,7 +259,7 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length_v3, 
 
 // Zoff -- new stuff --
 
-            header_v3->offset_full = net_htonl(sent);
+            header_v3->offset_full = net_htonl(sent); // raw data offset, without any header
             // TODO: bigendian ??
 
 // Zoff -- new stuff --
@@ -332,11 +335,12 @@ static struct RTPMessage *new_message(size_t allocate_len, const uint8_t *data, 
 //
 static struct RTPMessage *new_message_v3(size_t allocate_len, const uint8_t *data, uint16_t data_length, uint32_t offset, uint32_t full_data_length, uint8_t is_keyframe)
 {
-    assert(allocate_len >= data_length);
+    // assert(allocate_len >= data_length);
 
-    struct RTPMessage *msg = (struct RTPMessage *)calloc(1, 
-                sizeof(struct RTPMessage) + (allocate_len - sizeof(
-                struct RTPHeader)));
+    struct RTPMessage *msg = (
+                struct RTPMessage *)calloc(1,
+                    sizeof(struct RTPMessage) + (allocate_len)
+                            );
 
     msg->len = data_length - sizeof(struct RTPHeader); // without header
     memcpy(&msg->header, data, data_length);
@@ -348,14 +352,121 @@ static struct RTPMessage *new_message_v3(size_t allocate_len, const uint8_t *dat
     msg->header.cpart = net_ntohs(msg->header.cpart);
     msg->header.tlen = net_ntohs(msg->header.tlen); // without header
 
-    struct RTPHeaderV3 *header_v3 = (void *)data;
+    msg->header.pt = (rtp_TypeVideo % 128);
+
+    struct RTPHeaderV3 *header_v3 = (void *)&(msg->header);
     header_v3->data_length_full = full_data_length; // without header
     header_v3->offset_full = offset;
     header_v3->is_keyframe = is_keyframe;
+    header_v3->protocol_version = 3;
 
     return msg;
 }
 
+
+
+static int8_t get_slot(struct RTPWorkBufferList *wkbl, uint8_t is_keyframe, const struct RTPHeaderV3 *header_v3, uint8_t is_multipart)
+{
+    int8_t result_slot = -1; // -1 -> means drop message (or message part)
+
+    if (is_multipart == 1)
+    {
+        int i;
+        for (i=0;i<wkbl->next_free_entry;i++)
+        {
+            if ((wkbl->work_buffer[i].sequnum == net_ntohs(header_v3->sequnum))
+                &&
+                (wkbl->work_buffer[i].timestamp == net_ntohl(header_v3->timestamp)))
+            {
+                return i;
+            }
+        }
+
+        if (wkbl->next_free_entry < USED_RTP_WORKBUFFER_COUNT)
+        {
+            return wkbl->next_free_entry;
+        }
+    }
+    else
+    {
+    }
+
+    return result_slot;
+}
+
+
+static struct RTPMessage *process_oldest_frame(Logger *log, struct RTPWorkBufferList *wkbl)
+{
+    if (wkbl->next_free_entry > 0)
+    {
+        // remove entry 0, and make RTPMessageV3 from it
+        struct RTPMessage *m_new = (struct RTPMessage *)wkbl->work_buffer[0].buf;
+        wkbl->work_buffer[0].buf = NULL;
+
+        LOGGER_WARNING(log, "process_oldest_frame:m_new->len=%d", m_new->len);
+
+
+        LOGGER_WARNING(log, "process_oldest_frame:001a next_free_entry=%d", wkbl->next_free_entry);
+
+        int i;
+        for (i=0;i<(wkbl->next_free_entry - 1);i++)
+        {
+            // move entry (i+1) into entry (i)
+            memcpy(&(wkbl->work_buffer[i]), &(wkbl->work_buffer[i+1]), sizeof(struct RTPWorkBuffer));
+            wkbl->work_buffer[i].buf = wkbl->work_buffer[i+1].buf;
+            memset(&(wkbl->work_buffer[i+1]), 0, sizeof(struct RTPWorkBuffer));
+        }
+        wkbl->next_free_entry--;
+
+        LOGGER_WARNING(log, "process_oldest_frame:001b next_free_entry=%d", wkbl->next_free_entry);
+
+        return m_new;
+    }
+    else
+    {
+        return NULL;
+    }
+}
+
+void fill_data_into_slot(Logger *log, struct RTPWorkBufferList *wkbl, int8_t slot, uint8_t is_keyframe, const struct RTPHeaderV3 *header_v3, uint32_t length_v3, uint32_t offset_v3, const uint8_t *data, uint16_t length)
+{
+    if (slot > -1)
+    {
+        if (wkbl->work_buffer[slot].received_len == 0)
+        {
+            // this is the first time this slot is used. initialize it
+            wkbl->work_buffer[slot].buf = (void *)new_message_v3(
+                length_v3, data, length,
+                offset_v3, length_v3, is_keyframe);
+
+            LOGGER_WARNING(log, "new message v3 001 is_keyframe=%d len=%d offset=%d", is_keyframe, (int)length_v3, (int)offset_v3);
+
+            wkbl->work_buffer[slot].frame_type = is_keyframe;
+            wkbl->work_buffer[slot].data_len = length_v3;
+            wkbl->work_buffer[slot].timestamp = net_ntohl(header_v3->timestamp);
+            wkbl->work_buffer[slot].sequnum = net_ntohs(header_v3->sequnum);
+
+            wkbl->next_free_entry++;
+            LOGGER_WARNING(log, "wkbl->next_free_entry:001=%d", wkbl->next_free_entry);
+        }
+
+        if (offset_v3 > length_v3)
+        {
+            LOGGER_ERROR(log, "memory size too small!");
+        }
+
+        memcpy(
+            (wkbl->work_buffer[slot].buf + sizeof(struct RTPHeader) + offset_v3),
+            data + sizeof(struct RTPHeader),
+            (size_t)(length - sizeof(struct RTPHeader))
+                );
+
+        wkbl->work_buffer[slot].received_len = wkbl->work_buffer[slot].received_len + (length - sizeof(struct RTPHeader));
+
+        LOGGER_WARNING(log, "wkbl->next_free_entry:002=%d", wkbl->next_free_entry);
+        LOGGER_WARNING(log, "fill data into slot=%d rec_len=%d", slot, (int)wkbl->work_buffer[slot].received_len);
+    }
+}
 
 
 int handle_rtp_packet_v3(Messenger *m, uint32_t friendnumber, const uint8_t *data, uint16_t length, void *object)
@@ -365,12 +476,20 @@ int handle_rtp_packet_v3(Messenger *m, uint32_t friendnumber, const uint8_t *dat
 
     RTPSession *session = (RTPSession *)object;
     RTPSessionV3 *session_v3 = (RTPSessionV3 *)object;
-    struct RTPWorkBufferList *work_buffer_list = session_v3->work_buffer_list;
+    struct RTPWorkBufferList *work_buffer_list = (struct RTPWorkBufferList *)session_v3->work_buffer_list;
+    LOGGER_WARNING(m->log, "wkbl1 = %p", session_v3->work_buffer_list);
+    LOGGER_WARNING(m->log, "wkbl2 = %p", session->mp);
+    LOGGER_WARNING(m->log, "wkbl3 = %p", session->mcb);
 
-    if (work_buffer_list == NULL)
+    if (session_v3->work_buffer_list == NULL)
     {
-        work_buffer_list = (struct RTPWorkBufferList*)calloc(1, sizeof(struct RTPWorkBufferList));
-        work_buffer_list->in_progress_count = 0;
+        LOGGER_WARNING(m->log, "wkbl == NULL");
+        session_v3->work_buffer_list = (struct RTPWorkBufferList*)calloc(1, sizeof(struct RTPWorkBufferList));
+        session_v3->work_buffer_list->next_free_entry = 0;
+        work_buffer_list = (struct RTPWorkBufferList *)session_v3->work_buffer_list;
+        LOGGER_WARNING(m->log, "wkbl4 = %p", session->mp);
+        LOGGER_WARNING(m->log, "wkbl5 = %p", session_v3->work_buffer_list);
+        LOGGER_WARNING(m->log, "wkbl6 = %p", work_buffer_list);
     }
 
     /*
@@ -392,9 +511,11 @@ int handle_rtp_packet_v3(Messenger *m, uint32_t friendnumber, const uint8_t *dat
     const struct RTPHeaderV3 *header_v3 = (void *)data;
 
     uint32_t length_v3 = net_htonl(header_v3->data_length_full); // without header
-    uint32_t offset_v3 = net_htonl(header_v3->offset_full);
+    uint32_t offset_v3 = net_htonl(header_v3->offset_full); // without header
+    uint8_t is_keyframe = (int)header_v3->is_keyframe;
 
-    LOGGER_WARNING(m->log, "-- handle_rtp_packet_v3 -- full len=%d is_keyframe=%s", (int)length_v3, ((int)header_v3->is_keyframe) ? "K" : ".");
+    LOGGER_WARNING(m->log, "-- handle_rtp_packet_v3 -- full lens=%d len=%d offset=%d is_keyframe=%s", (int)length, (int)length_v3, (int)offset_v3, ((int)header_v3->is_keyframe) ? "K" : ".");
+    LOGGER_WARNING(m->log, "wkbl->next_free_entry:003=%d", work_buffer_list->next_free_entry);
 
     if (offset_v3 >= length_v3)
     {
@@ -408,47 +529,72 @@ int handle_rtp_packet_v3(Messenger *m, uint32_t friendnumber, const uint8_t *dat
 
     if (length_v3 == (length - sizeof(struct RTPHeader)))
     {
-        /* The message was sent in single part */
-        if (work_buffer_list->in_progress_count == 0)
+        //if (is_keyframe == 1)
         {
-            /*
-            struct RTPWorkBuffer *wkbuf = &(work_buffer_list->work_buffer[work_buffer_list->in_progress_count]);
-            wkbuf->frame_type = (uint8_t)header_v3->is_keyframe;
-            wkbuf->received_len = (length - sizeof(struct RTPHeader));
-            wkbuf->data_len = length_v3;
-            wkbuf->timestamp = header_v3->timestamp;
-            wkbuf->buf = calloc(1, length_v3 + 1 + sizeof(struct RTPHeader));
-            */
 
-            LOGGER_WARNING(m->log, "-- handle_rtp_packet_v3 -- single part message");
-
-            struct RTPMessage *m_new = new_message_v3(length_v3 + sizeof(struct RTPHeader), data, length, 0, length_v3, (uint8_t)header_v3->is_keyframe);
-
-            /*
-            work_buffer_list->in_progress_count++;
-            */
-
-            if (session->mcb)
+            /* The message was sent in single part */
+            //if (work_buffer_list->next_free_entry == 0)
             {
-                LOGGER_WARNING(m->log, "-- handle_rtp_packet_v3 -- CALLBACK-001");
-                session->mcb(session->cs, m_new);
-            }
-            else
-            {
-                free(m_new);
-            }
+                LOGGER_WARNING(m->log, "-- handle_rtp_packet_v3 -- single part message");
 
-            m_new = NULL;
+                struct RTPMessage *m_new = new_message_v3(length_v3, data, length, 0, length_v3, (uint8_t)header_v3->is_keyframe);
+                // memcpy(&m_new->header, data, length);
+
+                if (session->mcb)
+                {
+                    LOGGER_WARNING(m->log, "-- handle_rtp_packet_v3 -- CALLBACK-001");
+                    session->mcb(session->cs, m_new);
+                }
+                else
+                {
+                    free(m_new);
+                }
+
+                m_new = NULL;
+            }
         }
     }
     else
     {
         /* Multipart-message */
+
+        // check which slot to use
+        int8_t slot = get_slot(work_buffer_list, is_keyframe, header_v3, 1);
+        LOGGER_WARNING(m->log, "slot num=%d", (int)slot);
+
+        if (slot == -1)
+        {
+            LOGGER_WARNING(m->log, "process_oldest_frame");
+            struct RTPMessage *m_new = process_oldest_frame(m->log, work_buffer_list);
+            if (m_new)
+            {
+                if (session->mcb)
+                {
+                    LOGGER_WARNING(m->log, "-- handle_rtp_packet_v3 -- CALLBACK-002");
+                    session->mcb(session->cs, m_new);
+                }
+                else
+                {
+                    free(m_new);
+                }
+
+                m_new = NULL;
+            }
+
+            slot = get_slot(work_buffer_list, is_keyframe, header_v3, 1);
+        }
+
+        if (slot != -1)
+        {
+            LOGGER_WARNING(m->log, "fill_data_into_slot");
+
+            // fill in this part into the solt buffer at the correct offset
+            fill_data_into_slot(m->log, work_buffer_list, slot, is_keyframe, header_v3, length_v3, offset_v3, data, length);
+        }
     }
 
 
 }
-
 
 
 int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, uint16_t length, void *object)
