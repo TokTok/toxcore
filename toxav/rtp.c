@@ -183,7 +183,7 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length_v3, 
 
     struct RTPHeader *header = (struct RTPHeader *)(rdata + 1);
 
-    header->ve = 2; // version
+    header->ve = 2; // protocol version
     header->pe = 0;
     header->xe = 0;
     header->cc = 0;
@@ -206,14 +206,14 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length_v3, 
     header_v3->protocol_version = 3; // TOX RTP V3
 
     uint16_t length_safe = (uint16_t)(length_v3);
-    if (length > UINT16_MAX)
+    if (length_v3 > UINT16_MAX)
     {
         length_safe = UINT16_MAX;
     }
-    // header_v3->data_length_lower = net_htons(length_safe);
+    header_v3->data_length_lower = net_htons(length_safe);
     header_v3->data_length_full = net_htonl(length_v3); // without header
 
-    // header_v3->offset_lower = net_htons((uint16_t)(0));
+    header_v3->offset_lower = net_htons((uint16_t)(0));
     header_v3->offset_full = net_htonl(0);
 
     header_v3->is_keyframe = is_keyframe;
