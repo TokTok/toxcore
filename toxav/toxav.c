@@ -852,6 +852,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
                         );
 
                 LOGGER_ERROR(av->m->log, "+ _sending_FRAME_TYPE_==%s bytes=%d frame_len=%d", keyframe ? "K" : ".", (int)pkt->data.frame.sz, (int)frame_length_in_bytes);
+                LOGGER_ERROR(av->m->log, "+ _sending_FRAME_ b0=%d b1=%d", ((const uint8_t *)pkt->data.frame.buf)[0] , ((const uint8_t *)pkt->data.frame.buf)[1]);
 
                 if (res < 0)
                 {

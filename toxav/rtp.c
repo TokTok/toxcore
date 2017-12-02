@@ -403,7 +403,7 @@ static struct RTPMessage *process_oldest_frame(Logger *log, struct RTPWorkBuffer
         struct RTPMessage *m_new = (struct RTPMessage *)wkbl->work_buffer[0].buf;
         wkbl->work_buffer[0].buf = NULL;
 
-        LOGGER_WARNING(log, "process_oldest_frame:m_new->len=%d", m_new->len);
+        LOGGER_WARNING(log, "process_oldest_frame:m_new->len=%d b0=%d b1=%d", m_new->len, (int)m_new->data[0], (int)m_new->data[1]);
 
 
         LOGGER_WARNING(log, "process_oldest_frame:001a next_free_entry=%d", wkbl->next_free_entry);
@@ -418,6 +418,7 @@ static struct RTPMessage *process_oldest_frame(Logger *log, struct RTPWorkBuffer
         }
         wkbl->next_free_entry--;
 
+        LOGGER_WARNING(log, "process_oldest_frame:m_newX->len=%d b0=%d b1=%d", m_new->len, (int)m_new->data[0], (int)m_new->data[1]);
         LOGGER_WARNING(log, "process_oldest_frame:001b next_free_entry=%d", wkbl->next_free_entry);
 
         return m_new;
@@ -448,6 +449,8 @@ void fill_data_into_slot(Logger *log, struct RTPWorkBufferList *wkbl, int8_t slo
 
             wkbl->next_free_entry++;
             LOGGER_WARNING(log, "wkbl->next_free_entry:001=%d", wkbl->next_free_entry);
+            struct RTPMessage *mm = (void*)wkbl->work_buffer[slot].buf;
+            LOGGER_WARNING(log, "wkbl->next_free_entry:001:b0=%d b1=%d", mm->data[0], mm->data[1]);
         }
 
         if (offset_v3 > length_v3)
@@ -455,13 +458,15 @@ void fill_data_into_slot(Logger *log, struct RTPWorkBufferList *wkbl, int8_t slo
             LOGGER_ERROR(log, "memory size too small!");
         }
 
+        struct RTPMessage *mm2 = (void*)wkbl->work_buffer[slot].buf;
         memcpy(
-            (wkbl->work_buffer[slot].buf + sizeof(struct RTPHeader) + offset_v3),
+            (mm2->data + offset_v3),
             data + sizeof(struct RTPHeader),
             (size_t)(length - sizeof(struct RTPHeader))
                 );
 
         wkbl->work_buffer[slot].received_len = wkbl->work_buffer[slot].received_len + (length - sizeof(struct RTPHeader));
+
 
         LOGGER_WARNING(log, "wkbl->next_free_entry:002=%d", wkbl->next_free_entry);
         LOGGER_WARNING(log, "fill data into slot=%d rec_len=%d", slot, (int)wkbl->work_buffer[slot].received_len);
@@ -570,7 +575,7 @@ int handle_rtp_packet_v3(Messenger *m, uint32_t friendnumber, const uint8_t *dat
             {
                 if (session->mcb)
                 {
-                    LOGGER_WARNING(m->log, "-- handle_rtp_packet_v3 -- CALLBACK-002");
+                    LOGGER_WARNING(m->log, "-- handle_rtp_packet_v3 -- CALLBACK-002 b0=%d b1=%d", (int)m_new->data[0], (int)m_new->data[1]);
                     session->mcb(session->cs, m_new);
                 }
                 else
