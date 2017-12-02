@@ -52,7 +52,14 @@ RTPSession *rtp_new(int payload_type, Messenger *m, uint32_t friendnumber,
         return NULL;
     }
 
-    retu->ssrc = random_int();
+    if (payload_type == rtp_TypeVideo)
+    {
+        retu->ssrc = 0;
+    }
+    else
+    {
+        retu->ssrc = random_int();
+    }
     retu->payload_type = payload_type;
 
     retu->m = m;

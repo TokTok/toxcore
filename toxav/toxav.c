@@ -35,7 +35,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_ENCODE_TIME_US ((1000 / 24) * 1000)
+
+// don't hardcode this, let the application choose it
+#define MAX_ENCODE_TIME_US VPX_DL_GOOD_QUALITY // ((1000 / 24) * 1000)
+/*
+VPX_DL_REALTIME       (1)       deadline parameter analogous to VPx REALTIME mode.
+VPX_DL_GOOD_QUALITY   (1000000) deadline parameter analogous to VPx GOOD QUALITY mode.
+VPX_DL_BEST_QUALITY   (0)       deadline parameter analogous to VPx BEST QUALITY mode.
+*/
 
 typedef struct ToxAVCall_s {
     ToxAV *av;
@@ -735,6 +742,8 @@ END:
 
     return rc == TOXAV_ERR_SEND_FRAME_OK;
 }
+
+
 bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, uint16_t height, const uint8_t *y,
                             const uint8_t *u, const uint8_t *v, TOXAV_ERR_SEND_FRAME *error)
 {
@@ -776,7 +785,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         goto END;
     }
 
-    if (vc_reconfigure_encoder(call->video.second, call->video_bit_rate * 1000, width, height) != 0) {
+    if (vc_reconfigure_encoder(call->video.second, call->video_bit_rate * 1000, width, height, -1) != 0) {
         pthread_mutex_unlock(call->mutex_video);
         rc = TOXAV_ERR_SEND_FRAME_INVALID;
         goto END;
@@ -861,6 +870,26 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
                     rc = TOXAV_ERR_SEND_FRAME_RTP_FAILED;
                     goto END;
                 }
+                else
+                {
+#if 0
+
+                    // TODO: this makes the video stop for a moment. its not yet ready to use
+
+                    if (call->video.first->ssrc < VIDEO_SEND_X_KEYFRAMES_FIRST)
+                    {
+                        call->video.first->ssrc++;
+                        LOGGER_ERROR(av->m->log, "I_FRAME_FLAG:%d", call->video.first->ssrc);
+                    }
+                    else if (call->video.first->ssrc == VIDEO_SEND_X_KEYFRAMES_FIRST)
+                    {
+                        call->video.first->ssrc++;
+                        LOGGER_ERROR(av->m->log, "I_FRAME_FLAG:%d reconfigure encoder", call->video.first->ssrc);
+                        vc_reconfigure_encoder(call->video.second, call->video_bit_rate * 1000, width, height, 48);
+                    }
+                    // we start with I-frames (full frames) and then switch to normal mode later
+#endif
+                }
             }
         }
     }
@@ -877,6 +906,9 @@ END:
 
     return rc == TOXAV_ERR_SEND_FRAME_OK;
 }
+
+
+
 void toxav_callback_audio_receive_frame(ToxAV *av, toxav_audio_receive_frame_cb *callback, void *user_data)
 {
     pthread_mutex_lock(av->mutex);
@@ -1067,6 +1099,8 @@ bool invoke_call_state_callback(ToxAV *av, uint32_t friend_number, uint32_t stat
 
     return true;
 }
+
+
 ToxAVCall *call_new(ToxAV *av, uint32_t friend_number, TOXAV_ERR_CALL *error)
 {
     /* Assumes mutex locked */
@@ -1149,6 +1183,8 @@ END:
 
     return call;
 }
+
+
 ToxAVCall *call_get(ToxAV *av, uint32_t friend_number)
 {
     /* Assumes mutex locked */
@@ -1158,6 +1194,8 @@ ToxAVCall *call_get(ToxAV *av, uint32_t friend_number)
 
     return av->calls[friend_number];
 }
+
+
 ToxAVCall *call_remove(ToxAVCall *call)
 {
     if (call == NULL) {
@@ -1205,6 +1243,8 @@ CLEAR:
 
     return NULL;
 }
+
+
 bool call_prepare_transmission(ToxAVCall *call)
 {
     /* Assumes mutex locked */
@@ -1293,6 +1333,8 @@ FAILURE_3:
     pthread_mutex_destroy(call->mutex_audio);
     return false;
 }
+
+
 void call_kill_transmission(ToxAVCall *call)
 {
     if (call == NULL || call->active == 0) {
@@ -1324,3 +1366,5 @@ void call_kill_transmission(ToxAVCall *call)
     pthread_mutex_destroy(call->mutex_video);
     pthread_mutex_destroy(call->mutex);
 }
+
+
