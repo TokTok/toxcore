@@ -170,7 +170,7 @@ void vc_iterate(VCSession *vc)
         LOGGER_WARNING(vc->log, "vc_iterate:00:pv=%d", (uint8_t)header_v3->protocol_version);
         if ( ((uint8_t)header_v3->protocol_version) == 3)
         {
-            LOGGER_WARNING(vc->log, "vc_iterate:001");
+            LOGGER_WARNING(vc->log, "vc_iterate:001:full_data_len=%d", (int)full_data_len);
             full_data_len = header_v3->data_length_full;
         }
         else
