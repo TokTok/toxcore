@@ -31,8 +31,24 @@
 
 #include <vpx/vp8cx.h>
 #include <vpx/vp8dx.h>
-#define VIDEO_CODEC_DECODER_INTERFACE (vpx_codec_vp8_dx())
-#define VIDEO_CODEC_ENCODER_INTERFACE (vpx_codec_vp8_cx())
+
+
+// Zoff --
+// -- VP8 codec ----------------
+#define VIDEO_CODEC_DECODER_INTERFACE_VP8 (vpx_codec_vp8_dx())
+#define VIDEO_CODEC_ENCODER_INTERFACE_VP8 (vpx_codec_vp8_cx())
+// -- VP9 codec ----------------
+#define VIDEO_CODEC_DECODER_INTERFACE_VP9 (vpx_codec_vp9_dx())
+#define VIDEO_CODEC_ENCODER_INTERFACE_VP9 (vpx_codec_vp9_cx())
+// Zoff --
+
+#define VIDEO_CODEC_DECODER_MAX_WIDTH  (800) // (16384)
+#define VIDEO_CODEC_DECODER_MAX_HEIGHT (600) // (16384)
+
+#define VIDEO_SEND_X_KEYFRAMES_FIRST (8)
+#define VPX_MAX_ENCODER_THREADS (4)
+#define VPX_MAX_DECODER_THREADS (4)
+
 
 #include <pthread.h>
 
@@ -46,6 +62,7 @@ typedef struct VCSession_s {
 
     /* decoding */
     vpx_codec_ctx_t decoder[1];
+    int8_t is_using_vp9;
     struct RingBuffer *vbuf_raw; /* Un-decoded data */
 
     uint64_t linfts; /* Last received frame time stamp */
@@ -64,6 +81,6 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
 void vc_kill(VCSession *vc);
 void vc_iterate(VCSession *vc);
 int vc_queue_message(void *vcp, struct RTPMessage *msg);
-int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height);
+int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height, int16_t kf_max_dist);
 
 #endif /* VIDEO_H */
