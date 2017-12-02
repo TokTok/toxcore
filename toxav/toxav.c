@@ -885,7 +885,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
                     {
                         call->video.first->ssrc++;
                         LOGGER_ERROR(av->m->log, "I_FRAME_FLAG:%d reconfigure encoder", call->video.first->ssrc);
-                        vc_reconfigure_encoder(call->video.second, call->video_bit_rate * 1000, width, height, 48);
+                        vc_reconfigure_encoder(call->video.second, call->video_bit_rate * 1000, width, height, VPX_MAX_DIST_NORMAL);
                     }
                     // we start with I-frames (full frames) and then switch to normal mode later
 #endif
