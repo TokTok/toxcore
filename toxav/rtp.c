@@ -399,14 +399,32 @@ static int8_t get_slot(Logger *log, struct RTPWorkBufferList *wkbl, uint8_t is_k
 
         if (wkbl->next_free_entry < USED_RTP_WORKBUFFER_COUNT)
         {
-            return wkbl->next_free_entry;
+			if ((wkbl->next_free_entry > 0) && (wkbl->work_buffer[wkbl->next_free_entry - 1].timestamp > net_ntohl(header_v3->timestamp)))
+			{
+				LOGGER_WARNING(log, "workbuffer:1a:timestamp too old");
+				return -2;
+			}
+			else
+			{
+				// LOGGER_WARNING(log, "workbuffer:1b:timestamp prev=%d cur=%d", (int)wkbl->work_buffer[wkbl->next_free_entry - 1].timestamp , (int)net_ntohl(header_v3->timestamp));
+				return wkbl->next_free_entry;
+			}
         }
     }
     else
     {
         if (wkbl->next_free_entry < USED_RTP_WORKBUFFER_COUNT)
         {
-            return wkbl->next_free_entry;
+			if ((wkbl->next_free_entry > 0) && (wkbl->work_buffer[wkbl->next_free_entry - 1].timestamp > net_ntohl(header_v3->timestamp)))
+			{
+				LOGGER_WARNING(log, "workbuffer:2:timestamp too old");
+				return -2;
+			}
+			else
+			{
+				// LOGGER_WARNING(log, "workbuffer:2b:timestamp prev=%d cur=%d", (int)wkbl->work_buffer[wkbl->next_free_entry - 1].timestamp , (int)net_ntohl(header_v3->timestamp));
+				return wkbl->next_free_entry;
+			}
         }
     }
 
