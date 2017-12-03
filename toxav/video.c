@@ -74,7 +74,7 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t* cfg, int16_t kf_max_
 
 	vpx_codec_err_t rc;
 
-	if (1 == 1)
+	if (VPX_ENCODER_USED == VPX_VP8_CODEC)
 	{
         LOGGER_WARNING(log, "Using VP8 codec for encoder (1)");
 		rc = vpx_codec_enc_config_default(VIDEO_CODEC_ENCODER_INTERFACE_VP8, cfg, 0);
@@ -173,7 +173,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     dec_cfg.w = VIDEO_CODEC_DECODER_MAX_WIDTH;
     dec_cfg.h = VIDEO_CODEC_DECODER_MAX_HEIGHT;
 
-	if (1 == 1)
+	if (VPX_DECODER_USED == VPX_VP8_CODEC)
 	{
         LOGGER_WARNING(log, "Using VP8 codec for decoder (0)");
 		rc = vpx_codec_dec_init(vc->decoder, VIDEO_CODEC_DECODER_INTERFACE_VP8, &dec_cfg, VPX_CODEC_USE_FRAME_THREADING);
@@ -196,7 +196,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vpx_codec_enc_cfg_t  cfg;
 	vc__init_encoder_cfg(log, &cfg, 1);
 
-	if (1 == 1)
+	if (VPX_ENCODER_USED == VPX_VP8_CODEC)
 	{
         LOGGER_WARNING(log, "Using VP8 codec for encoder (0.1)");
 		rc = vpx_codec_enc_init(vc->encoder, VIDEO_CODEC_ENCODER_INTERFACE_VP8, &cfg, VPX_CODEC_USE_FRAME_THREADING);
@@ -230,7 +230,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
 
     int cpu_used_value = VP8E_SET_CPUUSED_VALUE;
 
-	if (1 == 2)
+	if (VPX_ENCODER_USED == VPX_VP9_CODEC)
 	{
 		if ((cpu_used_value < -8)||(cpu_used_value > 8))
 		{
@@ -265,7 +265,7 @@ By default, the value is 0, i.e. one single column tile for entire image.
 Supported in codecs: VP9 
  */
 
-	if (1 == 2)
+	if (VPX_ENCODER_USED == VPX_VP9_CODEC)
 	{
 		rc = vpx_codec_control(vc->encoder, VP9E_SET_TILE_COLUMNS, 3);
 
@@ -277,7 +277,7 @@ Supported in codecs: VP9
 	}
 
 
-	if (1 == 2)
+	if (VPX_ENCODER_USED == VPX_VP9_CODEC)
 	{
 		if (1 == 2)
 		{
@@ -630,7 +630,7 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
         cfg.g_h = height;
 
 
-		if (1 == 1)
+    	if (VPX_ENCODER_USED == VPX_VP8_CODEC)
 		{
             LOGGER_WARNING(vc->log, "Using VP8 codec for encoder");
 			rc = vpx_codec_enc_init(&new_c, VIDEO_CODEC_ENCODER_INTERFACE_VP8, &cfg, VPX_CODEC_USE_FRAME_THREADING);
@@ -649,7 +649,7 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
 
         int cpu_used_value = VP8E_SET_CPUUSED_VALUE;
 
-	    if (1 == 2)
+    	if (VPX_ENCODER_USED == VPX_VP9_CODEC)
 	    {
 		    if ((cpu_used_value < -8)||(cpu_used_value > 8))
 		    {
@@ -665,7 +665,7 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
             return -1;
         }
 
-		if (1 == 2)
+    	if (VPX_ENCODER_USED == VPX_VP9_CODEC)
 		{
 			rc = vpx_codec_control(&new_c, VP9E_SET_TILE_COLUMNS, 3);
 
@@ -676,7 +676,7 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
 			}
 		}
 
-		if (1 == 2)
+    	if (VPX_ENCODER_USED == VPX_VP9_CODEC)
 		{
 			if (1 == 2)
 			{
