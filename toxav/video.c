@@ -37,7 +37,7 @@
   Soft deadline the decoder should attempt to meet, in us (microseconds). Set to zero for unlimited.
   By convention, the value 1 is used to mean "return as fast as possible."
 */
-#define MAX_DECODE_TIME_US VPX_DL_REALTIME
+#define MAX_DECODE_TIME_US VPX_DL_GOOD_QUALITY
 /*
 VPX_DL_REALTIME       (1)
 deadline parameter analogous to VPx REALTIME mode.
@@ -60,7 +60,7 @@ Note
     Valid range for VP9: -8..8
  */
 
-#define VIDEO_BITRATE_INITIAL_VALUE 10000 // initialize encoder with this value. Target bandwidth to use for this stream, in kilobits per second.
+#define VIDEO_BITRATE_INITIAL_VALUE 5000 // initialize encoder with this value. Target bandwidth to use for this stream, in kilobits per second.
 
 
 #define VIDEO_DECODE_BUFFER_SIZE 5 // this does not make any sense. it should be maybe 4 or 5
@@ -147,8 +147,8 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t* cfg, int16_t kf_max_
   cfg->rc_buf_initial_sz = 500;
   cfg->rc_buf_optimal_sz = 600;
   cfg->rc_buf_sz = 1000;
-  // cfg->.g_error_resilient = 1; /* Enable error resilient mode */
-  // cfg->.g_lag_in_frames = 0;
+  // cfg->g_error_resilient = 1; /* Enable error resilient mode */
+  // cfg->g_lag_in_frames = 0;
 #endif
 
 }
