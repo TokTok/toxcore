@@ -374,6 +374,10 @@ static int handle_LANdiscovery(void *object, IP_Port source, const uint8_t *pack
         return 1;
     }
 
+    char ip_str[IP_NTOA_LEN] = { 0 };
+    ip_ntoa(&source.ip, ip_str, sizeof(ip_str));
+    LOGGER_DEBUG(dht->log, "Found node in LAN: %s", ip_str);
+
     dht_bootstrap(dht, source, packet + 1);
     return 0;
 }
