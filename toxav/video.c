@@ -133,7 +133,7 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t* cfg, int16_t kf_max_
  
     cfg->g_threads = VPX_MAX_ENCODER_THREADS; // Maximum number of threads to use
 
-#if 1
+#if 0
  /* Highest-resolution encoder settings */
   // cfg->g_w = width;
   // cfg->g_h = height;
