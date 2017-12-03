@@ -130,7 +130,27 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t* cfg, int16_t kf_max_
         cfg->kf_max_dist = VPX_MAX_DIST_START;
         LOGGER_WARNING(log, "kf_max_dist=%d (2)", cfg->kf_max_dist);
     }
+ 
     cfg->g_threads = VPX_MAX_ENCODER_THREADS; // Maximum number of threads to use
+
+#if 0
+ /* Highest-resolution encoder settings */
+  // cfg->g_w = width;
+  // cfg->g_h = height;
+  cfg->rc_dropframe_thresh = 0;
+  // cfg->rc_end_usage = VPX_CBR;
+  cfg->rc_resize_allowed = 0;
+  cfg->rc_min_quantizer = 2;
+  cfg->rc_max_quantizer = 56;
+  cfg->rc_undershoot_pct = 100;
+  cfg->rc_overshoot_pct = 15;
+  cfg->rc_buf_initial_sz = 500;
+  cfg->rc_buf_optimal_sz = 600;
+  cfg->rc_buf_sz = 1000;
+  // cfg->.g_error_resilient = 1; /* Enable error resilient mode */
+  // cfg->.g_lag_in_frames = 0;
+#endif
+
 }
 
 
