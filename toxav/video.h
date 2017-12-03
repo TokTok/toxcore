@@ -51,6 +51,12 @@
 #define VPX_MAX_DIST_NORMAL (48)
 #define VPX_MAX_DIST_START (48)
 
+#define VPX_VP8_CODEC (0)
+#define VPX_VP9_CODEC (1)
+
+#define VPX_ENCODER_USED VPX_VP8_CODEC
+#define VPX_DECODER_USED VPX_VP8_CODEC // this will switch automatically
+
 
 #include <pthread.h>
 
