@@ -791,6 +791,40 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         goto END;
     }
 
+	int vpx_encode_flags = 0;
+
+#if 1
+
+	if (call->video.first->ssrc < VIDEO_SEND_X_KEYFRAMES_FIRST)
+	{
+		//if (call->video.first->ssrc == 0)
+		//{
+			if (VPX_ENCODER_USED == VPX_VP8_CODEC)
+			{
+				// Key frame flag for first frames
+				vpx_encode_flags = VPX_EFLAG_FORCE_KF;
+				// vpx_codec_control(call->video.second->encoder, VP8E_SET_FRAME_FLAGS, vpx_encode_flags);
+				LOGGER_ERROR(av->m->log, "I_FRAME_FLAG:%d only-i-frame mode", call->video.first->ssrc);
+			}
+		//}
+		call->video.first->ssrc++;
+	}
+	else if (call->video.first->ssrc == VIDEO_SEND_X_KEYFRAMES_FIRST)
+	{
+		if (VPX_ENCODER_USED == VPX_VP8_CODEC)
+		{
+			// normal keyframe placement
+			vpx_encode_flags = 0;
+			// vpx_codec_control(call->video.second->encoder, VP8E_SET_FRAME_FLAGS, vpx_encode_flags);
+			LOGGER_ERROR(av->m->log, "I_FRAME_FLAG:%d normal mode", call->video.first->ssrc);
+		}
+		call->video.first->ssrc++;
+	}
+	// we start with I-frames (full frames) and then switch to normal mode later
+#endif
+
+
+
     { /* Encode */
         vpx_image_t img;
         img.w = img.h = img.d_w = img.d_h = 0;
@@ -804,7 +838,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         memcpy(img.planes[VPX_PLANE_V], v, (width / 2) * (height / 2));
 
         vpx_codec_err_t vrc = vpx_codec_encode(call->video.second->encoder, &img,
-                                               call->video.second->frame_counter, 1, 0, MAX_ENCODE_TIME_US);
+                                               call->video.second->frame_counter, 1, vpx_encode_flags, MAX_ENCODE_TIME_US);
 
         vpx_img_free(&img);
 
@@ -852,6 +886,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 
                 // TOX RTP V3 --- hack to give frame type to function ---
 
+
                 int res = rtp_send_data
                         (
                             call->video.first,
@@ -872,23 +907,6 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
                 }
                 else
                 {
-#if 0
-
-                    // TODO: this makes the video stop for a moment. its not yet ready to use
-
-                    if (call->video.first->ssrc < VIDEO_SEND_X_KEYFRAMES_FIRST)
-                    {
-                        call->video.first->ssrc++;
-                        LOGGER_ERROR(av->m->log, "I_FRAME_FLAG:%d", call->video.first->ssrc);
-                    }
-                    else if (call->video.first->ssrc == VIDEO_SEND_X_KEYFRAMES_FIRST)
-                    {
-                        call->video.first->ssrc++;
-                        LOGGER_ERROR(av->m->log, "I_FRAME_FLAG:%d reconfigure encoder", call->video.first->ssrc);
-                        vc_reconfigure_encoder(call->video.second, call->video_bit_rate * 1000, width, height, VPX_MAX_DIST_NORMAL);
-                    }
-                    // we start with I-frames (full frames) and then switch to normal mode later
-#endif
                 }
             }
         }
