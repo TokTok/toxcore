@@ -35,6 +35,14 @@ enum {
     rtp_TypeVideo, // = 193
 };
 
+
+enum {
+    video_frame_type_NORMALFRAME = 0,
+    video_frame_type_KEYFRAME, // = 1
+};
+
+#define VIDEO_KEEP_KEYFRAME_IN_BUFFER_FOR_MS (250)
+
 struct RTPHeader {
     /* Standard RTP header */
 #ifndef WORDS_BIGENDIAN

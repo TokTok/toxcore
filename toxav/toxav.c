@@ -804,7 +804,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 				// Key frame flag for first frames
 				vpx_encode_flags = VPX_EFLAG_FORCE_KF;
 				// vpx_codec_control(call->video.second->encoder, VP8E_SET_FRAME_FLAGS, vpx_encode_flags);
-				LOGGER_ERROR(av->m->log, "I_FRAME_FLAG:%d only-i-frame mode", call->video.first->ssrc);
+				LOGGER_INFO(av->m->log, "I_FRAME_FLAG:%d only-i-frame mode", call->video.first->ssrc);
 			}
 		//}
 		call->video.first->ssrc++;
@@ -816,7 +816,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 			// normal keyframe placement
 			vpx_encode_flags = 0;
 			// vpx_codec_control(call->video.second->encoder, VP8E_SET_FRAME_FLAGS, vpx_encode_flags);
-			LOGGER_ERROR(av->m->log, "I_FRAME_FLAG:%d normal mode", call->video.first->ssrc);
+			LOGGER_INFO(av->m->log, "I_FRAME_FLAG:%d normal mode", call->video.first->ssrc);
 		}
 		call->video.first->ssrc++;
 	}
@@ -895,8 +895,8 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
                             av->m->log
                         );
 
-                LOGGER_ERROR(av->m->log, "+ _sending_FRAME_TYPE_==%s bytes=%d frame_len=%d", keyframe ? "K" : ".", (int)pkt->data.frame.sz, (int)frame_length_in_bytes);
-                LOGGER_ERROR(av->m->log, "+ _sending_FRAME_ b0=%d b1=%d", ((const uint8_t *)pkt->data.frame.buf)[0] , ((const uint8_t *)pkt->data.frame.buf)[1]);
+                LOGGER_DEBUG(av->m->log, "+ _sending_FRAME_TYPE_==%s bytes=%d frame_len=%d", keyframe ? "K" : ".", (int)pkt->data.frame.sz, (int)frame_length_in_bytes);
+                LOGGER_DEBUG(av->m->log, "+ _sending_FRAME_ b0=%d b1=%d", ((const uint8_t *)pkt->data.frame.buf)[0] , ((const uint8_t *)pkt->data.frame.buf)[1]);
 
                 if (res < 0)
                 {

@@ -45,6 +45,7 @@
 #define VIDEO_CODEC_DECODER_MAX_WIDTH  (800) // (16384)
 #define VIDEO_CODEC_DECODER_MAX_HEIGHT (600) // (16384)
 
+
 #define VIDEO_SEND_X_KEYFRAMES_FIRST (4) // force the first 8 frames to be keyframes!
 #define VPX_MAX_DIST_NORMAL (48)
 #define VPX_MAX_DIST_START (48)
