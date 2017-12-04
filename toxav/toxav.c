@@ -37,7 +37,7 @@
 
 
 // don't hardcode this, let the application choose it
-#define MAX_ENCODE_TIME_US VPX_DL_BEST_QUALITY // ((1000 / 24) * 1000)
+#define MAX_ENCODE_TIME_US VPX_DL_GOOD_QUALITY // ((1000 / 24) * 1000)
 /*
 VPX_DL_REALTIME       (1)       deadline parameter analogous to VPx REALTIME mode.
 VPX_DL_GOOD_QUALITY   (1000000) deadline parameter analogous to VPx GOOD QUALITY mode.
