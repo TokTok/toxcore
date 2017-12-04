@@ -518,7 +518,6 @@ void vc_iterate(VCSession *vc)
             vpx_image_t *dest = vpx_codec_get_frame(vc->decoder, &iter);
             LOGGER_DEBUG(vc->log, "vpx_codec_get_frame=%p", dest);
 
-#if 1
             if (dest != NULL)
 	        {
                 if (vc->vcb.first) {
@@ -528,7 +527,7 @@ void vc_iterate(VCSession *vc)
                 }
 				// vpx_img_free(dest);
 	        }
-#endif
+
 
             /* Play decoded images */
             for (; dest; dest = vpx_codec_get_frame(vc->decoder, &iter))
