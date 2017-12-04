@@ -27,7 +27,7 @@
 #include <stdint.h>
 
 #ifndef MIN_LOGGER_LEVEL
-#define MIN_LOGGER_LEVEL LOG_DEBUG
+#define MIN_LOGGER_LEVEL LOG_INFO
 #endif
 
 typedef enum {
