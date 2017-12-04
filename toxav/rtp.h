@@ -133,7 +133,6 @@ typedef char __fail_if_misaligned_2 [ sizeof(struct RTPMessage) == 82 ? 1 : -1 ]
 
 
 #define USED_RTP_WORKBUFFER_COUNT (3)
-// #define FLAG_USE_VP8_DECODER (8)
 
 struct RTPWorkBuffer {
     uint8_t frame_type;
