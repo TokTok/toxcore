@@ -49,7 +49,7 @@ VPX_DL_BEST_QUALITY   (0)
 deadline parameter analogous to VPx BEST QUALITY mode.
 */
 
-#define VP8E_SET_CPUUSED_VALUE (16)
+#define VP8E_SET_CPUUSED_VALUE (3)
 /*
 Codec control function to set encoder internal speed settings.
 Changes in this value influences, among others, the encoder's selection of motion estimation methods.
