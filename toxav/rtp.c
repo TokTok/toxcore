@@ -604,13 +604,12 @@ int handle_rtp_packet_v3(Messenger *m, uint32_t friendnumber, const uint8_t *dat
      */
 
     // here the packet ID byte gets stripped, why? -----------
-    const uint8_t *data_orig = data;
     data++;
     length--; // this is the length of only this part of the message (brutto)
     // here the packet ID byte gets stripped, why? -----------
 
 
-    const struct RTPHeaderV3 *header_v3 = (void *)data;
+    const struct RTPHeaderV3 *header_v3 = (const void *)data;
 
     uint32_t length_v3 = net_htonl(header_v3->data_length_full); // without header
     uint32_t offset_v3 = net_htonl(header_v3->offset_full); // without header
@@ -841,7 +840,7 @@ int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, 
 
 // Zoff -- new stuff --
 
-    const struct RTPHeaderV3 *header_v3 = (void *)data;
+    const struct RTPHeaderV3 *header_v3 = (const void *)data;
 
     LOGGER_DEBUG(m->log, "header->pt %d, video %d", (uint8_t)header_v3->pt, (rtp_TypeVideo % 128));
 
