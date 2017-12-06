@@ -880,7 +880,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
                 {
                     if (keyframe == 1)
                     {
-                        frame_length_in_bytes = (1 << 31) | LOWER_31_BITS(frame_length_in_bytes);
+                        frame_length_in_bytes = (uint32_t)(1 << 31) | LOWER_31_BITS(frame_length_in_bytes);
                     }
                 }
 
