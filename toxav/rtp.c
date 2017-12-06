@@ -176,7 +176,7 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length_v3, 
         }
         else
         {
-            is_keyframe = (length_v3 & (uint32_t)(1 << 31)) != 0; // 1-> is keyframe, 0-> no keyframe
+            is_keyframe = (length_v3 & (uint32_t)(1L << 31)) != 0; // 1-> is keyframe, 0-> no keyframe
             length_v3 = LOWER_31_BITS(length_v3);
         }
 
