@@ -78,7 +78,7 @@ typedef char __fail_if_misaligned_1 [ sizeof(struct RTPHeader) == 80 ? 1 : -1 ];
 
 
 // #define LOWER_31_BITS(x) (x & ((int)(1L << 31) - 1))
-#define LOWER_31_BITS(x) (x & 0x7fffffff)
+#define LOWER_31_BITS(x) (uint32_t)(x & 0x7fffffff)
 
 
 struct RTPHeaderV3 {
