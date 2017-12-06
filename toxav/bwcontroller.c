@@ -89,6 +89,7 @@ BWController *bwc_new(Messenger *m, uint32_t friendnumber,
 
     return retu;
 }
+
 void bwc_kill(BWController *bwc)
 {
     if (!bwc) {
@@ -100,16 +101,17 @@ void bwc_kill(BWController *bwc)
     rb_kill(bwc->rcvpkt.rb);
     free(bwc);
 }
+
 void bwc_feed_avg(BWController *bwc, uint32_t bytes)
 {
     uint32_t *p;
     uint8_t dummy;
 
     rb_read(bwc->rcvpkt.rb, (void **) &p, &dummy);
-    rb_write(bwc->rcvpkt.rb, p, 0);
-
     *p = bytes;
+    rb_write(bwc->rcvpkt.rb, p, 0);
 }
+
 void bwc_add_lost(BWController *bwc, uint32_t bytes)
 {
     if (!bwc) {
@@ -137,6 +139,7 @@ void bwc_add_lost(BWController *bwc, uint32_t bytes)
     bwc->cycle.lost += bytes;
     send_update(bwc);
 }
+
 void bwc_add_recv(BWController *bwc, uint32_t bytes)
 {
     if (!bwc || !bytes) {
@@ -160,6 +163,7 @@ void send_update(BWController *bwc)
         bwc->cycle.lost /= 10;
         bwc->cycle.recv /= 10;
         bwc->cycle.lfu = current_time_monotonic();
+
     } else if (current_time_monotonic() - bwc->cycle.lsu > BWC_SEND_INTERVAL_MS) {
 
         if (bwc->cycle.lost) {
@@ -181,6 +185,7 @@ void send_update(BWController *bwc)
         bwc->cycle.lsu = current_time_monotonic();
     }
 }
+
 static int on_update(BWController *bwc, const struct BWCMessage *msg)
 {
     LOGGER_DEBUG(bwc->m->log, "%p Got update from peer", bwc);
@@ -199,6 +204,9 @@ static int on_update(BWController *bwc, const struct BWCMessage *msg)
     LOGGER_DEBUG(bwc->m->log, "recved: %u lost: %u", recv, lost);
 
     if (lost && bwc->mcb) {
+
+        LOGGER_DEBUG(bwc->m->log, "recved: %u lost: %u percentage: %f %", recv, lost, (float)( ((float) lost / (recv + lost)) * 100.0f) );
+
         bwc->mcb(bwc, bwc->friend_number,
                  ((float) lost / (recv + lost)),
                  bwc->mcb_data);
@@ -206,6 +214,7 @@ static int on_update(BWController *bwc, const struct BWCMessage *msg)
 
     return 0;
 }
+
 int bwc_handle_data(Messenger *m, uint32_t friendnumber, const uint8_t *data, uint16_t length, void *object)
 {
     if (length - 1 != sizeof(struct BWCMessage)) {
