@@ -626,6 +626,10 @@ int handle_rtp_packet_v3(Messenger *m, uint32_t friendnumber, const uint8_t *dat
         return -1;
     }
 
+	// --- BWC ---
+    bwc_feed_avg(session->bwc, length);
+	// --- BWC ---
+
     // length -> includes header
     // length_v3 -> does not include header
 
@@ -680,6 +684,10 @@ int handle_rtp_packet_v3(Messenger *m, uint32_t friendnumber, const uint8_t *dat
         if (slot > -1)
         {
             LOGGER_DEBUG(m->log, "fill_data_into_slot.1");
+
+			// --- BWC ---
+			bwc_add_recv(session->bwc, length);
+			// --- BWC ---
 
             // fill in this part into the slot buffer at the correct offset
             uint8_t frame_complete = fill_data_into_slot(m->log, work_buffer_list, slot, is_keyframe, header_v3, length_v3, offset_v3, data, length);
@@ -775,6 +783,10 @@ int handle_rtp_packet_v3(Messenger *m, uint32_t friendnumber, const uint8_t *dat
         if (slot > -1)
         {
             LOGGER_DEBUG(m->log, "fill_data_into_slot");
+
+			// --- BWC ---
+			bwc_add_recv(session->bwc, length);
+			// --- BWC ---
 
             // fill in this part into the solt buffer at the correct offset
             uint8_t frame_complete = fill_data_into_slot(m->log, work_buffer_list, slot, is_keyframe, header_v3, length_v3, offset_v3, data, length);
