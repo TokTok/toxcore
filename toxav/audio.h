@@ -24,35 +24,24 @@
 
 #include "../toxcore/logger.h"
 #include "../toxcore/util.h"
-#include "pair.h"
 
 #include <opus.h>
 #include <pthread.h>
 
-#define AUDIO_JITTERBUFFER_COUNT 3
-#define AUDIO_MAX_SAMPLE_RATE 48000
-#define AUDIO_MAX_CHANNEL_COUNT 2
 
-#define AUDIO_START_SAMPLE_RATE 48000
-#define AUDIO_START_BITRATE 48000
-#define AUDIO_START_CHANNEL_COUNT 2
-#define AUDIO_OPUS_PACKET_LOSS_PERC 10
-#define AUDIO_OPUS_COMPLEXITY 10
+#define AUDIO_JITTERBUFFER_COUNT (3)
+#define AUDIO_START_SAMPLING_RATE (48000)
+#define AUDIO_START_CHANNEL_COUNT (2)
+#define AUDIO_OPUS_PACKET_LOSS_PERC (10)
+#define AUDIO_OPUS_COMPLEXITY (10)
 
-#define AUDIO_DECODER_START_SAMPLE_RATE 48000
-#define AUDIO_DECODER_START_CHANNEL_COUNT 1
 
-#define AUDIO_MAX_FRAME_DURATION_MS 120
 
-// ((sampling_rate_in_hz * frame_duration_in_ms) / 1000) * 2 // because PCM16 needs 2 bytes for 1 sample
-// These are per frame and per channel.
-#define AUDIO_MAX_BUFFER_SIZE_PCM16 ((AUDIO_MAX_SAMPLE_RATE * AUDIO_MAX_FRAME_DURATION_MS) / 1000)
-#define AUDIO_MAX_BUFFER_SIZE_BYTES (AUDIO_MAX_BUFFER_SIZE_PCM16 * 2)
 
 struct RTPMessage;
 
 typedef struct ACSession_s {
-    const Logger *log;
+    Logger *log;
 
     /* encoding */
     OpusEncoder *encoder;
@@ -77,8 +66,7 @@ typedef struct ACSession_s {
     PAIR(toxav_audio_receive_frame_cb *, void *) acb; /* Audio frame receive callback */
 } ACSession;
 
-ACSession *ac_new(const Logger *log, ToxAV *av, uint32_t friend_number, toxav_audio_receive_frame_cb *cb,
-                  void *cb_data);
+ACSession *ac_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_audio_receive_frame_cb *cb, void *cb_data);
 void ac_kill(ACSession *ac);
 void ac_iterate(ACSession *ac);
 int ac_queue_message(void *acp, struct RTPMessage *msg);
