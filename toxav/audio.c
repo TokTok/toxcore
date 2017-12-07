@@ -90,8 +90,8 @@ ACSession *ac_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_audio_re
     /* These need to be set in order to properly
      * do error correction with opus */
     ac->lp_frame_duration = 120;
-    ac->lp_sampling_rate = AUDIO_START_SAMPLING_RATE;
-    ac->lp_channel_count = AUDIO_START_CHANNEL_COUNT;
+    ac->lp_sampling_rate = AUDIO_DECODER__START_SAMPLING_RATE;
+    ac->lp_channel_count = AUDIO_DECODER__START_CHANNEL_COUNT;
 
     ac->av = av;
     ac->friend_number = friend_number;
