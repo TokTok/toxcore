@@ -64,7 +64,7 @@ ACSession *ac_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_audio_re
         goto BASE_CLEANUP;
     }
 
-    if (!(ac->j_buf = jbuf_new(3))) {
+    if (!(ac->j_buf = jbuf_new(AUDIO_JITTERBUFFER_COUNT))) {
         LOGGER_WARNING(log, "Jitter buffer creaton failed!");
         opus_decoder_destroy(ac->decoder);
         goto BASE_CLEANUP;
@@ -80,18 +80,18 @@ ACSession *ac_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_audio_re
     }
 
     ac->le_bit_rate = 48000;
-    ac->le_sample_rate = 48000;
-    ac->le_channel_count = 2;
+    ac->le_sample_rate = AUDIO_START_SAMPLING_RATE;
+    ac->le_channel_count = AUDIO_START_CHANNEL_COUNT;
 
-    ac->ld_channel_count = 2;
-    ac->ld_sample_rate = 48000;
+    ac->ld_channel_count = AUDIO_START_CHANNEL_COUNT;
+    ac->ld_sample_rate = AUDIO_START_SAMPLING_RATE;
     ac->ldrts = 0; /* Make it possible to reconfigure straight away */
 
     /* These need to be set in order to properly
      * do error correction with opus */
     ac->lp_frame_duration = 120;
-    ac->lp_sampling_rate = 48000;
-    ac->lp_channel_count = 1;
+    ac->lp_sampling_rate = AUDIO_START_SAMPLING_RATE;
+    ac->lp_channel_count = AUDIO_START_CHANNEL_COUNT;
 
     ac->av = av;
     ac->friend_number = friend_number;
@@ -418,7 +418,7 @@ Parameters:
      * NOTE This could also be adjusted on the fly, rather than hard-coded,
      *      with feedback from the receiving client.
      */
-    status = opus_encoder_ctl(rc, OPUS_SET_PACKET_LOSS_PERC(10));
+    status = opus_encoder_ctl(rc, OPUS_SET_PACKET_LOSS_PERC(AUDIO_OPUS_PACKET_LOSS_PERC));
 
     if (status != OPUS_OK) {
         LOGGER_ERROR(log, "Error while setting encoder ctl: %s", opus_strerror(status));
@@ -435,7 +435,7 @@ Parameters:
     [in] 	x 	int: 0-10, inclusive 
  */
     /* Set algorithm to the highest complexity, maximizing compression */
-    status = opus_encoder_ctl(rc, OPUS_SET_COMPLEXITY(10));
+    status = opus_encoder_ctl(rc, OPUS_SET_COMPLEXITY(AUDIO_OPUS_COMPLEXITY));
 
     if (status != OPUS_OK) {
         LOGGER_ERROR(log, "Error while setting encoder ctl: %s", opus_strerror(status));
