@@ -108,6 +108,7 @@ BASE_CLEANUP:
     free(ac);
     return NULL;
 }
+
 void ac_kill(ACSession *ac)
 {
     if (!ac) {
@@ -123,6 +124,7 @@ void ac_kill(ACSession *ac)
     LOGGER_DEBUG(ac->log, "Terminated audio handler: %p", ac);
     free(ac);
 }
+
 void ac_iterate(ACSession *ac)
 {
     if (!ac) {
@@ -196,6 +198,7 @@ void ac_iterate(ACSession *ac)
 
     pthread_mutex_unlock(ac->queue_mutex);
 }
+
 int ac_queue_message(void *acp, struct RTPMessage *msg)
 {
     if (!acp || !msg) {
@@ -228,6 +231,7 @@ int ac_queue_message(void *acp, struct RTPMessage *msg)
 
     return 0;
 }
+
 int ac_reconfigure_encoder(ACSession *ac, int32_t bit_rate, int32_t sampling_rate, uint8_t channels)
 {
     if (!ac || !reconfigure_audio_encoder(ac->log, &ac->encoder, bit_rate,
@@ -276,6 +280,7 @@ static struct JitterBuffer *jbuf_new(uint32_t capacity)
     q->capacity = capacity;
     return q;
 }
+
 static void jbuf_clear(struct JitterBuffer *q)
 {
     for (; q->bottom != q->top; ++q->bottom) {
@@ -285,6 +290,7 @@ static void jbuf_clear(struct JitterBuffer *q)
         }
     }
 }
+
 static void jbuf_free(struct JitterBuffer *q)
 {
     if (!q) {
@@ -295,6 +301,7 @@ static void jbuf_free(struct JitterBuffer *q)
     free(q->queue);
     free(q);
 }
+
 static int jbuf_write(Logger *log, struct JitterBuffer *q, struct RTPMessage *m)
 {
     uint16_t sequnum = m->header.sequnum;
@@ -323,6 +330,7 @@ static int jbuf_write(Logger *log, struct JitterBuffer *q, struct RTPMessage *m)
 
     return 0;
 }
+
 static struct RTPMessage *jbuf_read(struct JitterBuffer *q, int32_t *success)
 {
     if (q->top == q->bottom) {
@@ -349,6 +357,7 @@ static struct RTPMessage *jbuf_read(struct JitterBuffer *q, int32_t *success)
     *success = 0;
     return NULL;
 }
+
 OpusEncoder *create_audio_encoder(Logger *log, int32_t bit_rate, int32_t sampling_rate, int32_t channel_count)
 {
     int status = OPUS_OK;
@@ -399,6 +408,7 @@ FAILURE:
     opus_encoder_destroy(rc);
     return NULL;
 }
+
 bool reconfigure_audio_encoder(Logger *log, OpusEncoder **e, int32_t new_br, int32_t new_sr, uint8_t new_ch,
                                int32_t *old_br, int32_t *old_sr, int32_t *old_ch)
 {
@@ -430,6 +440,7 @@ bool reconfigure_audio_encoder(Logger *log, OpusEncoder **e, int32_t new_br, int
     LOGGER_DEBUG(log, "Reconfigured audio encoder br: %d sr: %d cc:%d", new_br, new_sr, new_ch);
     return true;
 }
+
 bool reconfigure_audio_decoder(ACSession *ac, int32_t sampling_rate, int8_t channels)
 {
     if (sampling_rate != ac->ld_sample_rate || channels != ac->ld_channel_count) {
@@ -457,3 +468,4 @@ bool reconfigure_audio_decoder(ACSession *ac, int32_t sampling_rate, int8_t chan
 
     return true;
 }
+
