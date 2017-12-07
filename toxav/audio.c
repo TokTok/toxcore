@@ -57,7 +57,7 @@ ACSession *ac_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_audio_re
     }
 
     int status;
-    ac->decoder = opus_decoder_create(48000, 2, &status);
+    ac->decoder = opus_decoder_create(AUDIO_DECODER__START_SAMPLING_RATE, AUDIO_DECODER__START_CHANNEL_COUNT, &status);
 
     if (status != OPUS_OK) {
         LOGGER_ERROR(log, "Error while starting audio decoder: %s", opus_strerror(status));
@@ -73,18 +73,18 @@ ACSession *ac_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_audio_re
     ac->log = log;
 
     /* Initialize encoders with default values */
-    ac->encoder = create_audio_encoder(log, 48000, 48000, 2);
+    ac->encoder = create_audio_encoder(log, AUDIO_START_BITRATE_RATE, AUDIO_START_SAMPLING_RATE, AUDIO_START_CHANNEL_COUNT);
 
     if (ac->encoder == NULL) {
         goto DECODER_CLEANUP;
     }
 
-    ac->le_bit_rate = 48000;
+    ac->le_bit_rate = AUDIO_START_BITRATE_RATE;
     ac->le_sample_rate = AUDIO_START_SAMPLING_RATE;
     ac->le_channel_count = AUDIO_START_CHANNEL_COUNT;
 
-    ac->ld_channel_count = AUDIO_START_CHANNEL_COUNT;
-    ac->ld_sample_rate = AUDIO_START_SAMPLING_RATE;
+    ac->ld_channel_count = AUDIO_DECODER__START_SAMPLING_RATE;
+    ac->ld_sample_rate = AUDIO_DECODER__START_CHANNEL_COUNT;
     ac->ldrts = 0; /* Make it possible to reconfigure straight away */
 
     /* These need to be set in order to properly
@@ -180,6 +180,15 @@ void ac_iterate(ACSession *ac)
                 continue;
             }
 
+          /*
+          frame_size = opus_decode(dec, packet, len, decoded, max_size, 0);
+            where
+          packet is the byte array containing the compressed data
+          len is the exact number of bytes contained in the packet
+          decoded is the decoded audio data in opus_int16 (or float for opus_decode_float())
+          max_size is the max duration of the frame in samples (per channel) that can fit
+          into the decoded_frame array
+           */
             rc = opus_decode(ac->decoder, msg->data + 4, msg->len - 4, tmp, 5760, 0);
             free(msg);
         }
