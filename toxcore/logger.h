@@ -32,6 +32,10 @@
 #define MIN_LOGGER_LEVEL LOGGER_LEVEL_INFO
 #endif
 
+#ifndef LOGGER_MAX_MSG_LENGTH
+#define LOGGER_MAX_MSG_LENGTH (4096) // ORIG 1024
+#endif
+
 typedef enum Logger_Level {
     LOGGER_LEVEL_TRACE,
     LOGGER_LEVEL_DEBUG,
