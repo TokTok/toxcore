@@ -67,7 +67,7 @@ void logger_write(Logger *log, LOGGER_LEVEL level, const char *file, int line, c
     }
 
     /* Format message */
-    char msg[1024];
+    char msg[LOGGER_MAX_MSG_LENGTH];
     va_list args;
     va_start(args, format);
     vsnprintf(msg, sizeof msg, format, args);
