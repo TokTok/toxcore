@@ -361,6 +361,12 @@ static struct RTPMessage *jbuf_read(struct JitterBuffer *q, int32_t *success)
 OpusEncoder *create_audio_encoder(Logger *log, int32_t bit_rate, int32_t sampling_rate, int32_t channel_count)
 {
     int status = OPUS_OK;
+
+/*  
+    OPUS_APPLICATION_VOIP Process signal for improved speech intelligibility
+    OPUS_APPLICATION_AUDIO Favor faithfulness to the original input
+    OPUS_APPLICATION_RESTRICTED_LOWDELAY Configure the minimum possible coding delay
+*/
     OpusEncoder *rc = opus_encoder_create(sampling_rate, channel_count, OPUS_APPLICATION_VOIP, &status);
 
     if (status != OPUS_OK) {
@@ -368,6 +374,15 @@ OpusEncoder *create_audio_encoder(Logger *log, int32_t bit_rate, int32_t samplin
         return NULL;
     }
 
+/*
+  Rates from 500 to 512000 bits per second are meaningful as well as the special
+  values OPUS_BITRATE_AUTO and OPUS_BITRATE_MAX. The value OPUS_BITRATE_MAX can
+  be used to cause the codec to use as much rate as it can, which is useful for
+  controlling the rate by adjusting the output buffer size.
+
+  Parameters:
+    [in] 	x 	opus_int32: bitrate in bits per second. 
+*/
     status = opus_encoder_ctl(rc, OPUS_SET_BITRATE(bit_rate));
 
     if (status != OPUS_OK) {
@@ -375,6 +390,14 @@ OpusEncoder *create_audio_encoder(Logger *log, int32_t bit_rate, int32_t samplin
         goto FAILURE;
     }
 
+
+/*
+  Configures the encoder's use of inband forward error correction.
+  Note:
+    This is only applicable to the LPC layer
+  Parameters:
+    [in] 	x 	int: FEC flag, 0 (disabled) is default 
+ */
     /* Enable in-band forward error correction in codec */
     status = opus_encoder_ctl(rc, OPUS_SET_INBAND_FEC(1));
 
@@ -383,6 +406,14 @@ OpusEncoder *create_audio_encoder(Logger *log, int32_t bit_rate, int32_t samplin
         goto FAILURE;
     }
 
+/*
+Configures the encoder's expected packet loss percentage.
+Higher values with trigger progressively more loss resistant behavior in
+the encoder at the expense of quality at a given bitrate in the lossless case,
+but greater quality under loss.
+Parameters:
+    [in] 	x 	int: Loss percentage in the range 0-100, inclusive.
+ */
     /* Make codec resistant to up to 10% packet loss
      * NOTE This could also be adjusted on the fly, rather than hard-coded,
      *      with feedback from the receiving client.
@@ -394,6 +425,15 @@ OpusEncoder *create_audio_encoder(Logger *log, int32_t bit_rate, int32_t samplin
         goto FAILURE;
     }
 
+/*
+  Configures the encoder's computational complexity.
+
+  The supported range is 0-10 inclusive with 10 representing the highest complexity.
+  The default value is 10.
+
+  Parameters:
+    [in] 	x 	int: 0-10, inclusive 
+ */
     /* Set algorithm to the highest complexity, maximizing compression */
     status = opus_encoder_ctl(rc, OPUS_SET_COMPLEXITY(10));
 
