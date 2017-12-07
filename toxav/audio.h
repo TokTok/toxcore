@@ -28,6 +28,16 @@
 #include <opus.h>
 #include <pthread.h>
 
+
+#define AUDIO_JITTERBUFFER_COUNT (3)
+#define AUDIO_START_SAMPLING_RATE (48000)
+#define AUDIO_START_CHANNEL_COUNT (2)
+#define AUDIO_OPUS_PACKET_LOSS_PERC (10)
+#define AUDIO_OPUS_COMPLEXITY (10)
+
+
+
+
 struct RTPMessage;
 
 typedef struct ACSession_s {
