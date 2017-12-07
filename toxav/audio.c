@@ -134,7 +134,8 @@ void ac_iterate(ACSession *ac)
     /* TODO(mannol): fix this and jitter buffering */
 
     /* Enough space for the maximum frame size (120 ms 48 KHz stereo audio) */
-    int16_t tmp[5760 * 2];
+    int16_t temp_audio_buffer[AUDIO_MAX_BUFFER_SIZE_PCM16_FOR_FRAME_PER_CHANNEL *
+                              AUDIO_MAX_CHANNEL_COUNT];
 
     struct RTPMessage *msg;
     int rc = 0;
@@ -147,7 +148,7 @@ void ac_iterate(ACSession *ac)
         if (rc == 2) {
             LOGGER_DEBUG(ac->log, "OPUS correction");
             int fs = (ac->lp_sampling_rate * ac->lp_frame_duration) / 1000;
-            rc = opus_decode(ac->decoder, NULL, 0, tmp, fs, 1);
+            rc = opus_decode(ac->decoder, NULL, 0, temp_audio_buffer, fs, 1);
         } else {
             /* Get values from packet and decode. */
             /* NOTE: This didn't work very well */
@@ -189,7 +190,7 @@ void ac_iterate(ACSession *ac)
           max_size is the max duration of the frame in samples (per channel) that can fit
           into the decoded_frame array
            */
-            rc = opus_decode(ac->decoder, msg->data + 4, msg->len - 4, tmp, 5760, 0);
+            rc = opus_decode(ac->decoder, msg->data + 4, msg->len - 4, temp_audio_buffer, 5760, 0);
             free(msg);
         }
 
@@ -198,7 +199,7 @@ void ac_iterate(ACSession *ac)
         } else if (ac->acb.first) {
             ac->lp_frame_duration = (rc * 1000) / ac->lp_sampling_rate;
 
-            ac->acb.first(ac->av, ac->friend_number, tmp, rc, ac->lp_channel_count,
+            ac->acb.first(ac->av, ac->friend_number, temp_audio_buffer, rc, ac->lp_channel_count,
                           ac->lp_sampling_rate, ac->acb.second);
         }
 
