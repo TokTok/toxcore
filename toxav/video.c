@@ -63,8 +63,7 @@ Note
 #define VIDEO_BITRATE_INITIAL_VALUE 5000 // initialize encoder with this value. Target bandwidth to use for this stream, in kilobits per second.
 
 
-#define VIDEO_DECODE_BUFFER_SIZE 5 // this does not make any sense. it should be maybe 4 or 5
-                                    // this buffer has normally max. 1 entry
+#define VIDEO_DECODE_BUFFER_SIZE 5 // this buffer has normally max. 1 entry
 
 
 
@@ -514,23 +513,12 @@ void vc_iterate(VCSession *vc)
         {
             free(p);
 
+
+			/* Play decoded images */
             vpx_codec_iter_t iter = NULL;
-            vpx_image_t *dest = vpx_codec_get_frame(vc->decoder, &iter);
-            LOGGER_DEBUG(vc->log, "vpx_codec_get_frame=%p", dest);
+            vpx_image_t *dest = NULL;
 
-            if (dest != NULL)
-	        {
-                if (vc->vcb.first) {
-                    vc->vcb.first(vc->av, vc->friend_number, dest->d_w, dest->d_h,
-                                  (const uint8_t *)dest->planes[0], (const uint8_t *)dest->planes[1], (const uint8_t *)dest->planes[2],
-                                  dest->stride[0], dest->stride[1], dest->stride[2], vc->vcb.second);
-                }
-				// vpx_img_free(dest);
-	        }
-
-
-            /* Play decoded images */
-            for (; dest; dest = vpx_codec_get_frame(vc->decoder, &iter))
+			while ((dest = vpx_codec_get_frame(vc->decoder, &iter)) != NULL)
 			{
                 if (vc->vcb.first)
 				{
@@ -538,7 +526,7 @@ void vc_iterate(VCSession *vc)
                                   (const uint8_t *)dest->planes[0], (const uint8_t *)dest->planes[1], (const uint8_t *)dest->planes[2],
                                   dest->stride[0], dest->stride[1], dest->stride[2], vc->vcb.second);
                 }
-                // vpx_img_free(dest);
+                vpx_img_free(dest); // is this needed? none of the VPx examples show that
             }
         }
         else

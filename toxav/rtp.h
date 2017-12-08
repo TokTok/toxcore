@@ -41,7 +41,7 @@ enum {
     video_frame_type_KEYFRAME, // = 1
 };
 
-#define VIDEO_KEEP_KEYFRAME_IN_BUFFER_FOR_MS (250)
+#define VIDEO_KEEP_KEYFRAME_IN_BUFFER_FOR_MS (15)
 
 struct RTPHeader {
     /* Standard RTP header */
