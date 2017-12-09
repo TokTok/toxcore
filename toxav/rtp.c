@@ -565,6 +565,10 @@ static uint8_t fill_data_into_slot(Logger *log, struct RTPWorkBufferList *wkbl, 
 
         wkbl->work_buffer[slot].received_len = wkbl->work_buffer[slot].received_len + (length - sizeof(struct RTPHeader));
 
+        // update received length also in the Header of the Message, for later use
+        struct RTPHeaderV3 *header_v3 = (void *)&(mm2->header);
+        header_v3->received_length_full = wkbl->work_buffer[slot].received_len;
+
         if (wkbl->work_buffer[slot].received_len == length_v3)
         {
             frame_complete = 1;
@@ -577,6 +581,21 @@ static uint8_t fill_data_into_slot(Logger *log, struct RTPWorkBufferList *wkbl, 
     return frame_complete;
 }
 
+static void update_bwc_values(Logger *log, BWController *bwc, struct RTPMessage *msg)
+{
+    struct RTPHeaderV3 *header_v3 = (void *)&(msg->header);
+    uint32_t data_length_full = header_v3->data_length_full; // without header
+    uint32_t received_length_full = header_v3->received_length_full; // without header
+
+    bwc_add_recv(bwc, data_length_full);
+    // bwc_feed_avg(bwc, data_length_full);
+
+    if (received_length_full < data_length_full)
+	{
+		// LOGGER_WARNING(log, "BWC: full length=%u received length=%d", data_length_full, received_length_full);
+		bwc_add_lost_v3(bwc, (data_length_full - received_length_full));
+	}
+}
 
 int handle_rtp_packet_v3(Messenger *m, uint32_t friendnumber, const uint8_t *data, uint16_t length, void *object)
 {
@@ -625,9 +644,6 @@ int handle_rtp_packet_v3(Messenger *m, uint32_t friendnumber, const uint8_t *dat
         return -1;
     }
 
-	// --- BWC ---
-    bwc_feed_avg(session->bwc, length);
-	// --- BWC ---
 
     // length -> includes header
     // length_v3 -> does not include header
@@ -656,6 +672,7 @@ int handle_rtp_packet_v3(Messenger *m, uint32_t friendnumber, const uint8_t *dat
                 if (session->mcb)
                 {
                     LOGGER_DEBUG(m->log, "-- handle_rtp_packet_v3 -- CALLBACK-001a b0=%d b1=%d", (int)m_new->data[0], (int)m_new->data[1]);
+                    update_bwc_values(m->log, session->bwc, m_new);
                     session->mcb(session->cs, m_new);
                 }
                 else
@@ -684,10 +701,6 @@ int handle_rtp_packet_v3(Messenger *m, uint32_t friendnumber, const uint8_t *dat
         {
             LOGGER_DEBUG(m->log, "fill_data_into_slot.1");
 
-			// --- BWC ---
-			bwc_add_recv(session->bwc, length);
-			// --- BWC ---
-
             // fill in this part into the slot buffer at the correct offset
             uint8_t frame_complete = fill_data_into_slot(m->log, work_buffer_list, slot, is_keyframe, header_v3, length_v3, offset_v3, data, length);
 
@@ -701,6 +714,7 @@ int handle_rtp_packet_v3(Messenger *m, uint32_t friendnumber, const uint8_t *dat
                     if (session->mcb)
                     {
                         LOGGER_DEBUG(m->log, "-- handle_rtp_packet_v3 -- CALLBACK-003a b0=%d b1=%d", (int)m_new->data[0], (int)m_new->data[1]);
+						update_bwc_values(m->log, session->bwc, m_new);
                         session->mcb(session->cs, m_new);
                     }
                     else
@@ -722,6 +736,7 @@ int handle_rtp_packet_v3(Messenger *m, uint32_t friendnumber, const uint8_t *dat
                 if (session->mcb)
                 {
                     LOGGER_DEBUG(m->log, "-- handle_rtp_packet_v3 -- CALLBACK-001");
+                    update_bwc_values(m->log, session->bwc, m_new);
                     session->mcb(session->cs, m_new);
                 }
                 else
@@ -756,6 +771,7 @@ int handle_rtp_packet_v3(Messenger *m, uint32_t friendnumber, const uint8_t *dat
                 if (session->mcb)
                 {
                     LOGGER_DEBUG(m->log, "-- handle_rtp_packet_v3 -- CALLBACK-002 b0=%d b1=%d", (int)m_new->data[0], (int)m_new->data[1]);
+                    update_bwc_values(m->log, session->bwc, m_new);
                     session->mcb(session->cs, m_new);
                 }
                 else
@@ -783,10 +799,6 @@ int handle_rtp_packet_v3(Messenger *m, uint32_t friendnumber, const uint8_t *dat
         {
             LOGGER_DEBUG(m->log, "fill_data_into_slot");
 
-			// --- BWC ---
-			bwc_add_recv(session->bwc, length);
-			// --- BWC ---
-
             // fill in this part into the solt buffer at the correct offset
             uint8_t frame_complete = fill_data_into_slot(m->log, work_buffer_list, slot, is_keyframe, header_v3, length_v3, offset_v3, data, length);
 
@@ -800,6 +812,7 @@ int handle_rtp_packet_v3(Messenger *m, uint32_t friendnumber, const uint8_t *dat
                     if (session->mcb)
                     {
                         LOGGER_DEBUG(m->log, "-- handle_rtp_packet_v3 -- CALLBACK-003 b0=%d b1=%d", (int)m_new->data[0], (int)m_new->data[1]);
+						update_bwc_values(m->log, session->bwc, m_new);
                         session->mcb(session->cs, m_new);
                     }
                     else

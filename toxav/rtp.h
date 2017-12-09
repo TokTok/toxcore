@@ -105,7 +105,7 @@ struct RTPHeaderV3 {
     uint32_t ssrc;
     uint32_t offset_full; /* Data offset of the current part */
     uint32_t data_length_full; /* data length without header, and without packet id */
-    uint32_t handled_length_full; /* only the receiver uses this field */
+    uint32_t received_length_full; /* only the receiver uses this field */
     uint32_t csrc[13];
 
     uint16_t offset_lower;      /* Data offset of the current part */
