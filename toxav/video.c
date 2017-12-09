@@ -34,10 +34,12 @@
 #include <stdlib.h>
 
 /*
-  Soft deadline the decoder should attempt to meet, in us (microseconds). Set to zero for unlimited.
+  Soft deadline the decoder should attempt to meet, in "us" (microseconds). Set to zero for unlimited.
   By convention, the value 1 is used to mean "return as fast as possible."
 */
-#define MAX_DECODE_TIME_US VPX_DL_REALTIME
+// TODO: don't hardcode this, let the application choose it
+#define WANTED_MAX_DECODER_FPS (100)
+#define MAX_DECODE_TIME_US (1000000 / WANTED_MAX_DECODER_FPS) // to allow x fps
 /*
 VPX_DL_REALTIME       (1)
 deadline parameter analogous to VPx REALTIME mode.
