@@ -91,8 +91,8 @@ BWController *bwc_new(Messenger *m, uint32_t friendnumber,
 
     /* Fill with zeros */
     int i = 0;
-    for (i = 0; i < BWC_AVG_PKT_COUNT; i++)
-    {
+
+    for (i = 0; i < BWC_AVG_PKT_COUNT; i++) {
         uint32_t *j = (retu->rcvpkt.packet_length_array + i);
         *j = 0;
         rb_write(retu->rcvpkt.rb, j, 0);
@@ -137,26 +137,24 @@ void bwc_add_lost(BWController *bwc, uint32_t bytes_received_ok)
     if (!bwc) {
         return;
     }
-    
+
     // DISABLE
     return;
 
-    if (!bytes_received_ok)
-    {
+    if (!bytes_received_ok) {
         LOGGER_WARNING(bwc->m->log, "BWC lost(1): %d", (int)bytes_received_ok);
-        
+
         uint32_t *avg_packet_length_array[BWC_AVG_PKT_COUNT];
         uint32_t count = 1;
 
         rb_data(bwc->rcvpkt.rb, (void **)avg_packet_length_array);
 
         int i = 0;
-        for (i = 0; i < BWC_AVG_PKT_COUNT; i ++)
-        {
+
+        for (i = 0; i < BWC_AVG_PKT_COUNT; i ++) {
             bytes_received_ok = bytes_received_ok + *(avg_packet_length_array[i]);
 
-            if (*(avg_packet_length_array[i]))
-            {
+            if (*(avg_packet_length_array[i])) {
                 count++;
             }
         }
@@ -178,8 +176,7 @@ void bwc_add_lost_v3(BWController *bwc, uint32_t bytes_lost)
         return;
     }
 
-    if (!bytes_lost)
-    {
+    if (!bytes_lost) {
         LOGGER_WARNING(bwc->m->log, "BWC lost(1): %d", (int)bytes_lost);
 
         bwc->cycle.lost = bwc->cycle.lost + bytes_lost;
@@ -213,7 +210,7 @@ void send_update(BWController *bwc)
 
         if (bwc->cycle.lost) {
             LOGGER_INFO(bwc->m->log, "%p Sent update rcv: %u lost: %u",
-                         bwc, bwc->cycle.recv, bwc->cycle.lost);
+                        bwc, bwc->cycle.recv, bwc->cycle.lost);
 
             uint8_t bwc_packet[sizeof(struct BWCMessage) + 1];
             struct BWCMessage *msg = (struct BWCMessage *)(bwc_packet + 1);
@@ -250,7 +247,8 @@ static int on_update(BWController *bwc, const struct BWCMessage *msg)
 
     if (lost && bwc->mcb) {
 
-        LOGGER_INFO(bwc->m->log, "recved: %u lost: %u percentage: %f %", recv, lost, (float)( ((float) lost / (recv + lost)) * 100.0f) );
+        LOGGER_INFO(bwc->m->log, "recved: %u lost: %u percentage: %f %", recv, lost,
+                    (float)(((float) lost / (recv + lost)) * 100.0f));
 
         bwc->mcb(bwc, bwc->friend_number,
                  ((float) lost / (recv + lost)),
