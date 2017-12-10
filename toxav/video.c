@@ -139,9 +139,9 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
 	cfg->g_timebase.den = 60; // 60 fps
 
     cfg->rc_resize_allowed = 1; // allow encoder to resize to smaller resolution
-    cfg->rc_dropframe_thresh = 10;
-	cfg->rc_resize_up_thresh = 80;
-	cfg->rc_resize_down_thresh = 25;
+    cfg->rc_dropframe_thresh = 2;
+	cfg->rc_resize_up_thresh = 60;
+	cfg->rc_resize_down_thresh = 10;
 
 #if 0
     /* Highest-resolution encoder settings */
