@@ -135,11 +135,11 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
 
     cfg->g_threads = VPX_MAX_ENCODER_THREADS; // Maximum number of threads to use
 
-	cfg->g_timebase.num = 1;
-	cfg->g_timebase.den = 60; // 60 fps
+	// cfg->g_timebase.num = 1;
+	// cfg->g_timebase.den = 60; // 60 fps
 
     cfg->rc_resize_allowed = 1; // allow encoder to resize to smaller resolution
-    cfg->rc_dropframe_thresh = 10;
+    // cfg->rc_dropframe_thresh = 10;
 
 #if 0
     /* Highest-resolution encoder settings */
