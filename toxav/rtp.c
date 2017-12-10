@@ -557,8 +557,6 @@ static uint8_t fill_data_into_slot(Logger *log, struct RTPWorkBufferList *wkbl, 
     return frame_complete;
 }
 
-uint8_t dismiss_first_lostpackets_counter = 0;
-
 static void update_bwc_values(Logger *log, RTPSession *session, struct RTPMessage *msg)
 {
 	if (session->first_packets_counter < DISMISS_FIRST_LOST_VIDEO_PACKET_COUNT)
