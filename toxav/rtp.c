@@ -559,23 +559,20 @@ static uint8_t fill_data_into_slot(Logger *log, struct RTPWorkBufferList *wkbl, 
 
 static void update_bwc_values(Logger *log, RTPSession *session, struct RTPMessage *msg)
 {
-	if (session->first_packets_counter < DISMISS_FIRST_LOST_VIDEO_PACKET_COUNT)
-	{
-		session->first_packets_counter++;
-	}
-	else
-	{
- 		struct RTPHeaderV3 *header_v3 = (struct RTPHeaderV3 *) & (msg->header);
-		uint32_t data_length_full = header_v3->data_length_full; // without header
-		uint32_t received_length_full = header_v3->received_length_full; // without header
+    if (session->first_packets_counter < DISMISS_FIRST_LOST_VIDEO_PACKET_COUNT) {
+        session->first_packets_counter++;
+    } else {
+        struct RTPHeaderV3 *header_v3 = (struct RTPHeaderV3 *) & (msg->header);
+        uint32_t data_length_full = header_v3->data_length_full; // without header
+        uint32_t received_length_full = header_v3->received_length_full; // without header
 
-		bwc_add_recv(session->bwc, data_length_full);
+        bwc_add_recv(session->bwc, data_length_full);
 
-		if (received_length_full < data_length_full) {
-			LOGGER_WARNING(log, "BWC: full length=%u received length=%d", data_length_full, received_length_full);
-			bwc_add_lost_v3(session->bwc, (data_length_full - received_length_full));
-		}
-  	}
+        if (received_length_full < data_length_full) {
+            LOGGER_WARNING(log, "BWC: full length=%u received length=%d", data_length_full, received_length_full);
+            bwc_add_lost_v3(session->bwc, (data_length_full - received_length_full));
+        }
+    }
 }
 
 int handle_rtp_packet_v3(Messenger *m, uint32_t friendnumber, const uint8_t *data, uint16_t length, void *object)
