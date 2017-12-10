@@ -46,7 +46,7 @@
 #define VIDEO_CODEC_DECODER_MAX_HEIGHT (600) // (16384)
 
 
-#define VIDEO_SEND_X_KEYFRAMES_FIRST (2) // force the first n frames to be keyframes!
+#define VIDEO_SEND_X_KEYFRAMES_FIRST (7) // force the first n frames to be keyframes!
 #define VPX_MAX_DIST_NORMAL (40)
 #define VPX_MAX_DIST_START (40)
 

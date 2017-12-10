@@ -176,7 +176,7 @@ void bwc_add_lost_v3(BWController *bwc, uint32_t bytes_lost)
         return;
     }
 
-    if (!bytes_lost) {
+    if (bytes_lost > 0) {
         LOGGER_WARNING(bwc->m->log, "BWC lost(1): %d", (int)bytes_lost);
 
         bwc->cycle.lost = bwc->cycle.lost + bytes_lost;
@@ -209,8 +209,9 @@ void send_update(BWController *bwc)
     } else if (current_time_monotonic() - bwc->cycle.last_sent_timestamp > BWC_SEND_INTERVAL_MS) {
 
         if (bwc->cycle.lost) {
-            LOGGER_INFO(bwc->m->log, "%p Sent update rcv: %u lost: %u",
-                        bwc, bwc->cycle.recv, bwc->cycle.lost);
+            LOGGER_INFO(bwc->m->log, "%p Sent update rcv: %u lost: %u percent: %f %%",
+                        bwc, bwc->cycle.recv, bwc->cycle.lost,
+                        (float)(((float) bwc->cycle.lost / (bwc->cycle.recv + bwc->cycle.lost)) * 100.0f));
 
             uint8_t bwc_packet[sizeof(struct BWCMessage) + 1];
             struct BWCMessage *msg = (struct BWCMessage *)(bwc_packet + 1);
@@ -247,7 +248,7 @@ static int on_update(BWController *bwc, const struct BWCMessage *msg)
 
     if (lost && bwc->mcb) {
 
-        LOGGER_INFO(bwc->m->log, "recved: %u lost: %u percentage: %f %", recv, lost,
+        LOGGER_INFO(bwc->m->log, "recved: %u lost: %u percentage: %f %%", recv, lost,
                     (float)(((float) lost / (recv + lost)) * 100.0f));
 
         bwc->mcb(bwc, bwc->friend_number,

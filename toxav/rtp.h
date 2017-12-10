@@ -148,6 +148,7 @@ struct RTPWorkBufferList {
     struct RTPWorkBuffer work_buffer[USED_RTP_WORKBUFFER_COUNT];
 };
 
+#define DISMISS_FIRST_LOST_VIDEO_PACKET_COUNT (10)
 
 /**
  * RTP control session.
@@ -160,6 +161,7 @@ typedef struct {
     uint32_t ssrc; //  this seems to be unused!?
 
     struct RTPMessage *mp; /* Expected parted message */
+    uint8_t  first_packets_counter; /* dismiss first few lost video packets */
 
     Messenger *m;
     uint32_t friend_number;
@@ -181,6 +183,7 @@ typedef struct {
     uint32_t ssrc;  // this seems to be unused!?
 
     struct RTPWorkBufferList *work_buffer_list;
+    uint8_t  first_packets_counter;
 
     Messenger *m;
     uint32_t friend_number;
