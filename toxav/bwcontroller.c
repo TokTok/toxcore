@@ -206,6 +206,7 @@ void send_update(BWController *bwc)
 {
 
 #if 0
+
     if (current_time_monotonic() - bwc->cycle.last_refresh_timestamp > BWC_REFRESH_INTERVAL_MS) {
 
         bwc->cycle.lost /= 10;
@@ -213,13 +214,12 @@ void send_update(BWController *bwc)
         bwc->cycle.last_refresh_timestamp = current_time_monotonic();
 
     }
+
 #endif
 
     //if (current_time_monotonic() - bwc->cycle.last_sent_timestamp > BWC_SEND_INTERVAL_MS) {
-    if (bwc->packet_loss_counted_cycles > BWC_AVG_LOSS_OVER_CYCLES_COUNT)
-    {
-        if (current_time_monotonic() - bwc->cycle.last_sent_timestamp > BWC_SEND_INTERVAL_MS)
-        {
+    if (bwc->packet_loss_counted_cycles > BWC_AVG_LOSS_OVER_CYCLES_COUNT) {
+        if (current_time_monotonic() - bwc->cycle.last_sent_timestamp > BWC_SEND_INTERVAL_MS) {
             bwc->packet_loss_counted_cycles = 0;
 
             if (bwc->cycle.lost) {
