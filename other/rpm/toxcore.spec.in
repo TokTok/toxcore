@@ -1,11 +1,13 @@
+%define full_project_name c-@PROJECT_NAME@
+
 Name:           @PROJECT_NAME@
 Version:        @PROJECT_VERSION@
 Release:        1%{?dist}
 Summary:        All-in-one secure communication platform
 
 License:        GPLv3
-URL:            https://github.com/TokTok/c-toxcore
-Source0:        https://github.com/TokTok/c-toxcore/archive/v%{version}.tar.gz
+URL:            https://github.com/TokTok/%{full_project_name}
+Source0:        https://github.com/TokTok/%{full_project_name}/archive/v%{version}.tar.gz
 
 BuildRequires:  cmake
 BuildRequires:  libvpx-devel
@@ -15,7 +17,9 @@ BuildRequires:  libconfig-devel
 BuildRequires:  systemd-units
 
 %description
-With the rise of governmental monitoring programs, Tox, a FOSS initiative, aims to be an easy to use, all-in-one communication platform that ensures their users full privacy and secure message delivery.
+With the rise of governmental monitoring programs, Tox, a FOSS initiative, aims
+to be an easy to use, all-in-one communication platform that ensures their users
+full privacy and secure message delivery.
 
 %package devel
 Summary:        Development files for @PROJECT_NAME@
@@ -43,7 +47,7 @@ Requires(postun): systemd-units
 Tox DHT bootstrap daemon.
 
 %prep
-%setup -q -n c-toxcore-%{version}
+%setup -q -n %{full_project_name}-%{version}
 
 %build
 %cmake
@@ -52,10 +56,10 @@ Tox DHT bootstrap daemon.
 %install
 %make_install
 mkdir -p %{buildroot}%{_unitdir}
-install -m 0644 %{_builddir}/c-toxcore-%{version}/other/bootstrap_daemon/tox-bootstrapd.service %{buildroot}%{_unitdir}/tox-bootstrapd.service
+install -m 0644 other/rpm/tox-bootstrapd.service %{buildroot}%{_unitdir}/tox-bootstrapd.service
 install -d "%{buildroot}%{_sharedstatedir}/tox-bootstrapd"
 mkdir -p %{buildroot}%{_sysconfdir}
-install -m 0644 %{_builddir}/c-toxcore-%{version}/other/bootstrap_daemon/tox-bootstrapd.conf %{buildroot}%{_sysconfdir}/tox-bootstrapd.conf
+install -m 0644 other/bootstrap_daemon/tox-bootstrapd.conf %{buildroot}%{_sysconfdir}/tox-bootstrapd.conf
 
 %check
 %{__make} %{?_smp_mflags} test
