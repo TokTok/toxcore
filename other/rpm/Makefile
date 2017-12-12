@@ -29,4 +29,4 @@ srpm: toxcore.spec $(PROJECT_FULL_NAME)-$(PROJECT_COMMIT_ID_SHORT).tar.gz
 clean:
 	rm -f toxcore.spec *.tar.gz *.rpm
 
-.PHONY = clean srpm
+.PHONY = clean srpm spec
