@@ -1,0 +1,35 @@
+FROM alpine:latest
+
+RUN apk add --no-cache libsodium libconfig bash jq curl
+RUN apk add --no-cache --virtual .build-deps gcc g++ musl-dev cmake git make libsodium-dev libconfig-dev yasm linux-headers \
+    && cd \
+        # download toxcore
+        && git clone https://github.com/TokTok/c-toxcore.git \
+        && cd c-toxcore \
+        # build and install
+        && cmake . -DBUILD_TOXAV=OFF -DENABLE_STATIC=OFF \
+        && make \
+        && make install \
+    && cd \
+    # cleanup
+    && rm -fr c-toxcore \
+    && apk del .build-deps \
+    # add tox-bootstrapd user to run as
+    && adduser -h /var/lib/tox-bootstrapd -S -s /sbin/nologin tox-bootstrapd \
+    # add empty config
+    && touch /etc/tox-bootstrapd.conf \
+    # fix permissions
+    && chmod 700 /var/lib/tox-bootstrapd \
+    && chown tox-bootstrapd /etc/tox-bootstrapd.conf
+
+WORKDIR /var/lib/tox-bootstrapd
+VOLUME /var/lib/tox-bootstrapd
+USER tox-bootstrapd
+
+COPY get-nodes.sh /usr/local/bin/
+COPY entrypoint.sh /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["--config","/etc/tox-bootstrapd.conf","--log-backend","stdout","--foreground"]
+
+EXPOSE 443/tcp 3389/tcp 33445/tcp 33445/udp
