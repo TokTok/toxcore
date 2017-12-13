@@ -17,6 +17,10 @@ matrix:
   - env: JOB=toxcore ENV=freebsd
     dist: trusty
     sudo: required
+  - env: JOB=tox-bootstrapd-docker ENV=linux
+    services:
+    - docker
+    sudo: required
   fast_finish: true
 
 addons:
