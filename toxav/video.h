@@ -56,6 +56,9 @@
 #define VIDEO__VP9_KF_MAX_DIST (999)
 #define VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED (0)
 
+#define VIDEO_RINGBUFFER_BUFFER_ELEMENTS (5) // this buffer has normally max. 1 entry
+#define VIDEO_RINGBUFFER_FILL_THRESHOLD (2) // this must be lower than the above value!
+
 #define VPX_VP8_CODEC (0)
 #define VPX_VP9_CODEC (1)
 

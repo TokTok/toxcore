@@ -31,11 +31,11 @@
 #include <assert.h>
 #include <errno.h>
 
-#define BWC_PACKET_ID 196
+#define BWC_PACKET_ID (196)
 #define BWC_SEND_INTERVAL_MS (950)     /* 0.95s  */
 #define BWC_REFRESH_INTERVAL_MS (2000) /* 2.00s */
-#define BWC_AVG_PKT_COUNT 20
-#define BWC_AVG_LOSS_OVER_CYCLES_COUNT 30
+#define BWC_AVG_PKT_COUNT (20)
+#define BWC_AVG_LOSS_OVER_CYCLES_COUNT (50)
 
 /**
  *

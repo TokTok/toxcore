@@ -40,12 +40,14 @@
 // VPX Info: Time to spend encoding, in microseconds (it's a *soft* deadline)
 #define WANTED_MAX_ENCODER_FPS (40)
 #define MAX_ENCODE_TIME_US (1000000 / WANTED_MAX_ENCODER_FPS) // to allow x fps
-
 /*
 VPX_DL_REALTIME       (1)       deadline parameter analogous to VPx REALTIME mode.
 VPX_DL_GOOD_QUALITY   (1000000) deadline parameter analogous to VPx GOOD QUALITY mode.
 VPX_DL_BEST_QUALITY   (0)       deadline parameter analogous to VPx BEST QUALITY mode.
 */
+
+#define VIDEO_ACCEPTABLE_LOSS (0.08f) /* if loss is less than this (8%), then don't do anything */
+
 
 typedef struct ToxAVCall_s {
     ToxAV *av;
@@ -207,15 +209,23 @@ void toxav_kill(ToxAV *av)
 
     free(av);
 }
+
 Tox *toxav_get_tox(const ToxAV *av)
 {
     return (Tox *) av->m;
+
 }
 uint32_t toxav_iteration_interval(const ToxAV *av)
 {
     /* If no call is active interval is 200 */
     return av->calls ? av->interval : 200;
 }
+
+static void *video_play(void *data)
+{
+    vc_iterate((VCSession *)data);
+}
+
 void toxav_iterate(ToxAV *av)
 {
     pthread_mutex_lock(av->mutex);
@@ -235,8 +245,29 @@ void toxav_iterate(ToxAV *av)
             pthread_mutex_lock(i->mutex);
             pthread_mutex_unlock(av->mutex);
 
+            // ------- av_iterate for audio -------
             ac_iterate(i->audio.second);
-            vc_iterate(i->video.second);
+            // ------- av_iterate for audio -------
+
+            // ------- multithreaded av_iterate for video -------
+	        pthread_t video_play_thread;
+            if (pthread_create(&video_play_thread, NULL, video_play, (void *)(i->video.second)))
+            {
+                LOGGER_WARNING(av->m->log, "error creating video play thread");
+            }
+
+#if defined(__MINGW32__) || defined(_WIN32) || defined(WIN32)
+	        /* TODO: Zoff (2017): can not get uTox for windows compiled with "pthread_tryjoin_np" */
+	        pthread_join(video_play_thread, NULL);
+#else
+            while (pthread_tryjoin_np(video_play_thread, NULL) != 0)
+            {
+                /* video thread still running, let's do some more audio */
+                LOGGER_TRACE(av->m->log, "do some more audio iterate");
+                ac_iterate(i->audio.second);
+            }
+            // ------- multithreaded av_iterate for video -------
+#endif
 
             if (i->msi_call->self_capabilities & msi_CapRAudio &&
                     i->msi_call->peer_capabilities & msi_CapSAudio) {
@@ -247,6 +278,8 @@ void toxav_iterate(ToxAV *av)
                     i->msi_call->peer_capabilities & msi_CapSVideo) {
                 rc = MIN(i->video.second->lcfd, (uint32_t) rc);
             }
+
+            // LOGGER_TRACE(av->m->log, "lcfd=%u", (uint32_t)i->video.second->lcfd);
 
             uint32_t fid = i->friend_number;
 
@@ -957,8 +990,8 @@ void callback_bwc(BWController *bwc, uint32_t friend_number, float loss, void *u
 
     LOGGER_DEBUG(call->av->m->log, "Reported loss of %f%%", loss * 100);
 
-    /* if less than 10% data loss we do nothing! */
-    if (loss < 0.1f) {
+    /* if less than x% data loss we do nothing! */
+    if (loss < VIDEO_ACCEPTABLE_LOSS) {
         return;
     }
 

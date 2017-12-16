@@ -65,8 +65,6 @@ Note
 #define VIDEO_BITRATE_INITIAL_VALUE 5000 // initialize encoder with this value. Target bandwidth to use for this stream, in kilobits per second.
 
 
-#define VIDEO_DECODE_BUFFER_SIZE 5 // this buffer has normally max. 1 entry
-
 
 
 
@@ -139,10 +137,10 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
     // cfg->g_timebase.den = 60; // 60 fps
 
     cfg->rc_resize_allowed = 1; // allow encoder to resize to smaller resolution
-    // cfg->rc_dropframe_thresh = 10;
+    cfg->rc_dropframe_thresh = 0;
 
-    cfg->rc_resize_up_thresh = 40;
-    cfg->rc_resize_down_thresh = 5;
+    cfg->rc_resize_up_thresh = 50;
+    cfg->rc_resize_down_thresh = 6;
 
 #if 0
     /* Highest-resolution encoder settings */
@@ -177,7 +175,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
         return NULL;
     }
 
-    if (!(vc->vbuf_raw = rb_new(VIDEO_DECODE_BUFFER_SIZE))) {
+    if (!(vc->vbuf_raw = rb_new(VIDEO_RINGBUFFER_BUFFER_ELEMENTS))) {
         goto BASE_CLEANUP;
     }
 
@@ -375,7 +373,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
 
 
     vc->linfts = current_time_monotonic();
-    vc->lcfd = 60;
+    vc->lcfd = 10; // initial value in ms for av_iterate sleep
     vc->vcb.first = cb;
     vc->vcb.second = cb_data;
     vc->friend_number = friend_number;
@@ -542,23 +540,30 @@ void vc_iterate(VCSession *vc)
         LOGGER_DEBUG(vc->log, "vc_iterate: rb_read rb size=%d", (int)rb_size((RingBuffer *)vc->vbuf_raw));
 
 
-        rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, NULL, MAX_DECODE_TIME_US);
+		if ((int)rb_size((RingBuffer *)vc->vbuf_raw) > VIDEO_RINGBUFFER_FILL_THRESHOLD)
+		{
+			rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, NULL, VPX_DL_REALTIME);
+		}
+		else
+		{
+			rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, NULL, MAX_DECODE_TIME_US);
+		}
 
         if (rc != VPX_CODEC_OK) {
             if (rc == 5) { // Bitstream not supported by this decoder
                 LOGGER_WARNING(vc->log, "Switching VPX Decoder");
                 video_switch_decoder(vc);
+
+				rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, NULL, VPX_DL_REALTIME);
+				if (rc != VPX_CODEC_OK) {
+					LOGGER_ERROR(vc->log, "There is still an error decoding video: err-num=%d err-str=%s", (int)rc, vpx_codec_err_to_string(rc));
+				}
+
             } else if (rc == 7) {
                 LOGGER_WARNING(vc->log, "Corrupt frame detected: data size=%d start byte=%d end byte=%d",
                                (int)full_data_len, (int)p->data[0], (int)p->data[full_data_len - 1]);
             } else {
-                LOGGER_ERROR(vc->log, "Error decoding video: %d %s", (int)rc, vpx_codec_err_to_string(rc));
-            }
-
-            rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, NULL, MAX_DECODE_TIME_US);
-
-            if (rc != 5) {
-                LOGGER_ERROR(vc->log, "There is still an error decoding video: %d %s", (int)rc, vpx_codec_err_to_string(rc));
+                LOGGER_ERROR(vc->log, "Error decoding video: err-num=%d err-str=%s", (int)rc, vpx_codec_err_to_string(rc));
             }
         }
 
