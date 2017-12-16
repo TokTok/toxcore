@@ -95,7 +95,7 @@ typedef struct VCSession_s {
 
 VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_receive_frame_cb *cb, void *cb_data);
 void vc_kill(VCSession *vc);
-void vc_iterate(VCSession *vc);
+void vc_iterate(VCSession *vc, uint8_t skip_video_flag);
 int vc_queue_message(void *vcp, struct RTPMessage *msg);
 int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height, int16_t kf_max_dist);
 

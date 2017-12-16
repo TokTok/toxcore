@@ -506,7 +506,7 @@ void video_switch_decoder(VCSession *vc)
 }
 
 
-void vc_iterate(VCSession *vc)
+void vc_iterate(VCSession *vc, uint8_t skip_video_flag)
 {
     if (!vc) {
         return;
@@ -521,6 +521,16 @@ void vc_iterate(VCSession *vc)
     uint8_t data_type;
 
     uint32_t full_data_len;
+
+	if (skip_video_flag == 1)
+	{
+		if (rb_read((RingBuffer *)vc->vbuf_raw, (void **)&p, &data_type)) {
+			LOGGER_INFO(vc->log, "skipping incoming video frame");
+			free(p);
+		}
+		pthread_mutex_unlock(vc->queue_mutex);
+		return;
+	}
 
     if (rb_read((RingBuffer *)vc->vbuf_raw, (void **)&p, &data_type)) {
         pthread_mutex_unlock(vc->queue_mutex);

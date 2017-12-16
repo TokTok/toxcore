@@ -29,14 +29,17 @@
 #include <pthread.h>
 
 
-#define AUDIO_JITTERBUFFER_COUNT (3)
+#define AUDIO_JITTERBUFFER_COUNT (100) // ORIG = 3
+#define AUDIO_JITTERBUFFER_FILL_THRESHOLD (4) // this must be lower than the above value!
+#define AUDIO_JITTERBUFFER_SKIP_THRESHOLD (7)
+
 #define AUDIO_MAX_SAMPLING_RATE (48000)
 #define AUDIO_MAX_CHANNEL_COUNT (2)
 
 #define AUDIO_START_SAMPLING_RATE (48000)
 #define AUDIO_START_BITRATE_RATE (48000)
 #define AUDIO_START_CHANNEL_COUNT (2)
-#define AUDIO_OPUS_PACKET_LOSS_PERC (10)
+#define AUDIO_OPUS_PACKET_LOSS_PERC (15)
 #define AUDIO_OPUS_COMPLEXITY (10)
 
 #define AUDIO_DECODER__START_SAMPLING_RATE (48000)
@@ -78,7 +81,7 @@ typedef struct ACSession_s {
 
 ACSession *ac_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_audio_receive_frame_cb *cb, void *cb_data);
 void ac_kill(ACSession *ac);
-void ac_iterate(ACSession *ac);
+uint8_t ac_iterate(ACSession *ac);
 int ac_queue_message(void *acp, struct RTPMessage *msg);
 int ac_reconfigure_encoder(ACSession *ac, int32_t bit_rate, int32_t sampling_rate, uint8_t channels);
 

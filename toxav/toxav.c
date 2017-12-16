@@ -47,6 +47,7 @@ VPX_DL_BEST_QUALITY   (0)       deadline parameter analogous to VPx BEST QUALITY
 */
 
 #define VIDEO_ACCEPTABLE_LOSS (0.08f) /* if loss is less than this (8%), then don't do anything */
+#define AUDIO_ITERATATIONS_WHILE_VIDEO (10)
 
 
 typedef struct ToxAVCall_s {
@@ -59,6 +60,8 @@ typedef struct ToxAVCall_s {
     PAIR(RTPSession *, VCSession *) video;
 
     BWController *bwc;
+
+    uint8_t skip_video_flag;
 
     bool active;
     MSICall *msi_call;
@@ -213,8 +216,8 @@ void toxav_kill(ToxAV *av)
 Tox *toxav_get_tox(const ToxAV *av)
 {
     return (Tox *) av->m;
-
 }
+
 uint32_t toxav_iteration_interval(const ToxAV *av)
 {
     /* If no call is active interval is 200 */
@@ -223,7 +226,10 @@ uint32_t toxav_iteration_interval(const ToxAV *av)
 
 static void *video_play(void *data)
 {
-    vc_iterate((VCSession *)data);
+    ToxAVCall *call = (ToxAVCall *)data;
+    VCSession *vc = (VCSession *)call->video.second;
+    vc_iterate(vc, call->skip_video_flag);
+    return (void *)NULL;
 }
 
 void toxav_iterate(ToxAV *av)
@@ -237,37 +243,70 @@ void toxav_iterate(ToxAV *av)
 
     uint64_t start = current_time_monotonic();
     int32_t rc = 500;
+    uint32_t audio_iterations = 0;
 
     ToxAVCall *i = av->calls[av->calls_head];
 
     for (; i; i = i->next) {
+ 
+        audio_iterations = 0;
+ 
         if (i->active) {
             pthread_mutex_lock(i->mutex);
             pthread_mutex_unlock(av->mutex);
 
             // ------- av_iterate for audio -------
-            ac_iterate(i->audio.second);
+            uint8_t res_ac = ac_iterate(i->audio.second);
+            if (res_ac == 2)
+            {
+                i->skip_video_flag = 1;
+            }
+            else
+            {
+                i->skip_video_flag = 0;
+            }
             // ------- av_iterate for audio -------
 
             // ------- multithreaded av_iterate for video -------
 	        pthread_t video_play_thread;
-            if (pthread_create(&video_play_thread, NULL, video_play, (void *)(i->video.second)))
+            LOGGER_TRACE(av->m->log, "video_play -----");
+            if (pthread_create(&video_play_thread, NULL, video_play, (void *)(i)))
             {
                 LOGGER_WARNING(av->m->log, "error creating video play thread");
+            }
+            else
+            {
+                // set lower prio for video play thread ----
             }
 
 #if defined(__MINGW32__) || defined(_WIN32) || defined(WIN32)
 	        /* TODO: Zoff (2017): can not get uTox for windows compiled with "pthread_tryjoin_np" */
 	        pthread_join(video_play_thread, NULL);
 #else
+
             while (pthread_tryjoin_np(video_play_thread, NULL) != 0)
             {
                 /* video thread still running, let's do some more audio */
-                LOGGER_TRACE(av->m->log, "do some more audio iterate");
-                ac_iterate(i->audio.second);
+                if (ac_iterate(i->audio.second) == 0)
+                {
+                    // usleep(100);
+                }
+                else
+                {
+                    LOGGER_TRACE(av->m->log, "did some more audio iterate");
+                }
+                
+                audio_iterations++;
+                
+                if (audio_iterations >= AUDIO_ITERATATIONS_WHILE_VIDEO)
+                {
+                    pthread_join(video_play_thread, NULL);
+                    break;
+                }
             }
-            // ------- multithreaded av_iterate for video -------
 #endif
+            // ------- multithreaded av_iterate for video -------
+
 
             if (i->msi_call->self_capabilities & msi_CapRAudio &&
                     i->msi_call->peer_capabilities & msi_CapSAudio) {
@@ -600,7 +639,7 @@ bool toxav_bit_rate_set(ToxAV *av, uint32_t friend_number, int32_t audio_bit_rat
     if (audio_bit_rate >= 0) {
         LOGGER_DEBUG(av->m->log, "Setting new audio bitrate to: %d", audio_bit_rate);
 
-        if (call->audio_bit_rate == audio_bit_rate) {
+        if (call->audio_bit_rate == (uint32_t)audio_bit_rate) {
             LOGGER_DEBUG(av->m->log, "Audio bitrate already set to: %d", audio_bit_rate);
         } else if (audio_bit_rate == 0) {
             LOGGER_DEBUG(av->m->log, "Turned off audio sending");
@@ -640,7 +679,7 @@ bool toxav_bit_rate_set(ToxAV *av, uint32_t friend_number, int32_t audio_bit_rat
     if (video_bit_rate >= 0) {
         LOGGER_DEBUG(av->m->log, "Setting new video bitrate to: %d", video_bit_rate);
 
-        if (call->video_bit_rate == video_bit_rate) {
+        if (call->video_bit_rate == (uint32_t)video_bit_rate) {
             LOGGER_DEBUG(av->m->log, "Video bitrate already set to: %d", video_bit_rate);
         } else if (video_bit_rate == 0) {
             LOGGER_DEBUG(av->m->log, "Turned off video sending");

@@ -29,11 +29,21 @@
 
 #include <stdlib.h>
 
+
+struct JitterBuffer {
+    struct RTPMessage **queue;
+    uint32_t size;
+    uint32_t capacity;
+    uint16_t bottom;
+    uint16_t top;
+    uint32_t elements_inside;
+};
+
+
 static struct JitterBuffer *jbuf_new(uint32_t capacity);
 static void jbuf_clear(struct JitterBuffer *q);
 static void jbuf_free(struct JitterBuffer *q);
 static int jbuf_write(Logger *log, struct JitterBuffer *q, struct RTPMessage *m);
-static struct RTPMessage *jbuf_read(struct JitterBuffer *q, int32_t *success);
 OpusEncoder *create_audio_encoder(Logger *log, int32_t bit_rate, int32_t sampling_rate, int32_t channel_count);
 bool reconfigure_audio_encoder(Logger *log, OpusEncoder **e, int32_t new_br, int32_t new_sr, uint8_t new_ch,
                                int32_t *old_br, int32_t *old_sr, int32_t *old_ch);
@@ -125,11 +135,102 @@ void ac_kill(ACSession *ac)
     free(ac);
 }
 
-void ac_iterate(ACSession *ac)
+static inline struct RTPMessage *jbuf_read(Logger *log, struct JitterBuffer *q, int32_t *success)
+{
+    if ((q->top % q->size) == (q->bottom % q->size)) {
+        *success = 0;
+        return NULL;
+    }
+
+    unsigned int num = q->bottom % q->size;
+
+    if (q->queue[num]) {
+        struct RTPMessage *ret = q->queue[num];
+        q->queue[num] = NULL;
+        ++q->bottom;
+        if (q->elements_inside > 0)
+        {
+            q->elements_inside--;
+        }
+        *success = 1;
+        
+        if (q->bottom > q->size)
+        {
+            q->bottom = q->bottom % q->size;
+        }
+        
+        return ret;
+    }
+
+    if ((uint32_t)(q->top - q->bottom) > q->capacity) {
+        LOGGER_DEBUG(log, "drop oldest incoming audio frame");
+        ++q->bottom;
+        if (q->elements_inside > 0)
+        {
+            q->elements_inside--;
+        }
+
+        if (q->bottom > q->size)
+        {
+            q->bottom = q->bottom % q->size;
+        }
+
+        *success = 2;
+        return NULL;
+    }
+
+    *success = 0;
+    return NULL;
+}
+
+static inline uint8_t jbuf_is_empty(struct JitterBuffer *q)
+{
+    if (q->elements_inside < 1)
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+uint8_t ac_iterate(ACSession *ac)
 {
     if (!ac) {
-        return;
+        return 0;
     }
+
+    uint8_t ret_value = 1;
+    struct JitterBuffer *jbuffer = (struct JitterBuffer *)ac->j_buf;
+
+    LOGGER_INFO(ac->log, "jitterbuffer elements=%u", jbuffer->elements_inside);
+
+    if (jbuf_is_empty(jbuffer) == 1)
+    {
+        return 0;
+    }
+    else if (jbuffer->elements_inside > AUDIO_JITTERBUFFER_FILL_THRESHOLD)
+    {
+        // audio frames are building up, skip video frames to compensate
+        LOGGER_INFO(ac->log, "incoming audio frames are slowing down");
+        ret_value = 2;
+    }
+#if 0
+    else if (jbuffer->elements_inside > AUDIO_JITTERBUFFER_SKIP_THRESHOLD)
+    {
+        // audio frames are still building up, skip audio frames to synchronize again
+        int rc_skip = 0;
+        LOGGER_WARNING(ac->log, "skipping some incoming audio frames");
+        jbuf_read(ac->log, jbuffer, &rc_skip);
+        jbuf_read(ac->log, jbuffer, &rc_skip);
+        jbuf_read(ac->log, jbuffer, &rc_skip);
+        jbuf_read(ac->log, jbuffer, &rc_skip);
+        jbuf_read(ac->log, jbuffer, &rc_skip);
+        jbuf_read(ac->log, jbuffer, &rc_skip);
+        return 1;
+    }
+#endif
 
     /* TODO(mannol): fix this and jitter buffering */
 
@@ -142,7 +243,7 @@ void ac_iterate(ACSession *ac)
 
     pthread_mutex_lock(ac->queue_mutex);
 
-    while ((msg = jbuf_read((struct JitterBuffer *)ac->j_buf, &rc)) || rc == 2) {
+    while ((msg = jbuf_read(ac->log, jbuffer, &rc)) || rc == 2) {
         pthread_mutex_unlock(ac->queue_mutex);
 
         if (rc == 2) {
@@ -203,10 +304,12 @@ void ac_iterate(ACSession *ac)
                           ac->lp_sampling_rate, ac->acb.second);
         }
 
-        return;
+        return ret_value;
     }
 
     pthread_mutex_unlock(ac->queue_mutex);
+    
+    return ret_value;
 }
 
 int ac_queue_message(void *acp, struct RTPMessage *msg)
@@ -234,7 +337,7 @@ int ac_queue_message(void *acp, struct RTPMessage *msg)
     pthread_mutex_unlock(ac->queue_mutex);
 
     if (rc == -1) {
-        LOGGER_WARNING(ac->log, "Could not queue the message!");
+        LOGGER_WARNING(ac->log, "Could not queue the incoming audio message!");
         free(msg);
         return -1;
     }
@@ -254,16 +357,6 @@ int ac_reconfigure_encoder(ACSession *ac, int32_t bit_rate, int32_t sampling_rat
 
     return 0;
 }
-
-
-
-struct JitterBuffer {
-    struct RTPMessage **queue;
-    uint32_t size;
-    uint32_t capacity;
-    uint16_t bottom;
-    uint16_t top;
-};
 
 static struct JitterBuffer *jbuf_new(uint32_t capacity)
 {
@@ -288,6 +381,7 @@ static struct JitterBuffer *jbuf_new(uint32_t capacity)
 
     q->size = size;
     q->capacity = capacity;
+    q->elements_inside = 0;
     return q;
 }
 
@@ -299,6 +393,7 @@ static void jbuf_clear(struct JitterBuffer *q)
             q->queue[q->bottom % q->size] = NULL;
         }
     }
+    q->elements_inside = 0;
 }
 
 static void jbuf_free(struct JitterBuffer *q)
@@ -312,60 +407,64 @@ static void jbuf_free(struct JitterBuffer *q)
     free(q);
 }
 
+
 static int jbuf_write(Logger *log, struct JitterBuffer *q, struct RTPMessage *m)
+{
+    // uint16_t sequnum = m->header.sequnum;
+
+    unsigned int num = q->top % q->size;
+
+    if (q->queue[num]) {
+        LOGGER_WARNING(log, "jitter buffer full: %p", q);
+        return -1;
+    }
+
+    q->queue[num] = m;
+    q->elements_inside++;
+
+    //if ((sequnum - q->bottom) >= (q->top - q->bottom)) {
+    //    q->top = sequnum + 1;
+    //}
+    q->top++;
+    if (q->top > q->size)
+    {
+        q->top = q->top % q->size;
+    }
+
+    return 0;
+}
+
+
+static int jbuf_write__OLD(Logger *log, struct JitterBuffer *q, struct RTPMessage *m)
 {
     uint16_t sequnum = m->header.sequnum;
 
     unsigned int num = sequnum % q->size;
 
     if ((uint32_t)(sequnum - q->bottom) > q->size) {
-        LOGGER_DEBUG(log, "Clearing filled jitter buffer: %p", q);
+        LOGGER_WARNING(log, "Clearing filled jitter buffer: %p", q);
 
         jbuf_clear(q);
         q->bottom = sequnum - q->capacity;
         q->queue[num] = m;
+        q->elements_inside++;
         q->top = sequnum + 1;
         return 0;
     }
 
     if (q->queue[num]) {
+        LOGGER_WARNING(log, "jitter buffer full: %p", q);
         return -1;
     }
 
     q->queue[num] = m;
+    q->elements_inside++;
 
     if ((sequnum - q->bottom) >= (q->top - q->bottom)) {
         q->top = sequnum + 1;
     }
 
     return 0;
-}
-
-static struct RTPMessage *jbuf_read(struct JitterBuffer *q, int32_t *success)
-{
-    if (q->top == q->bottom) {
-        *success = 0;
-        return NULL;
-    }
-
-    unsigned int num = q->bottom % q->size;
-
-    if (q->queue[num]) {
-        struct RTPMessage *ret = q->queue[num];
-        q->queue[num] = NULL;
-        ++q->bottom;
-        *success = 1;
-        return ret;
-    }
-
-    if ((uint32_t)(q->top - q->bottom) > q->capacity) {
-        ++q->bottom;
-        *success = 2;
-        return NULL;
-    }
-
-    *success = 0;
-    return NULL;
 }
 
 OpusEncoder *create_audio_encoder(Logger *log, int32_t bit_rate, int32_t sampling_rate, int32_t channel_count)
