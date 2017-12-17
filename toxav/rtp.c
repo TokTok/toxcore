@@ -840,7 +840,7 @@ int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, 
 
 	if ((uint8_t)header->pt == (rtp_TypeAudio % 128))
 	{
-        LOGGER_WARNING(ac->log, "incoming audio data packet");
+        LOGGER_WARNING(m->log, "incoming audio data packet");
 	}
 
 
@@ -855,7 +855,7 @@ int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, 
         if (chloss(session, header)) {
 			if ((uint8_t)header->pt == (rtp_TypeAudio % 128))
 			{
-					LOGGER_WARNING(ac->log, "drop late audio messages (1)");
+					LOGGER_WARNING(m->log, "drop late audio messages (1)");
 			}
 
             return 0;
@@ -913,7 +913,7 @@ int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, 
 
 				if ((uint8_t)header->pt == (rtp_TypeAudio % 128))
 				{
-						LOGGER_WARNING(ac->log, "drop audio message (2)");
+						LOGGER_WARNING(m->log, "drop audio message (2)");
 				}
 
                 return 0;
@@ -947,7 +947,7 @@ int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, 
                  */
 				if ((uint8_t)header->pt == (rtp_TypeAudio % 128))
 				{
-						LOGGER_WARNING(ac->log, "drop old audio message (3)");
+						LOGGER_WARNING(m->log, "drop old audio message (3)");
 				}
 
                 return 0;
@@ -984,7 +984,7 @@ NEW_MULTIPARTED:
         if (chloss(session, header)) {
 			if ((uint8_t)header->pt == (rtp_TypeAudio % 128))
 			{
-					LOGGER_WARNING(ac->log, "drop out of order audio message (4)");
+					LOGGER_WARNING(m->log, "drop out of order audio message (4)");
 			}
 
             return 0;
