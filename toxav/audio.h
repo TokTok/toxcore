@@ -30,7 +30,7 @@
 
 
 #define AUDIO_JITTERBUFFER_COUNT (50) // ORIG = 3
-#define AUDIO_JITTERBUFFER_FILL_THRESHOLD (5) // this must be lower than the above value!
+#define AUDIO_JITTERBUFFER_FILL_THRESHOLD (6) // this must be lower than the above value!
 #define AUDIO_JITTERBUFFER_SKIP_THRESHOLD (10)
 
 #define AUDIO_MAX_SAMPLING_RATE (48000)
@@ -39,13 +39,15 @@
 #define AUDIO_START_SAMPLING_RATE (48000)
 #define AUDIO_START_BITRATE_RATE (48000)
 #define AUDIO_START_CHANNEL_COUNT (2)
-#define AUDIO_OPUS_PACKET_LOSS_PERC (20)
+#define AUDIO_OPUS_PACKET_LOSS_PERC (20) // allow upto 20% loss of audio packets
 #define AUDIO_OPUS_COMPLEXITY (10)
 
 #define AUDIO_DECODER__START_SAMPLING_RATE (48000)
 #define AUDIO_DECODER__START_CHANNEL_COUNT (2)
 
 #define AUDIO_MAX_FRAME_DURATION_MS (120)
+
+#define AUDIO_LOST_FRAME_INDICATOR (4)
 
 // ((sampling_rate_in_hz * frame_duration_in_ms) / 1000) * 2 // because PCM16 needs 2 bytes for 1 sample
 #define AUDIO_MAX_BUFFER_SIZE_PCM16_FOR_FRAME_PER_CHANNEL ((AUDIO_MAX_SAMPLING_RATE * AUDIO_MAX_FRAME_DURATION_MS) / 1000)

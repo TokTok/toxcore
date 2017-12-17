@@ -136,7 +136,7 @@ static inline struct RTPMessage *jbuf_read(Logger *log, struct RingBuffer *q, in
 
 	bool res = rb_read(q, &ret, &lost_frame);
     
-    LOGGER_WARNING(log, "jbuf_read:lost_frame=%d", (int)lost_frame);
+    LOGGER_TRACE(log, "jbuf_read:lost_frame=%d", (int)lost_frame);
 
 	if (res == true)
 	{
@@ -145,10 +145,8 @@ static inline struct RTPMessage *jbuf_read(Logger *log, struct RingBuffer *q, in
     
     if (lost_frame == 1)
     {
-        *success = 4;
+        *success = AUDIO_LOST_FRAME_INDICATOR;
     }
-
-	/* TODO: return (NULL, *success=3) on packet lost */
 
 	return (struct RTPMessage *)ret;
 }
@@ -167,10 +165,10 @@ uint8_t ac_iterate(ACSession *ac)
     uint8_t ret_value = 1;
     struct RingBuffer *jbuffer = (struct RingBuffer *)ac->j_buf;
 
-	if (jbuffer)
-	{
-		LOGGER_INFO(ac->log, "jitterbuffer elements=%u", rb_size(jbuffer));
-	}
+	// if (jbuffer)
+	// {
+	// 	LOGGER_INFO(ac->log, "jitterbuffer elements=%u", rb_size(jbuffer));
+	// }
 
     if (jbuf_is_empty(jbuffer))
     {
@@ -195,8 +193,6 @@ uint8_t ac_iterate(ACSession *ac)
     }
 #endif
 
-    /* TODO(mannol): fix this and jitter buffering */
-
     /* Enough space for the maximum frame size (120 ms 48 KHz stereo audio) */
     int16_t temp_audio_buffer[AUDIO_MAX_BUFFER_SIZE_PCM16_FOR_FRAME_PER_CHANNEL *
                               AUDIO_MAX_CHANNEL_COUNT];
@@ -206,18 +202,10 @@ uint8_t ac_iterate(ACSession *ac)
 
     pthread_mutex_lock(ac->queue_mutex);
 
-    while ((msg = jbuf_read(ac->log, jbuffer, &rc)) || rc == 2) {
+    while ((msg = jbuf_read(ac->log, jbuffer, &rc)) || rc == AUDIO_LOST_FRAME_INDICATOR) {
         pthread_mutex_unlock(ac->queue_mutex);
         
-        LOGGER_WARNING(ac->log, "OPUS:rc=%d", (int)rc);
-
-        if (rc == 2) {
-			/* how is this working exactly? */
-            LOGGER_WARNING(ac->log, "OPUS correction for lost frame (1)");
-            int fs = (ac->lp_sampling_rate * ac->lp_frame_duration) / 1000;
-            rc = opus_decode(ac->decoder, NULL, 0, temp_audio_buffer, fs, 1);
-        }
-        else if (rc == 4) {
+        if (rc == AUDIO_LOST_FRAME_INDICATOR) {
             LOGGER_WARNING(ac->log, "OPUS correction for lost frame (3)");
             int fs = (ac->lp_sampling_rate * ac->lp_frame_duration) / 1000;
             rc = opus_decode(ac->decoder, NULL, 0, temp_audio_buffer, fs, 1);
@@ -225,27 +213,10 @@ uint8_t ac_iterate(ACSession *ac)
         } else {
 
             int use_fec = 0;
-            if (rc == 3) {
-                LOGGER_WARNING(ac->log, "OPUS correction for lost frame (2)");
-                use_fec = 1;
-            }
-
+            /* TODO: check if we have the full data of this frame */
 
             /* Get values from packet and decode. */
             /* NOTE: This didn't work very well */
-#if 0
-            rc = convert_bw_to_sampling_rate(opus_packet_get_bandwidth(msg->data));
-
-            if (rc != -1) {
-                cs->last_packet_sampling_rate = rc;
-            } else {
-                LOGGER_WARNING(ac->log, "Failed to load packet values!");
-                rtp_free_msg(msg);
-                continue;
-            }
-
-#endif
-
 
             /* Pick up sampling rate from packet */
             memcpy(&ac->lp_sampling_rate, msg->data, 4);
@@ -409,8 +380,8 @@ static int jbuf_write(Logger *log, ACSession *ac, struct RingBuffer *q, struct R
             if (diff > 1)
             {
                 LOGGER_WARNING(log, "AudioFramesIN: missing %d audio frames, seqnum=%d", (int)(diff - 1), (int)(ac->lp_seqnum + 1));
+
                 int j;
-#if 1
                 for(j=0;j<(diff - 1);j++)
                 {
                     uint16_t lenx = (m->len + sizeof(struct RTPHeader));
@@ -420,12 +391,7 @@ static int jbuf_write(Logger *log, ACSession *ac, struct RingBuffer *q, struct R
                     {
                         LOGGER_WARNING(log, "AudioFramesIN: error in rb_write");
                     }
-                    // else
-                    // {
-                    //    LOGGER_WARNING(log, "AudioFramesIN: rb_write OK");
-                    // }
                 }
-#endif
             }
 
             ac->lp_seqnum = m->header.sequnum;
