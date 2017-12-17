@@ -70,7 +70,7 @@ typedef struct ACSession_s {
     int32_t ld_sample_rate; /* Last decoder sample rate */
     int32_t ld_channel_count; /* Last decoder channel count */
     uint64_t ldrts; /* Last decoder reconfiguration time stamp */
-    void *j_buf;
+    void *j_buf; /* it's a Ringbuffer now */
 
     pthread_mutex_t queue_mutex[1];
 
