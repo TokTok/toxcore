@@ -282,7 +282,7 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length_v3, 
         }
     }
 
-    session->sequnum ++;
+    session->sequnum++;
     return 0;
 }
 
@@ -838,10 +838,10 @@ int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, 
     }
 
 
-	if ((uint8_t)header->pt == (rtp_TypeAudio % 128))
-	{
-        LOGGER_WARNING(m->log, "incoming audio data packet");
-	}
+	//if ((uint8_t)header->pt == (rtp_TypeAudio % 128))
+	//{
+    //    LOGGER_TRACE(m->log, "incoming audio data packet");
+	//}
 
 
     bwc_feed_avg(session->bwc, length);

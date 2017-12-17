@@ -48,7 +48,12 @@ VPX_DL_BEST_QUALITY   (0)       deadline parameter analogous to VPx BEST QUALITY
 */
 
 #define VIDEO_ACCEPTABLE_LOSS (0.08f) /* if loss is less than this (8%), then don't do anything */
-#define AUDIO_ITERATATIONS_WHILE_VIDEO (10)
+#define AUDIO_ITERATATIONS_WHILE_VIDEO (5)
+
+#if defined(AUDIO_DEBUGGING_SKIP_FRAMES)
+uint32_t _debug_count_sent_audio_frames = 0;
+uint32_t _debug_skip_every_x_audio_frame = 10;
+#endif
 
 
 typedef struct ToxAVCall_s {
@@ -280,10 +285,14 @@ void toxav_iterate(ToxAV *av)
                 // set lower prio for video play thread ----
             }
 
-#if defined(__MINGW32__) || defined(_WIN32) || defined(WIN32)
-	        /* TODO: Zoff (2017): can not get uTox for windows compiled with "pthread_tryjoin_np" */
+/*
+ * compile toxcore with "-D_GNU_SOURCE" to activate "pthread_tryjoin_np" solution!
+ */
+#if !defined(_GNU_SOURCE)
 	        pthread_join(video_play_thread, NULL);
 #else
+
+            LOGGER_WARNING(av->m->log, "_GNU_SOURCE is defined");
 
             while (pthread_tryjoin_np(video_play_thread, NULL) != 0)
             {
@@ -783,6 +792,7 @@ bool toxav_audio_send_frame(ToxAV *av, uint32_t friend_number, const int16_t *pc
     { /* Encode and send */
         if (ac_reconfigure_encoder(call->audio.second, call->audio_bit_rate * 1000, sampling_rate, channels) != 0) {
             pthread_mutex_unlock(call->mutex_audio);
+            LOGGER_WARNING(av->m->log, "Failed reconfigure audio encoder");
             rc = TOXAV_ERR_SEND_FRAME_INVALID;
             goto END;
         }
@@ -795,16 +805,46 @@ bool toxav_audio_send_frame(ToxAV *av, uint32_t friend_number, const int16_t *pc
                               dest + sizeof(sampling_rate), SIZEOF_VLA(dest) - sizeof(sampling_rate));
 
         if (vrc < 0) {
-            LOGGER_WARNING(av->m->log, "Failed to encode frame %s", opus_strerror(vrc));
+            LOGGER_WARNING(av->m->log, "Failed to encode audio frame %s", opus_strerror(vrc));
             pthread_mutex_unlock(call->mutex_audio);
             rc = TOXAV_ERR_SEND_FRAME_INVALID;
             goto END;
         }
 
-        if (rtp_send_data(call->audio.first, dest, vrc + sizeof(sampling_rate), av->m->log) != 0) {
-            LOGGER_WARNING(av->m->log, "Failed to send audio packet");
-            rc = TOXAV_ERR_SEND_FRAME_RTP_FAILED;
+#if defined(AUDIO_DEBUGGING_SIMULATE_SOME_DATA_LOSS)
+        // set last part of audio frame to all zeros
+        size_t ten_percent_size = ((size_t)vrc / 10);
+        size_t start_offset = ((size_t)vrc - ten_percent_size - 1);
+        memset((dest + 4 + start_offset), (int)0, ten_percent_size);
+        LOGGER_WARNING(av->m->log, "* audio packet set some ZERO data at the end *");
+#endif
+
+#if defined(AUDIO_DEBUGGING_SKIP_FRAMES)
+        // skip sending some audio frames
+        _debug_count_sent_audio_frames++;
+        if (_debug_count_sent_audio_frames > _debug_skip_every_x_audio_frame)
+        {
+            call->audio.first->sequnum++;
+            LOGGER_WARNING(av->m->log, "* audio packet sending SKIPPED * %d", (int)call->audio.first->sequnum);
+            _debug_count_sent_audio_frames = 0;
         }
+        else
+        {
+#endif
+
+            if (rtp_send_data(call->audio.first, dest, vrc + sizeof(sampling_rate), av->m->log) != 0) {
+                LOGGER_WARNING(av->m->log, "Failed to send audio packet");
+                rc = TOXAV_ERR_SEND_FRAME_RTP_FAILED;
+            }
+            //else
+            //{
+            //    LOGGER_WARNING(av->m->log, "audio packet sent OK");
+            //}
+
+#if defined(AUDIO_DEBUGGING_SKIP_FRAMES)
+        }
+#endif
+
     }
 
 

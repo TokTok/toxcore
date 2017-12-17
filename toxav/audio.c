@@ -34,7 +34,7 @@
 static struct RingBuffer *jbuf_new(int size);
 static void jbuf_clear(struct RingBuffer *q);
 static void jbuf_free(struct RingBuffer *q);
-static int jbuf_write(Logger *log, struct RingBuffer *q, struct RTPMessage *m);
+static int jbuf_write(Logger *log, ACSession *ac, struct RingBuffer *q, struct RTPMessage *m);
 OpusEncoder *create_audio_encoder(Logger *log, int32_t bit_rate, int32_t sampling_rate, int32_t channel_count);
 bool reconfigure_audio_encoder(Logger *log, OpusEncoder **e, int32_t new_br, int32_t new_sr, uint8_t new_ch,
                                int32_t *old_br, int32_t *old_sr, int32_t *old_ch);
@@ -88,6 +88,8 @@ ACSession *ac_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_audio_re
     ac->ld_sample_rate = AUDIO_DECODER__START_CHANNEL_COUNT;
     ac->ldrts = 0; /* Make it possible to reconfigure straight away */
 
+    ac->lp_seqnum = -1;
+
     /* These need to be set in order to properly
      * do error correction with opus */
     ac->lp_frame_duration = AUDIO_MAX_FRAME_DURATION_MS;
@@ -129,17 +131,24 @@ void ac_kill(ACSession *ac)
 static inline struct RTPMessage *jbuf_read(Logger *log, struct RingBuffer *q, int32_t *success)
 {
 	void *ret = NULL;
-	uint8_t dummy;
+	uint8_t lost_frame = 0;
 	*success = 0;
 
-	bool res = rb_read(q, &ret, &dummy);
+	bool res = rb_read(q, &ret, &lost_frame);
+    
+    LOGGER_WARNING(log, "jbuf_read:lost_frame=%d", (int)lost_frame);
 
 	if (res == true)
 	{
 		*success = 1;
 	}
+    
+    if (lost_frame == 1)
+    {
+        *success = 4;
+    }
 
-	/* TODO: return (NULL, *success=2) on packet lost */
+	/* TODO: return (NULL, *success=3) on packet lost */
 
 	return (struct RTPMessage *)ret;
 }
@@ -170,15 +179,16 @@ uint8_t ac_iterate(ACSession *ac)
     else if (rb_size(jbuffer) > AUDIO_JITTERBUFFER_FILL_THRESHOLD)
     {
         // audio frames are building up, skip video frames to compensate
-        LOGGER_INFO(ac->log, "incoming audio frames are slowing down");
+        LOGGER_INFO(ac->log, "incoming audio frames are piling up");
         ret_value = 2;
     }
-#if 0
+#if 1
     else if (rb_size(jbuffer) > AUDIO_JITTERBUFFER_SKIP_THRESHOLD)
     {
         // audio frames are still building up, skip audio frames to synchronize again
         int rc_skip = 0;
         LOGGER_WARNING(ac->log, "skipping some incoming audio frames");
+        jbuf_read(ac->log, jbuffer, &rc_skip);
         jbuf_read(ac->log, jbuffer, &rc_skip);
         jbuf_read(ac->log, jbuffer, &rc_skip);
         return 1;
@@ -198,13 +208,29 @@ uint8_t ac_iterate(ACSession *ac)
 
     while ((msg = jbuf_read(ac->log, jbuffer, &rc)) || rc == 2) {
         pthread_mutex_unlock(ac->queue_mutex);
+        
+        LOGGER_WARNING(ac->log, "OPUS:rc=%d", (int)rc);
 
         if (rc == 2) {
 			/* how is this working exactly? */
-            LOGGER_WARNING(ac->log, "OPUS correction for lost frame");
+            LOGGER_WARNING(ac->log, "OPUS correction for lost frame (1)");
             int fs = (ac->lp_sampling_rate * ac->lp_frame_duration) / 1000;
             rc = opus_decode(ac->decoder, NULL, 0, temp_audio_buffer, fs, 1);
+        }
+        else if (rc == 4) {
+            LOGGER_WARNING(ac->log, "OPUS correction for lost frame (3)");
+            int fs = (ac->lp_sampling_rate * ac->lp_frame_duration) / 1000;
+            rc = opus_decode(ac->decoder, NULL, 0, temp_audio_buffer, fs, 1);
+            free(msg);
         } else {
+
+            int use_fec = 0;
+            if (rc == 3) {
+                LOGGER_WARNING(ac->log, "OPUS correction for lost frame (2)");
+                use_fec = 1;
+            }
+
+
             /* Get values from packet and decode. */
             /* NOTE: This didn't work very well */
 #if 0
@@ -224,8 +250,11 @@ uint8_t ac_iterate(ACSession *ac)
             /* Pick up sampling rate from packet */
             memcpy(&ac->lp_sampling_rate, msg->data, 4);
             ac->lp_sampling_rate = net_ntohl(ac->lp_sampling_rate);
-
             ac->lp_channel_count = opus_packet_get_nb_channels(msg->data + 4);
+            /* TODO: msg->data + 4
+             * this should be defined, not hardcoded
+             */
+
 
             /** NOTE: even though OPUS supports decoding mono frames with stereo decoder and vice versa,
               * it didn't work quite well.
@@ -247,7 +276,10 @@ uint8_t ac_iterate(ACSession *ac)
 			decode_fec: Flag (0 or 1) to request that any in-band forward error correction data be
 			decoded. If no such data is available, the frame is decoded as if it were lost. 
              */
-            rc = opus_decode(ac->decoder, msg->data + 4, msg->len - 4, temp_audio_buffer, 5760, 0);
+            /* TODO: msg->data + 4, msg->len - 4
+             * this should be defined, not hardcoded
+             */
+            rc = opus_decode(ac->decoder, msg->data + 4, msg->len - 4, temp_audio_buffer, 5760, use_fec);
             free(msg);
         }
 
@@ -289,7 +321,7 @@ int ac_queue_message(void *acp, struct RTPMessage *msg)
     }
 
     pthread_mutex_lock(ac->queue_mutex);
-    int rc = jbuf_write(ac->log, (struct RingBuffer *)ac->j_buf, msg);
+    int rc = jbuf_write(ac->log, ac, (struct RingBuffer *)ac->j_buf, msg);
     pthread_mutex_unlock(ac->queue_mutex);
 
     if (rc == -1) {
@@ -335,14 +367,77 @@ static void jbuf_free(struct RingBuffer *q)
 	rb_kill(q);
 }
 
-static int jbuf_write(Logger *log, struct RingBuffer *q, struct RTPMessage *m)
+static struct RTPMessage *new_empty_message(size_t allocate_len, const uint8_t *data, uint16_t data_length)
+{
+    struct RTPMessage *msg = (struct RTPMessage *)calloc(sizeof(struct RTPMessage) + (allocate_len - sizeof(
+                                 struct RTPHeader)), 1);
+
+    msg->len = data_length - sizeof(struct RTPHeader); // result without header
+    memcpy(&msg->header, data, data_length);
+    
+    // clear data
+    memset(&msg->data, 0, (size_t)(msg->len));
+
+    msg->header.sequnum = net_ntohs(msg->header.sequnum);
+    msg->header.timestamp = net_ntohl(msg->header.timestamp);
+    msg->header.ssrc = net_ntohl(msg->header.ssrc);
+
+    msg->header.cpart = net_ntohs(msg->header.cpart);
+    msg->header.tlen = net_ntohs(msg->header.tlen); // result without header
+
+    return msg;
+}
+
+static int jbuf_write(Logger *log, ACSession *ac, struct RingBuffer *q, struct RTPMessage *m)
 {
     if (rb_full(q)) {
-        LOGGER_WARNING(log, "jitter buffer full: %p", q);
+        LOGGER_WARNING(log, "AudioFramesIN: jitter buffer full: %p", q);
         return -1;
     }
 
-	rb_write(q, (void *)m, (uint8_t)0);
+    if (ac->lp_seqnum == -1)
+    {
+        ac->lp_seqnum = m->header.sequnum;
+        // LOGGER_WARNING(log, "AudioFramesIN: -1");
+    }
+    else
+    {
+        // LOGGER_WARNING(log, "AudioFramesIN: hs:%d lpseq=%d", (int)m->header.sequnum, (int)ac->lp_seqnum);
+        if (m->header.sequnum > ac->lp_seqnum)
+        {
+            uint32_t diff = (m->header.sequnum - ac->lp_seqnum);
+            if (diff > 1)
+            {
+                LOGGER_WARNING(log, "AudioFramesIN: missing %d audio frames, seqnum=%d", (int)(diff - 1), (int)(ac->lp_seqnum + 1));
+                int j;
+#if 1
+                for(j=0;j<(diff - 1);j++)
+                {
+                    uint16_t lenx = (m->len + sizeof(struct RTPHeader));
+                    struct RTPMessage *empty_m = new_empty_message((size_t)lenx, (void *)&(m->header), lenx);
+                    empty_m->header.sequnum = (ac->lp_seqnum + 1 + j);
+                    if (rb_write(q, (void *)empty_m, 1) != NULL)
+                    {
+                        LOGGER_WARNING(log, "AudioFramesIN: error in rb_write");
+                    }
+                    // else
+                    // {
+                    //    LOGGER_WARNING(log, "AudioFramesIN: rb_write OK");
+                    // }
+                }
+#endif
+            }
+
+            ac->lp_seqnum = m->header.sequnum;
+        }
+        else
+        {
+            LOGGER_WARNING(log, "AudioFramesIN: old audio frames received");
+            return -1;
+        }
+    }
+
+	rb_write(q, (void *)m, 0);
 
     return 0;
 }
