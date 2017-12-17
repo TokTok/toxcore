@@ -718,7 +718,17 @@ bool toxav_audio_send_frame(ToxAV *av, uint32_t friend_number, const int16_t *pc
             goto END;
         }
 
-        if (rtp_send_data(call->audio.first, dest, vrc + sizeof(sampling_rate), av->m->log) != 0) {
+        // FIXME(mannol): We souldn't need to trim the audio frame size to UINT16_MAX-2 if it exceeds it.
+        // make sure vrc + sizeof(sampling_rate) <= UINT16_MAX - 2
+        uint16_t frame_size_safe;
+
+        if (vrc <= UINT16_MAX - 2 - sizeof(sampling_rate)) {
+            frame_size_safe = vrc + sizeof(sampling_rate);
+        } else {
+            frame_size_safe = UINT16_MAX - 2;
+        }
+
+        if (rtp_send_data(call->audio.first, dest, frame_size_safe, av->m->log) != 0) {
             LOGGER_WARNING(av->m->log, "Failed to send audio packet");
             rc = TOXAV_ERR_SEND_FRAME_RTP_FAILED;
         }
@@ -814,13 +824,22 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         const vpx_codec_cx_pkt_t *pkt;
 
         while ((pkt = vpx_codec_get_cx_data(call->video.second->encoder, &iter))) {
-            if (pkt->kind == VPX_CODEC_CX_FRAME_PKT &&
-                    rtp_send_data(call->video.first, (const uint8_t *)pkt->data.frame.buf, pkt->data.frame.sz, av->m->log) < 0) {
+            if (pkt->kind == VPX_CODEC_CX_FRAME_PKT) {
+                // FIXME(mannol): We souldn't need to trim the video frame size to UINT16_MAX-2 if it exceeds it.
+                uint16_t frame_size_safe;
 
-                pthread_mutex_unlock(call->mutex_video);
-                LOGGER_WARNING(av->m->log, "Could not send video frame: %s\n", strerror(errno));
-                rc = TOXAV_ERR_SEND_FRAME_RTP_FAILED;
-                goto END;
+                if (pkt->data.frame.sz <= UINT16_MAX - 2) {
+                    frame_size_safe = pkt->data.frame.sz;
+                } else {
+                    frame_size_safe = UINT16_MAX - 2;
+                }
+
+                if (rtp_send_data(call->video.first, (const uint8_t *)pkt->data.frame.buf, frame_size_safe, av->m->log) < 0) {
+                    pthread_mutex_unlock(call->mutex_video);
+                    LOGGER_WARNING(av->m->log, "Could not send video frame: %s\n", strerror(errno));
+                    rc = TOXAV_ERR_SEND_FRAME_RTP_FAILED;
+                    goto END;
+                }
             }
         }
     }
