@@ -821,12 +821,9 @@ int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, 
 // Zoff -- new stuff --
 
 
-
-
     // everything below here is protocol version 2 ------------------
     // everything below here is protocol version 2 ------------------
     // everything below here is protocol version 2 ------------------
-
 
     const struct RTPHeader *header = (const struct RTPHeader *) data;
 
@@ -840,6 +837,13 @@ int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, 
         return -1;
     }
 
+
+	if ((uint8_t)header->pt == (rtp_TypeAudio % 128))
+	{
+        LOGGER_WARNING(ac->log, "incoming audio data packet");
+	}
+
+
     bwc_feed_avg(session->bwc, length);
 
     if (net_ntohs(header->tlen) == length - sizeof(struct RTPHeader)) {
@@ -849,6 +853,11 @@ int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, 
          * drop late messages
          */
         if (chloss(session, header)) {
+			if ((uint8_t)header->pt == (rtp_TypeAudio % 128))
+			{
+					LOGGER_WARNING(ac->log, "drop late audio messages (1)");
+			}
+
             return 0;
         }
 
@@ -901,6 +910,12 @@ int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, 
                 /* There happened to be some corruption on the stream;
                  * continue wihtout this part
                  */
+
+				if ((uint8_t)header->pt == (rtp_TypeAudio % 128))
+				{
+						LOGGER_WARNING(ac->log, "drop audio message (2)");
+				}
+
                 return 0;
             }
 
@@ -930,6 +945,11 @@ int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, 
                 /* The received message part is from the old message;
                  * discard it.
                  */
+				if ((uint8_t)header->pt == (rtp_TypeAudio % 128))
+				{
+						LOGGER_WARNING(ac->log, "drop old audio message (3)");
+				}
+
                 return 0;
             }
 
@@ -962,6 +982,11 @@ NEW_MULTIPARTED:
          * drop late messages
          */
         if (chloss(session, header)) {
+			if ((uint8_t)header->pt == (rtp_TypeAudio % 128))
+			{
+					LOGGER_WARNING(ac->log, "drop out of order audio message (4)");
+			}
+
             return 0;
         }
 

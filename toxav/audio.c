@@ -201,7 +201,7 @@ uint8_t ac_iterate(ACSession *ac)
 
         if (rc == 2) {
 			/* how is this working exactly? */
-            LOGGER_DEBUG(ac->log, "OPUS correction");
+            LOGGER_WARNING(ac->log, "OPUS correction for lost frame");
             int fs = (ac->lp_sampling_rate * ac->lp_frame_duration) / 1000;
             rc = opus_decode(ac->decoder, NULL, 0, temp_audio_buffer, fs, 1);
         } else {
