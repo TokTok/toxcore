@@ -75,6 +75,12 @@ typedef struct ToxAVCall_s {
 
     uint32_t audio_bit_rate; /* Sending audio bit rate */
     uint32_t video_bit_rate; /* Sending video bit rate */
+    
+    int64_t last_incoming_video_frame_rtimestamp;
+    int64_t last_incoming_video_frame_ltimestamp;
+
+    int64_t last_incoming_audio_frame_rtimestamp;
+    int64_t last_incoming_audio_frame_ltimestamp;
 
     /** Required for monitoring changes in states */
     uint8_t previous_self_capabilities;
@@ -84,6 +90,7 @@ typedef struct ToxAVCall_s {
     struct ToxAVCall_s *prev;
     struct ToxAVCall_s *next;
 } ToxAVCall;
+
 
 struct ToxAV {
     Messenger *m;
@@ -108,6 +115,7 @@ struct ToxAV {
 
     uint32_t interval; /** Calculated interval */
 };
+
 
 void callback_bwc(BWController *bwc, uint32_t friend_number, float loss, void *user_data);
 
@@ -234,7 +242,12 @@ static void *video_play(void *data)
 {
     ToxAVCall *call = (ToxAVCall *)data;
     VCSession *vc = (VCSession *)call->video.second;
-    vc_iterate(vc, call->skip_video_flag);
+    vc_iterate(vc, call->skip_video_flag,
+            &(call->last_incoming_audio_frame_rtimestamp),
+            &(call->last_incoming_audio_frame_ltimestamp),
+            &(call->last_incoming_video_frame_rtimestamp),
+            &(call->last_incoming_video_frame_ltimestamp)
+    );
     return (void *)NULL;
 }
 
@@ -262,7 +275,12 @@ void toxav_iterate(ToxAV *av)
             pthread_mutex_unlock(av->mutex);
 
             // ------- av_iterate for audio -------
-            uint8_t res_ac = ac_iterate(i->audio.second);
+            uint8_t res_ac = ac_iterate(i->audio.second,
+            &(i->last_incoming_audio_frame_rtimestamp),
+            &(i->last_incoming_audio_frame_ltimestamp),
+            &(i->last_incoming_video_frame_rtimestamp),
+            &(i->last_incoming_video_frame_ltimestamp)
+            );
             if (res_ac == 2)
             {
                 i->skip_video_flag = 1;
@@ -291,13 +309,15 @@ void toxav_iterate(ToxAV *av)
 #if !defined(_GNU_SOURCE)
 	        pthread_join(video_play_thread, NULL);
 #else
-
-            LOGGER_WARNING(av->m->log, "_GNU_SOURCE is defined");
-
             while (pthread_tryjoin_np(video_play_thread, NULL) != 0)
             {
                 /* video thread still running, let's do some more audio */
-                if (ac_iterate(i->audio.second) == 0)
+                if (ac_iterate(i->audio.second,
+                &(i->last_incoming_audio_frame_rtimestamp),
+                &(i->last_incoming_audio_frame_ltimestamp),
+                &(i->last_incoming_video_frame_rtimestamp),
+                &(i->last_incoming_video_frame_ltimestamp)
+                ) == 0)
                 {
                     // usleep(100);
                 }
@@ -339,6 +359,28 @@ void toxav_iterate(ToxAV *av)
             if (call_get(av, fid) != i) {
                 break;
             }
+
+            if ((i->last_incoming_audio_frame_ltimestamp != -1)
+            &&
+            (i->last_incoming_video_frame_ltimestamp != -1))
+            {
+                int64_t latency_ms = (
+                i->last_incoming_video_frame_rtimestamp -
+                (i->last_incoming_video_frame_ltimestamp - i->last_incoming_audio_frame_ltimestamp) -
+                i->last_incoming_audio_frame_rtimestamp
+                );
+                LOGGER_INFO(av->m->log, "AUDIO (to video):latency in ms=%lld", (long long)latency_ms);
+
+                LOGGER_INFO(av->m->log, "AUDIO (to video)A:latency in ms=%lld", (long long)(i->last_incoming_video_frame_ltimestamp - i->last_incoming_audio_frame_ltimestamp));
+                LOGGER_INFO(av->m->log, "AUDIO (to video)B:latency in ms=%lld", (long long)(i->last_incoming_video_frame_rtimestamp - i->last_incoming_audio_frame_rtimestamp));
+
+                LOGGER_INFO(av->m->log, "AUDIO (to video):latency in a=%lld b=%lld c=%lld d=%lld",
+                (long long)i->last_incoming_video_frame_rtimestamp,
+                (long long)i->last_incoming_audio_frame_rtimestamp,
+                (long long)i->last_incoming_video_frame_ltimestamp,
+                (long long)i->last_incoming_audio_frame_ltimestamp
+                );
+            }            
         }
     }
 
@@ -1251,6 +1293,12 @@ ToxAVCall *call_new(ToxAV *av, uint32_t friend_number, TOXAV_ERR_CALL *error)
 
 
     call = (ToxAVCall *)calloc(sizeof(ToxAVCall), 1);
+
+    call->last_incoming_video_frame_rtimestamp = -1;
+    call->last_incoming_video_frame_ltimestamp = -1;
+
+    call->last_incoming_audio_frame_rtimestamp = -1;
+    call->last_incoming_audio_frame_ltimestamp = -1;
 
     if (call == NULL) {
         rc = TOXAV_ERR_CALL_MALLOC;

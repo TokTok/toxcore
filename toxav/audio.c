@@ -156,7 +156,7 @@ static inline bool jbuf_is_empty(struct RingBuffer *q)
 	return rb_empty(q);
 }
 
-uint8_t ac_iterate(ACSession *ac)
+uint8_t ac_iterate(ACSession *ac, int64_t *a_r_timestamp, int64_t *a_l_timestamp, int64_t *v_r_timestamp, int64_t *v_l_timestamp)
 {
     if (!ac) {
         return 0;
@@ -259,6 +259,18 @@ uint8_t ac_iterate(ACSession *ac)
         } else if (ac->acb.first) {
             ac->lp_frame_duration = (rc * 1000) / ac->lp_sampling_rate;
 
+            // what is the audio to video latency?
+            const struct RTPHeader *header_ = (void *) & (msg->header);
+            if (*a_r_timestamp < header_->timestamp)
+            {
+                *a_r_timestamp = header_->timestamp;
+                *a_l_timestamp = current_time_monotonic();
+            }
+            else
+            {
+				LOGGER_ERROR(ac->log, "AUDIO: remote timestamp older");
+            }
+            // what is the audio to video latency?
             ac->acb.first(ac->av, ac->friend_number, temp_audio_buffer, rc, ac->lp_channel_count,
                           ac->lp_sampling_rate, ac->acb.second);
         }

@@ -43,6 +43,7 @@ enum {
 
 #define VIDEO_KEEP_KEYFRAME_IN_BUFFER_FOR_MS (15)
 
+
 struct RTPHeader {
     /* Standard RTP header */
 #ifndef WORDS_BIGENDIAN

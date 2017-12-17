@@ -506,7 +506,7 @@ void video_switch_decoder(VCSession *vc)
 }
 
 
-void vc_iterate(VCSession *vc, uint8_t skip_video_flag)
+void vc_iterate(VCSession *vc, uint8_t skip_video_flag, int64_t *a_r_timestamp, int64_t *a_l_timestamp, int64_t *v_r_timestamp, int64_t *v_l_timestamp)
 {
     if (!vc) {
         return;
@@ -547,7 +547,7 @@ void vc_iterate(VCSession *vc, uint8_t skip_video_flag)
         }
 
         LOGGER_DEBUG(vc->log, "vc_iterate: rb_read p->len=%d data_type=%d", (int)full_data_len, (int)data_type);
-        LOGGER_DEBUG(vc->log, "vc_iterate: rb_read rb size=%d", (int)rb_size((RingBuffer *)vc->vbuf_raw));
+        LOGGER_INFO(vc->log, "vc_iterate: rb_read rb size=%d", (int)rb_size((RingBuffer *)vc->vbuf_raw));
 
 
 		if ((int)rb_size((RingBuffer *)vc->vbuf_raw) > VIDEO_RINGBUFFER_FILL_THRESHOLD)
@@ -578,8 +578,6 @@ void vc_iterate(VCSession *vc, uint8_t skip_video_flag)
         }
 
         if (rc == VPX_CODEC_OK) {
-            free(p);
-
 
             /* Play decoded images */
             vpx_codec_iter_t iter = NULL;
@@ -587,6 +585,21 @@ void vc_iterate(VCSession *vc, uint8_t skip_video_flag)
 
             while ((dest = vpx_codec_get_frame(vc->decoder, &iter)) != NULL) {
                 if (vc->vcb.first) {
+
+					// what is the audio to video latency?
+					//
+					if (*v_r_timestamp < header_v3->timestamp)
+					{
+						*v_r_timestamp = header_v3->timestamp;
+						*v_l_timestamp = current_time_monotonic();
+					}
+					else
+					{
+						LOGGER_ERROR(vc->log, "VIDEO: remote timestamp older");
+					}
+					//
+					// what is the audio to video latency?
+
                     vc->vcb.first(vc->av, vc->friend_number, dest->d_w, dest->d_h,
                                   (const uint8_t *)dest->planes[0], (const uint8_t *)dest->planes[1], (const uint8_t *)dest->planes[2],
                                   dest->stride[0], dest->stride[1], dest->stride[2], vc->vcb.second);
@@ -594,6 +607,7 @@ void vc_iterate(VCSession *vc, uint8_t skip_video_flag)
 
                 vpx_img_free(dest); // is this needed? none of the VPx examples show that
             }
+            free(p);
         } else {
             free(p);
         }

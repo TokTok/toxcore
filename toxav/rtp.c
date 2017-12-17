@@ -194,6 +194,7 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length_v3, 
 
     header->sequnum = net_htons(session->sequnum);
     header->timestamp = net_htonl(current_time_monotonic());
+    
     header->ssrc = net_htonl(session->ssrc);
 
     header->cpart = 0;
