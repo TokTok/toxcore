@@ -143,7 +143,7 @@ int rtp_stop_receiving(RTPSession *session)
  * input is raw vpx data. length_v3 is the length of the raw data
  * HINT: this function must be thread safe!
  */
-int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length_v3, Logger *log)
+int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length_v3, uint64_t frame_record_timestamp, Logger *log)
 {
     if (!session) {
         LOGGER_ERROR(log, "No session!");
@@ -193,8 +193,13 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length_v3, 
     header->pt = session->payload_type % 128;
 
     header->sequnum = net_htons(session->sequnum);
+
+    // this can not work! putting a uint64_t into a uint32_t field in the header!
     header->timestamp = net_htonl(current_time_monotonic());
-    
+    LOGGER_WARNING(session->m->log, "TT:1:%llu", current_time_monotonic());
+    LOGGER_WARNING(session->m->log, "TT:2:%llu", header->timestamp);
+    LOGGER_WARNING(session->m->log, "TT:2b:%llu", net_ntohl(header->timestamp));
+
     header->ssrc = net_htonl(session->ssrc);
 
     header->cpart = 0;
@@ -218,6 +223,12 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length_v3, 
 
     header_v3->offset_lower = net_htons((uint16_t)(0));
     header_v3->offset_full = net_htonl(0);
+
+	header_v3->frame_record_timestamp = htonll(frame_record_timestamp);
+    LOGGER_WARNING(session->m->log, "TT:3:%llu", frame_record_timestamp);
+    LOGGER_WARNING(session->m->log, "TT:4:%llu", header_v3->frame_record_timestamp);
+    LOGGER_WARNING(session->m->log, "TT:4b:%llu", ntohll(header_v3->frame_record_timestamp));
+
 
     header_v3->is_keyframe = is_keyframe;
     // TODO: bigendian ??
@@ -322,9 +333,19 @@ static struct RTPMessage *new_message(size_t allocate_len, const uint8_t *data, 
     msg->len = data_length - sizeof(struct RTPHeader); // result without header
     memcpy(&msg->header, data, data_length);
 
+    printf("XT:1v:%llu\n", msg->header.sequnum);
     msg->header.sequnum = net_ntohs(msg->header.sequnum);
+    printf("XT:2v:%llu\n", msg->header.sequnum);
+
+    printf("XT:1:%llu\n", msg->header.timestamp);
     msg->header.timestamp = net_ntohl(msg->header.timestamp);
+    printf("XT:2:%llu\n", msg->header.timestamp);
     msg->header.ssrc = net_ntohl(msg->header.ssrc);
+
+    struct RTPHeaderV3 *header_v3 = (struct RTPHeaderV3 *) & (msg->header);
+    printf("XTB:1:%llu\n", header_v3->frame_record_timestamp);
+    header_v3->frame_record_timestamp = ntohll(header_v3->frame_record_timestamp);
+    printf("XTB:2:%llu\n", header_v3->frame_record_timestamp);
 
     msg->header.cpart = net_ntohs(msg->header.cpart);
     msg->header.tlen = net_ntohs(msg->header.tlen); // result without header
@@ -350,6 +371,7 @@ static struct RTPMessage *new_message_v3(size_t allocate_len, const uint8_t *dat
 
     msg->header.sequnum = net_ntohs(msg->header.sequnum);
     msg->header.timestamp = net_ntohl(msg->header.timestamp);
+
     msg->header.ssrc = net_ntohl(msg->header.ssrc);
 
     msg->header.cpart = net_ntohs(msg->header.cpart);
@@ -362,6 +384,10 @@ static struct RTPMessage *new_message_v3(size_t allocate_len, const uint8_t *dat
     header_v3->offset_full = offset;
     header_v3->is_keyframe = is_keyframe;
     header_v3->protocol_version = 3;
+
+    // printf("XTB:1:%llu\n", header_v3->frame_record_timestamp);
+    header_v3->frame_record_timestamp = ntohll(header_v3->frame_record_timestamp);
+    // printf("XTB:2:%llu\n", header_v3->frame_record_timestamp);
 
     return msg;
 }
@@ -519,7 +545,10 @@ static uint8_t fill_data_into_slot(Logger *log, struct RTPWorkBufferList *wkbl, 
 
             wkbl->work_buffer[slot].frame_type = is_keyframe;
             wkbl->work_buffer[slot].data_len = length_v3;
+            LOGGER_INFO(log, "new message v3 TT1 ts=%llu", header_v3->timestamp);
             wkbl->work_buffer[slot].timestamp = net_ntohl(header_v3->timestamp);
+            // frame_record_timestamp
+            LOGGER_INFO(log, "new message v3 TT2 ts=%llu", net_ntohl(header_v3->timestamp));
             wkbl->work_buffer[slot].sequnum = net_ntohs(header_v3->sequnum);
 
             wkbl->next_free_entry++;
@@ -612,6 +641,8 @@ int handle_rtp_packet_v3(Messenger *m, uint32_t friendnumber, const uint8_t *dat
     uint32_t length_v3 = net_htonl(header_v3->data_length_full); // without header
     uint32_t offset_v3 = net_htonl(header_v3->offset_full); // without header
     uint8_t is_keyframe = (int)header_v3->is_keyframe;
+
+    LOGGER_WARNING(m->log, "frame timestamp TT2 %llu", ntohll(header_v3->frame_record_timestamp));
 
     LOGGER_DEBUG(m->log, "-- handle_rtp_packet_v3 -- full lens=%d len=%d offset=%d is_keyframe=%s", (int)length,
                  (int)length_v3, (int)offset_v3, ((int)header_v3->is_keyframe) ? "K" : ".");

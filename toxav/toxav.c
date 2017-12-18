@@ -76,11 +76,11 @@ typedef struct ToxAVCall_s {
     uint32_t audio_bit_rate; /* Sending audio bit rate */
     uint32_t video_bit_rate; /* Sending video bit rate */
     
-    int64_t last_incoming_video_frame_rtimestamp;
-    int64_t last_incoming_video_frame_ltimestamp;
+    uint64_t last_incoming_video_frame_rtimestamp;
+    uint64_t last_incoming_video_frame_ltimestamp;
 
-    int64_t last_incoming_audio_frame_rtimestamp;
-    int64_t last_incoming_audio_frame_ltimestamp;
+    uint64_t last_incoming_audio_frame_rtimestamp;
+    uint64_t last_incoming_audio_frame_ltimestamp;
 
     /** Required for monitoring changes in states */
     uint8_t previous_self_capabilities;
@@ -274,6 +274,20 @@ void toxav_iterate(ToxAV *av)
             pthread_mutex_lock(i->mutex);
             pthread_mutex_unlock(av->mutex);
 
+
+            // ------- multithreaded av_iterate for video -------
+	        pthread_t video_play_thread;
+            LOGGER_TRACE(av->m->log, "video_play -----");
+            if (pthread_create(&video_play_thread, NULL, video_play, (void *)(i)))
+            {
+                LOGGER_WARNING(av->m->log, "error creating video play thread");
+            }
+            else
+            {
+                // TODO: set lower prio for video play thread ?
+            }
+            // ------- multithreaded av_iterate for video -------
+
             // ------- av_iterate for audio -------
             uint8_t res_ac = ac_iterate(i->audio.second,
             &(i->last_incoming_audio_frame_rtimestamp),
@@ -291,17 +305,6 @@ void toxav_iterate(ToxAV *av)
             }
             // ------- av_iterate for audio -------
 
-            // ------- multithreaded av_iterate for video -------
-	        pthread_t video_play_thread;
-            LOGGER_TRACE(av->m->log, "video_play -----");
-            if (pthread_create(&video_play_thread, NULL, video_play, (void *)(i)))
-            {
-                LOGGER_WARNING(av->m->log, "error creating video play thread");
-            }
-            else
-            {
-                // set lower prio for video play thread ----
-            }
 
 /*
  * compile toxcore with "-D_GNU_SOURCE" to activate "pthread_tryjoin_np" solution!
@@ -335,7 +338,6 @@ void toxav_iterate(ToxAV *av)
                 }
             }
 #endif
-            // ------- multithreaded av_iterate for video -------
 
 
             if (i->msi_call->self_capabilities & msi_CapRAudio &&
@@ -348,7 +350,6 @@ void toxav_iterate(ToxAV *av)
                 rc = MIN(i->video.second->lcfd, (uint32_t) rc);
             }
 
-            // LOGGER_TRACE(av->m->log, "lcfd=%u", (uint32_t)i->video.second->lcfd);
 
             uint32_t fid = i->friend_number;
 
@@ -360,19 +361,20 @@ void toxav_iterate(ToxAV *av)
                 break;
             }
 
-            if ((i->last_incoming_audio_frame_ltimestamp != -1)
+            if ((i->last_incoming_audio_frame_ltimestamp != 0)
             &&
-            (i->last_incoming_video_frame_ltimestamp != -1))
+            (i->last_incoming_video_frame_ltimestamp != 0))
             {
                 int64_t latency_ms = (
                 i->last_incoming_video_frame_rtimestamp -
                 (i->last_incoming_video_frame_ltimestamp - i->last_incoming_audio_frame_ltimestamp) -
                 i->last_incoming_audio_frame_rtimestamp
                 );
+
                 LOGGER_INFO(av->m->log, "AUDIO (to video):latency in ms=%lld", (long long)latency_ms);
 
-                LOGGER_INFO(av->m->log, "AUDIO (to video)A:latency in ms=%lld", (long long)(i->last_incoming_video_frame_ltimestamp - i->last_incoming_audio_frame_ltimestamp));
-                LOGGER_INFO(av->m->log, "AUDIO (to video)B:latency in ms=%lld", (long long)(i->last_incoming_video_frame_rtimestamp - i->last_incoming_audio_frame_rtimestamp));
+                LOGGER_INFO(av->m->log, "VIDEO latency in ms=%lld", (long long)(i->last_incoming_video_frame_ltimestamp - i->last_incoming_video_frame_rtimestamp));
+                LOGGER_INFO(av->m->log, "AUDIO latency in ms=%lld", (long long)(i->last_incoming_audio_frame_ltimestamp - i->last_incoming_audio_frame_rtimestamp));
 
                 LOGGER_INFO(av->m->log, "AUDIO (to video):latency in a=%lld b=%lld c=%lld d=%lld",
                 (long long)i->last_incoming_video_frame_rtimestamp,
@@ -790,6 +792,8 @@ bool toxav_audio_send_frame(ToxAV *av, uint32_t friend_number, const int16_t *pc
     TOXAV_ERR_SEND_FRAME rc = TOXAV_ERR_SEND_FRAME_OK;
     ToxAVCall *call;
 
+    uint64_t audio_frame_record_timestamp = current_time_monotonic();
+
     if (m_friend_exists(av->m, friend_number) == 0) {
         rc = TOXAV_ERR_SEND_FRAME_FRIEND_NOT_FOUND;
         goto END;
@@ -873,8 +877,14 @@ bool toxav_audio_send_frame(ToxAV *av, uint32_t friend_number, const int16_t *pc
         else
         {
 #endif
+            LOGGER_DEBUG(av->m->log, "audio packet record time: %llu", audio_frame_record_timestamp);
 
-            if (rtp_send_data(call->audio.first, dest, vrc + sizeof(sampling_rate), av->m->log) != 0) {
+
+            if (rtp_send_data(call->audio.first, dest,
+                vrc + sizeof(sampling_rate),
+                audio_frame_record_timestamp,
+                av->m->log) != 0)
+            {
                 LOGGER_WARNING(av->m->log, "Failed to send audio packet");
                 rc = TOXAV_ERR_SEND_FRAME_RTP_FAILED;
             }
@@ -907,6 +917,8 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 {
     TOXAV_ERR_SEND_FRAME rc = TOXAV_ERR_SEND_FRAME_OK;
     ToxAVCall *call;
+
+    uint64_t video_frame_record_timestamp = current_time_monotonic();
 
     if (m_friend_exists(av->m, friend_number) == 0) {
         rc = TOXAV_ERR_SEND_FRAME_FRIEND_NOT_FOUND;
@@ -980,7 +992,6 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 #endif
 
 
-
     { /* Encode */
         vpx_image_t img;
         img.w = img.h = img.d_w = img.d_h = 0;
@@ -1037,12 +1048,14 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 
                 // TOX RTP V3 --- hack to give frame type to function ---
 
+                LOGGER_DEBUG(av->m->log, "video packet record time: %llu", video_frame_record_timestamp);
 
                 int res = rtp_send_data
                           (
                               call->video.first,
                               (const uint8_t *)pkt->data.frame.buf,
                               frame_length_in_bytes,
+                              video_frame_record_timestamp,
                               av->m->log
                           );
 
@@ -1050,6 +1063,8 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
                              (int)pkt->data.frame.sz, (int)frame_length_in_bytes);
                 LOGGER_DEBUG(av->m->log, "+ _sending_FRAME_ b0=%d b1=%d", ((const uint8_t *)pkt->data.frame.buf)[0] ,
                              ((const uint8_t *)pkt->data.frame.buf)[1]);
+
+                video_frame_record_timestamp++;
 
                 if (res < 0) {
                     pthread_mutex_unlock(call->mutex_video);
@@ -1294,11 +1309,11 @@ ToxAVCall *call_new(ToxAV *av, uint32_t friend_number, TOXAV_ERR_CALL *error)
 
     call = (ToxAVCall *)calloc(sizeof(ToxAVCall), 1);
 
-    call->last_incoming_video_frame_rtimestamp = -1;
-    call->last_incoming_video_frame_ltimestamp = -1;
+    call->last_incoming_video_frame_rtimestamp = 0;
+    call->last_incoming_video_frame_ltimestamp = 0;
 
-    call->last_incoming_audio_frame_rtimestamp = -1;
-    call->last_incoming_audio_frame_ltimestamp = -1;
+    call->last_incoming_audio_frame_rtimestamp = 0;
+    call->last_incoming_audio_frame_ltimestamp = 0;
 
     if (call == NULL) {
         rc = TOXAV_ERR_CALL_MALLOC;

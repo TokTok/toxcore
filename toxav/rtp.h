@@ -107,7 +107,8 @@ struct RTPHeaderV3 {
     uint32_t offset_full; /* Data offset of the current part */
     uint32_t data_length_full; /* data length without header, and without packet id */
     uint32_t received_length_full; /* only the receiver uses this field */
-    uint32_t csrc[13];
+    uint64_t frame_record_timestamp; /* when was this frame actually recorded (this is a relative value!) */
+    uint32_t csrc[11];
 
     uint16_t offset_lower;      /* Data offset of the current part */
     uint16_t data_length_lower; /* data length without header, and without packet id */
@@ -140,6 +141,7 @@ struct RTPWorkBuffer {
     uint32_t received_len;
     uint32_t data_len;
     uint32_t timestamp;
+    // uint64_t timestamp_v3;
     uint16_t sequnum;
     uint8_t *buf;
 };
@@ -208,7 +210,7 @@ RTPSession *rtp_new(int payload_type, Messenger *m, uint32_t friendnumber,
 void rtp_kill(RTPSession *session);
 int rtp_allow_receiving(RTPSession *session);
 int rtp_stop_receiving(RTPSession *session);
-int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length, Logger *log);
+int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length_v3, uint64_t frame_record_timestamp, Logger *log);
 
 #endif /* RTP_H */
 

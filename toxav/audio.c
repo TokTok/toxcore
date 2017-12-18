@@ -156,7 +156,7 @@ static inline bool jbuf_is_empty(struct RingBuffer *q)
 	return rb_empty(q);
 }
 
-uint8_t ac_iterate(ACSession *ac, int64_t *a_r_timestamp, int64_t *a_l_timestamp, int64_t *v_r_timestamp, int64_t *v_l_timestamp)
+uint8_t ac_iterate(ACSession *ac, uint64_t *a_r_timestamp, uint64_t *a_l_timestamp, uint64_t *v_r_timestamp, uint64_t *v_l_timestamp)
 {
     if (!ac) {
         return 0;
@@ -251,6 +251,29 @@ uint8_t ac_iterate(ACSession *ac, int64_t *a_r_timestamp, int64_t *a_l_timestamp
              * this should be defined, not hardcoded
              */
             rc = opus_decode(ac->decoder, msg->data + 4, msg->len - 4, temp_audio_buffer, 5760, use_fec);
+
+            if (rc >= 0)
+            {
+                // what is the audio to video latency?
+                const struct RTPHeaderV3 *header_v3 = (void *) & (msg->header);
+                LOGGER_ERROR(ac->log, "AUDIO:TTx: %llu %lld", header_v3->frame_record_timestamp, (long long)*a_r_timestamp);
+                if (header_v3->frame_record_timestamp > 0)
+                {
+                    if (*a_r_timestamp < header_v3->frame_record_timestamp)
+                    {
+                        LOGGER_ERROR(ac->log, "AUDIO:TTx:2: %llu", header_v3->frame_record_timestamp);
+                        *a_r_timestamp = header_v3->frame_record_timestamp;
+                        *a_l_timestamp = current_time_monotonic();
+                    }
+                    else
+                    {
+                        LOGGER_ERROR(ac->log, "AUDIO: remote timestamp older");
+                    }
+                }
+            }
+            // what is the audio to video latency?
+
+
             free(msg);
         }
 
@@ -258,19 +281,6 @@ uint8_t ac_iterate(ACSession *ac, int64_t *a_r_timestamp, int64_t *a_l_timestamp
             LOGGER_WARNING(ac->log, "Decoding error: %s", opus_strerror(rc));
         } else if (ac->acb.first) {
             ac->lp_frame_duration = (rc * 1000) / ac->lp_sampling_rate;
-
-            // what is the audio to video latency?
-            const struct RTPHeader *header_ = (void *) & (msg->header);
-            if (*a_r_timestamp < header_->timestamp)
-            {
-                *a_r_timestamp = header_->timestamp;
-                *a_l_timestamp = current_time_monotonic();
-            }
-            else
-            {
-				LOGGER_ERROR(ac->log, "AUDIO: remote timestamp older");
-            }
-            // what is the audio to video latency?
             ac->acb.first(ac->av, ac->friend_number, temp_audio_buffer, rc, ac->lp_channel_count,
                           ac->lp_sampling_rate, ac->acb.second);
         }
@@ -304,6 +314,10 @@ int ac_queue_message(void *acp, struct RTPMessage *msg)
     }
 
     pthread_mutex_lock(ac->queue_mutex);
+
+    const struct RTPHeaderV3 *header_v3 = (void *) & (msg->header);
+    LOGGER_WARNING(ac->log, "TT:queue:A:%llu", header_v3->frame_record_timestamp);
+
     int rc = jbuf_write(ac->log, ac, (struct RingBuffer *)ac->j_buf, msg);
     pthread_mutex_unlock(ac->queue_mutex);
 
@@ -393,7 +407,7 @@ static int jbuf_write(Logger *log, ACSession *ac, struct RingBuffer *q, struct R
             {
                 LOGGER_WARNING(log, "AudioFramesIN: missing %d audio frames, seqnum=%d", (int)(diff - 1), (int)(ac->lp_seqnum + 1));
 
-                int j;
+                uint32_t j;
                 for(j=0;j<(diff - 1);j++)
                 {
                     uint16_t lenx = (m->len + sizeof(struct RTPHeader));

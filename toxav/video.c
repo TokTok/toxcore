@@ -506,7 +506,7 @@ void video_switch_decoder(VCSession *vc)
 }
 
 
-void vc_iterate(VCSession *vc, uint8_t skip_video_flag, int64_t *a_r_timestamp, int64_t *a_l_timestamp, int64_t *v_r_timestamp, int64_t *v_l_timestamp)
+void vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timestamp, uint64_t *a_l_timestamp, uint64_t *v_r_timestamp, uint64_t *v_l_timestamp)
 {
     if (!vc) {
         return;
@@ -547,7 +547,7 @@ void vc_iterate(VCSession *vc, uint8_t skip_video_flag, int64_t *a_r_timestamp, 
         }
 
         LOGGER_DEBUG(vc->log, "vc_iterate: rb_read p->len=%d data_type=%d", (int)full_data_len, (int)data_type);
-        LOGGER_INFO(vc->log, "vc_iterate: rb_read rb size=%d", (int)rb_size((RingBuffer *)vc->vbuf_raw));
+        LOGGER_DEBUG(vc->log, "vc_iterate: rb_read rb size=%d", (int)rb_size((RingBuffer *)vc->vbuf_raw));
 
 
 		if ((int)rb_size((RingBuffer *)vc->vbuf_raw) > VIDEO_RINGBUFFER_FILL_THRESHOLD)
@@ -588,14 +588,19 @@ void vc_iterate(VCSession *vc, uint8_t skip_video_flag, int64_t *a_r_timestamp, 
 
 					// what is the audio to video latency?
 					//
-					if (*v_r_timestamp < header_v3->timestamp)
+					LOGGER_ERROR(vc->log, "VIDEO:TTx: %llu", header_v3->frame_record_timestamp);
+					if (header_v3->frame_record_timestamp > 0)
 					{
-						*v_r_timestamp = header_v3->timestamp;
-						*v_l_timestamp = current_time_monotonic();
-					}
-					else
-					{
-						LOGGER_ERROR(vc->log, "VIDEO: remote timestamp older");
+						if (*v_r_timestamp < header_v3->frame_record_timestamp)
+						{
+							LOGGER_ERROR(vc->log, "VIDEO:TTx:2: %llu", header_v3->frame_record_timestamp);
+							*v_r_timestamp = header_v3->frame_record_timestamp;
+							*v_l_timestamp = current_time_monotonic();
+						}
+						else
+						{
+							LOGGER_ERROR(vc->log, "VIDEO: remote timestamp older");
+						}
 					}
 					//
 					// what is the audio to video latency?
@@ -650,6 +655,8 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
     }
 
     pthread_mutex_lock(vc->queue_mutex);
+
+    LOGGER_WARNING(vc->log, "TT:queue:V:%llu", header_v3->frame_record_timestamp);
 
     if ((((uint8_t)header_v3->protocol_version) == 3) &&
             (((uint8_t)header_v3->pt) == (rtp_TypeVideo % 128))
