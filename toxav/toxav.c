@@ -48,7 +48,7 @@ VPX_DL_BEST_QUALITY   (0)       deadline parameter analogous to VPx BEST QUALITY
 */
 
 #define VIDEO_ACCEPTABLE_LOSS (0.08f) /* if loss is less than this (8%), then don't do anything */
-#define AUDIO_ITERATATIONS_WHILE_VIDEO (5)
+#define AUDIO_ITERATATIONS_WHILE_VIDEO (0)
 
 #if defined(AUDIO_DEBUGGING_SKIP_FRAMES)
 uint32_t _debug_count_sent_audio_frames = 0;
@@ -275,6 +275,20 @@ void toxav_iterate(ToxAV *av)
             pthread_mutex_lock(i->mutex);
             pthread_mutex_unlock(av->mutex);
 
+            // ------- multithreaded av_iterate for video -------
+	        pthread_t video_play_thread;
+            LOGGER_TRACE(av->m->log, "video_play -----");
+
+            if (pthread_create(&video_play_thread, NULL, video_play, (void *)(i)))
+            {
+                LOGGER_WARNING(av->m->log, "error creating video play thread");
+            }
+            else
+            {
+                // TODO: set lower prio for video play thread ?
+            }
+            // ------- multithreaded av_iterate for video -------
+
             // ------- av_iterate for audio -------
             uint8_t res_ac = ac_iterate(i->audio.second,
             &(i->last_incoming_audio_frame_rtimestamp),
@@ -292,21 +306,6 @@ void toxav_iterate(ToxAV *av)
             }
             // ------- av_iterate for audio -------
 
-            // ------- multithreaded av_iterate for video -------
-	        pthread_t video_play_thread;
-            LOGGER_TRACE(av->m->log, "video_play -----");
-
-            if (pthread_create(&video_play_thread, NULL, video_play, (void *)(i)))
-            {
-                LOGGER_WARNING(av->m->log, "error creating video play thread");
-            }
-            else
-            {
-                // TODO: set lower prio for video play thread ?
-            }
-            // ------- multithreaded av_iterate for video -------
-
-
 /*
  * compile toxcore with "-D_GNU_SOURCE" to activate "pthread_tryjoin_np" solution!
  */
@@ -315,30 +314,34 @@ void toxav_iterate(ToxAV *av)
 #else
             while (pthread_tryjoin_np(video_play_thread, NULL) != 0)
             {
-                /* video thread still running, let's do some more audio */
-                if (ac_iterate(i->audio.second,
-                &(i->last_incoming_audio_frame_rtimestamp),
-                &(i->last_incoming_audio_frame_ltimestamp),
-                &(i->last_incoming_video_frame_rtimestamp),
-                &(i->last_incoming_video_frame_ltimestamp)
-                ) == 0)
+                if (audio_iterations < AUDIO_ITERATATIONS_WHILE_VIDEO)
                 {
-                    // usleep(100);
+                    /* video thread still running, let's do some more audio */
+                    if (ac_iterate(i->audio.second,
+                    &(i->last_incoming_audio_frame_rtimestamp),
+                    &(i->last_incoming_audio_frame_ltimestamp),
+                    &(i->last_incoming_video_frame_rtimestamp),
+                    &(i->last_incoming_video_frame_ltimestamp)
+                    ) == 0)
+                    {
+                        // usleep(100);
+                    }
+                    else
+                    {
+                        LOGGER_TRACE(av->m->log, "did some more audio iterate");
+                    }
                 }
                 else
                 {
-                    LOGGER_TRACE(av->m->log, "did some more audio iterate");
-                }
-                
-                audio_iterations++;
-                
-                if (audio_iterations >= AUDIO_ITERATATIONS_WHILE_VIDEO)
-                {
-                    pthread_join(video_play_thread, NULL);
                     break;
                 }
+
+                audio_iterations++;
             }
+
+            pthread_join(video_play_thread, NULL);
 #endif
+
 
             if (i->msi_call->self_capabilities & msi_CapRAudio &&
                     i->msi_call->peer_capabilities & msi_CapSAudio) {

@@ -134,6 +134,11 @@ static inline struct RTPMessage *jbuf_read(Logger *log, struct RingBuffer *q, in
 	uint8_t lost_frame = 0;
 	*success = 0;
 
+    if (rb_size(q) < AUDIO_JITTERBUFFER_MIN_FILLED)
+    {
+        return (struct RTPMessage *)ret;
+    }
+
 	bool res = rb_read(q, &ret, &lost_frame);
     
     LOGGER_TRACE(log, "jbuf_read:lost_frame=%d", (int)lost_frame);
