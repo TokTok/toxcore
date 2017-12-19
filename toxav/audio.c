@@ -165,10 +165,10 @@ uint8_t ac_iterate(ACSession *ac, uint64_t *a_r_timestamp, uint64_t *a_l_timesta
     uint8_t ret_value = 1;
     struct RingBuffer *jbuffer = (struct RingBuffer *)ac->j_buf;
 
-	// if (jbuffer)
-	// {
-	// 	LOGGER_INFO(ac->log, "jitterbuffer elements=%u", rb_size(jbuffer));
-	// }
+	if (jbuffer)
+	{
+		LOGGER_INFO(ac->log, "jitterbuffer elements=%u", rb_size(jbuffer));
+	}
 
     if (jbuf_is_empty(jbuffer))
     {
@@ -180,7 +180,7 @@ uint8_t ac_iterate(ACSession *ac, uint64_t *a_r_timestamp, uint64_t *a_l_timesta
         LOGGER_INFO(ac->log, "incoming audio frames are piling up");
         ret_value = 2;
     }
-#if 1
+#if 0
     else if (rb_size(jbuffer) > AUDIO_JITTERBUFFER_SKIP_THRESHOLD)
     {
         // audio frames are still building up, skip audio frames to synchronize again
@@ -256,7 +256,7 @@ uint8_t ac_iterate(ACSession *ac, uint64_t *a_r_timestamp, uint64_t *a_l_timesta
             {
                 // what is the audio to video latency?
                 const struct RTPHeaderV3 *header_v3 = (void *) & (msg->header);
-                LOGGER_ERROR(ac->log, "AUDIO:TTx: %llu %lld", header_v3->frame_record_timestamp, (long long)*a_r_timestamp);
+                LOGGER_ERROR(ac->log, "AUDIO:TTx: %llu %lld now=%llu", header_v3->frame_record_timestamp, (long long)*a_r_timestamp, current_time_monotonic());
                 if (header_v3->frame_record_timestamp > 0)
                 {
                     if (*a_r_timestamp < header_v3->frame_record_timestamp)

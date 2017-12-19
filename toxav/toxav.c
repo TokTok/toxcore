@@ -251,6 +251,7 @@ static void *video_play(void *data)
     return (void *)NULL;
 }
 
+
 void toxav_iterate(ToxAV *av)
 {
     pthread_mutex_lock(av->mutex);
@@ -274,20 +275,6 @@ void toxav_iterate(ToxAV *av)
             pthread_mutex_lock(i->mutex);
             pthread_mutex_unlock(av->mutex);
 
-
-            // ------- multithreaded av_iterate for video -------
-	        pthread_t video_play_thread;
-            LOGGER_TRACE(av->m->log, "video_play -----");
-            if (pthread_create(&video_play_thread, NULL, video_play, (void *)(i)))
-            {
-                LOGGER_WARNING(av->m->log, "error creating video play thread");
-            }
-            else
-            {
-                // TODO: set lower prio for video play thread ?
-            }
-            // ------- multithreaded av_iterate for video -------
-
             // ------- av_iterate for audio -------
             uint8_t res_ac = ac_iterate(i->audio.second,
             &(i->last_incoming_audio_frame_rtimestamp),
@@ -304,6 +291,20 @@ void toxav_iterate(ToxAV *av)
                 i->skip_video_flag = 0;
             }
             // ------- av_iterate for audio -------
+
+            // ------- multithreaded av_iterate for video -------
+	        pthread_t video_play_thread;
+            LOGGER_TRACE(av->m->log, "video_play -----");
+
+            if (pthread_create(&video_play_thread, NULL, video_play, (void *)(i)))
+            {
+                LOGGER_WARNING(av->m->log, "error creating video play thread");
+            }
+            else
+            {
+                // TODO: set lower prio for video play thread ?
+            }
+            // ------- multithreaded av_iterate for video -------
 
 
 /*
@@ -339,7 +340,6 @@ void toxav_iterate(ToxAV *av)
             }
 #endif
 
-
             if (i->msi_call->self_capabilities & msi_CapRAudio &&
                     i->msi_call->peer_capabilities & msi_CapSAudio) {
                 rc = MIN(i->audio.second->lp_frame_duration, rc);
@@ -366,15 +366,16 @@ void toxav_iterate(ToxAV *av)
             (i->last_incoming_video_frame_ltimestamp != 0))
             {
                 int64_t latency_ms = (
-                i->last_incoming_video_frame_rtimestamp -
-                (i->last_incoming_video_frame_ltimestamp - i->last_incoming_audio_frame_ltimestamp) -
-                i->last_incoming_audio_frame_rtimestamp
+                (i->last_incoming_video_frame_rtimestamp - i->last_incoming_audio_frame_rtimestamp) -
+                (i->last_incoming_video_frame_ltimestamp - i->last_incoming_audio_frame_ltimestamp)
                 );
 
-                LOGGER_INFO(av->m->log, "AUDIO (to video):latency in ms=%lld", (long long)latency_ms);
+                LOGGER_INFO(av->m->log, "VIDEO:1-latency-in-ms=%lld", (long long)latency_ms);
 
                 LOGGER_INFO(av->m->log, "VIDEO latency in ms=%lld", (long long)(i->last_incoming_video_frame_ltimestamp - i->last_incoming_video_frame_rtimestamp));
                 LOGGER_INFO(av->m->log, "AUDIO latency in ms=%lld", (long long)(i->last_incoming_audio_frame_ltimestamp - i->last_incoming_audio_frame_rtimestamp));
+
+                LOGGER_INFO(av->m->log, "VIDEO:3-latency-in-ms=%lld", (long long)(i->last_incoming_audio_frame_rtimestamp - i->last_incoming_video_frame_rtimestamp));
 
                 LOGGER_INFO(av->m->log, "AUDIO (to video):latency in a=%lld b=%lld c=%lld d=%lld",
                 (long long)i->last_incoming_video_frame_rtimestamp,
