@@ -65,7 +65,9 @@ Note
 #define VIDEO_BITRATE_INITIAL_VALUE 5000 // initialize encoder with this value. Target bandwidth to use for this stream, in kilobits per second.
 
 
-
+struct vpx_frame_user_data {
+	uint64_t record_timestamp;
+};
 
 
 void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_dist)
@@ -549,14 +551,21 @@ void vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timestamp,
         LOGGER_DEBUG(vc->log, "vc_iterate: rb_read p->len=%d data_type=%d", (int)full_data_len, (int)data_type);
         LOGGER_WARNING(vc->log, "vc_iterate: rb_read rb size=%d", (int)rb_size((RingBuffer *)vc->vbuf_raw));
 
+	    void *user_priv = NULL;
+	    if (header_v3->frame_record_timestamp > 0)
+	    {
+		struct vpx_frame_user_data *vpx_u_data = calloc(1, sizeof(struct vpx_frame_user_data));
+		vpx_u_data->record_timestamp = header_v3->frame_record_timestamp;
+		user_priv = vpx_u_data;
+	    }
 
 		if ((int)rb_size((RingBuffer *)vc->vbuf_raw) > VIDEO_RINGBUFFER_FILL_THRESHOLD)
 		{
-			rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, NULL, VPX_DL_REALTIME);
+			rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, VPX_DL_REALTIME);
 		}
 		else
 		{
-			rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, NULL, MAX_DECODE_TIME_US);
+			rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, MAX_DECODE_TIME_US);
 		}
 
         if (rc != VPX_CODEC_OK) {
@@ -564,9 +573,13 @@ void vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timestamp,
                 LOGGER_WARNING(vc->log, "Switching VPX Decoder");
                 video_switch_decoder(vc);
 
-				rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, NULL, VPX_DL_REALTIME);
+				rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, VPX_DL_REALTIME);
 				if (rc != VPX_CODEC_OK) {
 					LOGGER_ERROR(vc->log, "There is still an error decoding video: err-num=%d err-str=%s", (int)rc, vpx_codec_err_to_string(rc));
+					if (user_priv != NULL)
+					{
+						free(user_priv);
+					}
 				}
 
             } else if (rc == 7) {
@@ -588,22 +601,27 @@ void vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timestamp,
 
 					// what is the audio to video latency?
 					//
-					LOGGER_ERROR(vc->log, "VIDEO:TTx: %llu now=%llu", header_v3->frame_record_timestamp, current_time_monotonic());
-					if (header_v3->frame_record_timestamp > 0)
+					if (dest->user_priv != NULL)
 					{
-						if (*v_r_timestamp < header_v3->frame_record_timestamp)
+						uint64_t frame_record_timestamp_vpx = ((struct *vpx_frame_user_data)(dest->user_priv))->record_timestamp;
+						LOGGER_ERROR(vc->log, "VIDEO:TTx: %llu now=%llu", frame_record_timestamp_vpx, current_time_monotonic());
+						if (frame_record_timestamp_vpx > 0)
 						{
-							LOGGER_ERROR(vc->log, "VIDEO:TTx:2: %llu", header_v3->frame_record_timestamp);
-							*v_r_timestamp = header_v3->frame_record_timestamp;
-							*v_l_timestamp = current_time_monotonic();
+							if (*v_r_timestamp < frame_record_timestamp_vpx)
+							{
+								LOGGER_ERROR(vc->log, "VIDEO:TTx:2: %llu", frame_record_timestamp_vpx);
+								*v_r_timestamp = frame_record_timestamp_vpx;
+								*v_l_timestamp = current_time_monotonic();
+							}
+							else
+							{
+								LOGGER_ERROR(vc->log, "VIDEO: remote timestamp older");
+							}
 						}
-						else
-						{
-							LOGGER_ERROR(vc->log, "VIDEO: remote timestamp older");
-						}
+						//
+						// what is the audio to video latency?
+						free(dest->user_priv);
 					}
-					//
-					// what is the audio to video latency?
 
                     vc->vcb.first(vc->av, vc->friend_number, dest->d_w, dest->d_h,
                                   (const uint8_t *)dest->planes[0], (const uint8_t *)dest->planes[1], (const uint8_t *)dest->planes[2],
