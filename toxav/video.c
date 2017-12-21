@@ -603,7 +603,7 @@ void vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timestamp,
 					//
 					if (dest->user_priv != NULL)
 					{
-						uint64_t frame_record_timestamp_vpx = ((struct *vpx_frame_user_data)(dest->user_priv))->record_timestamp;
+						uint64_t frame_record_timestamp_vpx = ((struct vpx_frame_user_data *)(dest->user_priv))->record_timestamp;
 						LOGGER_ERROR(vc->log, "VIDEO:TTx: %llu now=%llu", frame_record_timestamp_vpx, current_time_monotonic());
 						if (frame_record_timestamp_vpx > 0)
 						{
