@@ -333,19 +333,19 @@ static struct RTPMessage *new_message(size_t allocate_len, const uint8_t *data, 
     msg->len = data_length - sizeof(struct RTPHeader); // result without header
     memcpy(&msg->header, data, data_length);
 
-    printf("XT:1v:%llu\n", msg->header.sequnum);
+    printf("XT:1v:%llu\n", (long long unsigned int)msg->header.sequnum);
     msg->header.sequnum = net_ntohs(msg->header.sequnum);
-    printf("XT:2v:%llu\n", msg->header.sequnum);
+    printf("XT:2v:%llu\n", (long long unsigned int)msg->header.sequnum);
 
-    printf("XT:1:%llu\n", msg->header.timestamp);
+    printf("XT:1:%llu\n", (long long unsigned int)msg->header.timestamp);
     msg->header.timestamp = net_ntohl(msg->header.timestamp);
-    printf("XT:2:%llu\n", msg->header.timestamp);
+    printf("XT:2:%llu\n", (long long unsigned int)msg->header.timestamp);
     msg->header.ssrc = net_ntohl(msg->header.ssrc);
 
     struct RTPHeaderV3 *header_v3 = (struct RTPHeaderV3 *) & (msg->header);
-    printf("XTB:1:%llu\n", header_v3->frame_record_timestamp);
+    printf("XTB:1:%llu\n", (long long unsigned int)header_v3->frame_record_timestamp);
     header_v3->frame_record_timestamp = ntohll(header_v3->frame_record_timestamp);
-    printf("XTB:2:%llu\n", header_v3->frame_record_timestamp);
+    printf("XTB:2:%llu\n", (long long unsigned int)header_v3->frame_record_timestamp);
 
     msg->header.cpart = net_ntohs(msg->header.cpart);
     msg->header.tlen = net_ntohs(msg->header.tlen); // result without header
