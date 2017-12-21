@@ -1033,7 +1033,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
                 const int keyframe = (pkt->data.frame.flags & VPX_FRAME_IS_KEY) != 0;
 		    
 		// use the record timestamp that was actually used for this frame
-		video_frame_record_timestamp = pkt->data.pts;
+		video_frame_record_timestamp = pkt->data.frame.pts;
 
                 // TOX RTP V3 --- hack to give frame type to function ---
                 //
