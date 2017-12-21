@@ -508,12 +508,13 @@ void video_switch_decoder(VCSession *vc)
 }
 
 
-void vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timestamp, uint64_t *a_l_timestamp, uint64_t *v_r_timestamp, uint64_t *v_l_timestamp)
+uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timestamp, uint64_t *a_l_timestamp, uint64_t *v_r_timestamp, uint64_t *v_l_timestamp)
 {
     if (!vc) {
-        return;
+        return 0;
     }
 
+	uint8_t ret_value = 0;
     struct RTPMessage *p;
 
     vpx_codec_err_t rc;
@@ -607,6 +608,8 @@ void vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timestamp,
 						LOGGER_ERROR(vc->log, "VIDEO:TTx: %llu now=%llu", frame_record_timestamp_vpx, current_time_monotonic());
 						if (frame_record_timestamp_vpx > 0)
 						{
+							ret_value = 1;
+							
 							if (*v_r_timestamp < frame_record_timestamp_vpx)
 							{
 								LOGGER_ERROR(vc->log, "VIDEO:TTx:2: %llu", frame_record_timestamp_vpx);
@@ -642,6 +645,8 @@ void vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timestamp,
     }
 
     pthread_mutex_unlock(vc->queue_mutex);
+    
+    return ret_value;
 }
 
 

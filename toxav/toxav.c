@@ -82,6 +82,11 @@ typedef struct ToxAVCall_s {
     uint64_t last_incoming_audio_frame_rtimestamp;
     uint64_t last_incoming_audio_frame_ltimestamp;
 
+    uint64_t reference_rtimestamp;
+    uint64_t reference_ltimestamp;
+    int64_t reference_diff_timestamp;
+    uint8_t reference_diff_timestamp_set;
+
     /** Required for monitoring changes in states */
     uint8_t previous_self_capabilities;
 
@@ -241,7 +246,7 @@ static void *video_play(void *data)
 {
     ToxAVCall *call = (ToxAVCall *)data;
     VCSession *vc = (VCSession *)call->video.second;
-    vc_iterate(vc, call->skip_video_flag,
+    uint8_t got_video_frame = vc_iterate(vc, call->skip_video_flag,
             &(call->last_incoming_audio_frame_rtimestamp),
             &(call->last_incoming_audio_frame_ltimestamp),
             &(call->last_incoming_video_frame_rtimestamp),
@@ -367,24 +372,39 @@ void toxav_iterate(ToxAV *av)
             &&
             (i->last_incoming_video_frame_ltimestamp != 0))
             {
-                int64_t latency_ms = (
-                (i->last_incoming_video_frame_rtimestamp - i->last_incoming_audio_frame_rtimestamp) -
-                (i->last_incoming_video_frame_ltimestamp - i->last_incoming_audio_frame_ltimestamp)
-                );
+                if (i->reference_diff_timestamp_set == 0)
+                {
+                    i->reference_rtimestamp = i->last_incoming_audio_frame_rtimestamp;
+                    i->reference_ltimestamp = i->last_incoming_audio_frame_ltimestamp;
+                    // this is the difference between local and remote clocks in "ms"
+                    i->reference_diff_timestamp = (int64_t)(i->reference_ltimestamp - i->reference_rtimestamp);
+                    i->reference_diff_timestamp_set = 1;
+                }
+                else
+                {                
+                    int64_t latency_ms = (int64_t)(
+                    (i->last_incoming_video_frame_rtimestamp - i->last_incoming_audio_frame_rtimestamp) -
+                    (i->last_incoming_video_frame_ltimestamp - i->last_incoming_audio_frame_ltimestamp)
+                    );
+                    
 
-                LOGGER_INFO(av->m->log, "VIDEO:1-latency-in-ms=%lld", (long long)latency_ms);
+                    LOGGER_INFO(av->m->log, "VIDEO:delay-to-audio-in-ms=%lld", (long long)latency_ms);
+                    // LOGGER_INFO(av->m->log, "CLOCK:delay-to-rmote-in-ms=%lld", (long long)(i->reference_diff_timestamp));
+                    LOGGER_INFO(av->m->log, "VIDEO:delay-to-refnc-in-ms=%lld", (long long)-((i->last_incoming_video_frame_ltimestamp - i->reference_diff_timestamp) - i->last_incoming_video_frame_rtimestamp));
+                    LOGGER_INFO(av->m->log, "AUDIO:delay-to-refnc-in-ms=%lld", (long long)-((i->last_incoming_audio_frame_ltimestamp - i->reference_diff_timestamp) - i->last_incoming_audio_frame_rtimestamp));
 
-                LOGGER_INFO(av->m->log, "VIDEO latency in ms=%lld", (long long)(i->last_incoming_video_frame_ltimestamp - i->last_incoming_video_frame_rtimestamp));
-                LOGGER_INFO(av->m->log, "AUDIO latency in ms=%lld", (long long)(i->last_incoming_audio_frame_ltimestamp - i->last_incoming_audio_frame_rtimestamp));
+                    // LOGGER_INFO(av->m->log, "VIDEO latency in ms=%lld", (long long)(i->last_incoming_video_frame_ltimestamp - i->last_incoming_video_frame_rtimestamp));
+                    // LOGGER_INFO(av->m->log, "AUDIO latency in ms=%lld", (long long)(i->last_incoming_audio_frame_ltimestamp - i->last_incoming_audio_frame_rtimestamp));
 
-                LOGGER_INFO(av->m->log, "VIDEO:3-latency-in-ms=%lld", (long long)(i->last_incoming_audio_frame_rtimestamp - i->last_incoming_video_frame_rtimestamp));
+                    // LOGGER_INFO(av->m->log, "VIDEO:3-latency-in-ms=%lld", (long long)(i->last_incoming_audio_frame_rtimestamp - i->last_incoming_video_frame_rtimestamp));
 
-                LOGGER_INFO(av->m->log, "AUDIO (to video):latency in a=%lld b=%lld c=%lld d=%lld",
-                (long long)i->last_incoming_video_frame_rtimestamp,
-                (long long)i->last_incoming_audio_frame_rtimestamp,
-                (long long)i->last_incoming_video_frame_ltimestamp,
-                (long long)i->last_incoming_audio_frame_ltimestamp
-                );
+                    //LOGGER_INFO(av->m->log, "AUDIO (to video):latency in a=%lld b=%lld c=%lld d=%lld",
+                    //(long long)i->last_incoming_video_frame_rtimestamp,
+                    //(long long)i->last_incoming_audio_frame_rtimestamp,
+                    //(long long)i->last_incoming_video_frame_ltimestamp,
+                    //(long long)i->last_incoming_audio_frame_ltimestamp
+                    //);
+                }
             }            
         }
     }
@@ -1320,6 +1340,11 @@ ToxAVCall *call_new(ToxAV *av, uint32_t friend_number, TOXAV_ERR_CALL *error)
 
     call->last_incoming_audio_frame_rtimestamp = 0;
     call->last_incoming_audio_frame_ltimestamp = 0;
+    
+    call->reference_rtimestamp = 0;
+    call->reference_ltimestamp = 0;
+    call->reference_diff_timestamp = 0;
+    call->reference_diff_timestamp_set = 0;
 
     if (call == NULL) {
         rc = TOXAV_ERR_CALL_MALLOC;
