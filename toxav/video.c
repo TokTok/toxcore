@@ -598,6 +598,8 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
             vpx_image_t *dest = NULL;
 
             while ((dest = vpx_codec_get_frame(vc->decoder, &iter)) != NULL) {
+		    // we have a frame, set return code
+		    ret_value = 1;
                 if (vc->vcb.first) {
 
 					// what is the audio to video latency?
@@ -638,7 +640,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
             free(p);
         }
 
-        return;
+        return ret_value;
     } else {
         // no frame data available
         // LOGGER_WARNING(vc->log, "Error decoding video: rb_read");
