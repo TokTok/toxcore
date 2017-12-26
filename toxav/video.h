@@ -46,17 +46,17 @@
 #define VIDEO_CODEC_DECODER_MAX_HEIGHT (600) // (16384)
 
 
-#define VIDEO_SEND_X_KEYFRAMES_FIRST (7) // force the first n frames to be keyframes!
+#define VIDEO_SEND_X_KEYFRAMES_FIRST (5) // force the first n frames to be keyframes!
 #define VPX_MAX_DIST_NORMAL (40)
 #define VPX_MAX_DIST_START (40)
 
-#define VPX_MAX_ENCODER_THREADS (4)
-#define VPX_MAX_DECODER_THREADS (4)
+#define VPX_MAX_ENCODER_THREADS (8)
+#define VPX_MAX_DECODER_THREADS (8)
 #define VIDEO__VP9E_SET_TILE_COLUMNS (0)
 #define VIDEO__VP9_KF_MAX_DIST (999)
 #define VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED (0)
 
-#define VIDEO_RINGBUFFER_BUFFER_ELEMENTS (5) // this buffer has normally max. 1 entry
+#define VIDEO_RINGBUFFER_BUFFER_ELEMENTS (6) // this buffer has normally max. 1 entry
 #define VIDEO_RINGBUFFER_FILL_THRESHOLD (2) // this must be lower than the above value!
 
 #define VPX_VP8_CODEC (0)

@@ -41,8 +41,8 @@ enum {
     video_frame_type_KEYFRAME, // = 1
 };
 
-#define VIDEO_KEEP_KEYFRAME_IN_BUFFER_FOR_MS (1)
-
+#define VIDEO_KEEP_KEYFRAME_IN_BUFFER_FOR_MS (4)
+#define USED_RTP_WORKBUFFER_COUNT (5)
 
 struct RTPHeader {
     /* Standard RTP header */
@@ -134,7 +134,6 @@ struct RTPMessage {
 typedef char __fail_if_misaligned_2 [ sizeof(struct RTPMessage) == 82 ? 1 : -1 ];
 
 
-#define USED_RTP_WORKBUFFER_COUNT (3)
 
 struct RTPWorkBuffer {
     uint8_t frame_type;
