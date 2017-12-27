@@ -600,7 +600,7 @@ static void update_bwc_values(Logger *log, RTPSession *session, struct RTPMessag
         bwc_add_recv(session->bwc, data_length_full);
 
         if (received_length_full < data_length_full) {
-            LOGGER_WARNING(log, "BWC: full length=%u received length=%d", data_length_full, received_length_full);
+            // LOGGER_WARNING(log, "BWC: full length=%u received length=%d", data_length_full, received_length_full);
             bwc_add_lost_v3(session->bwc, (data_length_full - received_length_full));
         }
     }
