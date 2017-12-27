@@ -546,7 +546,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 		}
 		else
 		{
-#if 0
+#if 1
 			if ((int)rb_size((RingBuffer *)vc->vbuf_raw) > (int)VIDEO_RINGBUFFER_DROP_THRESHOLD)
 			{
 				// LOGGER_WARNING(vc->log, "skipping:002 data_type=%d", (int)data_type);
@@ -642,14 +642,14 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 					if (dest->user_priv != NULL)
 					{
 						uint64_t frame_record_timestamp_vpx = ((struct vpx_frame_user_data *)(dest->user_priv))->record_timestamp;
-						LOGGER_ERROR(vc->log, "VIDEO:TTx: %llu now=%llu", frame_record_timestamp_vpx, current_time_monotonic());
+						//LOGGER_ERROR(vc->log, "VIDEO:TTx: %llu now=%llu", frame_record_timestamp_vpx, current_time_monotonic());
 						if (frame_record_timestamp_vpx > 0)
 						{
 							ret_value = 1;
 							
 							if (*v_r_timestamp < frame_record_timestamp_vpx)
 							{
-								LOGGER_ERROR(vc->log, "VIDEO:TTx:2: %llu", frame_record_timestamp_vpx);
+								// LOGGER_ERROR(vc->log, "VIDEO:TTx:2: %llu", frame_record_timestamp_vpx);
 								*v_r_timestamp = frame_record_timestamp_vpx;
 								*v_l_timestamp = current_time_monotonic();
 							}
@@ -663,10 +663,10 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 						free(dest->user_priv);
 					}
 
-					LOGGER_ERROR(vc->log, "VIDEO: -FRAME OUT- %p %p %p",
-								  (const uint8_t *)dest->planes[0],
-                                  (const uint8_t *)dest->planes[1],
-                                  (const uint8_t *)dest->planes[2]);
+					// LOGGER_ERROR(vc->log, "VIDEO: -FRAME OUT- %p %p %p",
+					// 			  (const uint8_t *)dest->planes[0],
+                    //               (const uint8_t *)dest->planes[1],
+                    //               (const uint8_t *)dest->planes[2]);
 
                     vc->vcb.first(vc->av, vc->friend_number, dest->d_w, dest->d_h,
                                   (const uint8_t *)dest->planes[0],
@@ -723,12 +723,12 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
 
     pthread_mutex_lock(vc->queue_mutex);
 
-    LOGGER_WARNING(vc->log, "TT:queue:V:%llu", header_v3->frame_record_timestamp);
+    // LOGGER_WARNING(vc->log, "TT:queue:V:%llu", header_v3->frame_record_timestamp);
 
     if ((((uint8_t)header_v3->protocol_version) == 3) &&
             (((uint8_t)header_v3->pt) == (rtp_TypeVideo % 128))
        ) {
-        LOGGER_WARNING(vc->log, "rb_write msg->len=%d b0=%d b1=%d rb_size=%d", (int)msg->len, (int)msg->data[0], (int)msg->data[1], (int)rb_size((RingBuffer *)vc->vbuf_raw));
+        // LOGGER_WARNING(vc->log, "rb_write msg->len=%d b0=%d b1=%d rb_size=%d", (int)msg->len, (int)msg->data[0], (int)msg->data[1], (int)rb_size((RingBuffer *)vc->vbuf_raw));
         free(rb_write((RingBuffer *)vc->vbuf_raw, msg, (uint8_t)header_v3->is_keyframe));
     } else {
         free(rb_write((RingBuffer *)vc->vbuf_raw, msg, 0));

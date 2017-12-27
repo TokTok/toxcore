@@ -900,7 +900,7 @@ bool toxav_audio_send_frame(ToxAV *av, uint32_t friend_number, const int16_t *pc
         else
         {
 #endif
-            LOGGER_DEBUG(av->m->log, "audio packet record time: %llu", audio_frame_record_timestamp);
+            // LOGGER_DEBUG(av->m->log, "audio packet record time: %llu", audio_frame_record_timestamp);
 
 
             if (rtp_send_data(call->audio.first, dest,
@@ -1074,7 +1074,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 
                 // TOX RTP V3 --- hack to give frame type to function ---
 
-                LOGGER_DEBUG(av->m->log, "video packet record time: %llu", video_frame_record_timestamp);
+                // LOGGER_DEBUG(av->m->log, "video packet record time: %llu", video_frame_record_timestamp);
 
                 int res = rtp_send_data
                           (

@@ -545,10 +545,10 @@ static uint8_t fill_data_into_slot(Logger *log, struct RTPWorkBufferList *wkbl, 
 
             wkbl->work_buffer[slot].frame_type = is_keyframe;
             wkbl->work_buffer[slot].data_len = length_v3;
-            LOGGER_INFO(log, "new message v3 TT1 ts=%llu", header_v3->timestamp);
+            // LOGGER_INFO(log, "new message v3 TT1 ts=%llu", header_v3->timestamp);
             wkbl->work_buffer[slot].timestamp = net_ntohl(header_v3->timestamp);
             // frame_record_timestamp
-            LOGGER_INFO(log, "new message v3 TT2 ts=%llu", net_ntohl(header_v3->timestamp));
+            // LOGGER_INFO(log, "new message v3 TT2 ts=%llu", net_ntohl(header_v3->timestamp));
             wkbl->work_buffer[slot].sequnum = net_ntohs(header_v3->sequnum);
 
             wkbl->next_free_entry++;
@@ -642,7 +642,7 @@ int handle_rtp_packet_v3(Messenger *m, uint32_t friendnumber, const uint8_t *dat
     uint32_t offset_v3 = net_htonl(header_v3->offset_full); // without header
     uint8_t is_keyframe = (int)header_v3->is_keyframe;
 
-    LOGGER_WARNING(m->log, "frame timestamp TT2 %llu", ntohll(header_v3->frame_record_timestamp));
+    // LOGGER_WARNING(m->log, "frame timestamp TT2 %llu", ntohll(header_v3->frame_record_timestamp));
 
     LOGGER_DEBUG(m->log, "-- handle_rtp_packet_v3 -- full lens=%d len=%d offset=%d is_keyframe=%s", (int)length,
                  (int)length_v3, (int)offset_v3, ((int)header_v3->is_keyframe) ? "K" : ".");

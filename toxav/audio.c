@@ -261,12 +261,12 @@ uint8_t ac_iterate(ACSession *ac, uint64_t *a_r_timestamp, uint64_t *a_l_timesta
             {
                 // what is the audio to video latency?
                 const struct RTPHeaderV3 *header_v3 = (void *) & (msg->header);
-                LOGGER_ERROR(ac->log, "AUDIO:TTx: %llu %lld now=%llu", header_v3->frame_record_timestamp, (long long)*a_r_timestamp, current_time_monotonic());
+                // LOGGER_ERROR(ac->log, "AUDIO:TTx: %llu %lld now=%llu", header_v3->frame_record_timestamp, (long long)*a_r_timestamp, current_time_monotonic());
                 if (header_v3->frame_record_timestamp > 0)
                 {
                     if (*a_r_timestamp < header_v3->frame_record_timestamp)
                     {
-                        LOGGER_ERROR(ac->log, "AUDIO:TTx:2: %llu", header_v3->frame_record_timestamp);
+                        // LOGGER_ERROR(ac->log, "AUDIO:TTx:2: %llu", header_v3->frame_record_timestamp);
                         *a_r_timestamp = header_v3->frame_record_timestamp;
                         *a_l_timestamp = current_time_monotonic();
                     }
