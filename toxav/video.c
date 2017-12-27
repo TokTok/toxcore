@@ -525,17 +525,45 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 
     uint32_t full_data_len;
 
-	if (skip_video_flag == 1)
-	{
-		if (rb_read((RingBuffer *)vc->vbuf_raw, (void **)&p, &data_type)) {
-			LOGGER_INFO(vc->log, "skipping incoming video frame");
-			free(p);
-		}
-		//pthread_mutex_unlock(vc->queue_mutex);
-		//return;
-	}
 
-    if (rb_read((RingBuffer *)vc->vbuf_raw, (void **)&p, &data_type)) {
+    if (rb_read((RingBuffer *)vc->vbuf_raw, (void **)&p, &data_type))
+    {
+
+		if (skip_video_flag == 1)
+		{
+			if (data_type != video_frame_type_KEYFRAME)
+			{
+				free(p);
+				LOGGER_WARNING(vc->log, "skipping incoming video frame (1)");
+				if (rb_read((RingBuffer *)vc->vbuf_raw, (void **)&p, &data_type)) {
+				}
+				else
+				{
+					pthread_mutex_unlock(vc->queue_mutex);
+					return 0;
+				}
+			}
+		}
+		else if ((int)rb_size((RingBuffer *)vc->vbuf_raw) > VIDEO_RINGBUFFER_DROP_THRESHOLD)
+		{
+			// LOGGER_WARNING(vc->log, "skipping:002");
+			if (data_type != video_frame_type_KEYFRAME)
+			{
+				// LOGGER_WARNING(vc->log, "skipping:003");
+				free(p);
+				LOGGER_WARNING(vc->log, "skipping incoming video frame (2)");
+				if (rb_read((RingBuffer *)vc->vbuf_raw, (void **)&p, &data_type)) {
+				}
+				else
+				{
+					// LOGGER_WARNING(vc->log, "skipping:005");
+					pthread_mutex_unlock(vc->queue_mutex);
+					return 0;
+				}
+			}
+		}
+
+
         pthread_mutex_unlock(vc->queue_mutex);
 
         const struct RTPHeaderV3 *header_v3 = (void *) & (p->header);
@@ -563,10 +591,12 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 		if ((int)rb_size((RingBuffer *)vc->vbuf_raw) > VIDEO_RINGBUFFER_FILL_THRESHOLD)
 		{
 			rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, VPX_DL_REALTIME);
+			LOGGER_WARNING(vc->log, "skipping:REALTIME");
 		}
 		else
 		{
 			rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, MAX_DECODE_TIME_US);
+			// LOGGER_WARNING(vc->log, "skipping:MAX_DECODE_TIME_US=%d", (int)MAX_DECODE_TIME_US);
 		}
 
         if (rc != VPX_CODEC_OK) {
