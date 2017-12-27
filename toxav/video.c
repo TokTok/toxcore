@@ -531,7 +531,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 
 		if (skip_video_flag == 1)
 		{
-			if (data_type != video_frame_type_KEYFRAME)
+			if ((int)data_type != (int)video_frame_type_KEYFRAME)
 			{
 				free(p);
 				LOGGER_WARNING(vc->log, "skipping incoming video frame (1)");
@@ -544,25 +544,30 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 				}
 			}
 		}
-		else if ((int)rb_size((RingBuffer *)vc->vbuf_raw) > VIDEO_RINGBUFFER_DROP_THRESHOLD)
+		else
 		{
-			// LOGGER_WARNING(vc->log, "skipping:002");
-			if (data_type != video_frame_type_KEYFRAME)
+#if 0
+			if ((int)rb_size((RingBuffer *)vc->vbuf_raw) > (int)VIDEO_RINGBUFFER_DROP_THRESHOLD)
 			{
-				// LOGGER_WARNING(vc->log, "skipping:003");
-				free(p);
-				LOGGER_WARNING(vc->log, "skipping incoming video frame (2)");
-				if (rb_read((RingBuffer *)vc->vbuf_raw, (void **)&p, &data_type)) {
-				}
-				else
+				// LOGGER_WARNING(vc->log, "skipping:002 data_type=%d", (int)data_type);
+				if ((int)data_type != (int)video_frame_type_KEYFRAME)
 				{
-					// LOGGER_WARNING(vc->log, "skipping:005");
+					// LOGGER_WARNING(vc->log, "skipping:003");
+					free(p);
+					LOGGER_WARNING(vc->log, "skipping all incoming video frames (2)");
+					void *p2;
+					uint8_t dummy;
+
+					while (rb_read((RingBuffer *)vc->vbuf_raw, &p2, &dummy)) {
+						free(p2);
+					}
+
 					pthread_mutex_unlock(vc->queue_mutex);
 					return 0;
 				}
 			}
+#endif
 		}
-
 
         pthread_mutex_unlock(vc->queue_mutex);
 
@@ -588,7 +593,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 		user_priv = vpx_u_data;
 	    }
 
-		if ((int)rb_size((RingBuffer *)vc->vbuf_raw) > VIDEO_RINGBUFFER_FILL_THRESHOLD)
+		if ((int)rb_size((RingBuffer *)vc->vbuf_raw) > (int)VIDEO_RINGBUFFER_FILL_THRESHOLD)
 		{
 			rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, VPX_DL_REALTIME);
 			LOGGER_WARNING(vc->log, "skipping:REALTIME");
@@ -658,8 +663,15 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 						free(dest->user_priv);
 					}
 
+					LOGGER_ERROR(vc->log, "VIDEO: -FRAME OUT- %p %p %p",
+								  (const uint8_t *)dest->planes[0],
+                                  (const uint8_t *)dest->planes[1],
+                                  (const uint8_t *)dest->planes[2]);
+
                     vc->vcb.first(vc->av, vc->friend_number, dest->d_w, dest->d_h,
-                                  (const uint8_t *)dest->planes[0], (const uint8_t *)dest->planes[1], (const uint8_t *)dest->planes[2],
+                                  (const uint8_t *)dest->planes[0],
+                                  (const uint8_t *)dest->planes[1],
+                                  (const uint8_t *)dest->planes[2],
                                   dest->stride[0], dest->stride[1], dest->stride[2], vc->vcb.second);
                 }
 
