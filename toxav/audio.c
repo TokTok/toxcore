@@ -172,7 +172,7 @@ uint8_t ac_iterate(ACSession *ac, uint64_t *a_r_timestamp, uint64_t *a_l_timesta
 
 	if (jbuffer)
 	{
-		LOGGER_INFO(ac->log, "jitterbuffer elements=%u", rb_size(jbuffer));
+		// LOGGER_INFO(ac->log, "jitterbuffer elements=%u", rb_size(jbuffer));
 	}
 
     if (jbuf_is_empty(jbuffer))
@@ -182,7 +182,7 @@ uint8_t ac_iterate(ACSession *ac, uint64_t *a_r_timestamp, uint64_t *a_l_timesta
     else if (rb_size(jbuffer) > AUDIO_JITTERBUFFER_FILL_THRESHOLD)
     {
         // audio frames are building up, skip video frames to compensate
-        LOGGER_INFO(ac->log, "incoming audio frames are piling up");
+        // LOGGER_INFO(ac->log, "incoming audio frames are piling up");
         ret_value = 2;
     }
 #if 0
@@ -272,7 +272,8 @@ uint8_t ac_iterate(ACSession *ac, uint64_t *a_r_timestamp, uint64_t *a_l_timesta
                     }
                     else
                     {
-                        LOGGER_ERROR(ac->log, "AUDIO: remote timestamp older");
+                        // TODO: this should not happen here!
+                        LOGGER_DEBUG(ac->log, "AUDIO: remote timestamp older");
                     }
                 }
             }

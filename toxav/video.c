@@ -535,7 +535,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 			if ((int)data_type != (int)video_frame_type_KEYFRAME)
 			{
 				free(p);
-				LOGGER_WARNING(vc->log, "skipping incoming video frame (1)");
+				LOGGER_DEBUG(vc->log, "skipping incoming video frame (1)");
 				if (rb_read((RingBuffer *)vc->vbuf_raw, (void **)&p, &data_type)) {
 				}
 				else
@@ -555,7 +555,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 				{
 					// LOGGER_WARNING(vc->log, "skipping:003");
 					free(p);
-					LOGGER_WARNING(vc->log, "skipping all incoming video frames (2)");
+					LOGGER_DEBUG(vc->log, "skipping all incoming video frames (2)");
 					void *p2;
 					uint8_t dummy;
 
@@ -584,7 +584,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
         }
 
         LOGGER_DEBUG(vc->log, "vc_iterate: rb_read p->len=%d data_type=%d", (int)full_data_len, (int)data_type);
-        LOGGER_WARNING(vc->log, "vc_iterate: rb_read rb size=%d", (int)rb_size((RingBuffer *)vc->vbuf_raw));
+        LOGGER_DEBUG(vc->log, "vc_iterate: rb_read rb size=%d", (int)rb_size((RingBuffer *)vc->vbuf_raw));
 
 	    void *user_priv = NULL;
 	    if (header_v3->frame_record_timestamp > 0)
@@ -597,7 +597,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 		if ((int)rb_size((RingBuffer *)vc->vbuf_raw) > (int)VIDEO_RINGBUFFER_FILL_THRESHOLD)
 		{
 			rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, VPX_DL_REALTIME);
-			LOGGER_WARNING(vc->log, "skipping:REALTIME");
+			LOGGER_DEBUG(vc->log, "skipping:REALTIME");
 		}
 #ifdef VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE
 		else
@@ -617,7 +617,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 				}
 			}
 			rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, (long)decode_time_auto_tune);
-			LOGGER_WARNING(vc->log, "AUTOTUNE:MAX_DECODE_TIME_US=%ld us = %.1f fps", (long)decode_time_auto_tune, (float)(1000000.0f / decode_time_auto_tune));
+			LOGGER_DEBUG(vc->log, "AUTOTUNE:MAX_DECODE_TIME_US=%ld us = %.1f fps", (long)decode_time_auto_tune, (float)(1000000.0f / decode_time_auto_tune));
 		}
 #else
 		else
@@ -684,7 +684,8 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 							}
 							else
 							{
-								LOGGER_ERROR(vc->log, "VIDEO: remote timestamp older");
+								// TODO: this should not happen here!
+								LOGGER_DEBUG(vc->log, "VIDEO: remote timestamp older");
 							}
 						}
 						//

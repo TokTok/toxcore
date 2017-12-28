@@ -388,10 +388,10 @@ void toxav_iterate(ToxAV *av)
                     );
                     
 
-                    LOGGER_INFO(av->m->log, "VIDEO:delay-to-audio-in-ms=%lld", (long long)latency_ms);
+                    LOGGER_DEBUG(av->m->log, "VIDEO:delay-to-audio-in-ms=%lld", (long long)latency_ms);
                     // LOGGER_INFO(av->m->log, "CLOCK:delay-to-rmote-in-ms=%lld", (long long)(i->reference_diff_timestamp));
-                    LOGGER_INFO(av->m->log, "VIDEO:delay-to-refnc-in-ms=%lld", (long long)-((i->last_incoming_video_frame_ltimestamp - i->reference_diff_timestamp) - i->last_incoming_video_frame_rtimestamp));
-                    LOGGER_INFO(av->m->log, "AUDIO:delay-to-refnc-in-ms=%lld", (long long)-((i->last_incoming_audio_frame_ltimestamp - i->reference_diff_timestamp) - i->last_incoming_audio_frame_rtimestamp));
+                    LOGGER_DEBUG(av->m->log, "VIDEO:delay-to-refnc-in-ms=%lld", (long long)-((i->last_incoming_video_frame_ltimestamp - i->reference_diff_timestamp) - i->last_incoming_video_frame_rtimestamp));
+                    LOGGER_DEBUG(av->m->log, "AUDIO:delay-to-refnc-in-ms=%lld", (long long)-((i->last_incoming_audio_frame_ltimestamp - i->reference_diff_timestamp) - i->last_incoming_audio_frame_rtimestamp));
 
                     // LOGGER_INFO(av->m->log, "VIDEO latency in ms=%lld", (long long)(i->last_incoming_video_frame_ltimestamp - i->last_incoming_video_frame_rtimestamp));
                     // LOGGER_INFO(av->m->log, "AUDIO latency in ms=%lld", (long long)(i->last_incoming_audio_frame_ltimestamp - i->last_incoming_audio_frame_rtimestamp));
