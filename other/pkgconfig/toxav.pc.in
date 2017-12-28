@@ -4,7 +4,8 @@ includedir=${prefix}/include
 
 Name: toxav
 Description: Tox A/V library
-Requires: opus toxcore vpx
+Requires.private: opus toxcore vpx
 Version: @PROJECT_VERSION@
-Libs: -L${libdir} @toxav_PKGCONFIG_LIBS@ -ltoxav
+Libs: -L${libdir} -ltoxav
+Libs.private: @toxav_PKGCONFIG_LIBS@
 Cflags: -I${includedir}

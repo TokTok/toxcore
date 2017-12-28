@@ -4,7 +4,8 @@ includedir=${prefix}/include
 
 Name: toxcore
 Description: Tox protocol library
-Requires: libsodium
+Requires.private: libsodium
 Version: @PROJECT_VERSION@
-Libs: -L${libdir} -ltoxcore @toxcore_PKGCONFIG_LIBS@ -ltoxcrypto -ltoxnetwork -ltoxdht -ltoxnetcrypto -ltoxfriends -ltoxmessenger -ltoxgroup
+Libs: -L${libdir} -ltoxcore
+Libs.private: @toxcore_PKGCONFIG_LIBS@ -ltoxcrypto -ltoxnetwork -ltoxdht -ltoxnetcrypto -ltoxfriends -ltoxmessenger -ltoxgroup
 Cflags: -I${includedir}
