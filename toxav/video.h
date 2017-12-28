@@ -60,6 +60,10 @@
 #define VIDEO_RINGBUFFER_FILL_THRESHOLD (2) // start decoding at lower quality
 #define VIDEO_RINGBUFFER_DROP_THRESHOLD (5) // start dropping incoming frames (except index frames)
 
+#define VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE 1
+#define VIDEO_DECODER_MINFPS_AUTOTUNE (10)
+#define VIDEO_DECODER_LEEWAY_IN_MS_AUTOTUNE (10)
+
 #define VPX_VP8_CODEC (0)
 #define VPX_VP9_CODEC (1)
 
@@ -84,6 +88,8 @@ typedef struct VCSession_s {
 
     uint64_t linfts; /* Last received frame time stamp */
     uint32_t lcfd; /* Last calculated frame duration for incoming video payload */
+    
+    uint64_t last_decoded_frame_ts;
 
     Logger *log;
     ToxAV *av;

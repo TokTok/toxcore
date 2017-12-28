@@ -381,6 +381,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc->friend_number = friend_number;
     vc->av = av;
     vc->log = log;
+    vc->last_decoded_frame_ts = 0;
 
     return vc;
 
@@ -598,11 +599,39 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 			rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, VPX_DL_REALTIME);
 			LOGGER_WARNING(vc->log, "skipping:REALTIME");
 		}
+#ifdef VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE
+		else
+		{
+			long decode_time_auto_tune = MAX_DECODE_TIME_US;
+			if (vc->last_decoded_frame_ts > 0)
+			{
+				decode_time_auto_tune = (current_time_monotonic() - vc->last_decoded_frame_ts) * 1000;
+				if (decode_time_auto_tune > (1000000 / VIDEO_DECODER_MINFPS_AUTOTUNE))
+				{
+					decode_time_auto_tune = (1000000 / VIDEO_DECODER_MINFPS_AUTOTUNE);
+				}
+
+				if (decode_time_auto_tune > (VIDEO_DECODER_LEEWAY_IN_MS_AUTOTUNE * 1000))
+				{
+					decode_time_auto_tune = decode_time_auto_tune - (VIDEO_DECODER_LEEWAY_IN_MS_AUTOTUNE * 1000); // give x ms more room
+				}
+			}
+			rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, (long)decode_time_auto_tune);
+			LOGGER_WARNING(vc->log, "AUTOTUNE:MAX_DECODE_TIME_US=%ld us = %.1f fps", (long)decode_time_auto_tune, (float)(1000000.0f / decode_time_auto_tune));
+		}
+#else
 		else
 		{
 			rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, MAX_DECODE_TIME_US);
 			// LOGGER_WARNING(vc->log, "skipping:MAX_DECODE_TIME_US=%d", (int)MAX_DECODE_TIME_US);
 		}
+#endif
+
+
+#ifdef VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE
+		vc->last_decoded_frame_ts = current_time_monotonic();
+#endif
+
 
         if (rc != VPX_CODEC_OK) {
             if (rc == 5) { // Bitstream not supported by this decoder
