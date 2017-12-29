@@ -279,6 +279,11 @@ void toxav_iterate(ToxAV *av)
             pthread_mutex_lock(i->mutex);
             pthread_mutex_unlock(av->mutex);
 
+
+
+#if !defined(_GNU_SOURCE)
+            video_play((void *)(i));
+#else
             // ------- multithreaded av_iterate for video -------
 	        pthread_t video_play_thread;
             LOGGER_TRACE(av->m->log, "video_play -----");
@@ -292,7 +297,10 @@ void toxav_iterate(ToxAV *av)
                 // TODO: set lower prio for video play thread ?
             }
             // ------- multithreaded av_iterate for video -------
-
+#endif
+ 
+ 
+ 
             // ------- av_iterate for audio -------
             uint8_t res_ac = ac_iterate(i->audio.second,
             &(i->last_incoming_audio_frame_rtimestamp),
@@ -310,11 +318,13 @@ void toxav_iterate(ToxAV *av)
             }
             // ------- av_iterate for audio -------
 
+
+
 /*
  * compile toxcore with "-D_GNU_SOURCE" to activate "pthread_tryjoin_np" solution!
  */
 #if !defined(_GNU_SOURCE)
-	        pthread_join(video_play_thread, NULL);
+	        // pthread_join(video_play_thread, NULL);
 #else
             while (pthread_tryjoin_np(video_play_thread, NULL) != 0)
             {
@@ -345,6 +355,8 @@ void toxav_iterate(ToxAV *av)
 
             pthread_join(video_play_thread, NULL);
 #endif
+
+
 
 
             if (i->msi_call->self_capabilities & msi_CapRAudio &&

@@ -937,8 +937,15 @@ int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, 
             /* First case */
 
             /* Make sure we have enough allocated memory */
-            if (session->mp->header.tlen - session->mp->len < length - sizeof(struct RTPHeader) ||
-                    session->mp->header.tlen <= net_ntohs(header->cpart)) {
+            if ((
+				(int32_t)(session->mp->header.tlen - session->mp->len)
+				<
+				(int32_t)(length - sizeof(struct RTPHeader))
+               )
+               ||
+               (
+               ((int32_t)session->mp->header.tlen <= (int32_t)net_ntohs(header->cpart))
+               )) {
                 /* There happened to be some corruption on the stream;
                  * continue wihtout this part
                  */
