@@ -30,8 +30,8 @@
 
 
 #define AUDIO_JITTERBUFFER_COUNT (30) // ORIG = 3
-#define AUDIO_JITTERBUFFER_FILL_THRESHOLD (7) // this must be lower than the above value!
-#define AUDIO_JITTERBUFFER_SKIP_THRESHOLD (10)
+#define AUDIO_JITTERBUFFER_FILL_THRESHOLD (8) // this must be lower than the above value!
+#define AUDIO_JITTERBUFFER_SKIP_THRESHOLD (14)
 
 #define AUDIO_JITTERBUFFER_MIN_FILLED (0)
 

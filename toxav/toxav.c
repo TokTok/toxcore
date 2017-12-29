@@ -244,14 +244,20 @@ uint32_t toxav_iteration_interval(const ToxAV *av)
 
 static void *video_play(void *data)
 {
-    ToxAVCall *call = (ToxAVCall *)data;
-    VCSession *vc = (VCSession *)call->video.second;
-    uint8_t got_video_frame = vc_iterate(vc, call->skip_video_flag,
-            &(call->last_incoming_audio_frame_rtimestamp),
-            &(call->last_incoming_audio_frame_ltimestamp),
-            &(call->last_incoming_video_frame_rtimestamp),
-            &(call->last_incoming_video_frame_ltimestamp)
-    );
+    if (data)
+    {
+        ToxAVCall *call = (ToxAVCall *)data;
+        if (call)
+        {
+            VCSession *vc = (VCSession *)call->video.second;
+            uint8_t got_video_frame = vc_iterate(vc, call->skip_video_flag,
+                    &(call->last_incoming_audio_frame_rtimestamp),
+                    &(call->last_incoming_audio_frame_ltimestamp),
+                    &(call->last_incoming_video_frame_rtimestamp),
+                    &(call->last_incoming_video_frame_ltimestamp)
+            );
+        }
+    }
     return (void *)NULL;
 }
 
@@ -338,7 +344,8 @@ void toxav_iterate(ToxAV *av)
                     &(i->last_incoming_video_frame_ltimestamp)
                     ) == 0)
                     {
-                        // usleep(100);
+                        // TODO: Zoff: not sure if this sleep is good, or bad??
+                        usleep(100);
                     }
                     else
                     {

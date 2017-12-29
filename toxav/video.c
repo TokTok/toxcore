@@ -535,7 +535,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 			if ((int)data_type != (int)video_frame_type_KEYFRAME)
 			{
 				free(p);
-				LOGGER_DEBUG(vc->log, "skipping incoming video frame (1)");
+				LOGGER_WARNING(vc->log, "skipping incoming video frame (1)");
 				if (rb_read((RingBuffer *)vc->vbuf_raw, (void **)&p, &data_type)) {
 				}
 				else
@@ -597,7 +597,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 		if ((int)rb_size((RingBuffer *)vc->vbuf_raw) > (int)VIDEO_RINGBUFFER_FILL_THRESHOLD)
 		{
 			rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, VPX_DL_REALTIME);
-			LOGGER_DEBUG(vc->log, "skipping:REALTIME");
+			LOGGER_WARNING(vc->log, "skipping:REALTIME");
 		}
 #ifdef VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE
 		else

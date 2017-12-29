@@ -170,10 +170,10 @@ uint8_t ac_iterate(ACSession *ac, uint64_t *a_r_timestamp, uint64_t *a_l_timesta
     uint8_t ret_value = 1;
     struct RingBuffer *jbuffer = (struct RingBuffer *)ac->j_buf;
 
-	if (jbuffer)
-	{
-		// LOGGER_INFO(ac->log, "jitterbuffer elements=%u", rb_size(jbuffer));
-	}
+	//if (jbuffer)
+	//{
+	//	LOGGER_INFO(ac->log, "jitterbuffer elements=%u", rb_size(jbuffer));
+	//}
 
     if (jbuf_is_empty(jbuffer))
     {
