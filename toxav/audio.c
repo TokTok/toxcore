@@ -406,14 +406,19 @@ static int jbuf_write(Logger *log, ACSession *ac, struct RingBuffer *q, struct R
     else
     {
         // LOGGER_WARNING(log, "AudioFramesIN: hs:%d lpseq=%d", (int)m->header.sequnum, (int)ac->lp_seqnum);
+        // TODO: !!! compensate for when seqnum rolls over !!!
+        // TODO: !!! compensate for when seqnum rolls over !!!
+        // TODO: !!! compensate for when seqnum rolls over !!!
+        // TODO: !!! compensate for when seqnum rolls over !!!
+        // TODO: !!! compensate for when seqnum rolls over !!!
         if (m->header.sequnum > ac->lp_seqnum)
         {
-            uint32_t diff = (m->header.sequnum - ac->lp_seqnum);
+            int64_t diff = (m->header.sequnum - ac->lp_seqnum);
             if (diff > 1)
             {
                 LOGGER_WARNING(log, "AudioFramesIN: missing %d audio frames, seqnum=%d", (int)(diff - 1), (int)(ac->lp_seqnum + 1));
 
-                uint32_t j;
+                int64_t j;
                 for(j=0;j<(diff - 1);j++)
                 {
                     uint16_t lenx = (m->len + sizeof(struct RTPHeader));
@@ -430,7 +435,9 @@ static int jbuf_write(Logger *log, ACSession *ac, struct RingBuffer *q, struct R
         }
         else
         {
-            LOGGER_WARNING(log, "AudioFramesIN: old audio frames received");
+            LOGGER_WARNING(log, "AudioFramesIN: old audio frames received hseqnum=%d, lpseqnum=%d",
+                (int)m->header.sequnum,
+                (int)ac->lp_seqnum);
             return -1;
         }
     }

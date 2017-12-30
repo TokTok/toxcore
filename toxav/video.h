@@ -46,12 +46,12 @@
 #define VIDEO_CODEC_DECODER_MAX_HEIGHT (600) // (16384)
 
 
-#define VIDEO_SEND_X_KEYFRAMES_FIRST (5) // force the first n frames to be keyframes!
-#define VPX_MAX_DIST_NORMAL (40)
-#define VPX_MAX_DIST_START (40)
+#define VIDEO_SEND_X_KEYFRAMES_FIRST (10) // force the first n frames to be keyframes!
+#define VPX_MAX_DIST_NORMAL (30)
+#define VPX_MAX_DIST_START (30)
 
-#define VPX_MAX_ENCODER_THREADS (8)
-#define VPX_MAX_DECODER_THREADS (8)
+#define VPX_MAX_ENCODER_THREADS (4)
+#define VPX_MAX_DECODER_THREADS (4)
 #define VIDEO__VP9E_SET_TILE_COLUMNS (0)
 #define VIDEO__VP9_KF_MAX_DIST (999)
 #define VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED (0)
@@ -105,5 +105,6 @@ void vc_kill(VCSession *vc);
 uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timestamp, uint64_t *a_l_timestamp, uint64_t *v_r_timestamp, uint64_t *v_l_timestamp);
 int vc_queue_message(void *vcp, struct RTPMessage *msg);
 int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height, int16_t kf_max_dist);
+int vc_reconfigure_encoder_bitrate_only(VCSession *vc, uint32_t bit_rate);
 
 #endif /* VIDEO_H */

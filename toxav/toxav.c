@@ -1004,6 +1004,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
     }
 
     int vpx_encode_flags = 0;
+    unsigned long max_encode_time_in_us = MAX_ENCODE_TIME_US;
 
 #if 1
 
@@ -1013,6 +1014,16 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
             // Key frame flag for first frames
             vpx_encode_flags = VPX_EFLAG_FORCE_KF;
+            max_encode_time_in_us = VPX_DL_REALTIME;
+            uint32_t lowered_bitrate = (800 * 1000);
+#if 0
+            if (lowered_bitrate < 300)
+            {
+                lowered_bitrate = 300;
+            }
+#endif
+            vc_reconfigure_encoder_bitrate_only(call->video.second, lowered_bitrate);
+            // HINT: Zoff: this does not seem to work
             // vpx_codec_control(call->video.second->encoder, VP8E_SET_FRAME_FLAGS, vpx_encode_flags);
             LOGGER_INFO(av->m->log, "I_FRAME_FLAG:%d only-i-frame mode", call->video.first->ssrc);
         }
@@ -1023,6 +1034,9 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
             // normal keyframe placement
             vpx_encode_flags = 0;
+            max_encode_time_in_us = MAX_ENCODE_TIME_US;
+            vc_reconfigure_encoder_bitrate_only(call->video.second, call->video_bit_rate * 1000);
+            // HINT: Zoff: this does not seem to work
             // vpx_codec_control(call->video.second->encoder, VP8E_SET_FRAME_FLAGS, vpx_encode_flags);
             LOGGER_INFO(av->m->log, "I_FRAME_FLAG:%d normal mode", call->video.first->ssrc);
         }
@@ -1047,7 +1061,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         memcpy(img.planes[VPX_PLANE_V], v, (width / 2) * (height / 2));
 
         vpx_codec_err_t vrc = vpx_codec_encode(call->video.second->encoder, &img,
-                                               (int64_t)video_frame_record_timestamp, 1, vpx_encode_flags, MAX_ENCODE_TIME_US);
+            (int64_t)video_frame_record_timestamp, 1, vpx_encode_flags, max_encode_time_in_us);
 
         vpx_img_free(&img);
 
@@ -1071,8 +1085,8 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
             if (pkt->kind == VPX_CODEC_CX_FRAME_PKT) {
                 const int keyframe = (pkt->data.frame.flags & VPX_FRAME_IS_KEY) != 0;
 		    
-		// use the record timestamp that was actually used for this frame
-		video_frame_record_timestamp = pkt->data.frame.pts;
+                // use the record timestamp that was actually used for this frame
+                video_frame_record_timestamp = pkt->data.frame.pts;
 
                 // TOX RTP V3 --- hack to give frame type to function ---
                 //

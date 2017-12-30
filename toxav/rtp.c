@@ -194,11 +194,16 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length_v3, 
 
     header->sequnum = net_htons(session->sequnum);
 
+	if (is_video_payload == 1) {
+		LOGGER_WARNING(session->m->log, "RTP_SEND:seqnum=%ld length=%lld",
+				(long)session->sequnum, (long long)length_v3);
+	}
+
     // this can not work! putting a uint64_t into a uint32_t field in the header!
     header->timestamp = net_htonl(current_time_monotonic());
-    LOGGER_WARNING(session->m->log, "TT:1:%llu", current_time_monotonic());
-    LOGGER_WARNING(session->m->log, "TT:2:%llu", header->timestamp);
-    LOGGER_WARNING(session->m->log, "TT:2b:%llu", net_ntohl(header->timestamp));
+    // LOGGER_WARNING(session->m->log, "TT:1:%llu", current_time_monotonic());
+    // LOGGER_WARNING(session->m->log, "TT:2:%llu", header->timestamp);
+    // LOGGER_WARNING(session->m->log, "TT:2b:%llu", net_ntohl(header->timestamp));
 
     header->ssrc = net_htonl(session->ssrc);
 

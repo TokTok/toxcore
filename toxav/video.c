@@ -586,6 +586,24 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
         LOGGER_DEBUG(vc->log, "vc_iterate: rb_read p->len=%d data_type=%d", (int)full_data_len, (int)data_type);
         LOGGER_DEBUG(vc->log, "vc_iterate: rb_read rb size=%d", (int)rb_size((RingBuffer *)vc->vbuf_raw));
 
+		if ((int)data_type == (int)video_frame_type_KEYFRAME)
+		{
+			LOGGER_WARNING(vc->log, "RTP_RECV:seqnum=%ld percent=%d%% *I* length=%ld recv_len=%ld",
+				(long)header_v3->sequnum,
+				(int)(((float)header_v3->received_length_full/(float)full_data_len) * 100.0f),
+				(long)full_data_len,
+				(long)header_v3->received_length_full);
+		}
+		else
+		{
+			LOGGER_WARNING(vc->log, "RTP_RECV:seqnum=%ld percent=%d%% length=%ld recv_len=%ld",
+				(long)header_v3->sequnum,
+				(int)(((float)header_v3->received_length_full/(float)full_data_len) * 100.0f),
+				(long)full_data_len,
+				(long)header_v3->received_length_full);
+		}
+
+
 	    void *user_priv = NULL;
 	    if (header_v3->frame_record_timestamp > 0)
 	    {
@@ -886,6 +904,34 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
         vpx_codec_destroy(vc->encoder);
         memcpy(vc->encoder, &new_c, sizeof(new_c));
     }
+
+    return 0;
+}
+
+
+int vc_reconfigure_encoder_bitrate_only(VCSession *vc, uint32_t bit_rate)
+{
+    if (!vc) {
+        return -1;
+    }
+
+    vpx_codec_enc_cfg_t cfg2 = *vc->encoder->config.enc;
+    vpx_codec_err_t rc;
+
+    if (cfg2.rc_target_bitrate == bit_rate) {
+        return 0; /* Nothing changed */
+    }
+
+	/* bit rate changed */
+	LOGGER_WARNING(vc->log, "bitrate change (2) from: %u to: %u", (uint32_t)cfg2.rc_target_bitrate, (uint32_t)bit_rate);
+
+	cfg2.rc_target_bitrate = bit_rate;
+	rc = vpx_codec_enc_config_set(vc->encoder, &cfg2);
+
+	if (rc != VPX_CODEC_OK) {
+		LOGGER_ERROR(vc->log, "Failed to set (2) encoder control setting: %s", vpx_codec_err_to_string(rc));
+		return -1;
+	}
 
     return 0;
 }

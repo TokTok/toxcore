@@ -41,7 +41,7 @@ enum {
     video_frame_type_KEYFRAME, // = 1
 };
 
-#define VIDEO_KEEP_KEYFRAME_IN_BUFFER_FOR_MS (4)
+#define VIDEO_KEEP_KEYFRAME_IN_BUFFER_FOR_MS (20)
 #define USED_RTP_WORKBUFFER_COUNT (5)
 
 struct RTPHeader {
