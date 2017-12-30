@@ -809,7 +809,7 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
     if (cfg2.g_w == width && cfg2.g_h == height && kf_max_dist == -1) {
         /* Only bit rate changed */
 
-        LOGGER_INFO(vc->log, "bitrate change from: %u to: %u", (uint32_t)cfg2.rc_target_bitrate, (uint32_t)bit_rate);
+        LOGGER_INFO(vc->log, "bitrate change from: %u to: %u", (uint32_t)(cfg2.rc_target_bitrate/1000), (uint32_t)(bit_rate/1000));
 
         cfg2.rc_target_bitrate = bit_rate;
 
@@ -923,7 +923,7 @@ int vc_reconfigure_encoder_bitrate_only(VCSession *vc, uint32_t bit_rate)
     }
 
 	/* bit rate changed */
-	LOGGER_WARNING(vc->log, "bitrate change (2) from: %u to: %u", (uint32_t)cfg2.rc_target_bitrate, (uint32_t)bit_rate);
+	LOGGER_WARNING(vc->log, "bitrate change (2) from: %u to: %u", (uint32_t)(cfg2.rc_target_bitrate/1000), (uint32_t)(bit_rate/1000));
 
 	cfg2.rc_target_bitrate = bit_rate;
 	rc = vpx_codec_enc_config_set(vc->encoder, &cfg2);
