@@ -200,8 +200,14 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     if (VPX_DECODER_USED == VPX_VP8_CODEC) {
         LOGGER_WARNING(log, "Using VP8 codec for decoder (0)");
 
+#ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
         rc = vpx_codec_dec_init(vc->decoder, VIDEO_CODEC_DECODER_INTERFACE_VP8, &dec_cfg,
-                                VPX_CODEC_USE_FRAME_THREADING | VPX_CODEC_USE_POSTPROC);
+             VPX_CODEC_USE_FRAME_THREADING | VPX_CODEC_USE_POSTPROC | VPX_CODEC_USE_INPUT_FRAGMENTS);
+        LOGGER_WARNING(log, "Using VP8 using input fragments (0) rc=%d", (int)rc);
+#else
+        rc = vpx_codec_dec_init(vc->decoder, VIDEO_CODEC_DECODER_INTERFACE_VP8, &dec_cfg,
+             VPX_CODEC_USE_FRAME_THREADING | VPX_CODEC_USE_POSTPROC);
+#endif
 
         if (rc == VPX_CODEC_INCAPABLE) {
             LOGGER_WARNING(log, "Postproc not supported by this decoder (0)");
@@ -219,28 +225,28 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     }
 
 
+	if (VPX_DECODER_USED == VPX_VP8_CODEC) {
+		if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 1) {
+			// vp8_postproc_cfg_t pp = {VP8_DEBLOCK | VP8_DEMACROBLOCK | VP8_MFQE, 4, 0};
+			vp8_postproc_cfg_t pp = {VP8_DEBLOCK , 1, 0};
+			vpx_codec_err_t cc_res = vpx_codec_control(vc->decoder, VP8_SET_POSTPROC, &pp);
 
-    if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 1) {
-        // vp8_postproc_cfg_t pp = {VP8_DEBLOCK | VP8_DEMACROBLOCK | VP8_MFQE, 4, 0};
-        vp8_postproc_cfg_t pp = {VP8_DEBLOCK , 1, 0};
-        vpx_codec_err_t cc_res = vpx_codec_control(vc->decoder, VP8_SET_POSTPROC, &pp);
+			if (cc_res != VPX_CODEC_OK) {
+				LOGGER_WARNING(log, "Failed to turn on postproc");
+			} else {
+				LOGGER_WARNING(log, "turn on postproc: OK");
+			}
+		} else {
+			vp8_postproc_cfg_t pp = {0, 0, 0};
+			vpx_codec_err_t cc_res = vpx_codec_control(vc->decoder, VP8_SET_POSTPROC, &pp);
 
-        if (cc_res != VPX_CODEC_OK) {
-            LOGGER_WARNING(log, "Failed to turn on postproc");
-        } else {
-            LOGGER_WARNING(log, "turn on postproc: OK");
-        }
-    } else {
-        vp8_postproc_cfg_t pp = {0, 0, 0};
-        vpx_codec_err_t cc_res = vpx_codec_control(vc->decoder, VP8_SET_POSTPROC, &pp);
-
-        if (cc_res != VPX_CODEC_OK) {
-            LOGGER_WARNING(log, "Failed to turn OFF postproc");
-        } else {
-            LOGGER_WARNING(log, "Disable postproc: OK");
-        }
-    }
-
+			if (cc_res != VPX_CODEC_OK) {
+				LOGGER_WARNING(log, "Failed to turn OFF postproc");
+			} else {
+				LOGGER_WARNING(log, "Disable postproc: OK");
+			}
+		}
+	}
 
 
 
@@ -258,7 +264,15 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
 
     if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
         LOGGER_WARNING(log, "Using VP8 codec for encoder (0.1)");
-        rc = vpx_codec_enc_init(vc->encoder, VIDEO_CODEC_ENCODER_INTERFACE_VP8, &cfg, VPX_CODEC_USE_FRAME_THREADING);
+
+#ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
+        rc = vpx_codec_enc_init(vc->encoder, VIDEO_CODEC_ENCODER_INTERFACE_VP8, &cfg,
+		     VPX_CODEC_USE_FRAME_THREADING | VPX_CODEC_USE_OUTPUT_PARTITION);
+#else
+        rc = vpx_codec_enc_init(vc->encoder, VIDEO_CODEC_ENCODER_INTERFACE_VP8, &cfg,
+		     VPX_CODEC_USE_FRAME_THREADING);
+#endif
+
     } else {
         LOGGER_WARNING(log, "Using VP9 codec for encoder (0.1)");
         rc = vpx_codec_enc_init(vc->encoder, VIDEO_CODEC_ENCODER_INTERFACE_VP9, &cfg, VPX_CODEC_USE_FRAME_THREADING);
@@ -268,10 +282,6 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
         LOGGER_ERROR(log, "Failed to initialize encoder: %s", vpx_codec_err_to_string(rc));
         goto BASE_CLEANUP_1;
     }
-
-
-
-
 
 
 
@@ -301,6 +311,15 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
         goto BASE_CLEANUP_1;
     }
 
+
+    if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
+		rc = vpx_codec_control(vc->encoder, VP8E_SET_TOKEN_PARTITIONS, VP8_FOUR_TOKENPARTITION);
+
+		if (rc != VPX_CODEC_OK) {
+			LOGGER_ERROR(log, "Failed to set encoder token partitions: %s", vpx_codec_err_to_string(rc));
+		}
+	}
+
     /*
     VP9E_SET_TILE_COLUMNS
 
@@ -322,6 +341,14 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
 
     if (VPX_ENCODER_USED == VPX_VP9_CODEC) {
         rc = vpx_codec_control(vc->encoder, VP9E_SET_TILE_COLUMNS, VIDEO__VP9E_SET_TILE_COLUMNS);
+
+        if (rc != VPX_CODEC_OK) {
+            LOGGER_ERROR(log, "Failed to set encoder control setting: %s", vpx_codec_err_to_string(rc));
+            vpx_codec_destroy(vc->encoder);
+            goto BASE_CLEANUP_1;
+        }
+
+        rc = vpx_codec_control(vc->encoder, VP9E_SET_TILE_ROWS, VIDEO__VP9E_SET_TILE_ROWS);
 
         if (rc != VPX_CODEC_OK) {
             LOGGER_ERROR(log, "Failed to set encoder control setting: %s", vpx_codec_err_to_string(rc));
@@ -459,8 +486,15 @@ void video_switch_decoder(VCSession *vc)
     dec_cfg.h = VIDEO_CODEC_DECODER_MAX_HEIGHT;
 
     if (vc->is_using_vp9 == 0) {
+
+#ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
         rc = vpx_codec_dec_init(&new_d, VIDEO_CODEC_DECODER_INTERFACE_VP8, &dec_cfg,
-                                VPX_CODEC_USE_FRAME_THREADING | VPX_CODEC_USE_POSTPROC);
+             VPX_CODEC_USE_FRAME_THREADING | VPX_CODEC_USE_POSTPROC | VPX_CODEC_USE_INPUT_FRAGMENTS);
+        LOGGER_WARNING(vc->log, "Using VP8 using input fragments (1) rc=%d", (int)rc);
+#else
+        rc = vpx_codec_dec_init(&new_d, VIDEO_CODEC_DECODER_INTERFACE_VP8, &dec_cfg,
+             VPX_CODEC_USE_FRAME_THREADING | VPX_CODEC_USE_POSTPROC);
+#endif
 
         if (rc == VPX_CODEC_INCAPABLE) {
             LOGGER_WARNING(vc->log, "Postproc not supported by this decoder");
@@ -478,27 +512,28 @@ void video_switch_decoder(VCSession *vc)
     }
 
 
-    if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 1) {
-        // vp8_postproc_cfg_t pp = {VP8_DEBLOCK | VP8_DEMACROBLOCK | VP8_MFQE, 4, 0};
-        vp8_postproc_cfg_t pp = {VP8_DEBLOCK , 1, 0};
-        vpx_codec_err_t cc_res = vpx_codec_control(&new_d, VP8_SET_POSTPROC, &pp);
+	if (VPX_DECODER_USED == VPX_VP8_CODEC) {
+		if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 1) {
+			// vp8_postproc_cfg_t pp = {VP8_DEBLOCK | VP8_DEMACROBLOCK | VP8_MFQE, 4, 0};
+			vp8_postproc_cfg_t pp = {VP8_DEBLOCK , 1, 0};
+			vpx_codec_err_t cc_res = vpx_codec_control(&new_d, VP8_SET_POSTPROC, &pp);
 
-        if (cc_res != VPX_CODEC_OK) {
-            LOGGER_WARNING(vc->log, "Failed to turn on postproc");
-        } else {
-            LOGGER_WARNING(vc->log, "turn on postproc: OK");
-        }
-    } else {
-        vp8_postproc_cfg_t pp = {0, 0, 0};
-        vpx_codec_err_t cc_res = vpx_codec_control(&new_d, VP8_SET_POSTPROC, &pp);
+			if (cc_res != VPX_CODEC_OK) {
+				LOGGER_WARNING(vc->log, "Failed to turn on postproc");
+			} else {
+				LOGGER_WARNING(vc->log, "turn on postproc: OK");
+			}
+		} else {
+			vp8_postproc_cfg_t pp = {0, 0, 0};
+			vpx_codec_err_t cc_res = vpx_codec_control(&new_d, VP8_SET_POSTPROC, &pp);
 
-        if (cc_res != VPX_CODEC_OK) {
-            LOGGER_WARNING(vc->log, "Failed to turn OFF postproc");
-        } else {
-            LOGGER_WARNING(vc->log, "Disable postproc: OK");
-        }
-    }
-
+			if (cc_res != VPX_CODEC_OK) {
+				LOGGER_WARNING(vc->log, "Failed to turn OFF postproc");
+			} else {
+				LOGGER_WARNING(vc->log, "Disable postproc: OK");
+			}
+		}
+	}
 
     // now replace the current decoder
     vpx_codec_destroy(vc->decoder);
@@ -635,6 +670,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 				}
 			}
 			rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, (long)decode_time_auto_tune);
+
 			LOGGER_DEBUG(vc->log, "AUTOTUNE:MAX_DECODE_TIME_US=%ld us = %.1f fps", (long)decode_time_auto_tune, (float)(1000000.0f / decode_time_auto_tune));
 		}
 #else
@@ -652,6 +688,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 
 
         if (rc != VPX_CODEC_OK) {
+#ifdef VIDEO_DECODER_AUTOSWITCH_CODEC
             if (rc == 5) { // Bitstream not supported by this decoder
                 LOGGER_WARNING(vc->log, "Switching VPX Decoder");
                 video_switch_decoder(vc);
@@ -666,6 +703,9 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 				}
 
             } else if (rc == 7) {
+#else
+            if (rc == 7) {
+#endif
                 LOGGER_WARNING(vc->log, "Corrupt frame detected: data size=%d start byte=%d end byte=%d",
                                (int)full_data_len, (int)p->data[0], (int)p->data[full_data_len - 1]);
             } else {
@@ -711,10 +751,10 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 						free(dest->user_priv);
 					}
 
-					// LOGGER_ERROR(vc->log, "VIDEO: -FRAME OUT- %p %p %p",
-					// 			  (const uint8_t *)dest->planes[0],
-                    //               (const uint8_t *)dest->planes[1],
-                    //               (const uint8_t *)dest->planes[2]);
+					LOGGER_ERROR(vc->log, "VIDEO: -FRAME OUT- %p %p %p",
+								  (const uint8_t *)dest->planes[0],
+                                   (const uint8_t *)dest->planes[1],
+                                   (const uint8_t *)dest->planes[2]);
 
                     vc->vcb.first(vc->av, vc->friend_number, dest->d_w, dest->d_h,
                                   (const uint8_t *)dest->planes[0],
@@ -838,7 +878,14 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
 
         if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
             LOGGER_WARNING(vc->log, "Using VP8 codec for encoder");
-            rc = vpx_codec_enc_init(&new_c, VIDEO_CODEC_ENCODER_INTERFACE_VP8, &cfg, VPX_CODEC_USE_FRAME_THREADING);
+
+#ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
+        rc = vpx_codec_enc_init(&new_c, VIDEO_CODEC_ENCODER_INTERFACE_VP8, &cfg,
+		     VPX_CODEC_USE_FRAME_THREADING | VPX_CODEC_USE_OUTPUT_PARTITION);
+#else
+        rc = vpx_codec_enc_init(&new_c, VIDEO_CODEC_ENCODER_INTERFACE_VP8, &cfg,
+		     VPX_CODEC_USE_FRAME_THREADING);
+#endif
         } else {
             LOGGER_WARNING(vc->log, "Using VP9 codec for encoder");
             rc = vpx_codec_enc_init(&new_c, VIDEO_CODEC_ENCODER_INTERFACE_VP9, &cfg, VPX_CODEC_USE_FRAME_THREADING);
@@ -866,8 +913,24 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
             return -1;
         }
 
+		if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
+			rc = vpx_codec_control(&new_c, VP8E_SET_TOKEN_PARTITIONS, VP8_FOUR_TOKENPARTITION);
+
+			if (rc != VPX_CODEC_OK) {
+				LOGGER_ERROR(vc->log, "Failed to set encoder token partitions: %s", vpx_codec_err_to_string(rc));
+			}
+		}
+
         if (VPX_ENCODER_USED == VPX_VP9_CODEC) {
             rc = vpx_codec_control(&new_c, VP9E_SET_TILE_COLUMNS, VIDEO__VP9E_SET_TILE_COLUMNS);
+
+            if (rc != VPX_CODEC_OK) {
+                LOGGER_ERROR(vc->log, "Failed to set encoder control setting: %s", vpx_codec_err_to_string(rc));
+                vpx_codec_destroy(&new_c);
+                return -1;
+            }
+
+            rc = vpx_codec_control(&new_c, VP9E_SET_TILE_ROWS, VIDEO__VP9E_SET_TILE_ROWS);
 
             if (rc != VPX_CODEC_OK) {
                 LOGGER_ERROR(vc->log, "Failed to set encoder control setting: %s", vpx_codec_err_to_string(rc));

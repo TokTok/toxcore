@@ -242,7 +242,7 @@ uint32_t toxav_iteration_interval(const ToxAV *av)
     return av->calls ? av->interval : 200;
 }
 
-static void *video_play(void *data)
+static void *video_play_bg(void *data)
 {
     if (data)
     {
@@ -288,13 +288,13 @@ void toxav_iterate(ToxAV *av)
 
 
 #if !defined(_GNU_SOURCE)
-            video_play((void *)(i));
+            video_play_bg((void *)(i));
 #else
             // ------- multithreaded av_iterate for video -------
 	        pthread_t video_play_thread;
             LOGGER_TRACE(av->m->log, "video_play -----");
 
-            if (pthread_create(&video_play_thread, NULL, video_play, (void *)(i)))
+            if (pthread_create(&video_play_thread, NULL, video_play_bg, (void *)(i)))
             {
                 LOGGER_WARNING(av->m->log, "error creating video play thread");
             }
@@ -1075,6 +1075,8 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 
     ++call->video.second->frame_counter;
 
+    LOGGER_ERROR(av->m->log, "VPXENC:======================\n");
+    LOGGER_ERROR(av->m->log, "VPXENC:frame num=%ld\n", (long)call->video.second->frame_counter);
 
 
     { /* Send frames */
@@ -1084,7 +1086,17 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         while ((pkt = vpx_codec_get_cx_data(call->video.second->encoder, &iter)) != NULL) {
             if (pkt->kind == VPX_CODEC_CX_FRAME_PKT) {
                 const int keyframe = (pkt->data.frame.flags & VPX_FRAME_IS_KEY) != 0;
-		    
+                if ((pkt->data.frame.flags & VPX_FRAME_IS_KEY) != 0)
+                {
+                    LOGGER_WARNING(av->m->log, "VPXENC:VPX_FRAME_IS_FRAGMENT:*yes* size=%lld pid=%d\n",
+                     (long long)pkt->data.frame.sz, (int)pkt->data.frame.partition_id);
+                }
+                else
+                {
+                    LOGGER_WARNING(av->m->log, "VPXENC:VPX_FRAME_IS_FRAGMENT:-no- size=%lld pid=%d\n",
+                     (long long)pkt->data.frame.sz, (int)pkt->data.frame.partition_id);
+                }
+
                 // use the record timestamp that was actually used for this frame
                 video_frame_record_timestamp = pkt->data.frame.pts;
 
