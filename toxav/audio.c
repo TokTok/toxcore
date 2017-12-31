@@ -427,6 +427,8 @@ static int jbuf_write(Logger *log, ACSession *ac, struct RingBuffer *q, struct R
                     if (rb_write(q, (void *)empty_m, 1) != NULL)
                     {
                         LOGGER_WARNING(log, "AudioFramesIN: error in rb_write");
+                        // TODO: possible mem leak!!
+                        // free(empty_m);
                     }
                 }
             }

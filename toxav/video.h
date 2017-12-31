@@ -50,28 +50,39 @@
 #define VPX_MAX_DIST_NORMAL (30)
 #define VPX_MAX_DIST_START (30)
 
-#define VPX_MAX_ENCODER_THREADS (4)
-#define VPX_MAX_DECODER_THREADS (4)
+#define VPX_MAX_ENCODER_THREADS (8)
+#define VPX_MAX_DECODER_THREADS (8)
 #define VIDEO__VP9E_SET_TILE_COLUMNS (2)
 #define VIDEO__VP9E_SET_TILE_ROWS (2)
-#define VIDEO__VP9_KF_MAX_DIST (60)
-#define VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED (1)
+#define VIDEO__VP9_KF_MAX_DIST (100)
+#define VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED (0)
 #define VIDEO_CODEC_ENCODER_USE_FRAGMENTS 1
+#define VIDEO_CODEC_FRAGMENT_NUMS (2)
+#define VIDEO_CODEC_FRAGMENT_VPX_NUMS VP8_ONE_TOKENPARTITION
+// #define VIDEO_CODEC_FRAGMENT_VPX_NUMS VP8_FOUR_TOKENPARTITION
+// #define VIDEO_CODEC_FRAGMENT_VPX_NUMS VP8_EIGHT_TOKENPARTITION
+#define VIDEO_MAX_FRAGMENT_BUFFER_COUNT (100)
 
+#ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
+#define VIDEO_RINGBUFFER_BUFFER_ELEMENTS (8 * VIDEO_CODEC_FRAGMENT_NUMS) // this buffer has normally max. 1 entry
+#define VIDEO_RINGBUFFER_FILL_THRESHOLD (2 * VIDEO_CODEC_FRAGMENT_NUMS) // start decoding at lower quality
+#define VIDEO_RINGBUFFER_DROP_THRESHOLD (5 * VIDEO_CODEC_FRAGMENT_NUMS) // start dropping incoming frames (except index frames)
+#else
 #define VIDEO_RINGBUFFER_BUFFER_ELEMENTS (8) // this buffer has normally max. 1 entry
 #define VIDEO_RINGBUFFER_FILL_THRESHOLD (2) // start decoding at lower quality
 #define VIDEO_RINGBUFFER_DROP_THRESHOLD (5) // start dropping incoming frames (except index frames)
+#endif
 
 #define VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE 1
-#define VIDEO_DECODER_AUTOSWITCH_CODEC 1
+// #define VIDEO_DECODER_AUTOSWITCH_CODEC 1
 #define VIDEO_DECODER_MINFPS_AUTOTUNE (10)
 #define VIDEO_DECODER_LEEWAY_IN_MS_AUTOTUNE (10)
 
 #define VPX_VP8_CODEC (0)
 #define VPX_VP9_CODEC (1)
 
-#define VPX_ENCODER_USED VPX_VP9_CODEC
-#define VPX_DECODER_USED VPX_VP9_CODEC // this will switch automatically
+#define VPX_ENCODER_USED VPX_VP8_CODEC
+#define VPX_DECODER_USED VPX_VP8_CODEC // this will switch automatically
 
 
 #include <pthread.h>
@@ -93,6 +104,11 @@ typedef struct VCSession_s {
     uint32_t lcfd; /* Last calculated frame duration for incoming video payload */
     
     uint64_t last_decoded_frame_ts;
+    uint8_t  flag_end_video_fragment;
+    int32_t  last_seen_fragment_num;
+    
+    void *vpx_frames_buf_list[VIDEO_MAX_FRAGMENT_BUFFER_COUNT];
+    uint16_t fragment_buf_counter;
 
     Logger *log;
     ToxAV *av;

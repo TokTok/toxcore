@@ -143,7 +143,8 @@ int rtp_stop_receiving(RTPSession *session)
  * input is raw vpx data. length_v3 is the length of the raw data
  * HINT: this function must be thread safe!
  */
-int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length_v3, uint64_t frame_record_timestamp, Logger *log)
+int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length_v3,
+	uint64_t frame_record_timestamp, int32_t fragment_num, Logger *log)
 {
     if (!session) {
         LOGGER_ERROR(log, "No session!");
@@ -225,14 +226,15 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length_v3, 
 
     header_v3->data_length_lower = net_htons(length_safe);
     header_v3->data_length_full = net_htonl(length_v3); // without header
+    header_v3->fragment_num = net_htonl(fragment_num);
 
     header_v3->offset_lower = net_htons((uint16_t)(0));
     header_v3->offset_full = net_htonl(0);
 
 	header_v3->frame_record_timestamp = htonll(frame_record_timestamp);
-    LOGGER_WARNING(session->m->log, "TT:3:%llu", frame_record_timestamp);
-    LOGGER_WARNING(session->m->log, "TT:4:%llu", header_v3->frame_record_timestamp);
-    LOGGER_WARNING(session->m->log, "TT:4b:%llu", ntohll(header_v3->frame_record_timestamp));
+    LOGGER_DEBUG(session->m->log, "TT:3:%llu", frame_record_timestamp);
+    LOGGER_DEBUG(session->m->log, "TT:4:%llu", header_v3->frame_record_timestamp);
+    LOGGER_DEBUG(session->m->log, "TT:4b:%llu", ntohll(header_v3->frame_record_timestamp));
 
 
     header_v3->is_keyframe = is_keyframe;
@@ -393,6 +395,10 @@ static struct RTPMessage *new_message_v3(size_t allocate_len, const uint8_t *dat
     // printf("XTB:1:%llu\n", header_v3->frame_record_timestamp);
     header_v3->frame_record_timestamp = ntohll(header_v3->frame_record_timestamp);
     // printf("XTB:2:%llu\n", header_v3->frame_record_timestamp);
+
+    // printf("XTB:1:%ld\n", (long)header_v3->fragment_num);
+    header_v3->fragment_num = ntohl(header_v3->fragment_num);
+    // printf("XTB:2:%ld\n", (long)header_v3->fragment_num);
 
     return msg;
 }
@@ -555,6 +561,8 @@ static uint8_t fill_data_into_slot(Logger *log, struct RTPWorkBufferList *wkbl, 
             // frame_record_timestamp
             // LOGGER_INFO(log, "new message v3 TT2 ts=%llu", net_ntohl(header_v3->timestamp));
             wkbl->work_buffer[slot].sequnum = net_ntohs(header_v3->sequnum);
+            wkbl->work_buffer[slot].fragment_num = net_ntohl(header_v3->fragment_num);
+            LOGGER_DEBUG(log, "fragnum=%ld", (long)wkbl->work_buffer[slot].fragment_num);
 
             wkbl->next_free_entry++;
             LOGGER_DEBUG(log, "wkbl->next_free_entry:001=%d", wkbl->next_free_entry);
@@ -646,6 +654,9 @@ int handle_rtp_packet_v3(Messenger *m, uint32_t friendnumber, const uint8_t *dat
     uint32_t length_v3 = net_htonl(header_v3->data_length_full); // without header
     uint32_t offset_v3 = net_htonl(header_v3->offset_full); // without header
     uint8_t is_keyframe = (int)header_v3->is_keyframe;
+    int32_t fragment_num = net_htonl(header_v3->fragment_num);
+    
+    LOGGER_DEBUG(m->log, "handle_rtp_packet_v3: fragment_num=%ld", (long)fragment_num);
 
     // LOGGER_WARNING(m->log, "frame timestamp TT2 %llu", ntohll(header_v3->frame_record_timestamp));
 
@@ -735,7 +746,8 @@ int handle_rtp_packet_v3(Messenger *m, uint32_t friendnumber, const uint8_t *dat
 
 #if 0
 
-        struct RTPMessage *m_new = new_message_v3(length_v3, data, length, 0, length_v3, (uint8_t)header_v3->is_keyframe);
+        struct RTPMessage *m_new = new_message_v3(length_v3, data, length, 0,
+			length_v3, (uint8_t)header_v3->is_keyframe);
         // memcpy(&m_new->header, data, length);
 
         if (session->mcb) {

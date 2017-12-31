@@ -311,14 +311,15 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
         goto BASE_CLEANUP_1;
     }
 
-
+#ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
     if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
-		rc = vpx_codec_control(vc->encoder, VP8E_SET_TOKEN_PARTITIONS, VP8_FOUR_TOKENPARTITION);
+		rc = vpx_codec_control(vc->encoder, VP8E_SET_TOKEN_PARTITIONS, VIDEO_CODEC_FRAGMENT_VPX_NUMS);
 
 		if (rc != VPX_CODEC_OK) {
 			LOGGER_ERROR(log, "Failed to set encoder token partitions: %s", vpx_codec_err_to_string(rc));
 		}
 	}
+#endif
 
     /*
     VP9E_SET_TILE_COLUMNS
@@ -409,6 +410,15 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc->av = av;
     vc->log = log;
     vc->last_decoded_frame_ts = 0;
+    vc->flag_end_video_fragment = 0;
+    vc->last_seen_fragment_num = 0;
+    vc->fragment_buf_counter = 0;
+    
+    uint16_t jk=0;
+    for(jk=0;jk<(uint16_t)VIDEO_MAX_FRAGMENT_BUFFER_COUNT;jk++)
+    {
+		vc->vpx_frames_buf_list[jk] = NULL;
+	}
 
     return vc;
 
@@ -623,28 +633,30 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 
 		if ((int)data_type == (int)video_frame_type_KEYFRAME)
 		{
-			LOGGER_WARNING(vc->log, "RTP_RECV:seqnum=%ld percent=%d%% *I* length=%ld recv_len=%ld",
+			LOGGER_WARNING(vc->log, "RTP_RECV:sn=%ld fn=%ld pct=%d%% *I* len=%ld recv_len=%ld",
 				(long)header_v3->sequnum,
+				(long)header_v3->fragment_num,
 				(int)(((float)header_v3->received_length_full/(float)full_data_len) * 100.0f),
 				(long)full_data_len,
 				(long)header_v3->received_length_full);
 		}
 		else
 		{
-			LOGGER_WARNING(vc->log, "RTP_RECV:seqnum=%ld percent=%d%% length=%ld recv_len=%ld",
+			LOGGER_WARNING(vc->log, "RTP_RECV:sn=%ld fn=%ld pct=%d%% len=%ld recv_len=%ld",
 				(long)header_v3->sequnum,
+				(long)header_v3->fragment_num,
 				(int)(((float)header_v3->received_length_full/(float)full_data_len) * 100.0f),
 				(long)full_data_len,
 				(long)header_v3->received_length_full);
 		}
 
-
+		long decoder_soft_dealine_value_used = 0;
 	    void *user_priv = NULL;
 	    if (header_v3->frame_record_timestamp > 0)
 	    {
-		struct vpx_frame_user_data *vpx_u_data = calloc(1, sizeof(struct vpx_frame_user_data));
-		vpx_u_data->record_timestamp = header_v3->frame_record_timestamp;
-		user_priv = vpx_u_data;
+			struct vpx_frame_user_data *vpx_u_data = calloc(1, sizeof(struct vpx_frame_user_data));
+			vpx_u_data->record_timestamp = header_v3->frame_record_timestamp;
+			user_priv = vpx_u_data;
 	    }
 
 		if ((int)rb_size((RingBuffer *)vc->vbuf_raw) > (int)VIDEO_RINGBUFFER_FILL_THRESHOLD)
@@ -659,6 +671,9 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 			if (vc->last_decoded_frame_ts > 0)
 			{
 				decode_time_auto_tune = (current_time_monotonic() - vc->last_decoded_frame_ts) * 1000;
+#ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
+				decode_time_auto_tune = decode_time_auto_tune * VIDEO_CODEC_FRAGMENT_NUMS;
+#endif
 				if (decode_time_auto_tune > (1000000 / VIDEO_DECODER_MINFPS_AUTOTUNE))
 				{
 					decode_time_auto_tune = (1000000 / VIDEO_DECODER_MINFPS_AUTOTUNE);
@@ -669,6 +684,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 					decode_time_auto_tune = decode_time_auto_tune - (VIDEO_DECODER_LEEWAY_IN_MS_AUTOTUNE * 1000); // give x ms more room
 				}
 			}
+			decoder_soft_dealine_value_used = decode_time_auto_tune;
 			rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, (long)decode_time_auto_tune);
 
 			LOGGER_DEBUG(vc->log, "AUTOTUNE:MAX_DECODE_TIME_US=%ld us = %.1f fps", (long)decode_time_auto_tune, (float)(1000000.0f / decode_time_auto_tune));
@@ -676,6 +692,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 #else
 		else
 		{
+			decoder_soft_dealine_value_used = MAX_DECODE_TIME_US;
 			rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, MAX_DECODE_TIME_US);
 			// LOGGER_WARNING(vc->log, "skipping:MAX_DECODE_TIME_US=%d", (int)MAX_DECODE_TIME_US);
 		}
@@ -715,13 +732,53 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 
         if (rc == VPX_CODEC_OK) {
 
+#ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
+
+			int save_current_buf = 0;
+			if (header_v3->fragment_num < vc->last_seen_fragment_num)
+			{
+				if (vc->flag_end_video_fragment == 0)
+				{
+					LOGGER_WARNING(vc->log, "endframe:x:%d", (int)header_v3->fragment_num);
+					vc->flag_end_video_fragment = 1;
+					save_current_buf = 1;
+					vpx_codec_decode(vc->decoder, NULL, 0, user_priv, decoder_soft_dealine_value_used);
+				}
+				else
+				{
+					vc->flag_end_video_fragment = 0;
+					LOGGER_WARNING(vc->log, "reset:flag:%d", (int)header_v3->fragment_num);
+				}
+			}
+			else if ((long)header_v3->fragment_num == (long)(VIDEO_CODEC_FRAGMENT_NUMS - 1))
+			{
+				LOGGER_WARNING(vc->log, "endframe:N:%d", (int)(VIDEO_CODEC_FRAGMENT_NUMS - 1));
+				vc->flag_end_video_fragment = 1;
+				vpx_codec_decode(vc->decoder, NULL, 0, user_priv, decoder_soft_dealine_value_used);
+			}
+
+			// push buffer to list
+			if (vc->fragment_buf_counter < (uint16_t)(VIDEO_MAX_FRAGMENT_BUFFER_COUNT - 1))
+			{
+				vc->vpx_frames_buf_list[vc->fragment_buf_counter] = p;
+				vc->fragment_buf_counter++;
+			}
+			else
+			{
+				LOGGER_WARNING(vc->log, "mem leak: VIDEO_MAX_FRAGMENT_BUFFER_COUNT");
+			}
+
+			vc->last_seen_fragment_num = header_v3->fragment_num;
+#endif
+
             /* Play decoded images */
             vpx_codec_iter_t iter = NULL;
             vpx_image_t *dest = NULL;
 
             while ((dest = vpx_codec_get_frame(vc->decoder, &iter)) != NULL) {
-		    // we have a frame, set return code
-		    ret_value = 1;
+				// we have a frame, set return code
+				ret_value = 1;
+
                 if (vc->vcb.first) {
 
 					// what is the audio to video latency?
@@ -751,7 +808,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 						free(dest->user_priv);
 					}
 
-					LOGGER_ERROR(vc->log, "VIDEO: -FRAME OUT- %p %p %p",
+					LOGGER_DEBUG(vc->log, "VIDEO: -FRAME OUT- %p %p %p",
 								  (const uint8_t *)dest->planes[0],
                                    (const uint8_t *)dest->planes[1],
                                    (const uint8_t *)dest->planes[2]);
@@ -765,7 +822,38 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 
                 vpx_img_free(dest); // is this needed? none of the VPx examples show that
             }
+
+#ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
+
+            if (vc->flag_end_video_fragment == 1)
+            {
+				LOGGER_ERROR(vc->log, "free vpx_frames_buf_list:count=%d", (int)vc->fragment_buf_counter);
+				uint16_t jk=0;
+				if (save_current_buf == 1)
+				{
+					for(jk=0;jk<(vc->fragment_buf_counter - 1);jk++)
+					{
+						free(vc->vpx_frames_buf_list[vc->fragment_buf_counter]);
+						vc->vpx_frames_buf_list[vc->fragment_buf_counter] = NULL;
+					}
+					vc->vpx_frames_buf_list[0] = vc->vpx_frames_buf_list[vc->fragment_buf_counter];
+					vc->vpx_frames_buf_list[vc->fragment_buf_counter] = NULL;
+					vc->fragment_buf_counter = 1;
+				}
+				else
+				{
+					for(jk=0;jk<vc->fragment_buf_counter;jk++)
+					{
+						free(vc->vpx_frames_buf_list[vc->fragment_buf_counter]);
+						vc->vpx_frames_buf_list[vc->fragment_buf_counter] = NULL;
+					}
+					vc->fragment_buf_counter = 0;
+				}
+			}
+#else
             free(p);
+#endif
+            
         } else {
             free(p);
         }
@@ -811,7 +899,7 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
 
     pthread_mutex_lock(vc->queue_mutex);
 
-    // LOGGER_WARNING(vc->log, "TT:queue:V:%llu", header_v3->frame_record_timestamp);
+    LOGGER_DEBUG(vc->log, "TT:queue:V:fragnum=%ld", (long)header_v3->fragment_num);
 
     if ((((uint8_t)header_v3->protocol_version) == 3) &&
             (((uint8_t)header_v3->pt) == (rtp_TypeVideo % 128))
@@ -913,13 +1001,15 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
             return -1;
         }
 
+#ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
 		if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
-			rc = vpx_codec_control(&new_c, VP8E_SET_TOKEN_PARTITIONS, VP8_FOUR_TOKENPARTITION);
+			rc = vpx_codec_control(&new_c, VP8E_SET_TOKEN_PARTITIONS, VIDEO_CODEC_FRAGMENT_VPX_NUMS);
 
 			if (rc != VPX_CODEC_OK) {
 				LOGGER_ERROR(vc->log, "Failed to set encoder token partitions: %s", vpx_codec_err_to_string(rc));
 			}
 		}
+#endif
 
         if (VPX_ENCODER_USED == VPX_VP9_CODEC) {
             rc = vpx_codec_control(&new_c, VP9E_SET_TILE_COLUMNS, VIDEO__VP9E_SET_TILE_COLUMNS);
