@@ -411,7 +411,13 @@ static int jbuf_write(Logger *log, ACSession *ac, struct RingBuffer *q, struct R
         // TODO: !!! compensate for when seqnum rolls over !!!
         // TODO: !!! compensate for when seqnum rolls over !!!
         // TODO: !!! compensate for when seqnum rolls over !!!
-        if (m->header.sequnum > ac->lp_seqnum)
+
+        // m->header.seqnum is of size "uint16_t"
+        if (
+                ((int32_t)m->header.sequnum > ac->lp_seqnum)
+                ||
+                ((m->header.sequnum < 8) && (ac->lp_seqnum > (UINT16_MAX - 7)))
+           )
         {
             int64_t diff = (m->header.sequnum - ac->lp_seqnum);
             if (diff > 1)
