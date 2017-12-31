@@ -236,6 +236,15 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
 			} else {
 				LOGGER_WARNING(log, "turn on postproc: OK");
 			}
+		} else if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 2) {
+			vp8_postproc_cfg_t pp = {VP8_DEBLOCK | VP8_DEMACROBLOCK | VP8_MFQE, 1, 0};
+			vpx_codec_err_t cc_res = vpx_codec_control(vc->decoder, VP8_SET_POSTPROC, &pp);
+
+			if (cc_res != VPX_CODEC_OK) {
+				LOGGER_WARNING(log, "Failed to turn on postproc");
+			} else {
+				LOGGER_WARNING(log, "turn on postproc: OK");
+			}
 		} else {
 			vp8_postproc_cfg_t pp = {0, 0, 0};
 			vpx_codec_err_t cc_res = vpx_codec_control(vc->decoder, VP8_SET_POSTPROC, &pp);
@@ -414,9 +423,6 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc->last_seen_fragment_num = 0;
     vc->last_seen_fragment_seqnum = -1;
     vc->fragment_buf_counter = 0;
-    
-    vc->cc1 = 0;
-    vc->cc2 = 0;
 
     uint16_t jk=0;
     for(jk=0;jk<(uint16_t)VIDEO_MAX_FRAGMENT_BUFFER_COUNT;jk++)
@@ -544,6 +550,15 @@ void video_switch_decoder(VCSession *vc)
 			} else {
 				LOGGER_WARNING(vc->log, "turn on postproc: OK");
 			}
+		} else if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 2) {
+			vp8_postproc_cfg_t pp = {VP8_DEBLOCK | VP8_DEMACROBLOCK | VP8_MFQE, 1, 0};
+			vpx_codec_err_t cc_res = vpx_codec_control(&new_d, VP8_SET_POSTPROC, &pp);
+
+			if (cc_res != VPX_CODEC_OK) {
+				LOGGER_WARNING(vc->log, "Failed to turn on postproc");
+			} else {
+				LOGGER_WARNING(vc->log, "turn on postproc: OK");
+			}
 		} else {
 			vp8_postproc_cfg_t pp = {0, 0, 0};
 			vpx_codec_err_t cc_res = vpx_codec_control(&new_d, VP8_SET_POSTPROC, &pp);
@@ -590,7 +605,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 		if (header_v3_0->sequnum < vc->last_seen_fragment_seqnum)
 		{
 			// drop frame with too old sequence number
-			LOGGER_WARNING(vc->log, "skipping incoming video frame (0) with sn=%d", (int)header_v3_0->sequnum);
+			LOGGER_DEBUG(vc->log, "skipping incoming video frame (0) with sn=%d", (int)header_v3_0->sequnum);
 			vc->last_seen_fragment_seqnum = header_v3_0->sequnum;
 			free(p);
 			pthread_mutex_unlock(vc->queue_mutex);
@@ -655,6 +670,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
         LOGGER_DEBUG(vc->log, "vc_iterate: rb_read p->len=%d data_type=%d", (int)full_data_len, (int)data_type);
         LOGGER_DEBUG(vc->log, "vc_iterate: rb_read rb size=%d", (int)rb_size((RingBuffer *)vc->vbuf_raw));
 
+#if 0
 		if ((int)data_type == (int)video_frame_type_KEYFRAME)
 		{
 			LOGGER_WARNING(vc->log, "RTP_RECV:sn=%ld fn=%ld pct=%d%% *I* len=%ld recv_len=%ld",
@@ -673,6 +689,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 				(long)full_data_len,
 				(long)header_v3->received_length_full);
 		}
+#endif
 
 		long decoder_soft_dealine_value_used = VPX_DL_REALTIME;
 	    void *user_priv = NULL;
@@ -689,7 +706,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 		if ((int)rb_size((RingBuffer *)vc->vbuf_raw) > (int)VIDEO_RINGBUFFER_FILL_THRESHOLD)
 		{
 			rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, VPX_DL_REALTIME);
-			LOGGER_WARNING(vc->log, "skipping:REALTIME");
+			LOGGER_DEBUG(vc->log, "skipping:REALTIME");
 		}
 #ifdef VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE
 		else
@@ -730,7 +747,6 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 		vc->last_decoded_frame_ts = current_time_monotonic();
 #endif
 
-		vc->cc1++;
 
         if (rc != VPX_CODEC_OK) {
 #ifdef VIDEO_DECODER_AUTOSWITCH_CODEC
@@ -754,7 +770,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
                 LOGGER_WARNING(vc->log, "Corrupt frame detected: data size=%d start byte=%d end byte=%d",
                                (int)full_data_len, (int)p->data[0], (int)p->data[full_data_len - 1]);
             } else {
-                LOGGER_ERROR(vc->log, "Error decoding video: err-num=%d err-str=%s", (int)rc, vpx_codec_err_to_string(rc));
+                // LOGGER_ERROR(vc->log, "Error decoding video: err-num=%d err-str=%s", (int)rc, vpx_codec_err_to_string(rc));
             }
         }
 
@@ -767,7 +783,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 			{
 				if (vc->flag_end_video_fragment == 0)
 				{
-					LOGGER_WARNING(vc->log, "endframe:x:%d", (int)header_v3->fragment_num);
+					//LOGGER_WARNING(vc->log, "endframe:x:%d", (int)header_v3->fragment_num);
 					vc->flag_end_video_fragment = 1;
 					save_current_buf = 1;
 					vpx_codec_decode(vc->decoder, NULL, 0, user_priv, decoder_soft_dealine_value_used);
@@ -775,14 +791,17 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 				else
 				{
 					vc->flag_end_video_fragment = 0;
-					LOGGER_WARNING(vc->log, "reset:flag:%d", (int)header_v3->fragment_num);
+					//LOGGER_WARNING(vc->log, "reset:flag:%d", (int)header_v3->fragment_num);
 				}
 			}
-			else if ((long)header_v3->fragment_num == (long)(VIDEO_CODEC_FRAGMENT_NUMS - 1))
+			else
 			{
-				LOGGER_WARNING(vc->log, "endframe:N:%d", (int)(VIDEO_CODEC_FRAGMENT_NUMS - 1));
-				vc->flag_end_video_fragment = 1;
-				vpx_codec_decode(vc->decoder, NULL, 0, user_priv, decoder_soft_dealine_value_used);
+				if ((long)header_v3->fragment_num == (long)(VIDEO_CODEC_FRAGMENT_NUMS - 1))
+				{
+					//LOGGER_WARNING(vc->log, "endframe:N:%d", (int)(VIDEO_CODEC_FRAGMENT_NUMS - 1));
+					vc->flag_end_video_fragment = 1;
+					vpx_codec_decode(vc->decoder, NULL, 0, user_priv, decoder_soft_dealine_value_used);
+				}
 			}
 
 			// push buffer to list
@@ -855,14 +874,13 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 
             if (vc->flag_end_video_fragment == 1)
             {
-				LOGGER_ERROR(vc->log, "free vpx_frames_buf_list:count=%d", (int)vc->fragment_buf_counter);
+				//LOGGER_ERROR(vc->log, "free vpx_frames_buf_list:count=%d", (int)vc->fragment_buf_counter);
 				uint16_t jk=0;
 				if (save_current_buf == 1)
 				{
 					for(jk=0;jk<(vc->fragment_buf_counter - 1);jk++)
 					{
 						free(vc->vpx_frames_buf_list[jk]);
-						vc->cc2++;
 						vc->vpx_frames_buf_list[jk] = NULL;
 					}
 					vc->vpx_frames_buf_list[0] = vc->vpx_frames_buf_list[vc->fragment_buf_counter];
@@ -873,7 +891,6 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 				{
 					for(jk=0;jk<vc->fragment_buf_counter;jk++)
 					{
-						vc->cc2++;
 						free(vc->vpx_frames_buf_list[jk]);
 						vc->vpx_frames_buf_list[jk] = NULL;
 					}
@@ -881,16 +898,12 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 				}
 			}
 #else
-			vc->cc2++;
             free(p);
 #endif
             
         } else {
-			vc->cc2++;
             free(p);
         }
-
-		LOGGER_WARNING(vc->log, "FREE_: alloc=%ld free=%ld", (long)vc->cc1, (long)vc->cc2);
 
         return ret_value;
     } else {

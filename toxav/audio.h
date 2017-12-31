@@ -29,7 +29,7 @@
 #include <pthread.h>
 
 
-#define AUDIO_JITTERBUFFER_COUNT (30) // ORIG = 3
+#define AUDIO_JITTERBUFFER_COUNT (40) // ORIG = 3
 #define AUDIO_JITTERBUFFER_FILL_THRESHOLD (8) // this must be lower than the above value!
 #define AUDIO_JITTERBUFFER_SKIP_THRESHOLD (14)
 
