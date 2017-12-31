@@ -55,12 +55,12 @@
 #define VIDEO__VP9E_SET_TILE_COLUMNS (2)
 #define VIDEO__VP9E_SET_TILE_ROWS (2)
 #define VIDEO__VP9_KF_MAX_DIST (100)
-#define VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED (0)
+#define VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED (1)
 #define VIDEO_CODEC_ENCODER_USE_FRAGMENTS 1
-#define VIDEO_CODEC_FRAGMENT_NUMS (2)
-#define VIDEO_CODEC_FRAGMENT_VPX_NUMS VP8_ONE_TOKENPARTITION
+#define VIDEO_CODEC_FRAGMENT_NUMS (9)
+// #define VIDEO_CODEC_FRAGMENT_VPX_NUMS VP8_ONE_TOKENPARTITION
 // #define VIDEO_CODEC_FRAGMENT_VPX_NUMS VP8_FOUR_TOKENPARTITION
-// #define VIDEO_CODEC_FRAGMENT_VPX_NUMS VP8_EIGHT_TOKENPARTITION
+#define VIDEO_CODEC_FRAGMENT_VPX_NUMS VP8_EIGHT_TOKENPARTITION
 #define VIDEO_MAX_FRAGMENT_BUFFER_COUNT (100)
 
 #ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
@@ -106,6 +106,7 @@ typedef struct VCSession_s {
     uint64_t last_decoded_frame_ts;
     uint8_t  flag_end_video_fragment;
     int32_t  last_seen_fragment_num;
+    int32_t  last_seen_fragment_seqnum;
     
     void *vpx_frames_buf_list[VIDEO_MAX_FRAGMENT_BUFFER_COUNT];
     uint16_t fragment_buf_counter;
@@ -113,6 +114,9 @@ typedef struct VCSession_s {
     Logger *log;
     ToxAV *av;
     uint32_t friend_number;
+    
+    uint32_t cc1;
+    uint32_t cc2;
 
     PAIR(toxav_video_receive_frame_cb *, void *) vcb; /* Video frame receive callback */
 

@@ -412,8 +412,12 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc->last_decoded_frame_ts = 0;
     vc->flag_end_video_fragment = 0;
     vc->last_seen_fragment_num = 0;
+    vc->last_seen_fragment_seqnum = -1;
     vc->fragment_buf_counter = 0;
     
+    vc->cc1 = 0;
+    vc->cc2 = 0;
+
     uint16_t jk=0;
     for(jk=0;jk<(uint16_t)VIDEO_MAX_FRAGMENT_BUFFER_COUNT;jk++)
     {
@@ -437,16 +441,23 @@ void vc_kill(VCSession *vc)
         return;
     }
 
+	int jk;
+	for(jk=0;jk<vc->fragment_buf_counter;jk++)
+	{
+		free(vc->vpx_frames_buf_list[jk]);
+		vc->vpx_frames_buf_list[jk] = NULL;
+	}
+	vc->fragment_buf_counter = 0;
+
+
     vpx_codec_destroy(vc->encoder);
     vpx_codec_destroy(vc->decoder);
 
     void *p;
     uint8_t dummy;
-
     while (rb_read((RingBuffer *)vc->vbuf_raw, &p, &dummy)) {
         free(p);
     }
-
     rb_kill((RingBuffer *)vc->vbuf_raw);
 
     pthread_mutex_destroy(vc->queue_mutex);
@@ -574,6 +585,19 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 
     if (rb_read((RingBuffer *)vc->vbuf_raw, (void **)&p, &data_type))
     {
+        const struct RTPHeaderV3 *header_v3_0 = (void *) & (p->header);
+
+		if (header_v3_0->sequnum < vc->last_seen_fragment_seqnum)
+		{
+			// drop frame with too old sequence number
+			LOGGER_WARNING(vc->log, "skipping incoming video frame (0) with sn=%d", (int)header_v3_0->sequnum);
+			vc->last_seen_fragment_seqnum = header_v3_0->sequnum;
+			free(p);
+			pthread_mutex_unlock(vc->queue_mutex);
+			return 0;
+		}
+		// TODO: check for seqnum rollover!!
+		vc->last_seen_fragment_seqnum = header_v3_0->sequnum;
 
 		if (skip_video_flag == 1)
 		{
@@ -600,7 +624,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 				{
 					// LOGGER_WARNING(vc->log, "skipping:003");
 					free(p);
-					LOGGER_DEBUG(vc->log, "skipping all incoming video frames (2)");
+					LOGGER_WARNING(vc->log, "skipping all incoming video frames (2)");
 					void *p2;
 					uint8_t dummy;
 
@@ -650,13 +674,16 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 				(long)header_v3->received_length_full);
 		}
 
-		long decoder_soft_dealine_value_used = 0;
+		long decoder_soft_dealine_value_used = VPX_DL_REALTIME;
 	    void *user_priv = NULL;
 	    if (header_v3->frame_record_timestamp > 0)
 	    {
+#ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
+#else
 			struct vpx_frame_user_data *vpx_u_data = calloc(1, sizeof(struct vpx_frame_user_data));
 			vpx_u_data->record_timestamp = header_v3->frame_record_timestamp;
 			user_priv = vpx_u_data;
+#endif
 	    }
 
 		if ((int)rb_size((RingBuffer *)vc->vbuf_raw) > (int)VIDEO_RINGBUFFER_FILL_THRESHOLD)
@@ -703,6 +730,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 		vc->last_decoded_frame_ts = current_time_monotonic();
 #endif
 
+		vc->cc1++;
 
         if (rc != VPX_CODEC_OK) {
 #ifdef VIDEO_DECODER_AUTOSWITCH_CODEC
@@ -833,8 +861,9 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 				{
 					for(jk=0;jk<(vc->fragment_buf_counter - 1);jk++)
 					{
-						free(vc->vpx_frames_buf_list[vc->fragment_buf_counter]);
-						vc->vpx_frames_buf_list[vc->fragment_buf_counter] = NULL;
+						free(vc->vpx_frames_buf_list[jk]);
+						vc->cc2++;
+						vc->vpx_frames_buf_list[jk] = NULL;
 					}
 					vc->vpx_frames_buf_list[0] = vc->vpx_frames_buf_list[vc->fragment_buf_counter];
 					vc->vpx_frames_buf_list[vc->fragment_buf_counter] = NULL;
@@ -844,19 +873,24 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 				{
 					for(jk=0;jk<vc->fragment_buf_counter;jk++)
 					{
-						free(vc->vpx_frames_buf_list[vc->fragment_buf_counter]);
-						vc->vpx_frames_buf_list[vc->fragment_buf_counter] = NULL;
+						vc->cc2++;
+						free(vc->vpx_frames_buf_list[jk]);
+						vc->vpx_frames_buf_list[jk] = NULL;
 					}
 					vc->fragment_buf_counter = 0;
 				}
 			}
 #else
+			vc->cc2++;
             free(p);
 #endif
             
         } else {
+			vc->cc2++;
             free(p);
         }
+
+		LOGGER_WARNING(vc->log, "FREE_: alloc=%ld free=%ld", (long)vc->cc1, (long)vc->cc2);
 
         return ret_value;
     } else {
