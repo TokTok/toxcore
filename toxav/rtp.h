@@ -42,7 +42,7 @@ enum {
 };
 
 #define VIDEO_KEEP_KEYFRAME_IN_BUFFER_FOR_MS (5)
-#define USED_RTP_WORKBUFFER_COUNT (5 * 5) // correct size for fragments!!
+#define USED_RTP_WORKBUFFER_COUNT (5) // correct size for fragments!!
 #define VIDEO_FRAGMENT_NUM_NO_FRAG (-1)
 
 struct RTPHeader {

@@ -227,8 +227,9 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
 
 	if (VPX_DECODER_USED == VPX_VP8_CODEC) {
 		if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 1) {
-			// vp8_postproc_cfg_t pp = {VP8_DEBLOCK | VP8_DEMACROBLOCK | VP8_MFQE, 4, 0};
-			vp8_postproc_cfg_t pp = {VP8_DEBLOCK , 1, 0};
+			LOGGER_WARNING(log, "turn on postproc: OK");
+		} else if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 2) {
+			vp8_postproc_cfg_t pp = {VP8_DEBLOCK, 1, 0};
 			vpx_codec_err_t cc_res = vpx_codec_control(vc->decoder, VP8_SET_POSTPROC, &pp);
 
 			if (cc_res != VPX_CODEC_OK) {
@@ -236,7 +237,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
 			} else {
 				LOGGER_WARNING(log, "turn on postproc: OK");
 			}
-		} else if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 2) {
+		} else if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 3) {
 			vp8_postproc_cfg_t pp = {VP8_DEBLOCK | VP8_DEMACROBLOCK | VP8_MFQE, 1, 0};
 			vpx_codec_err_t cc_res = vpx_codec_control(vc->decoder, VP8_SET_POSTPROC, &pp);
 
@@ -541,8 +542,9 @@ void video_switch_decoder(VCSession *vc)
 
 	if (VPX_DECODER_USED == VPX_VP8_CODEC) {
 		if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 1) {
-			// vp8_postproc_cfg_t pp = {VP8_DEBLOCK | VP8_DEMACROBLOCK | VP8_MFQE, 4, 0};
-			vp8_postproc_cfg_t pp = {VP8_DEBLOCK , 1, 0};
+			LOGGER_WARNING(vc->log, "turn on postproc: OK");
+		} else if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 2) {
+			vp8_postproc_cfg_t pp = {VP8_DEBLOCK, 1, 0};
 			vpx_codec_err_t cc_res = vpx_codec_control(&new_d, VP8_SET_POSTPROC, &pp);
 
 			if (cc_res != VPX_CODEC_OK) {
@@ -550,7 +552,7 @@ void video_switch_decoder(VCSession *vc)
 			} else {
 				LOGGER_WARNING(vc->log, "turn on postproc: OK");
 			}
-		} else if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 2) {
+		} else if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 3) {
 			vp8_postproc_cfg_t pp = {VP8_DEBLOCK | VP8_DEMACROBLOCK | VP8_MFQE, 1, 0};
 			vpx_codec_err_t cc_res = vpx_codec_control(&new_d, VP8_SET_POSTPROC, &pp);
 
