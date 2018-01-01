@@ -5744,9 +5744,12 @@ int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name
     chat->join_type = HJ_PRIVATE;
     self_gc_connected(chat);
 
-    if (group_announce_request(c, chat) == -1) {
-        group_delete(c, chat);
-        return -6;
+    if (privacy_state == GI_PUBLIC) {
+        int friend_number = m_add_friend_gc(c->messenger, chat->chat_public_key);
+        if (friend_number < 0) {
+            group_delete(c, chat);
+            return -6;
+        }
     }
 
     return groupnumber;
@@ -5760,6 +5763,7 @@ int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name
  * Reutrn -1 if the group object fails to initialize.
  * Return -2 if chat_id is NULL or a group with chat_id already exists in the chats array.
  * Return -3 if there is an error setting the group password.
+ * Return -4 if there is an error adding a friend
  */
 int gc_group_join(GC_Session *c, const uint8_t *chat_id, const uint8_t *passwd, uint16_t passwd_len)
 {
@@ -5792,6 +5796,12 @@ int gc_group_join(GC_Session *c, const uint8_t *chat_id, const uint8_t *passwd, 
     if (chat->num_addrs == 0) {
         group_get_nodes_request(c, chat);
     }
+
+    int friend_number = m_add_friend_gc(c->messenger, chat_id);
+    if (friend_number < 0) {
+        return -4;
+    }
+    // TODO: save friend number?
 
     return groupnumber;
 }

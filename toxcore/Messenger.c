@@ -317,6 +317,18 @@ int32_t m_addfriend_norequest(Messenger *m, const uint8_t *real_pk)
     return init_new_friend(m, real_pk, FRIEND_CONFIRMED);
 }
 
+int32_t m_add_friend_gc(Messenger *m, const uint8_t *chat_id)
+{
+    int32_t friend_number = m_addfriend_norequest(m, chat_id);
+    if (friend_number >= 0) {
+        Friend friend = m->friendlist[friend_number];
+        friend.type = CONTACT_TYPE_GC;
+    }
+
+    return friend_number;
+}
+
+
 static int clear_receipts(Messenger *m, int32_t friendnumber)
 {
     if (friend_not_valid(m, friendnumber)) {
