@@ -125,6 +125,12 @@ typedef enum Userstatus {
     USERSTATUS_INVALID,
 } Userstatus;
 
+typedef enum {
+    CONTACT_TYPE_FRIEND,
+    CONTACT_TYPE_GC
+}
+CONTACT_TYPE;
+
 #define FILE_ID_LENGTH 32
 
 struct File_Transfers {
@@ -237,6 +243,8 @@ typedef struct Friend {
 
     struct Receipts *receipts_start;
     struct Receipts *receipts_end;
+
+    CONTACT_TYPE type;
 } Friend;
 
 struct Messenger {
@@ -350,6 +358,8 @@ int32_t m_addfriend(Messenger *m, const uint8_t *address, const uint8_t *data, u
  *  return -8 if increasing the friend list size fails.
  */
 int32_t m_addfriend_norequest(Messenger *m, const uint8_t *real_pk);
+
+int32_t m_add_friend_gc(Messenger *m, const uint8_t *chat_id);
 
 /*  return the friend number associated to that client id.
  *  return -1 if no such friend.
