@@ -1365,7 +1365,7 @@ static int send_gc_ip_port(DHT *dht, GC_Chat *chat, GC_Connection *gconn)
         return 3;
     }
 
-    gconn->last_ip_port_shared = unix_time();
+    gconn->last_ip_port_shared = mono_time_get(chat->mono_time);
     return 0;
 }
 
@@ -5243,7 +5243,7 @@ static void do_peer_connections(Messenger *m, int groupnumber)
                 send_gc_tcp_relays(m->mono_time, chat, &chat->gcc[i]);
             }
 
-            if (is_timeout(chat->gcc[i].last_ip_port_shared, GCC_IP_PORT_TIMEOUT)) {
+            if (mono_time_is_timeout(m->mono_time, chat->gcc[i].last_ip_port_shared, GCC_IP_PORT_TIMEOUT)) {
                 send_gc_ip_port(m->dht, chat, &chat->gcc[i]);
             }
         }
@@ -5759,7 +5759,7 @@ int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name
     self_gc_connected(c->messenger->mono_time, chat);
 
     if (privacy_state == GI_PUBLIC) {
-        int friend_number = m_add_friend_gc(c->messenger, chat->chat_public_key);
+        int friend_number = m_add_friend_gc(c->messenger, chat);
         if (friend_number < 0) {
             group_delete(c, chat);
             return -6;
@@ -5811,11 +5811,10 @@ int gc_group_join(GC_Session *c, const uint8_t *chat_id, const uint8_t *passwd, 
         group_get_nodes_request(c, chat);
     }
 
-    int friend_number = m_add_friend_gc(c->messenger, chat_id);
+    int friend_number = m_add_friend_gc(c->messenger, chat);
     if (friend_number < 0) {
         return -4;
     }
-    // TODO: save friend number?
 
     return groupnumber;
 }
