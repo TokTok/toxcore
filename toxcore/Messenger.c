@@ -317,12 +317,27 @@ int32_t m_addfriend_norequest(Messenger *m, const uint8_t *real_pk)
     return init_new_friend(m, real_pk, FRIEND_CONFIRMED);
 }
 
-int32_t m_add_friend_gc(Messenger *m, const uint8_t *chat_id)
+int32_t m_add_friend_gc(Messenger *m, const GC_Chat *chat)
 {
-    int32_t friend_number = m_addfriend_norequest(m, chat_id);
+    int32_t friend_number = m_addfriend_norequest(m, chat->chat_public_key);
     if (friend_number >= 0) {
-        Friend friend = m->friendlist[friend_number];
-        friend.type = CONTACT_TYPE_GC;
+        Friend frnd = m->friendlist[friend_number];
+        frnd.type = CONTACT_TYPE_GC;
+
+        int friend_connection_id = frnd.friendcon_id;
+        Friend_Conn connection = m->fr_c->conns[friend_connection_id];
+        int onion_friend_number = connection.onion_friendnum;
+        Onion_Friend onion_friend = m->onion_c->friends_list[onion_friend_number];
+
+        Node_format tcp_relay[1]; // TODO: send > 1 relay?
+        size_t gc_data_size = sizeof(Node_format) + ENC_PUBLIC_KEY;
+        onion_friend.gc_data = (uint8_t *)malloc(gc_data_size);
+        if (!onion_friend.gc_data) {
+            return -1;
+        }
+        tcp_copy_connected_relays(chat->tcp_conn, tcp_relay, 1);
+        memcpy(onion_friend.gc_data + sizeof(Node_format), chat->self_public_key, ENC_PUBLIC_KEY);
+        onion_friend.gc_data_length = gc_data_size;
     }
 
     return friend_number;

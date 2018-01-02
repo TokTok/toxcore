@@ -5745,7 +5745,7 @@ int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name
     self_gc_connected(chat);
 
     if (privacy_state == GI_PUBLIC) {
-        int friend_number = m_add_friend_gc(c->messenger, chat->chat_public_key);
+        int friend_number = m_add_friend_gc(c->messenger, chat);
         if (friend_number < 0) {
             group_delete(c, chat);
             return -6;
@@ -5797,11 +5797,10 @@ int gc_group_join(GC_Session *c, const uint8_t *chat_id, const uint8_t *passwd, 
         group_get_nodes_request(c, chat);
     }
 
-    int friend_number = m_add_friend_gc(c->messenger, chat_id);
+    int friend_number = m_add_friend_gc(c->messenger, chat);
     if (friend_number < 0) {
         return -4;
     }
-    // TODO: save friend number?
 
     return groupnumber;
 }

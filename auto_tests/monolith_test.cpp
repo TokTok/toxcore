@@ -243,7 +243,7 @@ int main(int argc, char *argv[])
     CHECK_SIZE(Logger, 24);
     // toxcore/Messenger
     CHECK_SIZE(File_Transfers, 72);
-    CHECK_SIZE(Friend, 39264);
+    CHECK_SIZE(Friend, 39272);
     CHECK_SIZE(Messenger, 2040);
     CHECK_SIZE(Messenger_Options, 72);
     CHECK_SIZE(Receipts, 16);
@@ -273,8 +273,7 @@ int main(int argc, char *argv[])
     CHECK_SIZE(Onion_Client, 15816);
     CHECK_SIZE(Onion_Client_Cmp_data, 176);
     CHECK_SIZE(Onion_Client_Paths, 2520);
-    CHECK_SIZE(Onion_Friend, 1936);
-    CHECK_SIZE(Onion_Friend, 1936);
+    CHECK_SIZE(Onion_Friend, 1952);
     CHECK_SIZE(Onion_Node, 168);
     // toxcore/onion
     CHECK_SIZE(Onion, 245832);
