@@ -420,6 +420,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc->av = av;
     vc->log = log;
     vc->last_decoded_frame_ts = 0;
+    vc->last_encoded_frame_ts = 0;
     vc->flag_end_video_fragment = 0;
     vc->last_seen_fragment_num = 0;
     vc->last_seen_fragment_seqnum = -1;
@@ -428,6 +429,10 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc->decoder_soft_deadline[1] = 0;
     vc->decoder_soft_deadline[2] = 0;
     vc->decoder_soft_deadline_index = 0;
+    vc->encoder_soft_deadline[0] = 0;
+    vc->encoder_soft_deadline[1] = 0;
+    vc->encoder_soft_deadline[2] = 0;
+    vc->encoder_soft_deadline_index = 0;
 
     uint16_t jk=0;
     for(jk=0;jk<(uint16_t)VIDEO_MAX_FRAGMENT_BUFFER_COUNT;jk++)

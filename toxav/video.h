@@ -79,6 +79,10 @@
 #define VIDEO_DECODER_MINFPS_AUTOTUNE (8)
 #define VIDEO_DECODER_LEEWAY_IN_MS_AUTOTUNE (10)
 
+#define VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE 1
+#define VIDEO_ENCODER_MINFPS_AUTOTUNE (8)
+#define VIDEO_ENCODER_LEEWAY_IN_MS_AUTOTUNE (10)
+
 #define VPX_VP8_CODEC (0)
 #define VPX_VP9_CODEC (1)
 
@@ -105,11 +109,14 @@ typedef struct VCSession_s {
     uint32_t lcfd; /* Last calculated frame duration for incoming video payload */
     
     uint64_t last_decoded_frame_ts;
+    uint64_t last_encoded_frame_ts;
     uint8_t  flag_end_video_fragment;
     int32_t  last_seen_fragment_num;
     int32_t  last_seen_fragment_seqnum;
     uint32_t decoder_soft_deadline[3];
     uint8_t  decoder_soft_deadline_index;
+    uint32_t encoder_soft_deadline[3];
+    uint8_t  encoder_soft_deadline_index;
 
     void *vpx_frames_buf_list[VIDEO_MAX_FRAGMENT_BUFFER_COUNT];
     uint16_t fragment_buf_counter;
