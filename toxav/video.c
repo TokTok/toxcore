@@ -138,13 +138,9 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
     cfg->g_timebase.num = 1; // timebase units = 1ms = (1/1000)s
     cfg->g_timebase.den = 1000; // timebase units = 1ms = (1/1000)s
 
-    cfg->rc_resize_allowed = 1; // allow encoder to resize to smaller resolution
-    cfg->rc_dropframe_thresh = 0;
 
-    cfg->rc_resize_up_thresh = 50;
-    cfg->rc_resize_down_thresh = 6;
+#ifdef VIDEO_ENCODER_FUL_QUALITY
 
-#if 1
     /* Highest-resolution encoder settings */
     cfg->rc_dropframe_thresh = 0;
     cfg->rc_resize_allowed = 0;
@@ -155,6 +151,14 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
     cfg->rc_buf_initial_sz = 500;
     cfg->rc_buf_optimal_sz = 600;
     cfg->rc_buf_sz = 1000;
+
+#else
+
+    cfg->rc_resize_allowed = 1; // allow encoder to resize to smaller resolution
+    cfg->rc_dropframe_thresh = 0;
+    cfg->rc_resize_up_thresh = 50;
+    cfg->rc_resize_down_thresh = 6;
+
 #endif
 
 }
