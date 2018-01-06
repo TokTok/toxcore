@@ -5495,6 +5495,7 @@ static int get_new_group_index(GC_Session *c)
 
     int new_index = c->num_chats;
     memset(&(c->chats[new_index]), 0, sizeof(GC_Chat));
+    memset(&(c->chats[new_index].saved_invites), -1, MAX_GC_SAVED_INVITES);
 
     ++c->num_chats;
 
@@ -5871,8 +5872,8 @@ int gc_invite_friend(GC_Session *c, GC_Chat *chat, int32_t friendnumber,
         return -2;
     }
 
-    chat->saved_invites[chat->saved_invites_index] = friendnumber + 1;
-    chat->saved_invites_index = (chat->saved_invites_index + 1) % GC_MAX_SAVED_INVITES;
+    chat->saved_invites[chat->saved_invites_index] = friendnumber;
+    chat->saved_invites_index = (chat->saved_invites_index + 1) % MAX_GC_SAVED_INVITES;
 
     return 0;
 }
@@ -5985,16 +5986,17 @@ int handle_gc_invite_confirmed_packet(GC_Session *c, int friend_number, const ui
     return 0;
 }
 
-
 bool friend_was_invited(GC_Chat *chat, int friend_number)
 {
     int i;
-    for (i = 0; i < GC_MAX_SAVED_INVITES; i++) {
-        if (chat->saved_invites[i] == friend_number - 1) {
+    for (i = 0; i < MAX_GC_SAVED_INVITES; i++) {
+        if (chat->saved_invites[i] == friend_number) {
             chat->saved_invites[i] = -1;
+
             return true;
         }
     }
+
     return false;
 }
 
