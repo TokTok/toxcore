@@ -39,13 +39,14 @@
 #define MAX_GC_PEER_ADDRS 30
 #define MAX_GC_PASSWD_SIZE 32
 #define MAX_GC_MODERATORS 128
+#define MAX_GC_SAVED_INVITES 50
+
 
 #define GC_MOD_LIST_ENTRY_SIZE SIG_PUBLIC_KEY
 #define GC_MODERATION_HASH_SIZE CRYPTO_SHA256_SIZE
 #define GC_PING_INTERVAL 12
 #define GC_CONFIRMED_PEER_TIMEOUT (GC_PING_INTERVAL * 4 + 10)
 #define GC_UNCONFIRMED_PEER_TIMEOUT GC_PING_INTERVAL
-#define GC_MAX_SAVED_INVITES 10
 
 typedef enum GROUP_PRIVACY_STATE {
     GI_PUBLIC,
@@ -254,7 +255,7 @@ typedef struct GC_Chat {
     uint16_t    num_addrs;
     uint16_t    addrs_idx;
 
-    int32_t saved_invites[GC_MAX_SAVED_INVITES];
+    int32_t saved_invites[MAX_GC_SAVED_INVITES];
     uint8_t saved_invites_index;
 } GC_Chat;
 
