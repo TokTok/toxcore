@@ -82,7 +82,7 @@
 #define VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE 1
 #define VIDEO_ENCODER_MINFPS_AUTOTUNE (20)
 #define VIDEO_ENCODER_LEEWAY_IN_MS_AUTOTUNE (10)
-#define VIDEO_ENCODER_FUL_QUALITY 1
+
 
 #define VPX_VP8_CODEC (0)
 #define VPX_VP9_CODEC (1)
@@ -122,6 +122,8 @@ typedef struct VCSession_s {
 	// options ---
 	int32_t video_encoder_cpu_used;
 	int32_t video_encoder_cpu_used_prev;
+	int32_t video_encoder_vp8_quality;
+	int32_t video_encoder_vp8_quality_prev;
 	// options ---
 
     void *vpx_frames_buf_list[VIDEO_MAX_FRAGMENT_BUFFER_COUNT];

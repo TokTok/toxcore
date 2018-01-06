@@ -60,7 +60,7 @@ struct vpx_frame_user_data {
 };
 
 
-void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_dist)
+void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_dist, int32_t quality)
 {
 
     vpx_codec_err_t rc;
@@ -129,27 +129,26 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
     cfg->g_timebase.den = 1000; // timebase units = 1ms = (1/1000)s
 
 
-#ifdef VIDEO_ENCODER_FUL_QUALITY
-
-    /* Highest-resolution encoder settings */
-    cfg->rc_dropframe_thresh = 0;
-    cfg->rc_resize_allowed = 0;
-    cfg->rc_min_quantizer = 2;
-    cfg->rc_max_quantizer = 56;
-    cfg->rc_undershoot_pct = 100;
-    cfg->rc_overshoot_pct = 15;
-    cfg->rc_buf_initial_sz = 500;
-    cfg->rc_buf_optimal_sz = 600;
-    cfg->rc_buf_sz = 1000;
-
-#else
-
-    cfg->rc_resize_allowed = 1; // allow encoder to resize to smaller resolution
-    cfg->rc_dropframe_thresh = 0;
-    cfg->rc_resize_up_thresh = 50;
-    cfg->rc_resize_down_thresh = 6;
-
-#endif
+	if (quality == TOXAV_ENCODER_VP8_QUALITY_HIGH)
+	{
+		/* Highest-resolution encoder settings */
+		cfg->rc_dropframe_thresh = 0;
+		cfg->rc_resize_allowed = 0;
+		cfg->rc_min_quantizer = 2;
+		cfg->rc_max_quantizer = 56;
+		cfg->rc_undershoot_pct = 100;
+		cfg->rc_overshoot_pct = 15;
+		cfg->rc_buf_initial_sz = 500;
+		cfg->rc_buf_optimal_sz = 600;
+		cfg->rc_buf_sz = 1000;
+	}
+	else // TOXAV_ENCODER_VP8_QUALITY_NORMAL
+	{
+		cfg->rc_resize_allowed = 1; // allow encoder to resize to smaller resolution
+		cfg->rc_dropframe_thresh = 0;
+		cfg->rc_resize_up_thresh = 50;
+		cfg->rc_resize_down_thresh = 6;
+	}
 
 }
 
@@ -179,7 +178,9 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
 
 	// options ---
 	vc->video_encoder_cpu_used = VP8E_SET_CPUUSED_VALUE;
-	vc->video_encoder_cpu_used_prev = VP8E_SET_CPUUSED_VALUE;
+	vc->video_encoder_cpu_used_prev = vc->video_encoder_cpu_used;
+	vc->video_encoder_vp8_quality = TOXAV_ENCODER_VP8_QUALITY_NORMAL;
+	vc->video_encoder_vp8_quality_prev = vc->video_encoder_vp8_quality;
 	// options ---
 
 
@@ -268,7 +269,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     /* Set encoder to some initial values
      */
     vpx_codec_enc_cfg_t  cfg;
-    vc__init_encoder_cfg(log, &cfg, 1);
+    vc__init_encoder_cfg(log, &cfg, 1, vc->video_encoder_vp8_quality);
 
     if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
         LOGGER_WARNING(log, "Using VP8 codec for encoder (0.1)");
@@ -1009,12 +1010,16 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
     vpx_codec_err_t rc;
 
     if (cfg2.rc_target_bitrate == bit_rate && cfg2.g_w == width && cfg2.g_h == height && kf_max_dist == -1
-        && vc->video_encoder_cpu_used == vc->video_encoder_cpu_used_prev) {
+        && vc->video_encoder_cpu_used == vc->video_encoder_cpu_used_prev
+        && vc->video_encoder_vp8_quality == vc->video_encoder_vp8_quality_prev
+        ) {
         return 0; /* Nothing changed */
     }
 
     if (cfg2.g_w == width && cfg2.g_h == height && kf_max_dist == -1
-       && vc->video_encoder_cpu_used == vc->video_encoder_cpu_used_prev) {
+       && vc->video_encoder_cpu_used == vc->video_encoder_cpu_used_prev
+       && vc->video_encoder_vp8_quality == vc->video_encoder_vp8_quality_prev
+       ) {
         /* Only bit rate changed */
 
         LOGGER_INFO(vc->log, "bitrate change from: %u to: %u", (uint32_t)(cfg2.rc_target_bitrate/1000), (uint32_t)(bit_rate/1000));
@@ -1037,7 +1042,9 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
 
         vpx_codec_ctx_t new_c;
         vpx_codec_enc_cfg_t  cfg;
-        vc__init_encoder_cfg(vc->log, &cfg, kf_max_dist);
+        vc__init_encoder_cfg(vc->log, &cfg, kf_max_dist, vc->video_encoder_vp8_quality);
+
+		vc->video_encoder_vp8_quality_prev = vc->video_encoder_vp8_quality;
 
         cfg.rc_target_bitrate = bit_rate;
         cfg.g_w = width;

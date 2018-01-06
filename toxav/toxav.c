@@ -737,7 +737,21 @@ bool toxav_option_set(ToxAV *av, uint32_t friend_number, TOXAV_OPTIONS_OPTION op
         {
             vc->video_encoder_cpu_used_prev = vc->video_encoder_cpu_used;
             vc->video_encoder_cpu_used = (int32_t)value;
-            LOGGER_WARNING(av->m->log, "video encoder setting cpu_used already to: %d", (int)value);
+            LOGGER_WARNING(av->m->log, "video encoder setting cpu_used to: %d", (int)value);
+        }
+    }
+    else if (option == TOXAV_ENCODER_VP8_QUALITY)
+    {
+        VCSession *vc = (VCSession *)call->video.second;
+        
+        if (vc->video_encoder_vp8_quality == (int32_t)value) {
+            LOGGER_WARNING(av->m->log, "video encoder vp8_quality already set to: %d", (int)value);
+        }
+        else
+        {
+            vc->video_encoder_vp8_quality_prev = vc->video_encoder_vp8_quality;
+            vc->video_encoder_vp8_quality = (int32_t)value;
+            LOGGER_WARNING(av->m->log, "video encoder setting vp8_quality to: %d", (int)value);
         }
     }
 
