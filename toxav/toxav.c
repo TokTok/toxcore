@@ -731,12 +731,13 @@ bool toxav_option_set(ToxAV *av, uint32_t friend_number, TOXAV_OPTIONS_OPTION op
         VCSession *vc = (VCSession *)call->video.second;
         
         if (vc->video_encoder_cpu_used == (int32_t)value) {
-            LOGGER_INFO(av->m->log, "video encoder cpu used already set to: %d", (int)value);
+            LOGGER_WARNING(av->m->log, "video encoder cpu_used already set to: %d", (int)value);
         }
         else
         {
             vc->video_encoder_cpu_used_prev = vc->video_encoder_cpu_used;
             vc->video_encoder_cpu_used = (int32_t)value;
+            LOGGER_WARNING(av->m->log, "video encoder setting cpu_used already to: %d", (int)value);
         }
     }
 

@@ -314,10 +314,17 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     rc = vpx_codec_control(vc->encoder, VP8E_SET_CPUUSED, cpu_used_value);
 
     if (rc != VPX_CODEC_OK) {
-        LOGGER_ERROR(log, "Failed to set encoder control setting: %s", vpx_codec_err_to_string(rc));
+        LOGGER_ERROR(log, "Failed to set encoder VP8E_SET_CPUUSED setting: %s value=%d", vpx_codec_err_to_string(rc), (int)cpu_used_value);
         vpx_codec_destroy(vc->encoder);
         goto BASE_CLEANUP_1;
     }
+    else
+    {
+		LOGGER_WARNING(log, "set encoder VP8E_SET_CPUUSED setting: %s value=%d", vpx_codec_err_to_string(rc), (int)cpu_used_value);
+	}
+
+	vc->video_encoder_cpu_used = cpu_used_value;
+	vc->video_encoder_cpu_used_prev = cpu_used_value;
 
 #ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
     if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
@@ -1068,10 +1075,17 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
         rc = vpx_codec_control(&new_c, VP8E_SET_CPUUSED, cpu_used_value);
 
         if (rc != VPX_CODEC_OK) {
-            LOGGER_ERROR(vc->log, "Failed to set encoder control setting: %s", vpx_codec_err_to_string(rc));
+            LOGGER_ERROR(vc->log, "(b)Failed to set encoder VP8E_SET_CPUUSED setting: %s value=%d", vpx_codec_err_to_string(rc), (int)cpu_used_value);
             vpx_codec_destroy(&new_c);
             return -1;
         }
+        else
+        {
+            LOGGER_WARNING(vc->log, "(b)set encoder VP8E_SET_CPUUSED setting: %s value=%d", vpx_codec_err_to_string(rc), (int)cpu_used_value);
+		}
+
+		vc->video_encoder_cpu_used = cpu_used_value;
+		vc->video_encoder_cpu_used_prev = cpu_used_value;
 
 #ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
 		if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
