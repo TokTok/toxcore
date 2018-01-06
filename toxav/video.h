@@ -119,6 +119,11 @@ typedef struct VCSession_s {
     uint32_t encoder_soft_deadline[3];
     uint8_t  encoder_soft_deadline_index;
 
+	// options ---
+	int32_t video_encoder_cpu_used;
+	int32_t video_encoder_cpu_used_prev;
+	// options ---
+
     void *vpx_frames_buf_list[VIDEO_MAX_FRAGMENT_BUFFER_COUNT];
     uint16_t fragment_buf_counter;
 

@@ -778,6 +778,53 @@ int toxav_join_av_groupchat(Tox *tox, uint32_t friendnumber, const uint8_t *data
 int toxav_group_send_audio(Tox *tox, uint32_t groupnumber, const int16_t *pcm, unsigned int samples, uint8_t channels,
                            uint32_t sample_rate);
 
+
+/*******************************************************************************
+ *
+ * :: A/V generic encoder/decoder options
+ *
+ ******************************************************************************/
+
+typedef enum TOXAV_ERR_OPTION_SET {
+
+    /**
+     * The function returned successfully.
+     */
+    TOXAV_ERR_OPTION_SET_OK,
+
+    /**
+     * Some other error occurred
+     */
+    TOXAV_ERR_OPTION_SET_OTHER_ERROR,
+
+    /**
+     * The option passed does not exist
+     */
+    TOXAV_ERR_OPTION_SET_INVALID_OPTION,
+
+    /**
+     * The value passed was not one of the supported values.
+     */
+    TOXAV_ERR_OPTION_SET_INVALID_VALUE,
+
+} TOXAV_ERR_OPTION_SET;
+
+
+
+typedef enum TOXAV_OPTIONS_OPTION {
+    TOXAV_ENCODER_CPU_USED,
+} TOXAV_OPTIONS_OPTION;
+
+
+
+/**
+ * Set generic AV encoder/decoder settings.
+ *
+ */
+bool toxav_option_set(ToxAV *av, uint32_t friend_number, TOXAV_OPTIONS_OPTION option, int32_t value,
+                        TOXAV_ERR_OPTION_SET *error);
+
+
 #ifdef __cplusplus
 }
 #endif

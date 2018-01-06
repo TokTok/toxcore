@@ -45,6 +45,19 @@ enum {
 #define USED_RTP_WORKBUFFER_COUNT (5) // correct size for fragments!!
 #define VIDEO_FRAGMENT_NUM_NO_FRAG (-1)
 
+
+#define VP8E_SET_CPUUSED_VALUE (16)
+/*
+Codec control function to set encoder internal speed settings.
+Changes in this value influences, among others, the encoder's selection of motion estimation methods.
+Values greater than 0 will increase encoder speed at the expense of quality.
+
+Note
+    Valid range for VP8: -16..16
+    Valid range for VP9: -8..8
+ */
+
+
 struct RTPHeader {
     /* Standard RTP header */
 #ifndef WORDS_BIGENDIAN

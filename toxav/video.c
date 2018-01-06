@@ -51,16 +51,6 @@ VPX_DL_BEST_QUALITY   (0)
 deadline parameter analogous to VPx BEST QUALITY mode.
 */
 
-#define VP8E_SET_CPUUSED_VALUE (16)
-/*
-Codec control function to set encoder internal speed settings.
-Changes in this value influences, among others, the encoder's selection of motion estimation methods.
-Values greater than 0 will increase encoder speed at the expense of quality.
-
-Note
-    Valid range for VP8: -16..16
-    Valid range for VP9: -8..8
- */
 
 #define VIDEO_BITRATE_INITIAL_VALUE 5000 // initialize encoder with this value. Target bandwidth to use for this stream, in kilobits per second.
 
@@ -187,6 +177,10 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
 
 
 
+	// options ---
+	vc->video_encoder_cpu_used = VP8E_SET_CPUUSED_VALUE;
+	vc->video_encoder_cpu_used_prev = VP8E_SET_CPUUSED_VALUE;
+	// options ---
 
 
     /*
@@ -309,7 +303,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
       Valid range for VP9: -8..8
     */
 
-    int cpu_used_value = VP8E_SET_CPUUSED_VALUE;
+    int cpu_used_value = vc->video_encoder_cpu_used;
 
     if (VPX_ENCODER_USED == VPX_VP9_CODEC) {
         if ((cpu_used_value < -8) || (cpu_used_value > 8)) {
@@ -997,7 +991,8 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
     return 0;
 }
 
-int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height, int16_t kf_max_dist)
+int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height,
+    int16_t kf_max_dist)
 {
     if (!vc) {
         return -1;
@@ -1006,11 +1001,13 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
     vpx_codec_enc_cfg_t cfg2 = *vc->encoder->config.enc;
     vpx_codec_err_t rc;
 
-    if (cfg2.rc_target_bitrate == bit_rate && cfg2.g_w == width && cfg2.g_h == height && kf_max_dist == -1) {
+    if (cfg2.rc_target_bitrate == bit_rate && cfg2.g_w == width && cfg2.g_h == height && kf_max_dist == -1
+        && vc->video_encoder_cpu_used == vc->video_encoder_cpu_used_prev) {
         return 0; /* Nothing changed */
     }
 
-    if (cfg2.g_w == width && cfg2.g_h == height && kf_max_dist == -1) {
+    if (cfg2.g_w == width && cfg2.g_h == height && kf_max_dist == -1
+       && vc->video_encoder_cpu_used == vc->video_encoder_cpu_used_prev) {
         /* Only bit rate changed */
 
         LOGGER_INFO(vc->log, "bitrate change from: %u to: %u", (uint32_t)(cfg2.rc_target_bitrate/1000), (uint32_t)(bit_rate/1000));
@@ -1060,8 +1057,7 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
             return -1;
         }
 
-
-        int cpu_used_value = VP8E_SET_CPUUSED_VALUE;
+        int cpu_used_value = vc->video_encoder_cpu_used;
 
         if (VPX_ENCODER_USED == VPX_VP9_CODEC) {
             if ((cpu_used_value < -8) || (cpu_used_value > 8)) {

@@ -75,7 +75,7 @@ typedef struct ToxAVCall_s {
 
     uint32_t audio_bit_rate; /* Sending audio bit rate */
     uint32_t video_bit_rate; /* Sending video bit rate */
-    
+
     uint64_t last_incoming_video_frame_rtimestamp;
     uint64_t last_incoming_video_frame_ltimestamp;
 
@@ -702,6 +702,55 @@ END:
 
     return rc == TOXAV_ERR_CALL_CONTROL_OK;
 }
+
+bool toxav_option_set(ToxAV *av, uint32_t friend_number, TOXAV_OPTIONS_OPTION option, int32_t value,
+                        TOXAV_ERR_OPTION_SET *error)
+{
+    TOXAV_ERR_OPTION_SET rc = TOXAV_ERR_OPTION_SET_OK;
+
+    ToxAVCall *call;
+
+    if (m_friend_exists(av->m, friend_number) == 0) {
+        rc = TOXAV_ERR_OPTION_SET_OTHER_ERROR;
+        goto END;
+    }
+
+    pthread_mutex_lock(av->mutex);
+    call = call_get(av, friend_number);
+
+    if (call == NULL || !call->active || call->msi_call->state != msi_CallActive) {
+        pthread_mutex_unlock(av->mutex);
+        rc = TOXAV_ERR_OPTION_SET_OTHER_ERROR;
+        goto END;
+    }
+
+    pthread_mutex_lock(call->mutex);
+
+    if (option == TOXAV_ENCODER_CPU_USED)
+    {
+        VCSession *vc = (VCSession *)call->video.second;
+        
+        if (vc->video_encoder_cpu_used == (int32_t)value) {
+            LOGGER_INFO(av->m->log, "video encoder cpu used already set to: %d", (int)value);
+        }
+        else
+        {
+            vc->video_encoder_cpu_used_prev = vc->video_encoder_cpu_used;
+            vc->video_encoder_cpu_used = (int32_t)value;
+        }
+    }
+
+    pthread_mutex_unlock(call->mutex);
+    pthread_mutex_unlock(av->mutex);
+END:
+
+    if (error) {
+        *error = rc;
+    }
+
+    return rc == TOXAV_ERR_OPTION_SET_OK;
+}
+
 bool toxav_bit_rate_set(ToxAV *av, uint32_t friend_number, int32_t audio_bit_rate,
                         int32_t video_bit_rate, TOXAV_ERR_BIT_RATE_SET *error)
 {
@@ -821,6 +870,7 @@ END:
 
     return rc == TOXAV_ERR_BIT_RATE_SET_OK;
 }
+
 void toxav_callback_bit_rate_status(ToxAV *av, toxav_bit_rate_status_cb *callback, void *user_data)
 {
     pthread_mutex_lock(av->mutex);
@@ -998,7 +1048,8 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         goto END;
     }
 
-    if (vc_reconfigure_encoder(call->video.second, call->video_bit_rate * 1000, width, height, -1) != 0) {
+    if (vc_reconfigure_encoder(call->video.second, call->video_bit_rate * 1000,
+           width, height, -1) != 0) {
         pthread_mutex_unlock(call->mutex_video);
         rc = TOXAV_ERR_SEND_FRAME_INVALID;
         goto END;
