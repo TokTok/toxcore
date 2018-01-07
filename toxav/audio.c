@@ -190,7 +190,7 @@ uint8_t ac_iterate(ACSession *ac, uint64_t *a_r_timestamp, uint64_t *a_l_timesta
     {
         // audio frames are still building up, skip audio frames to synchronize again
         int rc_skip = 0;
-        LOGGER_WARNING(ac->log, "skipping some incoming audio frames");
+        LOGGER_DEBUG(ac->log, "skipping some incoming audio frames");
         jbuf_read(ac->log, jbuffer, &rc_skip);
         jbuf_read(ac->log, jbuffer, &rc_skip);
         jbuf_read(ac->log, jbuffer, &rc_skip);
@@ -211,7 +211,7 @@ uint8_t ac_iterate(ACSession *ac, uint64_t *a_r_timestamp, uint64_t *a_l_timesta
         pthread_mutex_unlock(ac->queue_mutex);
         
         if (rc == AUDIO_LOST_FRAME_INDICATOR) {
-            LOGGER_WARNING(ac->log, "OPUS correction for lost frame (3)");
+            LOGGER_DEBUG(ac->log, "OPUS correction for lost frame (3)");
             int fs = (ac->lp_sampling_rate * ac->lp_frame_duration) / 1000;
             rc = opus_decode(ac->decoder, NULL, 0, temp_audio_buffer, fs, 1);
             free(msg);
@@ -422,7 +422,7 @@ static int jbuf_write(Logger *log, ACSession *ac, struct RingBuffer *q, struct R
             int64_t diff = (m->header.sequnum - ac->lp_seqnum);
             if (diff > 1)
             {
-                LOGGER_WARNING(log, "AudioFramesIN: missing %d audio frames, seqnum=%d", (int)(diff - 1), (int)(ac->lp_seqnum + 1));
+                LOGGER_DEBUG(log, "AudioFramesIN: missing %d audio frames, seqnum=%d", (int)(diff - 1), (int)(ac->lp_seqnum + 1));
 
                 int64_t j;
                 for(j=0;j<(diff - 1);j++)
@@ -432,7 +432,7 @@ static int jbuf_write(Logger *log, ACSession *ac, struct RingBuffer *q, struct R
                     empty_m->header.sequnum = (ac->lp_seqnum + 1 + j);
                     if (rb_write(q, (void *)empty_m, 1) != NULL)
                     {
-                        LOGGER_WARNING(log, "AudioFramesIN: error in rb_write");
+                        LOGGER_DEBUG(log, "AudioFramesIN: error in rb_write");
                         // TODO: possible mem leak!!
                         // free(empty_m);
                     }
@@ -443,7 +443,7 @@ static int jbuf_write(Logger *log, ACSession *ac, struct RingBuffer *q, struct R
         }
         else
         {
-            LOGGER_WARNING(log, "AudioFramesIN: old audio frames received hseqnum=%d, lpseqnum=%d",
+            LOGGER_DEBUG(log, "AudioFramesIN: old audio frames received hseqnum=%d, lpseqnum=%d",
                 (int)m->header.sequnum,
                 (int)ac->lp_seqnum);
             return -1;

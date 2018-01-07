@@ -636,7 +636,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 			if ((int)data_type != (int)video_frame_type_KEYFRAME)
 			{
 				free(p);
-				LOGGER_WARNING(vc->log, "skipping incoming video frame (1)");
+				LOGGER_DEBUG(vc->log, "skipping incoming video frame (1)");
 				if (rb_read((RingBuffer *)vc->vbuf_raw, (void **)&p, &data_type)) {
 				}
 				else
@@ -690,7 +690,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 #if 0
 		if ((int)data_type == (int)video_frame_type_KEYFRAME)
 		{
-			LOGGER_WARNING(vc->log, "RTP_RECV:sn=%ld fn=%ld pct=%d%% *I* len=%ld recv_len=%ld",
+			LOGGER_DEBUG(vc->log, "RTP_RECV:sn=%ld fn=%ld pct=%d%% *I* len=%ld recv_len=%ld",
 				(long)header_v3->sequnum,
 				(long)header_v3->fragment_num,
 				(int)(((float)header_v3->received_length_full/(float)full_data_len) * 100.0f),
@@ -699,7 +699,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 		}
 		else
 		{
-			LOGGER_WARNING(vc->log, "RTP_RECV:sn=%ld fn=%ld pct=%d%% len=%ld recv_len=%ld",
+			LOGGER_DEBUG(vc->log, "RTP_RECV:sn=%ld fn=%ld pct=%d%% len=%ld recv_len=%ld",
 				(long)header_v3->sequnum,
 				(long)header_v3->fragment_num,
 				(int)(((float)header_v3->received_length_full/(float)full_data_len) * 100.0f),
