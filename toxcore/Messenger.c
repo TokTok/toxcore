@@ -2100,7 +2100,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
     }
 
 #ifndef VANILLA_NACL
-    m->group_announce = new_gca(m->dht);
+    m->group_announce = new_gca_list();
 
     if (m->group_announce == nullptr) {
         kill_networking(m->net);
@@ -2116,7 +2116,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
         kill_networking(m->net);
         kill_net_crypto(m->net_crypto);
         kill_DHT(m->dht);
-        kill_gca(m->group_announce);
+//        kill_gca(m->group_announce);
         free(m);
         return nullptr;
     }
@@ -2134,8 +2134,8 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
         kill_onion_announce(m->onion_a);
         kill_onion_client(m->onion_c);
 #ifndef VANILLA_NACL
-        kill_gca(m->group_announce);
-        kill_dht_groupchats(m->group_handler);
+//        kill_gca(m->group_announce);
+        kill_groupchats(m->group_handler);
 #endif /* VANILLA_NACL */
         kill_net_crypto(m->net_crypto);
         kill_DHT(m->dht);

@@ -258,7 +258,7 @@ struct Messenger {
     time_t lastdump;
 
     GC_Session *group_handler;
-    GC_Announce *group_announce;
+    GC_Announces_List *group_announce;
 
     uint8_t has_added_relays; // If the first connection has occurred in do_messenger
     Node_format loaded_relays[NUM_SAVED_TCP_RELAYS]; // Relays loaded from config

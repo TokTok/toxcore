@@ -416,6 +416,8 @@ static int handle_gc_announce_request(Onion_Announce *onion_a, IP_Port source, c
     fprintf(stderr, "WOW, that's gc announce!!!111");
 
     // TODO: implement me
+
+    return 0;
 }
 
 static int handle_announce_request(void *object, IP_Port source, const uint8_t *packet, uint16_t length, void *userdata)
