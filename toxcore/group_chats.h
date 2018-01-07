@@ -263,7 +263,7 @@ typedef struct GC_Chat {
 typedef struct GC_Session {
     struct Messenger    *messenger;
     GC_Chat             *chats;
-    struct GC_Announce  *announce;
+    struct GC_Announces_List *announce;
 
     uint32_t     num_chats;
 
