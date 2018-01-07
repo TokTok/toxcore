@@ -275,7 +275,7 @@ typedef void gc_rejected_cb(Messenger *m, uint32_t group_number, unsigned int ty
 typedef struct GC_Session {
     Messenger           *messenger;
     GC_Chat             *chats;
-    struct GC_Announce  *announce;
+    struct GC_Announces_List *announce;
 
     uint32_t     num_chats;
 
