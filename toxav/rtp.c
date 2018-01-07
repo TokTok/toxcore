@@ -196,7 +196,7 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length_v3,
     header->sequnum = net_htons(session->sequnum);
 
 	if (is_video_payload == 1) {
-		LOGGER_WARNING(session->m->log, "RTP_SEND:seqnum=%ld length=%lld",
+		LOGGER_DEBUG(session->m->log, "RTP_SEND:seqnum=%ld length=%lld",
 				(long)session->sequnum, (long long)length_v3);
 	}
 
@@ -432,7 +432,7 @@ static int8_t get_slot(Logger *log, struct RTPWorkBufferList *wkbl, uint8_t is_k
         if (wkbl->next_free_entry < USED_RTP_WORKBUFFER_COUNT) {
             if ((wkbl->next_free_entry > 0)
                     && (wkbl->work_buffer[wkbl->next_free_entry - 1].timestamp > net_ntohl(header_v3->timestamp))) {
-                LOGGER_WARNING(log, "workbuffer:1a:timestamp too old");
+                LOGGER_DEBUG(log, "workbuffer:1a:timestamp too old");
                 return -2;
             } else {
                 // LOGGER_WARNING(log, "workbuffer:1b:timestamp prev=%d cur=%d", (int)wkbl->work_buffer[wkbl->next_free_entry - 1].timestamp , (int)net_ntohl(header_v3->timestamp));
@@ -443,7 +443,7 @@ static int8_t get_slot(Logger *log, struct RTPWorkBufferList *wkbl, uint8_t is_k
         if (wkbl->next_free_entry < USED_RTP_WORKBUFFER_COUNT) {
             if ((wkbl->next_free_entry > 0)
                     && (wkbl->work_buffer[wkbl->next_free_entry - 1].timestamp > net_ntohl(header_v3->timestamp))) {
-                LOGGER_WARNING(log, "workbuffer:2:timestamp too old");
+                LOGGER_DEBUG(log, "workbuffer:2:timestamp too old");
                 return -2;
             } else {
                 // LOGGER_WARNING(log, "workbuffer:2b:timestamp prev=%d cur=%d", (int)wkbl->work_buffer[wkbl->next_free_entry - 1].timestamp , (int)net_ntohl(header_v3->timestamp));
@@ -458,7 +458,7 @@ static int8_t get_slot(Logger *log, struct RTPWorkBufferList *wkbl, uint8_t is_k
                 if ((wkbl->work_buffer[0].timestamp + VIDEO_KEEP_KEYFRAME_IN_BUFFER_FOR_MS) > net_ntohl(header_v3->timestamp)) {
                     // if we are processing a keyframe and the current part does not belong to a keyframe
                     // keep the keyframe and drop the current data
-                    LOGGER_WARNING(log, "keep KEYFRAME in workbuffer");
+                    LOGGER_DEBUG(log, "keep KEYFRAME in workbuffer");
                     result_slot = -2;
                 }
             }
@@ -904,7 +904,7 @@ int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, 
         if (chloss(session, header)) {
 			if ((uint8_t)header->pt == (rtp_TypeAudio % 128))
 			{
-					LOGGER_WARNING(m->log, "drop late audio messages (1)");
+					LOGGER_DEBUG(m->log, "drop late audio messages (1)");
 			}
 
             return 0;
@@ -969,7 +969,7 @@ int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, 
 
 				if ((uint8_t)header->pt == (rtp_TypeAudio % 128))
 				{
-						LOGGER_WARNING(m->log, "drop audio message (2)");
+						LOGGER_DEBUG(m->log, "drop audio message (2)");
 				}
 
                 return 0;
@@ -1003,7 +1003,7 @@ int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, 
                  */
 				if ((uint8_t)header->pt == (rtp_TypeAudio % 128))
 				{
-						LOGGER_WARNING(m->log, "drop old audio message (3)");
+						LOGGER_DEBUG(m->log, "drop old audio message (3)");
 				}
 
                 return 0;
@@ -1040,7 +1040,7 @@ NEW_MULTIPARTED:
         if (chloss(session, header)) {
 			if ((uint8_t)header->pt == (rtp_TypeAudio % 128))
 			{
-					LOGGER_WARNING(m->log, "drop out of order audio message (4)");
+					LOGGER_DEBUG(m->log, "drop out of order audio message (4)");
 			}
 
             return 0;
