@@ -538,10 +538,6 @@ if (BUILD_MISC_TESTS)
     other/fun/save-generator.c)
   target_link_modules(save-generator toxcore misc_tools)
 
-  add_executable(group_announce_test ${CPUFEATURES}
-    testing/groupchats/group_announce_test.c)
-  target_link_modules(group_announce_test toxcore misc_tools)
-
   add_executable(group_bootstrap_n_chat ${CPUFEATURES}
     testing/groupchats/group_bootstrap_n_chat.c)
   target_link_modules(group_bootstrap_n_chat toxcore misc_tools)
