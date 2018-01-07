@@ -2035,7 +2035,7 @@ Messenger *new_messenger(Mono_Time *mono_time, Messenger_Options *options, unsig
     }
 
 #ifndef VANILLA_NACL
-    m->group_announce = new_gca(m->mono_time, m->dht);
+    m->group_announce = new_gca_list();
 
     if (m->group_announce == nullptr) {
         kill_networking(m->net);
@@ -2051,6 +2051,7 @@ Messenger *new_messenger(Mono_Time *mono_time, Messenger_Options *options, unsig
         kill_gca(m->group_announce);
         kill_net_crypto(m->net_crypto);
         kill_dht(m->dht);
+//        kill_gca(m->group_announce);
         kill_networking(m->net);
         friendreq_kill(m->fr);
         logger_kill(m->log);
@@ -2072,7 +2073,7 @@ Messenger *new_messenger(Mono_Time *mono_time, Messenger_Options *options, unsig
         kill_onion_client(m->onion_c);
 #ifndef VANILLA_NACL
         kill_dht_groupchats(m->group_handler);
-        kill_gca(m->group_announce);
+//        kill_gca(m->group_announce);
 #endif /* VANILLA_NACL */
         kill_net_crypto(m->net_crypto);
         kill_dht(m->dht);
