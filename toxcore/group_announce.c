@@ -1079,14 +1079,6 @@ static void check_gca_node_timeouts(GC_Announce *announce)
     }
 }
 
-void do_gca(GC_Announce *announce)
-{
-    gca_do_rate_limit(announce);
-    ping_gca_nodes(announce);
-    check_gca_node_timeouts(announce);
-    renew_gca_self_announces(announce);
-}
-
 /* Removes peer with public_key in chat_id's group from requests list */
 void gca_peer_cleanup(GC_Announce *announce, const uint8_t *chat_id, const uint8_t *peer_pk)
 {

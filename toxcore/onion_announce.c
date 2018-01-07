@@ -119,8 +119,9 @@ int create_gc_announce_request(uint8_t *packet, uint16_t max_packet_length, cons
                                const uint8_t *client_id, const uint8_t *data_public_key, uint64_t sendback_data,
                                const uint8_t *gc_data, size_t gc_data_length)
 {
-    if (max_packet_length < ONION_ANNOUNCE_REQUEST_MAX_SIZE)
+    if (max_packet_length < ONION_ANNOUNCE_REQUEST_MAX_SIZE) {
         return -1;
+    }
 
     uint8_t plain[ONION_PING_ID_SIZE + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_PUBLIC_KEY_SIZE +
                   ONION_ANNOUNCE_SENDBACK_DATA_LENGTH + MAX_SENT_GC_NODES * (sizeof(Node_format) + CRYPTO_PUBLIC_KEY_SIZE)];
@@ -146,9 +147,9 @@ int create_gc_announce_request(uint8_t *packet, uint16_t max_packet_length, cons
     int len = encrypt_data(dest_client_id, secret_key, packet + 1, plain, sizeof(plain),
                            packet + 1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE);
 
-//    if ((uint32_t)len + 1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE != ONION_ANNOUNCE_REQUEST_MAX_SIZE) {
-//        return -1;
-//    }
+    if ((uint32_t)len + 1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE != ONION_ANNOUNCE_REQUEST_MAX_SIZE) {
+        return -1;
+    }
 
     memcpy(packet + 1 + CRYPTO_NONCE_SIZE, public_key, CRYPTO_PUBLIC_KEY_SIZE);
 
@@ -406,12 +407,23 @@ static int add_to_entries(Onion_Announce *onion_a, IP_Port ret_ip_port, const ui
     return in_entries(onion_a, public_key);
 }
 
+static int handle_gc_announce_request(Onion_Announce *onion_a, IP_Port source, const uint8_t *packet, uint16_t length)
+{
+    if (length != ANNOUNCE_REQUEST_MAX_SIZE_RECV) {
+        return 1;
+    }
+
+    fprintf(stderr, "WOW, that's gc announce!!!111");
+
+    // TODO: implement me
+}
+
 static int handle_announce_request(void *object, IP_Port source, const uint8_t *packet, uint16_t length, void *userdata)
 {
     Onion_Announce *onion_a = (Onion_Announce *)object;
 
-    if (length != ANNOUNCE_REQUEST_MIN_SIZE_RECV && length != ANNOUNCE_REQUEST_MAX_SIZE_RECV) {
-        return 1;
+    if (length != ANNOUNCE_REQUEST_MIN_SIZE_RECV) {
+        return handle_gc_announce_request(onion_a, source, packet, length);
     }
 
     const uint8_t *packet_public_key = packet + 1 + CRYPTO_NONCE_SIZE;

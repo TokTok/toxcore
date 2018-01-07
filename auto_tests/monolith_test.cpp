@@ -273,7 +273,7 @@ int main(int argc, char *argv[])
     CHECK_SIZE(Onion_Client, 15816);
     CHECK_SIZE(Onion_Client_Cmp_data, 176);
     CHECK_SIZE(Onion_Client_Paths, 2520);
-    CHECK_SIZE(Onion_Friend, 1952);
+    CHECK_SIZE(Onion_Friend, 2040);
     CHECK_SIZE(Onion_Node, 168);
     // toxcore/onion
     CHECK_SIZE(Onion, 245832);

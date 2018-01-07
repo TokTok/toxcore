@@ -38,6 +38,9 @@
 #include "logger.h"
 #include "network.h"
 #include "util.h"
+#include "group_chats.h"
+#include "group_moderation.h"
+#include "onion_client.h"
 
 static int write_cryptpacket_id(const Messenger *m, int32_t friendnumber, uint8_t packet_id, const uint8_t *data,
                                 uint32_t length, uint8_t congestion_control);
@@ -319,7 +322,7 @@ int32_t m_addfriend_norequest(Messenger *m, const uint8_t *real_pk)
 
 int32_t m_add_friend_gc(Messenger *m, const GC_Chat *chat)
 {
-    int32_t friend_number = m_addfriend_norequest(m, chat->chat_public_key);
+    int32_t friend_number = m_addfriend_norequest(m, CHAT_ID(chat->chat_public_key));
     if (friend_number >= 0) {
         Friend frnd = m->friendlist[friend_number];
         frnd.type = CONTACT_TYPE_GC;
@@ -327,22 +330,27 @@ int32_t m_add_friend_gc(Messenger *m, const GC_Chat *chat)
         int friend_connection_id = frnd.friendcon_id;
         Friend_Conn connection = m->fr_c->conns[friend_connection_id];
         int onion_friend_number = connection.onion_friendnum;
-        Onion_Friend onion_friend = m->onion_c->friends_list[onion_friend_number];
 
         Node_format tcp_relay[1]; // TODO: send > 1 relay?
-        size_t gc_data_size = sizeof(Node_format) + ENC_PUBLIC_KEY;
-        onion_friend.gc_data = (uint8_t *)malloc(gc_data_size);
-        if (!onion_friend.gc_data) {
-            return -1;
-        }
         tcp_copy_connected_relays(chat->tcp_conn, tcp_relay, 1);
-        memcpy(onion_friend.gc_data + sizeof(Node_format), chat->self_public_key, ENC_PUBLIC_KEY);
-        onion_friend.gc_data_length = gc_data_size;
+        memcpy(m->onion_c->friends_list[onion_friend_number].gc_data, tcp_relay, sizeof(Node_format));
+        memcpy(m->onion_c->friends_list[onion_friend_number].gc_data + sizeof(Node_format), chat->self_public_key, ENC_PUBLIC_KEY);
+        m->onion_c->friends_list[onion_friend_number].gc_data_length = GC_MAX_DATA_LENGTH;
     }
 
     return friend_number;
 }
 
+
+int32_t m_remove_friend_gc(Messenger *m, const GC_Chat *chat)
+{
+    int friend_number = getfriend_id(m, chat->chat_public_key);
+    if (friend_number >= 0) {
+        m_delfriend(m, friend_number);
+    }
+
+    return friend_number;
+}
 
 static int clear_receipts(Messenger *m, int32_t friendnumber)
 {
@@ -2724,7 +2732,6 @@ void do_messenger(Messenger *m, void *userdata)
     do_friend_connections(m->fr_c, userdata);
 #ifndef VANILLA_NACL
     do_gc(m->group_handler, userdata);
-    do_gca(m->group_handler->announce);
 #endif /* VANILLA_NACL */
     do_friends(m, userdata);
     connection_status_cb(m, userdata);

@@ -109,9 +109,6 @@ int gca_send_get_nodes_request(GC_Announce *announce, const uint8_t *self_public
  */
 size_t gca_get_requested_nodes(GC_Announce *announce, const uint8_t *chat_id, GC_Announce_Node *nodes);
 
-/* Main group announce loop: Pings nodes and checks timeouts. */
-void do_gca(GC_Announce *announce);
-
 /* Removes peer with public_key in chat_id's group from requests list */
 void gca_peer_cleanup(GC_Announce *announce, const uint8_t *chat_id, const uint8_t *peer_pk);
 

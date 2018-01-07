@@ -341,6 +341,8 @@ int32_t m_addfriend_norequest(Messenger *m, const uint8_t *real_pk);
 
 int32_t m_add_friend_gc(Messenger *m, const GC_Chat *chat);
 
+int32_t m_remove_friend_gc(Messenger *m, const GC_Chat *chat);
+
 /*  return the friend number associated to that client id.
  *  return -1 if no such friend.
  */

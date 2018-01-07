@@ -341,12 +341,12 @@ static int group_announce_request(GC_Session *c, const GC_Chat *chat)
  */
 static int group_get_nodes_request(GC_Session *c, const GC_Chat *chat)
 {
-    if (chat->shared_state.privacy_state != GI_PUBLIC) {
+//    if (chat->shared_state.privacy_state != GI_PUBLIC) {
         return 0;
-    }
-
-    return gca_send_get_nodes_request(c->announce, chat->self_public_key, chat->self_secret_key,
-                                      CHAT_ID(chat->chat_public_key));
+//    }
+//
+//    return gca_send_get_nodes_request(c->announce, chat->self_public_key, chat->self_secret_key,
+//                                      CHAT_ID(chat->chat_public_key));
 }
 
 /* Expands the chat_id into the extended chat public key (encryption key + signature key)
@@ -2146,6 +2146,8 @@ static void do_gc_shared_state_changes(GC_Session *c, const GC_Chat *chat, const
         } else if (chat->shared_state.privacy_state == GI_PRIVATE) {
             gca_cleanup(c->announce, CHAT_ID(chat->chat_public_key));
         }
+
+        // TODO: remove gc contacts
 
         return;
     }
@@ -5761,7 +5763,7 @@ int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name
  * If the group is not password protected passwd should be set to NULL and passwd_len should be 0.
  *
  * Return groupnumber on success.
- * Reutrn -1 if the group object fails to initialize.
+ * Return -1 if the group object fails to initialize.
  * Return -2 if chat_id is NULL or a group with chat_id already exists in the chats array.
  * Return -3 if there is an error setting the group password.
  * Return -4 if there is an error adding a friend
