@@ -44,7 +44,7 @@ struct GC_Announce {
 
 struct GC_Announces {
     uint8_t chat_id[CHAT_ID_SIZE];
-    uint8_t index;
+    uint64_t index;
 
     GC_Announce announces[MAX_GCA_SAVED_ANNOUNCES_PER_GC];
 };
@@ -82,5 +82,9 @@ int unpack_gca_nodes(GC_Announce_Node *nodes, uint32_t max_num_nodes, uint16_t *
  * Return -1 on failure.
  */
 int make_self_gca_node(const DHT *dht, GC_Announce_Node *node, const uint8_t *client_id);
+
+
+int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Announce *gc_announces, uint8_t max_nodes,
+                         const uint8_t *chat_id);
 
 #endif /* GROUP_ANNOUNCE_H */

@@ -356,7 +356,8 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    Onion_Announce *onion_a = new_onion_announce(mono_time, dht);
+    GC_Announces_List *gc_announces_list = new_gca_list();
+    Onion_Announce *onion_a = new_onion_announce(mono_time, dht, gc_announces_list);
 
     if (!onion_a) {
         log_write(LOG_LEVEL_ERROR, "Couldn't initialize Tox Onion Announce. Exiting.\n");
