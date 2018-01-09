@@ -103,4 +103,40 @@ int make_self_gca_node(const DHT *dht, GC_Announce_Node *node, const uint8_t *pu
     return 0;
 }
 
+static GC_Announces* get_announces_by_chat_id(GC_Announces_List *gc_announces_list,  const uint8_t *chat_id)
+{
+    int i;
+    for (i = 0; i < gc_announces_list->announces_count; i++) {
+        if (!memcmp(gc_announces_list->announces[i].chat_id, chat_id, ENC_PUBLIC_KEY)) {
+            return &gc_announces_list->announces[i];
+        }
+    }
+
+    return NULL;
+}
+
+int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Announce *gc_announces, uint8_t max_nodes,
+                         const uint8_t *chat_id)
+{
+    if (!gc_announces || !gc_announces_list || !chat_id || !max_nodes) {
+        return -1;
+    }
+
+    GC_Announces *announces = get_announces_by_chat_id(gc_announces_list, chat_id);
+    if (!announces) {
+        return 0;
+    }
+
+    // TODO: add proper selection
+    int gc_announces_count = 0, announce_size = sizeof(GC_Announce), i;
+    GC_Announce *curr_announce = gc_announces;
+    for (i = 0; i < announces->index && i < max_nodes; i++) {
+        memcpy(curr_announce, &announces->announces[i], announce_size);
+        curr_announce += announce_size;
+        gc_announces_count++;
+    }
+
+    return gc_announces_count;
+}
+
 #endif /* VANILLA_NACL */

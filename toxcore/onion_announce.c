@@ -52,6 +52,7 @@ typedef struct {
 struct Onion_Announce {
     DHT     *dht;
     Networking_Core *net;
+    GC_Announces_List *gc_announces_list;
     Onion_Announce_Entry entries[ONION_ANNOUNCE_MAX_ENTRIES];
     /* This is CRYPTO_SYMMETRIC_KEY_SIZE long just so we can use new_symmetric_key() to fill it */
     uint8_t secret_bytes[CRYPTO_SYMMETRIC_KEY_SIZE];
@@ -549,9 +550,9 @@ static int handle_data_request(void *object, IP_Port source, const uint8_t *pack
     return 0;
 }
 
-Onion_Announce *new_onion_announce(DHT *dht)
+Onion_Announce *new_onion_announce(DHT *dht, GC_Announces_List *gc_announces_list)
 {
-    if (dht == nullptr) {
+    if (dht == nullptr || gc_announces_list == nullptr) {
         return nullptr;
     }
 
@@ -563,6 +564,7 @@ Onion_Announce *new_onion_announce(DHT *dht)
 
     onion_a->dht = dht;
     onion_a->net = dht_get_net(dht);
+    onion_a->gc_announces_list = gc_announces_list;
     new_symmetric_key(onion_a->secret_bytes);
 
     networking_registerhandler(onion_a->net, NET_PACKET_ANNOUNCE_REQUEST, &handle_announce_request, onion_a);

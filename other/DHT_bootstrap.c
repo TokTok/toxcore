@@ -119,7 +119,8 @@ int main(int argc, char *argv[])
     Logger *logger = logger_new();
     DHT *dht = new_DHT(logger, new_networking(nullptr, ip, PORT), true);
     Onion *onion = new_onion(dht);
-    Onion_Announce *onion_a = new_onion_announce(dht);
+    GC_Announces_List *gc_announces_list = new_gca_list();
+    Onion_Announce *onion_a = new_onion_announce(dht, gc_announces_list);
 
 #ifdef DHT_NODE_EXTRA_PACKETS
     bootstrap_set_callbacks(dht_get_net(dht), DHT_VERSION_NUMBER, DHT_MOTD, sizeof(DHT_MOTD));
