@@ -313,18 +313,19 @@ int32_t m_add_friend_gc(Messenger *m, const GC_Chat *chat)
 {
     int32_t friend_number = m_addfriend_norequest(m, get_chat_id(chat->chat_public_key));
     if (friend_number >= 0) {
-        Friend frnd = m->friendlist[friend_number];
-        frnd.type = CONTACT_TYPE_GC;
+        Friend *frnd = &m->friendlist[friend_number];
+        frnd->type = CONTACT_TYPE_GC;
 
-        int friend_connection_id = frnd.friendcon_id;
-        Friend_Conn connection = m->fr_c->conns[friend_connection_id];
-        int onion_friend_number = connection.onion_friendnum;
+        int friend_connection_id = frnd->friendcon_id;
+        Friend_Conn *connection = &m->fr_c->conns[friend_connection_id];
+        int onion_friend_number = connection->onion_friendnum;
+        Onion_Friend *onion_friend = &m->onion_c->friends_list[onion_friend_number];
 
         Node_format tcp_relay[1]; // TODO: send > 1 relay?
         tcp_copy_connected_relays(chat->tcp_conn, tcp_relay, 1);
-        memcpy(m->onion_c->friends_list[onion_friend_number].gc_data, tcp_relay, sizeof(Node_format));
-        memcpy(m->onion_c->friends_list[onion_friend_number].gc_data + sizeof(Node_format), chat->self_public_key, ENC_PUBLIC_KEY);
-        m->onion_c->friends_list[onion_friend_number].gc_data_length = GC_MAX_DATA_LENGTH;
+        memcpy(onion_friend->gc_data, tcp_relay, sizeof(Node_format));
+        memcpy(onion_friend->gc_data + sizeof(Node_format), chat->self_public_key, ENC_PUBLIC_KEY);
+        onion_friend->gc_data_length = GC_MAX_DATA_LENGTH;
     }
 
     return friend_number;
@@ -2095,7 +2096,7 @@ Messenger *new_messenger(Mono_Time *mono_time, Messenger_Options *options, unsig
 #endif /* VANILLA_NACL */
 
     m->onion = new_onion(m->mono_time, m->dht);
-    m->onion_a = new_onion_announce(m->mono_time, m->dht);
+    m->onion_a = new_onion_announce(m->mono_time, m->dht, m->group_announce);
     m->onion_c =  new_onion_client(m->mono_time, m->net_crypto);
     m->fr_c = new_friend_connections(m->mono_time, m->onion_c, options->local_discovery_enabled);
 

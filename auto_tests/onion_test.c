@@ -205,8 +205,10 @@ static void test_basic(void)
         do_onion(onion2);
     } while (handled_test_2 == 0);
 
-    Onion_Announce *onion1_a = new_onion_announce(mono_time1, onion1->dht);
-    Onion_Announce *onion2_a = new_onion_announce(mono_time2, onion2->dht);
+    GC_Announces_List *gc_announces_list1 = new_gca_list();
+    Onion_Announce *onion1_a = new_onion_announce(mono_time1, onion1->dht, gc_announces_list1);
+    GC_Announces_List *gc_announces_list2 = new_gca_list();
+    Onion_Announce *onion2_a = new_onion_announce(mono_time2, onion2->dht, gc_announces_list2);
     networking_registerhandler(onion1->net, NET_PACKET_ANNOUNCE_RESPONSE, &handle_test_3, onion1);
     ck_assert_msg((onion1_a != nullptr) && (onion2_a != nullptr), "Onion_Announce failed initializing.");
     uint8_t zeroes[64] = {0};
@@ -377,7 +379,8 @@ static Onions *new_onions(uint16_t port, uint32_t *index)
         return nullptr;
     }
 
-    on->onion_a = new_onion_announce(on->mono_time, dht);
+    GC_Announces_List *gc_announces_list = new_gca_list();
+    on->onion_a = new_onion_announce(on->mono_time, dht, gc_announces_list);
 
     if (!on->onion_a) {
         kill_onion(on->onion);
