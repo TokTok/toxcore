@@ -144,7 +144,7 @@ static int proxy_http_generate_connection_request(TCP_Client_Connection *TCP_con
         return 0;
     }
 
-    const uint16_t port = net_ntohs(TCP_conn->ip_port.port);
+    const uint16_t port = ntohs(TCP_conn->ip_port.port);
     const int written = snprintf((char *)TCP_conn->last_packet, MAX_PACKET_SIZE, "%s%s:%hu%s%s:%hu%s", one, ip, port, two,
                                  ip, port, three);
 
@@ -450,7 +450,7 @@ static int write_packet_TCP_client_secure_connection(TCP_Client_Connection *con,
 
     VLA(uint8_t, packet, sizeof(uint16_t) + length + CRYPTO_MAC_SIZE);
 
-    uint16_t c_length = net_htons(length + CRYPTO_MAC_SIZE);
+    uint16_t c_length = htons(length + CRYPTO_MAC_SIZE);
     memcpy(packet, &c_length, sizeof(uint16_t));
     int len = encrypt_data_symmetric(con->shared_key, con->sent_nonce, data, length, packet + sizeof(uint16_t));
 

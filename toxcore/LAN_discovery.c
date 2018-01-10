@@ -85,9 +85,9 @@ static void fetch_broadcast_info(uint16_t port)
                 if (gateway.family == TOX_AF_INET && subnet_mask.family == TOX_AF_INET) {
                     IP_Port *ip_port = &ip_ports[count];
                     ip_port->ip.family = TOX_AF_INET;
-                    uint32_t gateway_ip = net_ntohl(gateway.ip4.uint32), subnet_ip = net_ntohl(subnet_mask.ip4.uint32);
+                    uint32_t gateway_ip = ntohl(gateway.ip4.uint32), subnet_ip = ntohl(subnet_mask.ip4.uint32);
                     uint32_t broadcast_ip = gateway_ip + ~subnet_ip - 1;
-                    ip_port->ip.ip4.uint32 = net_htonl(broadcast_ip);
+                    ip_port->ip.ip4.uint32 = htonl(broadcast_ip);
                     ip_port->port = port;
                     count++;
 
@@ -275,7 +275,7 @@ bool ip_is_local(IP ip)
         }
 
         /* localhost in IPv6 (::1) */
-        if (ip.ip6.uint64[0] == 0 && ip.ip6.uint32[2] == 0 && ip.ip6.uint32[3] == net_htonl(1)) {
+        if (ip.ip6.uint64[0] == 0 && ip.ip6.uint32[2] == 0 && ip.ip6.uint32[3] == htonl(1)) {
             return 1;
         }
     }

@@ -311,7 +311,7 @@ int main(int argc, char *argv[])
     print_public_key(dht_get_self_public_key(dht));
 
     uint64_t last_LANdiscovery = 0;
-    const uint16_t net_htons_port = net_htons(port);
+    const uint16_t net_htons_port = htons(port);
 
     int waiting_for_dht_connection = 1;
 
