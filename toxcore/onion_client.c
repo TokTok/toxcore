@@ -738,8 +738,6 @@ static int handle_announce_response(void *object, IP_Port source, const uint8_t 
         return 1;
     }
 
-    uint16_t len_nodes = length - ONION_ANNOUNCE_RESPONSE_MIN_SIZE;
-
     uint8_t public_key[CRYPTO_PUBLIC_KEY_SIZE];
     IP_Port ip_port;
     uint32_t path_num;
@@ -749,7 +747,7 @@ static int handle_announce_response(void *object, IP_Port source, const uint8_t 
         return 1;
     }
 
-    VLA(uint8_t, plain, 1 + ONION_PING_ID_SIZE + len_nodes);
+    VLA(uint8_t, plain, 1 + ONION_PING_ID_SIZE + length - ONION_ANNOUNCE_RESPONSE_MIN_SIZE);
     int len;
 
     if (num == 0) {
@@ -778,17 +776,27 @@ static int handle_announce_response(void *object, IP_Port source, const uint8_t 
         return 1;
     }
 
+    uint16_t len_nodes = plain[1 + ONION_PING_ID_SIZE] * sizeof(Node_format);
     if (len_nodes != 0) {
         Node_format nodes[MAX_SENT_NODES];
-        int num_nodes = unpack_nodes(nodes, MAX_SENT_NODES, nullptr, plain + 1 + ONION_PING_ID_SIZE, len_nodes, 0);
+        int num_nodes = unpack_nodes(nodes, plain[1 + ONION_PING_ID_SIZE], 0, plain + 2 + ONION_PING_ID_SIZE, len_nodes, 0);
 
-        if (num_nodes <= 0) {
+        if (num_nodes < 0) {
             return 1;
         }
 
         if (client_ping_nodes(onion_c, num, nodes, num_nodes, source) == -1) {
             return 1;
         }
+    }
+
+    if (len_nodes < length - ONION_ANNOUNCE_RESPONSE_MIN_SIZE && false) {
+        GC_Announce announces[MAX_SENT_GC_NODES];
+        uint16_t gc_announces_count = plain[1 + ONION_PING_ID_SIZE + len_nodes];
+        memcpy(announces, plain + 2 + ONION_PING_ID_SIZE + len_nodes, gc_announces_count * sizeof(GC_Announce));
+
+        fprintf(stderr, "in handle ann response: %d\n", gc_announces_count);
+        // TODO: add to peers list
     }
 
     // TODO(irungentoo): LAN vs non LAN ips?, if we are connected only to LAN, are we offline?
