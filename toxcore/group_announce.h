@@ -87,4 +87,6 @@ int make_self_gca_node(const DHT *dht, GC_Announce_Node *node, const uint8_t *cl
 int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Announce *gc_announces, uint8_t max_nodes,
                          const uint8_t *chat_id);
 
+int add_gc_announce(GC_Announces_List *gc_announces_list, const uint8_t *node, const uint8_t *node_pk, const uint8_t *chat_id);
+
 #endif /* GROUP_ANNOUNCE_H */
