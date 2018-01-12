@@ -1,5 +1,6 @@
 #include <wchar.h>
 #include "group_announce.h"
+#include "util.h"
 
 #ifndef VANILLA_NACL
 
@@ -128,15 +129,40 @@ int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Announce *gc_annou
     }
 
     // TODO: add proper selection
-    int gc_announces_count = 0, announce_size = sizeof(GC_Announce), i;
-    GC_Announce *curr_announce = gc_announces;
+    int gc_announces_count = 0, i;
     for (i = 0; i < announces->index && i < max_nodes; i++) {
-        memcpy(curr_announce, &announces->announces[i], announce_size);
-        curr_announce += announce_size;
+        memcpy(&gc_announces[gc_announces_count], &announces->announces[i], sizeof(GC_Announce));
         gc_announces_count++;
     }
 
     return gc_announces_count;
+}
+
+int add_gc_announce(GC_Announces_List *gc_announces_list, const uint8_t *node, const uint8_t *node_pk, const uint8_t *chat_id)
+{
+    if (!gc_announces_list || !chat_id || !node_pk) {
+        return 1;
+    }
+
+    GC_Announce announce;
+    memcpy(announce.gc_public_key, node_pk, ENC_PUBLIC_KEY);
+    memcpy(&announce.node, node, sizeof(Node_format));
+    announce.timestamp = unix_time();
+
+    GC_Announces *announces = get_announces_by_chat_id(gc_announces_list, chat_id);
+    if (!announces) {
+        GC_Announces new_announce;
+        new_announce.index = 0;
+        gc_announces_list->announces_count++;
+        gc_announces_list->announces = realloc(gc_announces_list->announces, gc_announces_list->announces_count * sizeof(GC_Announces));
+        announces = &gc_announces_list->announces[gc_announces_list->announces_count - 1];
+        memcpy(announces, &new_announce, sizeof(GC_Announces));
+    }
+    uint64_t index = announces->index % MAX_GCA_SAVED_ANNOUNCES_PER_GC;
+    memcpy(&announces->announces[index], &announce, sizeof(GC_Announce));
+    announces->index++;
+
+    return 0;
 }
 
 #endif /* VANILLA_NACL */
