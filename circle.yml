@@ -29,7 +29,7 @@ compile:
   ### ------- get libsodium -------
   - mkdir ~/libsodium
   - cd ~/libsodium/ ; git clone https://github.com/jedisct1/libsodium.git
-  - cd ~/libsodium/ ; cd libsodium/ ; git checkout tags/1.0.11
+  - cd ~/libsodium/ ; cd libsodium/ ; git checkout tags/1.0.12
   - cd ~/libsodium/ ; cd libsodium/ ; ./autogen.sh
   - cd ~/libsodium/ ; cd libsodium/ ; ./configure && make check
   - cd ~/libsodium/ ; cd libsodium/ ; sudo bash -c "printf 'y\naa\n\n' | checkinstall --install --pkgname libsodium --pkgversion 1.0.0 --nodoc --deldesc=no --pkglicense='GPL2'"
@@ -69,7 +69,7 @@ compile:
   - . ~/pp;cd ~/build/;make install
 
 
-  - . ~/pp;cd $_s_;git clone --depth=1 --branch=v1.6.0 https://github.com/webmproject/libvpx.git
+  - . ~/pp;cd $_s_;git clone --depth=1 --branch=v1.6.1 https://github.com/webmproject/libvpx.git
   - . ~/pp;rm -Rf ~/build/
   - . ~/pp;mkdir -p ~/build/
   - . ~/pp;cd ~/build/;$_s_/libvpx/configure --prefix="$_toolchain_"/arm-linux-androideabi/sysroot/usr --disable-examples --disable-unit-tests --sdk-path=/home/ubuntu/android-ndk --target=armv7-android-gcc
@@ -81,7 +81,7 @@ compile:
   - cd /home/ubuntu/install_dest/ ; cd home/ubuntu/c-toxcore/toolchains/arm-linux-androideabi/sysroot/ ; zip -r $CIRCLE_ARTIFACTS/android/libvpx.zip *
 
 
-  - . ~/pp;cd $_s_;git clone --depth=1 --branch=v1.1.3 https://github.com/xiph/opus.git
+  - . ~/pp;cd $_s_;git clone --depth=1 --branch=v1.1.5 https://github.com/xiph/opus.git
   - . ~/pp;cd $_s_/opus/;autoreconf -fi
   - . ~/pp;rm -Rf ~/build/
   - . ~/pp;mkdir -p ~/build/
@@ -94,7 +94,7 @@ compile:
   - cd /home/ubuntu/install_dest/ ; cd home/ubuntu/c-toxcore/toolchains/arm-linux-androideabi/sysroot/ ; zip -r $CIRCLE_ARTIFACTS/android/opus.zip *
     
     
-  - . ~/pp;cd $_s_;git clone --depth=1 --branch=1.0.11 https://github.com/jedisct1/libsodium.git
+  - . ~/pp;cd $_s_;git clone --depth=1 --branch=1.0.12 https://github.com/jedisct1/libsodium.git
   - . ~/pp;cd $_s_/libsodium/;autoreconf -fi
   - . ~/pp;rm -Rf ~/build/
   - . ~/pp;mkdir -p ~/build/

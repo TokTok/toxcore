@@ -80,12 +80,14 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     /* TODO(mannol): If we set error resilience the app will crash due to bug in vp8.
        Perhaps vp9 has solved it?*/
 #if 0
+    /* zoff: this does still not work */
     cfg.g_error_resilient = VPX_ERROR_RESILIENT_DEFAULT | VPX_ERROR_RESILIENT_PARTITIONS;
 #endif
     cfg.g_lag_in_frames = 0;
     cfg.kf_min_dist = 0;
-    cfg.kf_max_dist = 48;
-    cfg.kf_mode = VPX_KF_AUTO;
+    cfg.kf_mode = VPX_KF_AUTO; // Encoder determines optimal placement automatically
+    cfg.rc_end_usage = VPX_CQ; // Constrained Quality (CQ) mode -> give codec a hint that we may be on low bandwidth connection
+    cfg.kf_max_dist = 10; // a full frame every 10 frames minimum (can be more often, codec decides automatically)
 
     rc = vpx_codec_enc_init(vc->encoder, VIDEO_CODEC_ENCODER_INTERFACE, &cfg, 0);
 
