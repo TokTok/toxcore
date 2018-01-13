@@ -116,6 +116,7 @@ static GC_Announces* get_announces_by_chat_id(GC_Announces_List *gc_announces_li
     return NULL;
 }
 
+// TODO: filter own announces!
 int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Announce *gc_announces, uint8_t max_nodes,
                          const uint8_t *chat_id)
 {
@@ -155,13 +156,18 @@ int add_gc_announce(GC_Announces_List *gc_announces_list, const uint8_t *node, c
         new_announce.index = 0;
         gc_announces_list->announces_count++;
         gc_announces_list->announces = realloc(gc_announces_list->announces, gc_announces_list->announces_count * sizeof(GC_Announces));
+        if (!gc_announces_list->announces) {
+            gc_announces_list->announces_count = 0;
+
+            return 2;
+        }
         announces = &gc_announces_list->announces[gc_announces_list->announces_count - 1];
         memcpy(announces, &new_announce, sizeof(GC_Announces));
     }
     uint64_t index = announces->index % MAX_GCA_SAVED_ANNOUNCES_PER_GC;
     memcpy(&announces->announces[index], &announce, sizeof(GC_Announce));
     announces->index++;
-
+    // TODO; lock && simplify
     return 0;
 }
 
