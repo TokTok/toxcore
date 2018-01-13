@@ -82,3 +82,8 @@ cscope.files
 
 # rpm
 tox.spec
+
+# Emacs
+GRTAGS
+GTAGS
+GPATH
