@@ -488,10 +488,15 @@ static int handle_gc_announce_request(Onion_Announce *onion_a, IP_Port source, c
 
     GC_Announces_List *gc_announces_list = onion_a->gc_announces_list;
 
-    uint8_t num_ann = (uint8_t)get_gc_announces(gc_announces_list, gc_announces, MAX_SENT_NODES, data_public_key);
+    GC_Announce *new_announce = add_gc_announce(gc_announces_list, pl + 1 + ONION_PING_ID_SIZE,
+                                                pl + 1 + ONION_PING_ID_SIZE + sizeof(Node_format), data_public_key,
+                                                pl + 1 + ONION_PING_ID_SIZE + sizeof(Node_format) + ENC_PUBLIC_KEY);
+    if (!new_announce) {
+        return 1;
+    }
+    uint8_t num_ann = (uint8_t)get_gc_announces(gc_announces_list, gc_announces, MAX_SENT_NODES,
+                                                data_public_key, new_announce->peer_public_key);
     fprintf(stderr, "NUM_ANN: %d\n", num_ann);
-    add_gc_announce(gc_announces_list, pl + 1 + ONION_PING_ID_SIZE,
-                    pl + 1 + ONION_PING_ID_SIZE + sizeof(Node_format), data_public_key);
 
     pl[2 + ONION_PING_ID_SIZE + nodes_length] = num_ann;
     size_t announces_length = num_ann * sizeof(GC_Announce);

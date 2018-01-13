@@ -118,7 +118,7 @@ static GC_Announces* get_announces_by_chat_id(GC_Announces_List *gc_announces_li
 
 // TODO: filter own announces!
 int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Announce *gc_announces, uint8_t max_nodes,
-                         const uint8_t *chat_id)
+                     const uint8_t *chat_id, const uint8_t *except_public_key)
 {
     if (!gc_announces || !gc_announces_list || !chat_id || !max_nodes) {
         return -1;
@@ -132,6 +132,10 @@ int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Announce *gc_annou
     // TODO: add proper selection
     int gc_announces_count = 0, i;
     for (i = 0; i < announces->index && i < max_nodes; i++) {
+        if (!memcmp(except_public_key, &announces->announces[i].peer_public_key, ENC_PUBLIC_KEY)) {
+            continue;
+        }
+
         memcpy(&gc_announces[gc_announces_count], &announces->announces[i], sizeof(GC_Announce));
         gc_announces_count++;
     }
@@ -139,16 +143,12 @@ int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Announce *gc_annou
     return gc_announces_count;
 }
 
-int add_gc_announce(GC_Announces_List *gc_announces_list, const uint8_t *node, const uint8_t *node_pk, const uint8_t *chat_id)
+GC_Announce* add_gc_announce(GC_Announces_List *gc_announces_list, const uint8_t *node, const uint8_t *node_pk,
+                             const uint8_t *chat_id, const uint8_t *peer_id)
 {
     if (!gc_announces_list || !chat_id || !node_pk) {
-        return 1;
+        return NULL;
     }
-
-    GC_Announce announce;
-    memcpy(announce.gc_public_key, node_pk, ENC_PUBLIC_KEY);
-    memcpy(&announce.node, node, sizeof(Node_format));
-    announce.timestamp = unix_time();
 
     GC_Announces *announces = get_announces_by_chat_id(gc_announces_list, chat_id);
     if (!announces) {
@@ -159,16 +159,19 @@ int add_gc_announce(GC_Announces_List *gc_announces_list, const uint8_t *node, c
         if (!gc_announces_list->announces) {
             gc_announces_list->announces_count = 0;
 
-            return 2;
+            return NULL;
         }
         announces = &gc_announces_list->announces[gc_announces_list->announces_count - 1];
         memcpy(announces, &new_announce, sizeof(GC_Announces));
     }
     uint64_t index = announces->index % MAX_GCA_SAVED_ANNOUNCES_PER_GC;
-    memcpy(&announces->announces[index], &announce, sizeof(GC_Announce));
+    GC_Announce *gc_announce = &announces->announces[index];
+    memcpy(&gc_announce->gc_public_key, chat_id, ENC_PUBLIC_KEY);
+    memcpy(&gc_announce->node, node, sizeof(Node_format));
+    announces->announces[index].timestamp = unix_time();
     announces->index++;
-    // TODO; lock && simplify
-    return 0;
+    // TODO; lock
+    return gc_announce;
 }
 
 #endif /* VANILLA_NACL */
