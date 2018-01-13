@@ -412,10 +412,10 @@ static int add_to_entries(Onion_Announce *onion_a, IP_Port ret_ip_port, const ui
 
 static int handle_gc_announce_request(Onion_Announce *onion_a, IP_Port source, const uint8_t *packet, uint16_t length)
 {
-    if (length > ANNOUNCE_REQUEST_MAX_SIZE_RECV) {
+    if (length > ANNOUNCE_REQUEST_MAX_SIZE_RECV || length < ANNOUNCE_REQUEST_MIN_SIZE_RECV) {
         return 1;
     }
-    fprintf(stderr, "1\n");
+
     const uint8_t *packet_public_key = packet + 1 + crypto_box_NONCEBYTES;
     uint8_t shared_key[crypto_box_BEFORENMBYTES];
     get_shared_key(&onion_a->shared_keys_recv, shared_key, dht_get_self_secret_key(onion_a->dht), packet_public_key);
@@ -424,12 +424,10 @@ static int handle_gc_announce_request(Onion_Announce *onion_a, IP_Port source, c
                   ONION_ANNOUNCE_SENDBACK_DATA_LENGTH + sizeof(Node_format) + crypto_box_PUBLICKEYBYTES];
     int len = decrypt_data_symmetric(shared_key, packet + 1, packet + 1 + crypto_box_NONCEBYTES + crypto_box_PUBLICKEYBYTES,
                                      sizeof(plain) + crypto_box_MACBYTES, plain);
-    fprintf(stderr, "2\n");
 
     if ((uint32_t)len != sizeof(plain)) {
         return 1;
     }
-    fprintf(stderr, "3\n");
 
     uint8_t ping_id1[ONION_PING_ID_SIZE];
     generate_ping_id(onion_a, unix_time(), packet_public_key, source, ping_id1);
@@ -440,7 +438,6 @@ static int handle_gc_announce_request(Onion_Announce *onion_a, IP_Port source, c
     int index;
 
     uint8_t *data_public_key = plain + ONION_PING_ID_SIZE + crypto_box_PUBLICKEYBYTES;
-    fprintf(stderr, "4\n");
 
     if (sodium_memcmp(ping_id1, plain, ONION_PING_ID_SIZE) == 0
         || sodium_memcmp(ping_id2, plain, ONION_PING_ID_SIZE) == 0) {
@@ -457,10 +454,8 @@ static int handle_gc_announce_request(Onion_Announce *onion_a, IP_Port source, c
                                              ip_is_lan(source.ip) == 0, 1);
     uint8_t nonce[CRYPTO_NONCE_SIZE];
     random_nonce(nonce);
-    fprintf(stderr, "5\n");
 
     uint8_t pl[3 + ONION_PING_ID_SIZE + sizeof(nodes_list) + sizeof(gc_announces)];
-    fprintf(stderr, "6\n");
 
     if (index == -1) {
         pl[0] = 0;
@@ -479,42 +474,33 @@ static int handle_gc_announce_request(Onion_Announce *onion_a, IP_Port source, c
             memcpy(pl + 1, onion_a->entries[index].data_public_key, CRYPTO_PUBLIC_KEY_SIZE);
         }
     }
-    fprintf(stderr, "7\n");
 
     int nodes_length = 0;
 
     if (num_nodes != 0) {
         nodes_length = pack_nodes(pl + 2 + ONION_PING_ID_SIZE, sizeof(nodes_list), nodes_list, num_nodes);
 
-        if (nodes_length < 0)
+        if (nodes_length <= 0)
             return 1;
     }
-    fprintf(stderr, "8\n");
 
     pl[1 + ONION_PING_ID_SIZE] = (uint8_t)num_nodes;
-    fprintf(stderr, "9\n");
 
     GC_Announces_List *gc_announces_list = onion_a->gc_announces_list;
-    fprintf(stderr, "10\n");
 
     uint8_t num_ann = (uint8_t)get_gc_announces(gc_announces_list, gc_announces, MAX_SENT_NODES, data_public_key);
-    fprintf(stderr, "11: NUM_ANN: %d\n", num_ann);
-    add_gc_announce(gc_announces_list, &pl[1 + ONION_PING_ID_SIZE],
-                    &pl[1 + ONION_PING_ID_SIZE + sizeof(Node_format)], data_public_key);
-    fprintf(stderr, "11_1: NUM_ANN: %d\n", num_ann);
+    fprintf(stderr, "NUM_ANN: %d\n", num_ann);
+    add_gc_announce(gc_announces_list, pl + 1 + ONION_PING_ID_SIZE,
+                    pl + 1 + ONION_PING_ID_SIZE + sizeof(Node_format), data_public_key);
 
-    num_ann = 1;
     pl[2 + ONION_PING_ID_SIZE + nodes_length] = num_ann;
     size_t announces_length = num_ann * sizeof(GC_Announce);
-    fprintf(stderr, "12\n");
 
     memcpy(pl + 3 + ONION_PING_ID_SIZE + nodes_length, gc_announces, announces_length);
-    fprintf(stderr, "13\n");
 
     uint8_t data[ONION_ANNOUNCE_RESPONSE_MAX_SIZE];
     len = encrypt_data_symmetric(shared_key, nonce, pl, 3 + ONION_PING_ID_SIZE + nodes_length + announces_length,
                                  data + 1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH + crypto_box_NONCEBYTES);
-    fprintf(stderr, "14\n");
 
     if (len != 3 + ONION_PING_ID_SIZE + nodes_length + announces_length + crypto_box_MACBYTES) {
         return 1;
@@ -524,15 +510,12 @@ static int handle_gc_announce_request(Onion_Announce *onion_a, IP_Port source, c
     memcpy(data + 1, plain + ONION_PING_ID_SIZE + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_PUBLIC_KEY_SIZE,
            ONION_ANNOUNCE_SENDBACK_DATA_LENGTH);
     memcpy(data + 1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH, nonce, crypto_box_NONCEBYTES);
-    fprintf(stderr, "15\n");
-
 
     if (send_onion_response(onion_a->net, source, data,
                             1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH + crypto_box_NONCEBYTES + len,
-                            packet + (MAX_DATA_REQUEST_SIZE - ONION_RETURN_3)) == -1) {
+                            packet + (length - ONION_RETURN_3)) == -1) {
         return 1;
     }
-    fprintf(stderr, "16\n");
 
     return 0;
 }

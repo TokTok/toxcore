@@ -26,6 +26,7 @@
 
 #define MAX_GCA_SELF_REQUESTS 30
 #define MAX_GCA_SAVED_ANNOUNCES_PER_GC 100
+#define GC_ANNOUNCE_PACKED_SIZE (sizeof(Node_format) + 2 * ENC_PUBLIC_KEY)
 
 typedef struct {
     uint8_t public_key[ENC_PUBLIC_KEY];
@@ -39,6 +40,7 @@ typedef struct GC_Announces_List GC_Announces_List;
 struct GC_Announce {
     uint64_t timestamp;
     Node_format node;
+    uint8_t node_public_key[ENC_PUBLIC_KEY];
     uint8_t gc_public_key[ENC_PUBLIC_KEY];
 };
 
@@ -88,5 +90,8 @@ int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Announce *gc_annou
                          const uint8_t *chat_id);
 
 int add_gc_announce(GC_Announces_List *gc_announces_list, const uint8_t *node, const uint8_t *node_pk, const uint8_t *chat_id);
+
+
+//TODO: pack && unpack announces?
 
 #endif /* GROUP_ANNOUNCE_H */
