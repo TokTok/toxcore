@@ -794,15 +794,15 @@ static int handle_announce_response(void *object, IP_Port source, const uint8_t 
     }
 
     if (len_nodes + 2 < length - ONION_ANNOUNCE_RESPONSE_MIN_SIZE) {
-        GC_Announce announces[MAX_SENT_GC_NODES];
+        GC_Announce announces[MAX_SENT_NODES];
         uint8_t gc_announces_count = plain[2 + ONION_PING_ID_SIZE + len_nodes];
-        fprintf(stderr, "in handle ann response: %d\n", gc_announces_count);
 
-        if (gc_announces_count > MAX_SENT_GC_NODES) { // TODO: check real length everywhere!!!111
+        if (gc_announces_count > MAX_SENT_NODES) { // TODO: check real length everywhere!!!111
             return 1;
         }
 
         if (gc_announces_count) {
+            fprintf(stderr, "ann count: %d\n", gc_announces_count);
             memcpy(announces, plain + 3 + ONION_PING_ID_SIZE + len_nodes, gc_announces_count * GC_ANNOUNCE_PACKED_SIZE);
 
             GC_Chat *chat = gc_get_group_by_public_key(onion_c->gc_session,
@@ -812,6 +812,7 @@ static int handle_announce_response(void *object, IP_Port source, const uint8_t 
             }
 
             int added_peers = add_peers_from_announces(onion_c->gc_session, chat, announces, gc_announces_count);
+            fprintf(stderr, "added peers count: %d\n", added_peers);
             if (added_peers <= 0) {
                 return 1;
             }

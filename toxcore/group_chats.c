@@ -6323,7 +6323,7 @@ int add_peers_from_announces(const GC_Session *gc_session, const GC_Chat *chat, 
     if (!gc_announces_count) {
         return 0;
     }
-
+    // TODO: check if already added
     int i, added_peers = 0;
     for (i = 0; i < gc_announces_count; i++) {
         GC_Announce *curr_announce = &announces[i];
