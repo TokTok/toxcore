@@ -43,7 +43,8 @@
 enum {
     MESSAGE_NORMAL,
     MESSAGE_ACTION,
-    MESSAGE_CORRECTION
+    MESSAGE_CORRECTION,
+    MESSAGE_LAST
 };
 
 /* NOTE: Packet ids below 24 must never be used. */

@@ -486,7 +486,8 @@ int m_friend_exists(const Messenger *m, int32_t friendnumber)
 int m_send_message_generic(Messenger *m, int32_t friendnumber, uint8_t type, const uint8_t *message, uint32_t length,
                            uint32_t *message_id)
 {
-    if (type > MESSAGE_CORRECTION) {
+    /* MESSAGE_LAST itself is incorrect value */
+    if (type >= MESSAGE_LAST) {
         return -5;
     }
 
