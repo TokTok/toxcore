@@ -32,6 +32,7 @@
 #include <string.h>
 
 #include "LAN_discovery.h"
+#include "group_chats.h"
 #include "util.h"
 
 /* defines for the array size and
@@ -794,7 +795,7 @@ static int handle_announce_response(void *object, IP_Port source, const uint8_t 
 
     if (len_nodes + 2 < length - ONION_ANNOUNCE_RESPONSE_MIN_SIZE) {
         GC_Announce announces[MAX_SENT_GC_NODES];
-        uint16_t gc_announces_count = plain[2 + ONION_PING_ID_SIZE + len_nodes];
+        uint8_t gc_announces_count = plain[2 + ONION_PING_ID_SIZE + len_nodes];
         fprintf(stderr, "in handle ann response: %d\n", gc_announces_count);
 
         if (gc_announces_count > MAX_SENT_GC_NODES) { // TODO: check real length everywhere!!!111
@@ -803,9 +804,18 @@ static int handle_announce_response(void *object, IP_Port source, const uint8_t 
 
         if (gc_announces_count) {
             memcpy(announces, plain + 3 + ONION_PING_ID_SIZE + len_nodes, gc_announces_count * GC_ANNOUNCE_PACKED_SIZE);
-        }
 
-        // TODO: add to peers list
+            GC_Chat *chat = gc_get_group_by_public_key(onion_c->gc_session,
+                                                       onion_c->friends_list[num - 1].real_public_key);
+            if (!chat) {
+                return 1;
+            }
+
+            int added_peers = add_peers_from_announces(onion_c->gc_session, chat, announces, gc_announces_count);
+            if (added_peers <= 0) {
+                return 1;
+            }
+        }
     }
 
     //TODO: LAN vs non LAN ips?, if we are connected only to LAN, are we offline?
@@ -1765,10 +1775,10 @@ void do_onion_client(Onion_Client *onion_c)
     onion_c->last_run = unix_time();
 }
 
-Onion_Client *new_onion_client(Net_Crypto *c)
+Onion_Client *new_onion_client(Net_Crypto *c, GC_Session *gc_session)
 {
-    if (c == nullptr) {
-        return nullptr;
+    if (!c || !gc_session) {
+        return NULL;
     }
 
     Onion_Client *onion_c = (Onion_Client *)calloc(1, sizeof(Onion_Client));
@@ -1787,6 +1797,7 @@ Onion_Client *new_onion_client(Net_Crypto *c)
     onion_c->dht = nc_get_dht(c);
     onion_c->net = dht_get_net(onion_c->dht);
     onion_c->c = c;
+    onion_c->gc_session = gc_session;
     new_symmetric_key(onion_c->secret_symmetric_key);
     crypto_new_keypair(onion_c->temp_public_key, onion_c->temp_secret_key);
     networking_registerhandler(onion_c->net, NET_PACKET_ANNOUNCE_RESPONSE, &handle_announce_response, onion_c);

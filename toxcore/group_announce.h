@@ -40,7 +40,6 @@ typedef struct GC_Announces_List GC_Announces_List;
 struct GC_Announce {
     uint64_t timestamp;
     Node_format node;
-    uint8_t gc_public_key[ENC_PUBLIC_KEY];
     uint8_t peer_public_key[ENC_PUBLIC_KEY];
 };
 
@@ -89,7 +88,7 @@ int make_self_gca_node(const DHT *dht, GC_Announce_Node *node, const uint8_t *cl
 int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Announce *gc_announces, uint8_t max_nodes,
                      const uint8_t *chat_id, const uint8_t *except_public_key);
 
-GC_Announce* add_gc_announce(GC_Announces_List *gc_announces_list, const uint8_t *node, const uint8_t *node_pk,
+GC_Announce* add_gc_announce(GC_Announces_List *gc_announces_list, const uint8_t *node,
                              const uint8_t *chat_id, const uint8_t *peer_id);
 
 

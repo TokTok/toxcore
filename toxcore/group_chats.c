@@ -39,8 +39,6 @@
 #include "util.h"
 #include "Messenger.h"
 
-#ifndef VANILLA_NACL
-
 #include <sodium.h>
 
 enum {
@@ -90,7 +88,6 @@ static int group_delete(GC_Session *c, GC_Chat *chat);
 static int get_nick_peernumber(const GC_Chat *chat, const uint8_t *nick, uint16_t length);
 static int sync_gc_announced_nodes(const GC_Session *c, GC_Chat *chat);
 static bool group_exists(const GC_Session *c, const uint8_t *chat_id);
-GC_Chat *gc_get_group_by_public_key(const GC_Session *c, const uint8_t *public_key);
 static int save_tcp_relay(GC_Connection *gconn, Node_format *node);
 
 typedef enum {
@@ -5840,8 +5837,7 @@ bool check_group_invite(GC_Session *c, const uint8_t *data, uint32_t length)
  *
  * Return 0 on success.
  * Return -1 if friendnumber does not exist.
- * Return -2 on failure to create the invite data.
- * Return -3 if the packet fails to send.
+ * Return -2 if the packet fails to send.
  */
 int gc_invite_friend(GC_Session *c, GC_Chat *chat, int32_t friendnumber,
                      int send_group_invite_packet(const Messenger *m, uint32_t friendnumber, const uint8_t *packet, size_t length))
@@ -5927,7 +5923,7 @@ static int send_gc_invite_confirmed_packet(Messenger *m, GC_Chat *chat, uint32_t
 
 
 int handle_gc_invite_confirmed_packet(GC_Session *c, int friend_number, const uint8_t *data,
-                                     uint32_t length)
+                                      uint32_t length)
 {
     if (length <= CHAT_ID_SIZE + ENC_PUBLIC_KEY) {
         return -1;
@@ -6140,7 +6136,7 @@ GC_Session *new_dht_groupchats(Messenger *m)
     }
 
     c->messenger = m;
-    c->announce = m->group_announce;
+    c->announces_list = m->group_announce;
 
     networking_registerhandler(m->net, NET_PACKET_GC_LOSSLESS, &handle_gc_udp_packet, m);
     networking_registerhandler(m->net, NET_PACKET_GC_LOSSY, &handle_gc_udp_packet, m);
@@ -6318,4 +6314,35 @@ static bool group_exists(const GC_Session *c, const uint8_t *chat_id)
     return false;
 }
 
-#endif /* VANILLA_NACL */
+int add_peers_from_announces(const GC_Session *gc_session, const GC_Chat *chat, GC_Announce *announces, uint8_t gc_announces_count)
+{
+    if (!chat || !announces || !gc_session) {
+        return -1;
+    }
+
+    if (!gc_announces_count) {
+        return 0;
+    }
+
+    int i, added_peers = 0;
+    for (i = 0; i < gc_announces_count; i++) {
+        GC_Announce *curr_announce = &announces[i];
+        int peer_id = peer_add(gc_session->messenger, chat->groupnumber, NULL, curr_announce->peer_public_key);
+        if (peer_id < 0) {
+            continue;
+        }
+
+        GC_Connection *gconn = gcc_get_connection(chat, peer_id);
+
+        add_tcp_relay_connection(chat->tcp_conn, gconn->tcp_connection_num, curr_announce->node.ip_port,
+                                 curr_announce->peer_public_key);
+        save_tcp_relay(gconn, &curr_announce->node);
+
+        gconn->pending_handshake_type = HS_INVITE_REQUEST;
+        gconn->pending_handshake = unix_time() + HANDSHAKE_SENDING_TIMEOUT;
+
+        added_peers++;
+    }
+
+    return added_peers;
+}

@@ -450,7 +450,7 @@ static int handle_gc_announce_request(Onion_Announce *onion_a, IP_Port source, c
     /*Respond with a announce response packet*/
     Node_format nodes_list[MAX_SENT_NODES];
     GC_Announce gc_announces[MAX_SENT_NODES];
-    unsigned int num_nodes = get_close_nodes(onion_a->dht, plain + 1 + ONION_PING_ID_SIZE, nodes_list, 0,
+    unsigned int num_nodes = get_close_nodes(onion_a->dht, plain + ONION_PING_ID_SIZE, nodes_list, 0,
                                              ip_is_lan(source.ip) == 0, 1);
     uint8_t nonce[CRYPTO_NONCE_SIZE];
     random_nonce(nonce);
@@ -487,15 +487,15 @@ static int handle_gc_announce_request(Onion_Announce *onion_a, IP_Port source, c
     pl[1 + ONION_PING_ID_SIZE] = (uint8_t)num_nodes;
 
     GC_Announces_List *gc_announces_list = onion_a->gc_announces_list;
-
-    GC_Announce *new_announce = add_gc_announce(gc_announces_list, pl + 1 + ONION_PING_ID_SIZE,
-                                                pl + 1 + ONION_PING_ID_SIZE + sizeof(Node_format), data_public_key,
-                                                pl + 1 + ONION_PING_ID_SIZE + sizeof(Node_format) + ENC_PUBLIC_KEY);
+    GC_Announce *new_announce = add_gc_announce(gc_announces_list,
+                                                plain + ONION_PING_ID_SIZE + ENC_PUBLIC_KEY * 2 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH,
+                                                plain + ONION_PING_ID_SIZE,
+                                                plain + ONION_PING_ID_SIZE + ENC_PUBLIC_KEY * 2 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH + sizeof(Node_format));
     if (!new_announce) {
         return 1;
     }
     uint8_t num_ann = (uint8_t)get_gc_announces(gc_announces_list, gc_announces, MAX_SENT_NODES,
-                                                data_public_key, new_announce->peer_public_key);
+                                                plain + ONION_PING_ID_SIZE, new_announce->peer_public_key);
     fprintf(stderr, "NUM_ANN: %d\n", num_ann);
 
     pl[2 + ONION_PING_ID_SIZE + nodes_length] = num_ann;
