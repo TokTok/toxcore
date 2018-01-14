@@ -13,6 +13,7 @@
 #include "net_crypto.h"
 #include "onion_announce.h"
 #include "ping_array.h"
+#include "group_chats.h"
 
 #define MAX_ONION_CLIENTS 8
 #define MAX_ONION_CLIENTS_ANNOUNCE 12 // Number of nodes to announce ourselves to.
@@ -171,7 +172,7 @@ void oniondata_registerhandler(Onion_Client *onion_c, uint8_t byte, oniondata_ha
 
 void do_onion_client(Onion_Client *onion_c);
 
-Onion_Client *new_onion_client(const Logger *logger, Mono_Time *mono_time, Net_Crypto *c);
+Onion_Client *new_onion_client(const Logger *logger, Mono_Time *mono_time, Net_Crypto *c, GC_Session *gc_session);
 
 void kill_onion_client(Onion_Client *onion_c);
 
@@ -261,6 +262,7 @@ struct Onion_Client {
 
     DHT     *dht;
     Net_Crypto *c;
+    GC_Session *gc_session;
     Networking_Core *net;
     Onion_Friend    *friends_list;
     uint16_t       num_friends;
