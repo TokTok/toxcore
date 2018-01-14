@@ -1045,8 +1045,11 @@ bool audio_bit_rate_invalid(uint32_t bit_rate)
 }
 bool video_bit_rate_invalid(uint32_t bit_rate)
 {
-    (void) bit_rate;
-    /* TODO(mannol): If anyone knows the answer to this one please fill it up */
+    /* https://www.webmproject.org/docs/webm-sdk/structvpx__codec__enc__cfg.html shows the following:
+     * unsigned int	rc_target_bitrate
+     * which means we dont need to worry about it, because we also use uint
+     * leave this functions a stub, and extend it if needed in the future
+     */
     return false;
 }
 bool invoke_call_state_callback(ToxAV *av, uint32_t friend_number, uint32_t state)
