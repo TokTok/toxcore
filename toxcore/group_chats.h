@@ -27,6 +27,7 @@
 
 #include <stdbool.h>
 #include "TCP_connection.h"
+#include "group_announce.h"
 
 #define TIME_STAMP_SIZE (sizeof(uint64_t))
 #define HASH_ID_BYTES (sizeof(uint32_t))
@@ -286,9 +287,9 @@ typedef void gc_self_join_cb(Messenger *m, uint32_t group_number, void *user_dat
 typedef void gc_rejected_cb(Messenger *m, uint32_t group_number, unsigned int type, void *user_data);
 
 typedef struct GC_Session {
-    Messenger           *messenger;
-    GC_Chat             *chats;
-    struct GC_Announces_List *announce;
+    Messenger                 *messenger;
+    GC_Chat                   *chats;
+    struct GC_Announces_List  *announces_list;
 
     uint32_t     num_chats;
 
@@ -716,5 +717,9 @@ bool check_group_invite(GC_Session *c, const uint8_t *data, uint32_t length);
 
 int handle_gc_invite_confirmed_packet(GC_Session *c, int friend_number, const uint8_t *data,
                                       uint32_t length);
+
+GC_Chat *gc_get_group_by_public_key(const GC_Session *c, const uint8_t *public_key);
+
+int add_peers_from_announces(const GC_Session *gc_session, const GC_Chat *chat, GC_Announce *announces, uint8_t gc_announces_count);
 
 #endif  /* GROUP_CHATS_H */
