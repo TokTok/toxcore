@@ -388,17 +388,15 @@ bool call_control(uint32_t friend_number, CALL_CONTROL control) {
 
 namespace bit_rate {
   /**
-   * Set the bit rate to be used in subsequent audio/video frames.
+   * Set the bit rate to be used in subsequent audio frames.
    *
    * @param friend_number The friend number of the friend for which to set the
    * bit rate.
    * @param audio_bit_rate The new audio bit rate in Kb/sec. Set to 0 to disable
-   * audio sending. Set to -1 to leave unchanged.
-   * @param video_bit_rate The new video bit rate in Kb/sec. Set to 0 to disable
-   * video sending. Set to -1 to leave unchanged.
    *
    */
-  bool set(uint32_t friend_number, int32_t audio_bit_rate, int32_t video_bit_rate) {
+
+  bool set_audio(uint32_t friend_number, uint32_t audio_bit_rate) {
     /**
      * Synchronization error occurred.
      */
@@ -406,11 +404,33 @@ namespace bit_rate {
     /**
      * The audio bit rate passed was not one of the supported values.
      */
-    INVALID_AUDIO_BIT_RATE,
+    INVALID_BIT_RATE,
+    /**
+     * The friend_number passed did not designate a valid friend.
+     */
+    FRIEND_NOT_FOUND,
+    /**
+     * This client is currently not in a call with the friend.
+     */
+    FRIEND_NOT_IN_CALL,
+  }
+  /**
+   * Set the bit rate to be used in subsequent video frames.
+   *
+   * @param friend_number The friend number of the friend for which to set the
+   * bit rate.
+   * @param video_bit_rate The new video bit rate in Kb/sec. Set to 0 to disable
+   *
+   */
+  bool set_video(uint32_t friend_number, uint32_t video_bit_rate) {
+    /**
+     * Synchronization error occurred.
+     */
+    SYNC,
     /**
      * The video bit rate passed was not one of the supported values.
      */
-    INVALID_VIDEO_BIT_RATE,
+    INVALID_BIT_RATE,
     /**
      * The friend_number passed did not designate a valid friend.
      */
