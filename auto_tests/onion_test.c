@@ -300,15 +300,31 @@ static Onions *new_onions(uint16_t port)
     Onions *on = (Onions *)malloc(sizeof(Onions));
     DHT *dht = new_DHT(NULL, new_networking(NULL, ip, port), true);
     on->onion = new_onion(dht);
+
+    if (!on->onion) {
+        free(on);
+        return NULL;
+    }
+
     on->onion_a = new_onion_announce(dht);
+
+    if (!on->onion_a) {
+        kill_onion(on->onion);
+        free(on);
+        return NULL;
+    }
+
     TCP_Proxy_Info inf = {{{0}}};
     on->onion_c = new_onion_client(new_net_crypto(NULL, dht, &inf));
 
-    if (on->onion && on->onion_a && on->onion_c) {
-        return on;
+    if (!on->onion_c) {
+        kill_onion_announce(on->onion_a);
+        kill_onion(on->onion);
+        free(on);
+        return NULL;
     }
 
-    return NULL;
+    return on;
 }
 
 static void do_onions(Onions *on)
