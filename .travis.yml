@@ -1,3 +1,9 @@
+# For Pull Requests, we build only the first three jobs: autotools on Linux,
+# cmake on Linux, and cmake on Windows 32 bit.
+#
+# For branch builds and cron builds (once a day), we build all the jobs. This
+# is achieved using the "if: type IN (push, api, cron)" fields in the matrix.
+
 language: c
 
 matrix:
@@ -8,33 +14,41 @@ matrix:
   - stage: "Stage 1"
     env: JOB=toxcore ENV=linux
     compiler: clang
+    # Asan requires sudo at the moment.
+    # See https://github.com/travis-ci/travis-ci/issues/9033.
+    sudo: required
   - stage: "Stage 1"
     env: JOB=toxcore ENV=windows ARCH=i686
     group: deprecated-2017Q4
     services:
     - docker
   - stage: "Stage 1"
+    if: type IN (push, api, cron)
     env: JOB=toxcore ENV=windows ARCH=x86_64
     group: deprecated-2017Q4
     services:
     - docker
   - stage: "Stage 1"
+    if: type IN (push, api, cron)
     env: JOB=toxcore ENV=freebsd
     dist: trusty
     sudo: required
     install:       other/travis/phase $JOB $ENV install       stage1
     script:        other/travis/phase $JOB $ENV script        stage1
   - stage: "Stage 1"
+    if: type IN (push, api, cron)
     env: JOB=tox-bootstrapd-docker ENV=linux
     services:
     - docker
     sudo: required
   - stage: "Stage 2"
+    if: type IN (push, api, cron)
     env: JOB=toxcore ENV=freebsd
     dist: trusty
     sudo: required
     install:       other/travis/phase $JOB $ENV install       stage2
   - stage: "Stage 2"
+    if: type IN (push, api, cron)
     env: JOB=toxcore ENV=osx RUN_TESTS=true
     os: osx
   fast_finish: true
