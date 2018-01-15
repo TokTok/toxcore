@@ -26,7 +26,7 @@
 
 #define MAX_GCA_SELF_REQUESTS 30
 #define MAX_GCA_SAVED_ANNOUNCES_PER_GC 100
-#define GC_ANNOUNCE_PACKED_SIZE (sizeof(Node_format) + ENC_PUBLIC_KEY)
+#define GC_ANNOUNCE_PACKED_SIZE (sizeof(GC_Announce))
 
 typedef struct {
     uint8_t public_key[ENC_PUBLIC_KEY];
