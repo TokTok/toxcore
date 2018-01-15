@@ -265,7 +265,7 @@ typedef struct Onion_Friend {
     uint32_t run_count;
 
     uint8_t gc_data[GC_MAX_DATA_LENGTH];
-    size_t gc_data_length;
+    short gc_data_length;
 } Onion_Friend;
 
 typedef struct Onion_Data_Handler {
