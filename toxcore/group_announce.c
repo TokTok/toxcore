@@ -171,7 +171,7 @@ GC_Announce* add_gc_announce(const Mono_Time *mono_time, GC_Announces_List *gc_a
     GC_Announce *gc_announce = &announces->announces[index];
     memcpy(&gc_announce->peer_public_key, peer_id, ENC_PUBLIC_KEY);
     memcpy(&gc_announce->node, node, sizeof(Node_format));
-    announces->announces[index].timestamp = mono_time_get(mono_time);
+    gc_announce->timestamp = mono_time_get(mono_time);
     announces->index++;
     // TODO; lock
     return gc_announce;
