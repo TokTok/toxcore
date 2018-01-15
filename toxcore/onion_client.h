@@ -133,7 +133,7 @@ typedef struct {
     uint32_t run_count;
 
     uint8_t gc_data[GC_MAX_DATA_LENGTH];
-    size_t gc_data_length;
+    short gc_data_length;
 } Onion_Friend;
 
 typedef int (*oniondata_handler_callback)(void *object, const uint8_t *source_pubkey, const uint8_t *data,

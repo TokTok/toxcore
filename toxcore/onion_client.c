@@ -490,7 +490,7 @@ static int client_send_announce_request(Onion_Client *onion_c, uint32_t num, IP_
     } else {
         Onion_Friend friend = onion_c->friends_list[num - 1];
 
-        if (friend.gc_data_length) { // contact is a gc
+        if (friend.gc_data_length > 0) { // contact is a gc
             len = create_gc_announce_request(request, sizeof(request), dest_pubkey, friend.temp_public_key,
                                           friend.temp_secret_key, ping_id, friend.real_public_key, zero_ping_id,
                                           sendback, friend.gc_data, friend.gc_data_length);
