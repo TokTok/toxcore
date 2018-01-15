@@ -4285,6 +4285,7 @@ int make_gc_handshake_packet(GC_Chat *chat, const GC_Connection *gconn, uint8_t 
 static int send_gc_handshake_packet(GC_Chat *chat, uint32_t peernumber, uint8_t handshake_type,
                                     uint8_t request_type, uint8_t join_type)
 {
+    fprintf(stderr, "in send_gc_handshake_packet\n");
     GC_Connection *gconn = gcc_get_connection(chat, peernumber);
 
     if (gconn == nullptr) {
@@ -4302,7 +4303,7 @@ static int send_gc_handshake_packet(GC_Chat *chat, uint32_t peernumber, uint8_t 
         return -1;
     }
 
-    int ret1 = -1, ret2 = -1;
+    int ret1 = -1, ret2;
 
     if (!net_family_is_unspec(gconn->addr.ip_port.ip.family)) {
         ret1 = sendpacket(chat->net, gconn->addr.ip_port, packet, length);
@@ -4313,6 +4314,8 @@ static int send_gc_handshake_packet(GC_Chat *chat, uint32_t peernumber, uint8_t 
     if (ret1 == -1 && ret2 == -1) {
         return -1;
     }
+
+    fprintf(stderr, "send_gc_handshake_packet success\n");
 
     return 0;
 }
@@ -6320,10 +6323,6 @@ int add_peers_from_announces(const GC_Session *gc_session, const GC_Chat *chat, 
         return -1;
     }
 
-    if (!gc_announces_count) {
-        return 0;
-    }
-    // TODO: check if already added
     int i, added_peers = 0;
     for (i = 0; i < gc_announces_count; i++) {
         GC_Announce *curr_announce = &announces[i];
@@ -6333,9 +6332,11 @@ int add_peers_from_announces(const GC_Session *gc_session, const GC_Chat *chat, 
         }
 
         GC_Connection *gconn = gcc_get_connection(chat, peer_id);
-
+        if (!gconn) {
+            continue;
+        }
         add_tcp_relay_connection(chat->tcp_conn, gconn->tcp_connection_num, curr_announce->node.ip_port,
-                                 curr_announce->peer_public_key);
+                                 curr_announce->node.public_key);
         save_tcp_relay(gconn, &curr_announce->node);
 
         gconn->pending_handshake_type = HS_INVITE_REQUEST;
