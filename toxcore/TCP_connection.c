@@ -1022,6 +1022,7 @@ static int tcp_conn_data_callback(void *object, uint32_t number, uint8_t connect
 static int tcp_conn_oob_callback(void *object, const uint8_t *public_key, const uint8_t *data, uint16_t length,
                                  void *userdata)
 {
+    fprintf(stderr, "handle_gc_tcp_oob_packet1\n");
     if (length == 0) {
         return -1;
     }

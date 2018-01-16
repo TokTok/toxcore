@@ -1025,6 +1025,9 @@ static int send_gc_handshake_request(Messenger *m, int groupnumber, IP_Port ipp,
 static int send_gc_handshake_packet(GC_Chat *chat, uint32_t peernumber, uint8_t handshake_type,
                                     uint8_t request_type, uint8_t join_type);
 
+static int send_gc_oob_handshake_packet(GC_Chat *chat, uint32_t peernumber, uint8_t handshake_type,
+                                        uint8_t request_type, uint8_t join_type);
+
 static int handle_gc_sync_response(Messenger *m, int groupnumber, int peernumber, GC_Connection *gconn,
                                    const uint8_t *data, uint32_t length)
 {
@@ -4319,6 +4322,33 @@ static int send_gc_handshake_packet(GC_Chat *chat, uint32_t peernumber, uint8_t 
     return 0;
 }
 
+static int send_gc_oob_handshake_packet(GC_Chat *chat, uint32_t peernumber, uint8_t handshake_type,
+                                        uint8_t request_type, uint8_t join_type)
+{
+    GC_Connection *gconn = gcc_get_connection(chat, peernumber);
+
+    if (gconn == NULL) {
+        return -1;
+    }
+
+    uint8_t packet[GC_ENCRYPTED_HS_PACKET_SIZE];
+    int length = make_gc_handshake_packet(chat, gconn, handshake_type, request_type, join_type, packet, sizeof(packet));
+
+    if (length != sizeof(packet)) {
+        return -1;
+    }
+
+    if (gcc_add_send_ary(gconn, packet, length, -1) == -1) {
+        return -1;
+    }
+
+    int ret = tcp_send_oob_packet(chat->tcp_conn, gconn->tcp_connection_num, gconn->addr.public_key, packet, length);
+
+    fprintf(stderr, "send_gc_oob_handshake_packet result %d peer %s\n", ret, id_toa(chat->addr_list[peernumber].public_key));
+
+    return ret;
+}
+
 /* Initiates a handshake request with a peer.
  * request_type should be one of GROUP_HANDSHAKE_REQUEST_TYPE.
  * join_type should be HJ_PUBLIC if we found the group via DHT, otherwise HJ_PRIVATE.
@@ -4854,6 +4884,7 @@ int handle_gc_tcp_packet(void *object, int id, const uint8_t *packet, uint16_t l
 int handle_gc_tcp_oob_packet(void *object, const uint8_t *public_key, unsigned int tcp_connections_number,
                              const uint8_t *packet, uint16_t length, void *userdata)
 {
+    fprintf(stderr, "handle_gc_tcp_oob_packet\n");
     if (length <= 1 + sizeof(uint32_t)) {
         return -1;
     }
@@ -5338,8 +5369,15 @@ static int send_pending_handshake(GC_Chat *chat, GC_Connection *gconn, int peer_
         return 0;
     }
 
-    int result = send_gc_handshake_packet(chat, peer_id, GH_REQUEST,
+    int result;
+    if (gconn->is_oob_handshake) {
+        result = send_gc_oob_handshake_packet(chat, peer_id, GH_REQUEST,
+                                              gconn->pending_handshake_type, chat->join_type);
+    } else {
+        result = send_gc_handshake_packet(chat, peer_id, GH_REQUEST,
                                           gconn->pending_handshake_type, chat->join_type);
+    }
+
     if (!result) {
         gconn->pending_handshake = 0;
     }
@@ -6350,6 +6388,7 @@ int add_peers_from_announces(const GC_Session *gc_session, const GC_Chat *chat, 
             continue;
         }
 
+        gconn->is_oob_handshake = true;
         gconn->pending_handshake_type = HS_INVITE_REQUEST;
         gconn->pending_handshake = unix_time() + HANDSHAKE_SENDING_TIMEOUT;
 
