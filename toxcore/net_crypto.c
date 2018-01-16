@@ -2175,6 +2175,7 @@ static int tcp_oob_callback(void *object, const uint8_t *public_key, unsigned in
 {
     Net_Crypto *c = (Net_Crypto *)object;
 
+    fprintf(stderr, "oob callback");
     if (length == 0 || length > MAX_CRYPTO_PACKET_SIZE) {
         return -1;
     }
