@@ -2125,7 +2125,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
         kill_networking(m->net);
         kill_net_crypto(m->net_crypto);
         kill_dht(m->dht);
-//        kill_gca(m->group_announce);
+        kill_gca(m->group_announce);
         free(m);
         return nullptr;
     }
@@ -3479,7 +3479,7 @@ uint32_t count_friendlist(const Messenger *m)
     uint32_t i;
 
     for (i = 0; i < m->numfriends; ++i) {
-        if (m->friendlist[i].status > 0) {
+        if (m->friendlist[i].status > 0 && m->friendlist[i].type != CONTACT_TYPE_GC) {
             ++ret;
         }
     }
@@ -3510,7 +3510,7 @@ uint32_t copy_friendlist(Messenger const *m, uint32_t *out_list, uint32_t list_s
             break; /* Abandon ship */
         }
 
-        if (m->friendlist[i].status > 0) {
+        if (m->friendlist[i].status > 0 && m->friendlist[i].type != CONTACT_TYPE_GC) {
             out_list[ret] = i;
             ++ret;
         }
