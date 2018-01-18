@@ -24,13 +24,11 @@
 #include <stdlib.h>
 
 struct RingBuffer {
-    uint16_t size; /* Max size */
-// Zoff --
-    uint8_t data_type;
-// Zoff --
-    uint16_t start;
-    uint16_t end;
-    void   **data;
+    uint16_t  size; /* Max size */
+    uint16_t  start;
+    uint16_t  end;
+    void    **data;
+    uint8_t  *type;
 };
 
 bool rb_full(const RingBuffer *b)
@@ -55,11 +53,8 @@ void *rb_write(RingBuffer *b, void *p, uint8_t data_type_)
         rc = b->data[b->start];
     }
 
-// Zoff --
-    b->data_type = data_type_;
-// Zoff --
-
     b->data[b->end] = p;
+    b->type[b->end] = data_type_;
     b->end = (b->end + 1) % b->size;
 
     if (b->end == b->start) {
@@ -77,10 +72,7 @@ bool rb_read(RingBuffer *b, void **p, uint8_t *data_type_)
     }
 
     *p = b->data[b->start];
-
-// Zoff --
-    *data_type_ = b->data_type;
-// Zoff --
+    *data_type_ = b->type[b->start];
 
     b->start = (b->start + 1) % b->size;
     return true;
@@ -101,6 +93,10 @@ RingBuffer *rb_new(int size)
         return NULL;
     }
 
+    if (!(buf->type = (uint8_t *)calloc(buf->size, sizeof(uint8_t)))) {
+        // TODO: ???
+    }
+
     return buf;
 }
 
@@ -108,6 +104,7 @@ void rb_kill(RingBuffer *b)
 {
     if (b) {
         free(b->data);
+        free(b->type);
         free(b);
     }
 }
