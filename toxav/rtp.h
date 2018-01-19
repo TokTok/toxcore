@@ -51,6 +51,9 @@ enum RTPFlags {
     RTP_KEY_FRAME = 1 << 1,
 };
 
+
+#define VIDEO_KEEP_KEYFRAME_IN_BUFFER_FOR_MS 15
+
 struct RTPHeader {
     /* Standard RTP header */
 #ifndef WORDS_BIGENDIAN
@@ -117,8 +120,52 @@ struct RTPHeader {
 /* Check alignment */
 typedef char __fail_if_misaligned_1 [ sizeof(struct RTPHeader) == 80 ? 1 : -1 ];
 
+
+// TODO: not entirely sure about this
+// #define LOWER_31_BITS(x) (uint32_t)(x & 0x7fffffff)
+#define LOWER_31_BITS(x) (uint32_t)(x & (((uint32_t)1 << 31) - 1))
+
+
+struct RTPHeaderV3 {
+#ifndef WORDS_BIGENDIAN
+    uint16_t cc: 4; /* Contributing sources count */
+    uint16_t is_keyframe: 1;
+    uint16_t pe: 1; /* Padding */
+    uint16_t protocol_version: 2; /* Version has only 2 bits! */
+
+    uint16_t pt: 7; /* Payload type */
+    uint16_t ma: 1; /* Marker */
+#else
+    uint16_t protocol_version: 2; /* Version has only 2 bits! */
+    uint16_t pe: 1; /* Padding */
+    uint16_t is_keyframe: 1;
+    uint16_t cc: 4; /* Contributing sources count */
+
+    uint16_t ma: 1; /* Marker */
+    uint16_t pt: 7; /* Payload type */
+#endif
+
+    uint16_t sequnum;
+    uint32_t timestamp;
+    uint32_t ssrc;
+    uint64_t flags;
+    uint32_t offset_full; /* Data offset of the current part */
+    uint32_t data_length_full; /* data length without header, and without packet id */
+    uint32_t received_length_full; /* only the receiver uses this field */
+    uint32_t csrc[11];
+
+    uint16_t offset_lower;      /* Data offset of the current part */
+    uint16_t data_length_lower; /* data length without header, and without packet id */
+} __attribute__((packed));
+
+/* Check struct size */
+typedef char __fail_if_size_wrong_1 [ sizeof(struct RTPHeaderV3) == 80 ? 1 : -1 ];
+
+/* Check that V3 header is the same size as previous header */
+typedef char __fail_if_size_wrong_2 [ sizeof(struct RTPHeader) == sizeof(struct RTPHeaderV3) ? 1 : -1 ];
+
 struct RTPMessage {
-    uint16_t len;
+    uint16_t len; // Zoff: this is actually only the length of the current part of this message!
 
     struct RTPHeader header;
     uint8_t data[];
@@ -126,6 +173,24 @@ struct RTPMessage {
 
 /* Check alignment */
 typedef char __fail_if_misaligned_2 [ sizeof(struct RTPMessage) == 82 ? 1 : -1 ];
+
+#define USED_RTP_WORKBUFFER_COUNT 3
+
+struct RTPWorkBuffer {
+    bool is_keyframe;
+    uint32_t received_len;
+    uint32_t data_len;
+    uint32_t timestamp;
+    uint16_t sequnum;
+    uint8_t *buf;
+};
+
+struct RTPWorkBufferList {
+    int8_t next_free_entry;
+    struct RTPWorkBuffer work_buffer[USED_RTP_WORKBUFFER_COUNT];
+};
+
+#define DISMISS_FIRST_LOST_VIDEO_PACKET_COUNT 10
 
 /**
  * RTP control session.
@@ -135,18 +200,37 @@ typedef struct {
     uint16_t sequnum;      /* Sending sequence number */
     uint16_t rsequnum;     /* Receiving sequence number */
     uint32_t rtimestamp;
-    uint32_t ssrc;
-
+    uint32_t ssrc; //  this seems to be unused!?
     struct RTPMessage *mp; /* Expected parted message */
-
+    uint8_t  first_packets_counter; /* dismiss first few lost video packets */
     Messenger *m;
     uint32_t friend_number;
-
     BWController *bwc;
     void *cs;
     int (*mcb)(void *, struct RTPMessage *msg);
 } RTPSession;
 
+
+/**
+ * RTP control session V3
+ */
+typedef struct {
+    uint8_t  payload_type;
+    uint16_t sequnum;      /* Sending sequence number */
+    uint16_t rsequnum;     /* Receiving sequence number */
+    uint32_t rtimestamp;
+    uint32_t ssrc;  // this seems to be unused!?
+    struct RTPWorkBufferList *work_buffer_list;
+    uint8_t  first_packets_counter;
+    Messenger *m;
+    uint32_t friend_number;
+    BWController *bwc;
+    void *cs;
+    int (*mcb)(void *, struct RTPMessage *msg);
+} RTPSessionV3;
+
+/* Check that RTPSessionV3 is the same size as RTPSession */
+typedef char __fail_if_size_wrong_3 [ sizeof(RTPSession) == sizeof(RTPSessionV3) ? 1 : -1 ];
 
 RTPSession *rtp_new(int payload_type, Messenger *m, uint32_t friendnumber,
                     BWController *bwc, void *cs,
@@ -154,6 +238,16 @@ RTPSession *rtp_new(int payload_type, Messenger *m, uint32_t friendnumber,
 void rtp_kill(RTPSession *session);
 int rtp_allow_receiving(RTPSession *session);
 int rtp_stop_receiving(RTPSession *session);
-int rtp_send_data(RTPSession *session, const uint8_t *data, uint16_t length, Logger *log);
+/**
+ * Send a frame of audio or video data, chunked in \ref RTPMessage instances.
+ *
+ * @param session The A/V session to send the data for.
+ * @param data A byte array of length \p length.
+ * @param length The number of bytes to send from @p data.
+ * @param is_keyframe Whether this video frame is a key frame. If it is an
+ *   audio frame, this parameter is ignored.
+ */
+int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length,
+                  bool is_keyframe, Logger *log);
 
 #endif /* RTP_H */
