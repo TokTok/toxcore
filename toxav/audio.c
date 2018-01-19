@@ -57,7 +57,7 @@ ACSession *ac_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_audio_re
     }
 
     int status;
-    ac->decoder = opus_decoder_create(AUDIO_DECODER_START_SAMPLING_RATE, AUDIO_DECODER_START_CHANNEL_COUNT, &status);
+    ac->decoder = opus_decoder_create(AUDIO_DECODER_START_SAMPLE_RATE, AUDIO_DECODER_START_CHANNEL_COUNT, &status);
 
     if (status != OPUS_OK) {
         LOGGER_ERROR(log, "Error while starting audio decoder: %s", opus_strerror(status));
@@ -73,24 +73,24 @@ ACSession *ac_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_audio_re
     ac->log = log;
 
     /* Initialize encoders with default values */
-    ac->encoder = create_audio_encoder(log, AUDIO_START_BITRATE_RATE, AUDIO_START_SAMPLING_RATE, AUDIO_START_CHANNEL_COUNT);
+    ac->encoder = create_audio_encoder(log, AUDIO_START_BITRATE, AUDIO_START_SAMPLE_RATE, AUDIO_START_CHANNEL_COUNT);
 
     if (ac->encoder == NULL) {
         goto DECODER_CLEANUP;
     }
 
-    ac->le_bit_rate = AUDIO_START_BITRATE_RATE;
-    ac->le_sample_rate = AUDIO_START_SAMPLING_RATE;
+    ac->le_bit_rate = AUDIO_START_BITRATE;
+    ac->le_sample_rate = AUDIO_START_SAMPLE_RATE;
     ac->le_channel_count = AUDIO_START_CHANNEL_COUNT;
 
-    ac->ld_channel_count = AUDIO_DECODER_START_SAMPLING_RATE;
-    ac->ld_sample_rate = AUDIO_DECODER_START_CHANNEL_COUNT;
+    ac->ld_channel_count = AUDIO_DECODER_START_CHANNEL_COUNT;
+    ac->ld_sample_rate = AUDIO_DECODER_START_SAMPLE_RATE;
     ac->ldrts = 0; /* Make it possible to reconfigure straight away */
 
     /* These need to be set in order to properly
      * do error correction with opus */
     ac->lp_frame_duration = AUDIO_MAX_FRAME_DURATION_MS;
-    ac->lp_sampling_rate = AUDIO_DECODER_START_SAMPLING_RATE;
+    ac->lp_sampling_rate = AUDIO_DECODER_START_SAMPLE_RATE;
     ac->lp_channel_count = AUDIO_DECODER_START_CHANNEL_COUNT;
 
     ac->av = av;
@@ -134,8 +134,7 @@ void ac_iterate(ACSession *ac)
     /* TODO(mannol): fix this and jitter buffering */
 
     /* Enough space for the maximum frame size (120 ms 48 KHz stereo audio) */
-    int16_t temp_audio_buffer[AUDIO_MAX_BUFFER_SIZE_PCM16_FOR_FRAME_PER_CHANNEL *
-                              AUDIO_MAX_CHANNEL_COUNT];
+    int16_t temp_audio_buffer[AUDIO_MAX_BUFFER_SIZE_PCM16 * AUDIO_MAX_CHANNEL_COUNT];
 
     struct RTPMessage *msg;
     int rc = 0;
