@@ -33,8 +33,12 @@
 #include <vpx/vp8dx.h>
 
 
-#define VIDEO_CODEC_DECODER_INTERFACE (vpx_codec_vp8_dx())
-#define VIDEO_CODEC_ENCODER_INTERFACE (vpx_codec_vp8_cx())
+// -- VP8 codec ----------------
+#define VIDEO_CODEC_DECODER_INTERFACE_VP8 (vpx_codec_vp8_dx())
+#define VIDEO_CODEC_ENCODER_INTERFACE_VP8 (vpx_codec_vp8_cx())
+// -- VP9 codec ----------------
+#define VIDEO_CODEC_DECODER_INTERFACE_VP9 (vpx_codec_vp9_dx())
+#define VIDEO_CODEC_ENCODER_INTERFACE_VP9 (vpx_codec_vp9_cx())
 
 #define VIDEO_CODEC_DECODER_MAX_WIDTH  800 // its a dummy values, because the struct needs a value there
 #define VIDEO_CODEC_DECODER_MAX_HEIGHT 600 // its a dummy values, because the struct needs a value there
@@ -46,7 +50,16 @@
 
 #define VPX_MAX_ENCODER_THREADS 4
 #define VPX_MAX_DECODER_THREADS 4
+#define VIDEO__VP9E_SET_TILE_COLUMNS 0
+#define VIDEO__VP9_KF_MAX_DIST 999
 #define VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED 0
+#define VIDEO__VP9_LOSSLESS_ENCODING 0
+
+#define VPX_VP8_CODEC 0
+#define VPX_VP9_CODEC 1
+
+#define VPX_ENCODER_USED VPX_VP8_CODEC
+#define VPX_DECODER_USED VPX_VP8_CODEC // this will switch automatically
 
 
 #include <pthread.h>
@@ -61,6 +74,7 @@ typedef struct VCSession_s {
 
     /* decoding */
     vpx_codec_ctx_t decoder[1];
+    bool is_using_vp9;
     struct RingBuffer *vbuf_raw; /* Un-decoded data */
 
     uint64_t linfts; /* Last received frame time stamp */

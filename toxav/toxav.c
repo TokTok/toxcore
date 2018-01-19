@@ -828,17 +828,24 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
     }
 
     if (call->video.first->ssrc < VIDEO_SEND_X_KEYFRAMES_FIRST) {
-        // Key frame flag for first frames
-        vpx_encode_flags = VPX_EFLAG_FORCE_KF;
-        // vpx_codec_control(call->video.second->encoder, VP8E_SET_FRAME_FLAGS, vpx_encode_flags);
-        LOGGER_INFO(av->m->log, "I_FRAME_FLAG:%d only-i-frame mode", call->video.first->ssrc);
+        //if (call->video.first->ssrc == 0)
+        //{
+        if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
+            // Key frame flag for first frames
+            vpx_encode_flags = VPX_EFLAG_FORCE_KF;
+            // vpx_codec_control(call->video.second->encoder, VP8E_SET_FRAME_FLAGS, vpx_encode_flags);
+            LOGGER_INFO(av->m->log, "I_FRAME_FLAG:%d only-i-frame mode", call->video.first->ssrc);
+        }
 
+        //}
         call->video.first->ssrc++;
     } else if (call->video.first->ssrc == VIDEO_SEND_X_KEYFRAMES_FIRST) {
-        // normal keyframe placement
-        vpx_encode_flags = 0;
-        // vpx_codec_control(call->video.second->encoder, VP8E_SET_FRAME_FLAGS, vpx_encode_flags);
-        LOGGER_INFO(av->m->log, "I_FRAME_FLAG:%d normal mode", call->video.first->ssrc);
+        if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
+            // normal keyframe placement
+            vpx_encode_flags = 0;
+            // vpx_codec_control(call->video.second->encoder, VP8E_SET_FRAME_FLAGS, vpx_encode_flags);
+            LOGGER_INFO(av->m->log, "I_FRAME_FLAG:%d normal mode", call->video.first->ssrc);
+        }
 
         call->video.first->ssrc++;
     }
