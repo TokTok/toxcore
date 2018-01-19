@@ -29,8 +29,8 @@
 typedef struct RingBuffer RingBuffer;
 bool rb_full(const RingBuffer *b);
 bool rb_empty(const RingBuffer *b);
-void *rb_write(RingBuffer *b, void *p);
-bool rb_read(RingBuffer *b, void **p);
+void *rb_write(RingBuffer *b, void *p, uint8_t data_type);
+bool rb_read(RingBuffer *b, void **p, uint8_t *data_type);
 RingBuffer *rb_new(int size);
 void rb_kill(RingBuffer *b);
 uint16_t rb_size(const RingBuffer *b);
