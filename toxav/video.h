@@ -32,8 +32,13 @@
 #include <vpx/vp8cx.h>
 #include <vpx/vp8dx.h>
 
-
 #include <pthread.h>
+
+#define VPX_VP8_CODEC 0
+#define VPX_VP9_CODEC 1
+
+#define VPX_ENCODER_USED VPX_VP8_CODEC
+#define VPX_DECODER_USED VPX_VP8_CODEC // this will switch automatically
 
 struct RTPMessage;
 struct RingBuffer;
@@ -45,6 +50,7 @@ typedef struct VCSession_s {
 
     /* decoding */
     vpx_codec_ctx_t decoder[1];
+    bool is_using_vp9;
     struct RingBuffer *vbuf_raw; /* Un-decoded data */
 
     uint64_t linfts; /* Last received frame time stamp */

@@ -33,72 +33,83 @@
 #include <assert.h>
 #include <stdlib.h>
 
-/**
- * Soft deadline the decoder should attempt to meet, in "us" (microseconds).
- * Set to zero for unlimited.
- *
- * By convention, the value 1 is used to mean "return as fast as possible."
- */
+/*
+  Soft deadline the decoder should attempt to meet, in "us" (microseconds). Set to zero for unlimited.
+  By convention, the value 1 is used to mean "return as fast as possible."
+*/
 // TODO: don't hardcode this, let the application choose it
 #define WANTED_MAX_DECODER_FPS 40
-
-/**
- * VPX_DL_REALTIME       (1)
- * deadline parameter analogous to VPx REALTIME mode.
- *
- * VPX_DL_GOOD_QUALITY   (1000000)
- * deadline parameter analogous to VPx GOOD QUALITY mode.
- *
- * VPX_DL_BEST_QUALITY   (0)
- * deadline parameter analogous to VPx BEST QUALITY mode.
- */
 #define MAX_DECODE_TIME_US (1000000 / WANTED_MAX_DECODER_FPS) // to allow x fps
+/*
+VPX_DL_REALTIME       (1)
+deadline parameter analogous to VPx REALTIME mode.
 
-/**
- * Codec control function to set encoder internal speed settings. Changes in
- * this value influences, among others, the encoder's selection of motion
- * estimation methods. Values greater than 0 will increase encoder speed at the
- * expense of quality.
- *
- * Note Valid range for VP8: -16..16
- */
+VPX_DL_GOOD_QUALITY   (1000000)
+deadline parameter analogous to VPx GOOD QUALITY mode.
+
+VPX_DL_BEST_QUALITY   (0)
+deadline parameter analogous to VPx BEST QUALITY mode.
+*/
+
 #define VP8E_SET_CPUUSED_VALUE 16
+/*
+Codec control function to set encoder internal speed settings.
+Changes in this value influences, among others, the encoder's selection of motion estimation methods.
+Values greater than 0 will increase encoder speed at the expense of quality.
 
-/**
- * Initialize encoder with this value. Target bandwidth to use for this stream, in kilobits per second.
+Note
+    Valid range for VP8: -16..16
+    Valid range for VP9: -8..8
  */
-#define VIDEO_BITRATE_INITIAL_VALUE 5000
+
+#define VIDEO_BITRATE_INITIAL_VALUE 5000 // initialize encoder with this value. Target bandwidth to use for this stream, in kilobits per second.
 #define VIDEO_DECODE_BUFFER_SIZE 5 // this buffer has normally max. 1 entry
 
-#define VIDEO_CODEC_DECODER_INTERFACE (vpx_codec_vp8_dx())
-#define VIDEO_CODEC_ENCODER_INTERFACE (vpx_codec_vp8_cx())
+// -- VP8 codec ----------------
+#define VIDEO_CODEC_DECODER_INTERFACE_VP8 (vpx_codec_vp8_dx())
+#define VIDEO_CODEC_ENCODER_INTERFACE_VP8 (vpx_codec_vp8_cx())
+// -- VP9 codec ----------------
+#define VIDEO_CODEC_DECODER_INTERFACE_VP9 (vpx_codec_vp9_dx())
+#define VIDEO_CODEC_ENCODER_INTERFACE_VP9 (vpx_codec_vp9_cx())
 
-#define VIDEO_CODEC_DECODER_MAX_WIDTH  800 // its a dummy value, because the struct needs a value there
-#define VIDEO_CODEC_DECODER_MAX_HEIGHT 600 // its a dummy value, because the struct needs a value there
+#define VIDEO_CODEC_DECODER_MAX_WIDTH  800 // its a dummy values, because the struct needs a value there
+#define VIDEO_CODEC_DECODER_MAX_HEIGHT 600 // its a dummy values, because the struct needs a value there
 
+
+#define VIDEO_SEND_X_KEYFRAMES_FIRST 7 // force the first n frames to be keyframes!
 #define VPX_MAX_DIST_NORMAL 40
 #define VPX_MAX_DIST_START 40
 
 #define VPX_MAX_ENCODER_THREADS 4
 #define VPX_MAX_DECODER_THREADS 4
+#define VIDEO__VP9E_SET_TILE_COLUMNS 0
+#define VIDEO__VP9_KF_MAX_DIST 999
 #define VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED 0
+#define VIDEO__VP9_LOSSLESS_ENCODING 0
 
 void vc_init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_dist)
 {
-    vpx_codec_err_t rc = vpx_codec_enc_config_default(VIDEO_CODEC_ENCODER_INTERFACE, cfg, 0);
+    vpx_codec_err_t rc;
+
+    if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
+        LOGGER_WARNING(log, "Using VP8 codec for encoder (1)");
+        rc = vpx_codec_enc_config_default(VIDEO_CODEC_ENCODER_INTERFACE_VP8, cfg, 0);
+    } else {
+        LOGGER_WARNING(log, "Using VP9 codec for encoder (1)");
+        rc = vpx_codec_enc_config_default(VIDEO_CODEC_ENCODER_INTERFACE_VP9, cfg, 0);
+    }
 
     if (rc != VPX_CODEC_OK) {
         LOGGER_ERROR(log, "vc_init_encoder_cfg:Failed to get config: %s", vpx_codec_err_to_string(rc));
     }
 
-    /* Target bandwidth to use for this stream, in kilobits per second */
-    cfg->rc_target_bitrate = VIDEO_BITRATE_INITIAL_VALUE;
+    cfg->rc_target_bitrate =
+        VIDEO_BITRATE_INITIAL_VALUE; /* Target bandwidth to use for this stream, in kilobits per second */
     cfg->g_w = VIDEO_CODEC_DECODER_MAX_WIDTH;
     cfg->g_h = VIDEO_CODEC_DECODER_MAX_HEIGHT;
     cfg->g_pass = VPX_RC_ONE_PASS;
     cfg->g_error_resilient = VPX_ERROR_RESILIENT_DEFAULT | VPX_ERROR_RESILIENT_PARTITIONS;
     cfg->g_lag_in_frames = 0;
-
     /* Allow lagged encoding
      *
      * If set, this value allows the encoder to consume a number of input
@@ -116,17 +127,22 @@ void vc_init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_d
     cfg->rc_end_usage = VPX_VBR; // what quality mode?
 
     /*
-     * VPX_VBR    Variable Bit Rate (VBR) mode
-     * VPX_CBR    Constant Bit Rate (CBR) mode
-     * VPX_CQ     Constrained Quality (CQ) mode -> give codec a hint that we may be on low bandwidth connection
-     * VPX_Q    Constant Quality (Q) mode
+     VPX_VBR    Variable Bit Rate (VBR) mode
+     VPX_CBR    Constant Bit Rate (CBR) mode
+     VPX_CQ     Constrained Quality (CQ) mode -> give codec a hint that we may be on low bandwidth connection
+     VPX_Q    Constant Quality (Q) mode
      */
     if (kf_max_dist > 1) {
         cfg->kf_max_dist = kf_max_dist; // a full frame every x frames minimum (can be more often, codec decides automatically)
-        LOGGER_DEBUG(log, "kf_max_dist=%d (1)", cfg->kf_max_dist);
+        LOGGER_WARNING(log, "kf_max_dist=%d (1)", cfg->kf_max_dist);
     } else {
         cfg->kf_max_dist = VPX_MAX_DIST_START;
-        LOGGER_DEBUG(log, "kf_max_dist=%d (2)", cfg->kf_max_dist);
+        LOGGER_WARNING(log, "kf_max_dist=%d (2)", cfg->kf_max_dist);
+    }
+
+    if (VPX_ENCODER_USED == VPX_VP9_CODEC) {
+        cfg->kf_max_dist = VIDEO__VP9_KF_MAX_DIST;
+        LOGGER_WARNING(log, "kf_max_dist=%d (3)", cfg->kf_max_dist);
     }
 
     cfg->g_threads = VPX_MAX_ENCODER_THREADS; // Maximum number of threads to use
@@ -136,7 +152,6 @@ void vc_init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_d
     cfg->rc_resize_allowed = 1; // allow encoder to resize to smaller resolution
     cfg->rc_resize_up_thresh = 40;
     cfg->rc_resize_down_thresh = 5;
-
     /* TODO: make quality setting an API call, but start with normal quality */
 #if 0
     /* Highest-resolution encoder settings */
@@ -168,31 +183,51 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
         return nullptr;
     }
 
+    /*
+    Codec control function to set encoder internal speed settings.
+    Changes in this value influences, among others, the encoder's selection of motion estimation methods.
+    Values greater than 0 will increase encoder speed at the expense of quality.
+
+    Note:
+      Valid range for VP8: -16..16
+      Valid range for VP9: -8..8
+    */
     int cpu_used_value = VP8E_SET_CPUUSED_VALUE;
+
+    if (VPX_ENCODER_USED == VPX_VP9_CODEC) {
+        if ((cpu_used_value < -8) || (cpu_used_value > 8)) {
+            cpu_used_value = 8; // set to default (fastest) value
+        }
+    }
 
     if (!(vc->vbuf_raw = rb_new(VIDEO_DECODE_BUFFER_SIZE))) {
         goto BASE_CLEANUP;
     }
 
     /*
-     * VPX_CODEC_USE_FRAME_THREADING
-     *    Enable frame-based multi-threading
-     *
-     * VPX_CODEC_USE_ERROR_CONCEALMENT
-     *    Conceal errors in decoded frames
-     */
+    VPX_CODEC_USE_FRAME_THREADING
+       Enable frame-based multi-threading
+
+    VPX_CODEC_USE_ERROR_CONCEALMENT
+       Conceal errors in decoded frames
+    */
     vpx_codec_dec_cfg_t  dec_cfg;
     dec_cfg.threads = VPX_MAX_DECODER_THREADS; // Maximum number of threads to use
     dec_cfg.w = VIDEO_CODEC_DECODER_MAX_WIDTH;
     dec_cfg.h = VIDEO_CODEC_DECODER_MAX_HEIGHT;
 
-    LOGGER_DEBUG(log, "Using VP8 codec for decoder (0)");
-    rc = vpx_codec_dec_init(vc->decoder, VIDEO_CODEC_DECODER_INTERFACE, &dec_cfg,
-                            VPX_CODEC_USE_FRAME_THREADING | VPX_CODEC_USE_POSTPROC);
+    if (VPX_DECODER_USED == VPX_VP8_CODEC) {
+        LOGGER_DEBUG(log, "Using VP8 codec for decoder (0)");
+        rc = vpx_codec_dec_init(vc->decoder, VIDEO_CODEC_DECODER_INTERFACE_VP8, &dec_cfg,
+                                VPX_CODEC_USE_FRAME_THREADING | VPX_CODEC_USE_POSTPROC);
 
-    if (rc == VPX_CODEC_INCAPABLE) {
-        LOGGER_WARNING(log, "Postproc not supported by this decoder (0)");
-        rc = vpx_codec_dec_init(vc->decoder, VIDEO_CODEC_DECODER_INTERFACE, &dec_cfg, VPX_CODEC_USE_FRAME_THREADING);
+        if (rc == VPX_CODEC_INCAPABLE) {
+            LOGGER_WARNING(log, "Postproc not supported by this decoder (0)");
+            rc = vpx_codec_dec_init(vc->decoder, VIDEO_CODEC_DECODER_INTERFACE_VP8, &dec_cfg, VPX_CODEC_USE_FRAME_THREADING);
+        }
+    } else {
+        LOGGER_DEBUG(log, "Using VP9 codec for decoder (0)");
+        rc = vpx_codec_dec_init(vc->decoder, VIDEO_CODEC_DECODER_INTERFACE_VP9, &dec_cfg, VPX_CODEC_USE_FRAME_THREADING);
     }
 
     if (rc != VPX_CODEC_OK) {
@@ -201,13 +236,14 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     }
 
     if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 1) {
+        // vp8_postproc_cfg_t pp = {VP8_DEBLOCK | VP8_DEMACROBLOCK | VP8_MFQE, 4, 0};
         vp8_postproc_cfg_t pp = {VP8_DEBLOCK, 1, 0};
         vpx_codec_err_t cc_res = vpx_codec_control(vc->decoder, VP8_SET_POSTPROC, &pp);
 
         if (cc_res != VPX_CODEC_OK) {
             LOGGER_WARNING(log, "Failed to turn on postproc");
         } else {
-            LOGGER_DEBUG(log, "turn on postproc: OK");
+            LOGGER_WARNING(log, "turn on postproc: OK");
         }
     } else {
         vp8_postproc_cfg_t pp = {0, 0, 0};
@@ -216,7 +252,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
         if (cc_res != VPX_CODEC_OK) {
             LOGGER_WARNING(log, "Failed to turn OFF postproc");
         } else {
-            LOGGER_DEBUG(log, "Disable postproc: OK");
+            LOGGER_WARNING(log, "Disable postproc: OK");
         }
     }
 
@@ -225,8 +261,13 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vpx_codec_enc_cfg_t  cfg;
     vc_init_encoder_cfg(log, &cfg, 1);
 
-    LOGGER_DEBUG(log, "Using VP8 codec for encoder (0.1)");
-    rc = vpx_codec_enc_init(vc->encoder, VIDEO_CODEC_ENCODER_INTERFACE, &cfg, VPX_CODEC_USE_FRAME_THREADING);
+    if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
+        LOGGER_WARNING(log, "Using VP8 codec for encoder (0.1)");
+        rc = vpx_codec_enc_init(vc->encoder, VIDEO_CODEC_ENCODER_INTERFACE_VP8, &cfg, VPX_CODEC_USE_FRAME_THREADING);
+    } else {
+        LOGGER_WARNING(log, "Using VP9 codec for encoder (0.1)");
+        rc = vpx_codec_enc_init(vc->encoder, VIDEO_CODEC_ENCODER_INTERFACE_VP9, &cfg, VPX_CODEC_USE_FRAME_THREADING);
+    }
 
     if (rc != VPX_CODEC_OK) {
         LOGGER_ERROR(log, "Failed to initialize encoder: %s", vpx_codec_err_to_string(rc));
@@ -239,6 +280,57 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
         LOGGER_ERROR(log, "Failed to set encoder control setting: %s", vpx_codec_err_to_string(rc));
         vpx_codec_destroy(vc->encoder);
         goto BASE_CLEANUP_1;
+    }
+
+    /*
+    VP9E_SET_TILE_COLUMNS
+
+    Codec control function to set number of tile columns.
+
+    In encoding and decoding, VP9 allows an input image frame be partitioned
+    into separated vertical tile columns, which can be encoded or decoded independently.
+    This enables easy implementation of parallel encoding and decoding. This control requests
+    the encoder to use column tiles in encoding an input frame, with number of tile columns
+    (in Log2 unit) as the parameter: 0 = 1 tile column 1 = 2 tile columns
+    2 = 4 tile columns ..... n = 2**n tile columns The requested tile columns will
+    be capped by encoder based on image size limitation (The minimum width of a
+    tile column is 256 pixel, the maximum is 4096).
+
+    By default, the value is 0, i.e. one single column tile for entire image.
+
+    Supported in codecs: VP9
+     */
+
+    if (VPX_ENCODER_USED == VPX_VP9_CODEC) {
+        rc = vpx_codec_control(vc->encoder, VP9E_SET_TILE_COLUMNS, VIDEO__VP9E_SET_TILE_COLUMNS);
+
+        if (rc != VPX_CODEC_OK) {
+            LOGGER_ERROR(log, "Failed to set encoder control setting: %s", vpx_codec_err_to_string(rc));
+            vpx_codec_destroy(vc->encoder);
+            goto BASE_CLEANUP_1;
+        }
+    }
+
+    if (VPX_ENCODER_USED == VPX_VP9_CODEC) {
+        if (VIDEO__VP9_LOSSLESS_ENCODING == 1) {
+            rc = vpx_codec_control(vc->encoder, VP9E_SET_LOSSLESS, 1);
+            LOGGER_WARNING(vc->log, "setting VP9 lossless video quality(2): ON");
+
+            if (rc != VPX_CODEC_OK) {
+                LOGGER_ERROR(log, "Failed to set encoder control setting: %s", vpx_codec_err_to_string(rc));
+                vpx_codec_destroy(vc->encoder);
+                goto BASE_CLEANUP_1;
+            }
+        } else {
+            rc = vpx_codec_control(vc->encoder, VP9E_SET_LOSSLESS, 0);
+            LOGGER_WARNING(vc->log, "setting VP9 lossless video quality(2): OFF");
+
+            if (rc != VPX_CODEC_OK) {
+                LOGGER_ERROR(log, "Failed to set encoder control setting: %s", vpx_codec_err_to_string(rc));
+                vpx_codec_destroy(vc->encoder);
+                goto BASE_CLEANUP_1;
+            }
+        }
     }
 
     /*
@@ -292,6 +384,68 @@ void vc_kill(VCSession *vc)
     free(vc);
 }
 
+void video_switch_decoder(VCSession *vc)
+{
+    vpx_codec_err_t rc;
+
+    if (vc->is_using_vp9 == true) {
+        vc->is_using_vp9 = false;
+    } else {
+        vc->is_using_vp9 = true;
+    }
+
+    vpx_codec_ctx_t new_d;
+    LOGGER_WARNING(vc->log, "Switch:Re-initializing DEcoder to: %d", (int)vc->is_using_vp9);
+    vpx_codec_dec_cfg_t dec_cfg;
+    dec_cfg.threads = VPX_MAX_DECODER_THREADS; // Maximum number of threads to use
+    dec_cfg.w = VIDEO_CODEC_DECODER_MAX_WIDTH;
+    dec_cfg.h = VIDEO_CODEC_DECODER_MAX_HEIGHT;
+
+    if (vc->is_using_vp9 == true) {
+        rc = vpx_codec_dec_init(&new_d, VIDEO_CODEC_DECODER_INTERFACE_VP8, &dec_cfg,
+                                VPX_CODEC_USE_FRAME_THREADING | VPX_CODEC_USE_POSTPROC);
+
+        if (rc == VPX_CODEC_INCAPABLE) {
+            LOGGER_WARNING(vc->log, "Postproc not supported by this decoder");
+            rc = vpx_codec_dec_init(&new_d, VIDEO_CODEC_DECODER_INTERFACE_VP8, &dec_cfg, VPX_CODEC_USE_FRAME_THREADING);
+        }
+    } else {
+        rc = vpx_codec_dec_init(&new_d, VIDEO_CODEC_DECODER_INTERFACE_VP9, &dec_cfg, VPX_CODEC_USE_FRAME_THREADING);
+    }
+
+    if (rc != VPX_CODEC_OK) {
+        LOGGER_ERROR(vc->log, "Failed to Re-initialize decoder: %s", vpx_codec_err_to_string(rc));
+        vpx_codec_destroy(&new_d);
+        return;
+    }
+
+    if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 1) {
+        // vp8_postproc_cfg_t pp = {VP8_DEBLOCK | VP8_DEMACROBLOCK | VP8_MFQE, 4, 0};
+        vp8_postproc_cfg_t pp = {VP8_DEBLOCK, 1, 0};
+        vpx_codec_err_t cc_res = vpx_codec_control(&new_d, VP8_SET_POSTPROC, &pp);
+
+        if (cc_res != VPX_CODEC_OK) {
+            LOGGER_WARNING(vc->log, "Failed to turn on postproc");
+        } else {
+            LOGGER_WARNING(vc->log, "turn on postproc: OK");
+        }
+    } else {
+        vp8_postproc_cfg_t pp = {0, 0, 0};
+        vpx_codec_err_t cc_res = vpx_codec_control(&new_d, VP8_SET_POSTPROC, &pp);
+
+        if (cc_res != VPX_CODEC_OK) {
+            LOGGER_WARNING(vc->log, "Failed to turn OFF postproc");
+        } else {
+            LOGGER_WARNING(vc->log, "Disable postproc: OK");
+        }
+    }
+
+    // now replace the current decoder
+    vpx_codec_destroy(vc->decoder);
+    memcpy(vc->decoder, &new_d, sizeof(new_d));
+    LOGGER_ERROR(vc->log, "Re-initialize decoder OK: %s", vpx_codec_err_to_string(rc));
+}
+
 void vc_iterate(VCSession *vc)
 {
     if (!vc) {
@@ -321,11 +475,27 @@ void vc_iterate(VCSession *vc)
         LOGGER_DEBUG(vc->log, "vc_iterate: rb_read p->len=%d p->header.xe=%d", (int)full_data_len, p->header.xe);
         LOGGER_DEBUG(vc->log, "vc_iterate: rb_read rb size=%d", (int)rb_size((RingBuffer *)vc->vbuf_raw));
         rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, nullptr, MAX_DECODE_TIME_US);
-        free(p);
 
         if (rc != VPX_CODEC_OK) {
-            LOGGER_ERROR(vc->log, "Error decoding video: %d %s", (int)rc, vpx_codec_err_to_string(rc));
-        } else {
+            if (rc == 5) { // Bitstream not supported by this decoder
+                LOGGER_WARNING(vc->log, "Switching VPX Decoder");
+                video_switch_decoder(vc);
+            } else if (rc == 7) {
+                LOGGER_WARNING(vc->log, "Corrupt frame detected: data size=%d start byte=%d end byte=%d",
+                               (int)full_data_len, (int)p->data[0], (int)p->data[full_data_len - 1]);
+            } else {
+                LOGGER_ERROR(vc->log, "Error decoding video: %d %s", (int)rc, vpx_codec_err_to_string(rc));
+            }
+
+            rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, nullptr, MAX_DECODE_TIME_US);
+
+            if (rc != 5) {
+                LOGGER_ERROR(vc->log, "There is still an error decoding video: %d %s", (int)rc, vpx_codec_err_to_string(rc));
+            }
+        }
+
+        if (rc == VPX_CODEC_OK) {
+            free(p);
             /* Play decoded images */
             vpx_codec_iter_t iter = nullptr;
             vpx_image_t *dest = nullptr;
@@ -339,6 +509,8 @@ void vc_iterate(VCSession *vc)
 
                 vpx_img_free(dest); // is this needed? none of the VPx examples show that
             }
+        } else {
+            free(p);
         }
 
         return;
@@ -425,8 +597,13 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
         cfg.g_w = width;
         cfg.g_h = height;
 
-        LOGGER_DEBUG(vc->log, "Using VP8 codec for encoder");
-        rc = vpx_codec_enc_init(&new_c, VIDEO_CODEC_ENCODER_INTERFACE, &cfg, VPX_CODEC_USE_FRAME_THREADING);
+        if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
+            LOGGER_WARNING(vc->log, "Using VP8 codec for encoder");
+            rc = vpx_codec_enc_init(&new_c, VIDEO_CODEC_ENCODER_INTERFACE_VP8, &cfg, VPX_CODEC_USE_FRAME_THREADING);
+        } else {
+            LOGGER_WARNING(vc->log, "Using VP9 codec for encoder");
+            rc = vpx_codec_enc_init(&new_c, VIDEO_CODEC_ENCODER_INTERFACE_VP9, &cfg, VPX_CODEC_USE_FRAME_THREADING);
+        }
 
         if (rc != VPX_CODEC_OK) {
             LOGGER_ERROR(vc->log, "Failed to initialize encoder: %s", vpx_codec_err_to_string(rc));
@@ -435,12 +612,50 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
 
         int cpu_used_value = VP8E_SET_CPUUSED_VALUE;
 
+        if (VPX_ENCODER_USED == VPX_VP9_CODEC) {
+            if ((cpu_used_value < -8) || (cpu_used_value > 8)) {
+                cpu_used_value = 8; // set to default (fastest) value
+            }
+        }
+
         rc = vpx_codec_control(&new_c, VP8E_SET_CPUUSED, cpu_used_value);
 
         if (rc != VPX_CODEC_OK) {
             LOGGER_ERROR(vc->log, "Failed to set encoder control setting: %s", vpx_codec_err_to_string(rc));
             vpx_codec_destroy(&new_c);
             return -1;
+        }
+
+        if (VPX_ENCODER_USED == VPX_VP9_CODEC) {
+            rc = vpx_codec_control(&new_c, VP9E_SET_TILE_COLUMNS, VIDEO__VP9E_SET_TILE_COLUMNS);
+
+            if (rc != VPX_CODEC_OK) {
+                LOGGER_ERROR(vc->log, "Failed to set encoder control setting: %s", vpx_codec_err_to_string(rc));
+                vpx_codec_destroy(&new_c);
+                return -1;
+            }
+        }
+
+        if (VPX_ENCODER_USED == VPX_VP9_CODEC) {
+            if (VIDEO__VP9_LOSSLESS_ENCODING == 1) {
+                LOGGER_WARNING(vc->log, "setting VP9 lossless video quality: ON");
+                rc = vpx_codec_control(&new_c, VP9E_SET_LOSSLESS, 1);
+
+                if (rc != VPX_CODEC_OK) {
+                    LOGGER_ERROR(vc->log, "Failed to set encoder control setting: %s", vpx_codec_err_to_string(rc));
+                    vpx_codec_destroy(&new_c);
+                    return -1;
+                }
+            } else {
+                LOGGER_WARNING(vc->log, "setting VP9 lossless video quality: OFF");
+                rc = vpx_codec_control(&new_c, VP9E_SET_LOSSLESS, 0);
+
+                if (rc != VPX_CODEC_OK) {
+                    LOGGER_ERROR(vc->log, "Failed to set encoder control setting: %s", vpx_codec_err_to_string(rc));
+                    vpx_codec_destroy(&new_c);
+                    return -1;
+                }
+            }
         }
 
         vpx_codec_destroy(vc->encoder);
