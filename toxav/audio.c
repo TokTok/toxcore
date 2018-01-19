@@ -181,13 +181,13 @@ void ac_iterate(ACSession *ac)
             }
 
             /*
-              frame_size = opus_decode(dec, packet, len, decoded, max_size, 0);
-                where
-              packet is the byte array containing the compressed data
-              len is the exact number of bytes contained in the packet
-              decoded is the decoded audio data in opus_int16 (or float for opus_decode_float())
-              max_size is the max duration of the frame in samples (per channel) that can fit
-              into the decoded_frame array
+             * frame_size = opus_decode(dec, packet, len, decoded, max_size, 0);
+             *   where
+             * packet is the byte array containing the compressed data
+             * len is the exact number of bytes contained in the packet
+             * decoded is the decoded audio data in opus_int16 (or float for opus_decode_float())
+             * max_size is the max duration of the frame in samples (per channel) that can fit
+             * into the decoded_frame array
              */
             rc = opus_decode(ac->decoder, msg->data + 4, msg->len - 4, temp_audio_buffer, 5760, 0);
             free(msg);
