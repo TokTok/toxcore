@@ -370,7 +370,6 @@ static struct RTPMessage *jbuf_read(struct JitterBuffer *q, int32_t *success)
 OpusEncoder *create_audio_encoder(Logger *log, int32_t bit_rate, int32_t sampling_rate, int32_t channel_count)
 {
     int status = OPUS_OK;
-
     /*
      * OPUS_APPLICATION_VOIP Process signal for improved speech intelligibility
      * OPUS_APPLICATION_AUDIO Favor faithfulness to the original input
