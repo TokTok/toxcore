@@ -129,7 +129,7 @@ static void *pa_write_thread(void *d)
         frame *f;
         pthread_mutex_lock(cc->arb_mutex);
 
-        if (rb_read(cc->arb, (void **)&f)) {
+        if (rb_read(cc->arb, (void **)&f, NULL)) {
             pthread_mutex_unlock(cc->arb_mutex);
             Pa_WriteStream(adout, f->data, f->size);
             free(f);
@@ -207,7 +207,7 @@ static void t_toxav_receive_audio_frame_cb(ToxAV *av, uint32_t friend_number,
     f->size = sample_count;
 
     pthread_mutex_lock(cc->arb_mutex);
-    free(rb_write(cc->arb, f));
+    free(rb_write(cc->arb, f, 0));
     pthread_mutex_unlock(cc->arb_mutex);
 }
 static void t_toxav_audio_bit_rate_cb(ToxAV *av, uint32_t friend_number,
@@ -704,11 +704,11 @@ CHECK_ARG:
 
         void *f = nullptr;
 
-        while (rb_read(AliceCC.arb, &f)) {
+        while (rb_read(AliceCC.arb, &f, NULL)) {
             free(f);
         }
 
-        while (rb_read(BobCC.arb, &f)) {
+        while (rb_read(BobCC.arb, &f, NULL)) {
             free(f);
         }
 
