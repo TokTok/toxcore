@@ -32,8 +32,20 @@
 #include <vpx/vp8cx.h>
 #include <vpx/vp8dx.h>
 
-
 #include <pthread.h>
+
+#define VPX_VP8_CODEC 0
+#define VPX_VP9_CODEC 1
+
+#define VPX_ENCODER_USED VPX_VP8_CODEC
+#define VPX_DECODER_USED VPX_VP8_CODEC // this will switch automatically
+
+/**
+ * Force the first n frames to be keyframes.
+ *
+ * We do this to get the first picture to the receiver as early as possible.
+ */
+#define VIDEO_SEND_X_KEYFRAMES_FIRST 3
 
 struct RTPMessage;
 struct RingBuffer;
@@ -45,6 +57,7 @@ typedef struct VCSession_s {
 
     /* decoding */
     vpx_codec_ctx_t decoder[1];
+    bool is_using_vp9;
     struct RingBuffer *vbuf_raw; /* Un-decoded data */
 
     uint64_t linfts; /* Last received frame time stamp */
