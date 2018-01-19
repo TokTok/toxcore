@@ -35,7 +35,17 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_ENCODE_TIME_US ((1000 / 24) * 1000)
+
+// TODO: don't hardcode this, let the application choose it
+// VPX Info: Time to spend encoding, in microseconds (it's a *soft* deadline)
+#define WANTED_MAX_ENCODER_FPS (40)
+#define MAX_ENCODE_TIME_US (1000000 / WANTED_MAX_ENCODER_FPS) // to allow x fps
+
+/*
+VPX_DL_REALTIME       (1)       deadline parameter analogous to VPx REALTIME mode.
+VPX_DL_GOOD_QUALITY   (1000000) deadline parameter analogous to VPx GOOD QUALITY mode.
+VPX_DL_BEST_QUALITY   (0)       deadline parameter analogous to VPx BEST QUALITY mode.
+*/
 
 typedef struct ToxAVCall_s {
     ToxAV *av;
@@ -735,6 +745,8 @@ END:
 
     return rc == TOXAV_ERR_SEND_FRAME_OK;
 }
+
+
 bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, uint16_t height, const uint8_t *y,
                             const uint8_t *u, const uint8_t *v, TOXAV_ERR_SEND_FRAME *error)
 {
@@ -776,11 +788,40 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         goto END;
     }
 
-    if (vc_reconfigure_encoder(call->video.second, call->video_bit_rate * 1000, width, height) != 0) {
+    if (vc_reconfigure_encoder(call->video.second, call->video_bit_rate * 1000, width, height, -1) != 0) {
         pthread_mutex_unlock(call->mutex_video);
         rc = TOXAV_ERR_SEND_FRAME_INVALID;
         goto END;
     }
+
+    int vpx_encode_flags = 0;
+
+    if (call->video.first->ssrc < VIDEO_SEND_X_KEYFRAMES_FIRST) {
+        //if (call->video.first->ssrc == 0)
+        //{
+        if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
+            // Key frame flag for first frames
+            vpx_encode_flags = VPX_EFLAG_FORCE_KF;
+            // vpx_codec_control(call->video.second->encoder, VP8E_SET_FRAME_FLAGS, vpx_encode_flags);
+            LOGGER_INFO(av->m->log, "I_FRAME_FLAG:%d only-i-frame mode", call->video.first->ssrc);
+        }
+
+        //}
+        call->video.first->ssrc++;
+    } else if (call->video.first->ssrc == VIDEO_SEND_X_KEYFRAMES_FIRST) {
+        if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
+            // normal keyframe placement
+            vpx_encode_flags = 0;
+            // vpx_codec_control(call->video.second->encoder, VP8E_SET_FRAME_FLAGS, vpx_encode_flags);
+            LOGGER_INFO(av->m->log, "I_FRAME_FLAG:%d normal mode", call->video.first->ssrc);
+        }
+
+        call->video.first->ssrc++;
+    }
+
+    // we start with I-frames (full frames) and then switch to normal mode later
+
+
 
     { /* Encode */
         vpx_image_t img;
@@ -795,7 +836,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         memcpy(img.planes[VPX_PLANE_V], v, (width / 2) * (height / 2));
 
         vpx_codec_err_t vrc = vpx_codec_encode(call->video.second->encoder, &img,
-                                               call->video.second->frame_counter, 1, 0, MAX_ENCODE_TIME_US);
+                                               call->video.second->frame_counter, 1, vpx_encode_flags, MAX_ENCODE_TIME_US);
 
         vpx_img_free(&img);
 
@@ -809,30 +850,60 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 
     ++call->video.second->frame_counter;
 
+
+
     { /* Send frames */
         vpx_codec_iter_t iter = NULL;
         const vpx_codec_cx_pkt_t *pkt;
 
-        while ((pkt = vpx_codec_get_cx_data(call->video.second->encoder, &iter))) {
+        while ((pkt = vpx_codec_get_cx_data(call->video.second->encoder, &iter)) != NULL) {
             if (pkt->kind == VPX_CODEC_CX_FRAME_PKT) {
-                const uint8_t *buf = (const uint8_t *)pkt->data.frame.buf;
-                const uint8_t *end = buf + pkt->data.frame.sz;
+                const int keyframe = (pkt->data.frame.flags & VPX_FRAME_IS_KEY) != 0;
 
-                while (buf < end) {
-                    uint16_t size = MIN(UINT16_MAX, end - buf);
+                // TOX RTP V3 --- hack to give frame type to function ---
+                //
+                // use the highest bit (bit 31) to spec. keyframe = 1 / no keyframe = 0
+                // if length(31 bits) > 1FFFFFFF then use all bits for length
+                // and assume its a keyframe (most likely is anyway)
 
-                    if (rtp_send_data(call->video.first, buf, size, av->m->log) < 0) {
-                        pthread_mutex_unlock(call->mutex_video);
-                        LOGGER_WARNING(av->m->log, "Could not send video frame: %s\n", strerror(errno));
-                        rc = TOXAV_ERR_SEND_FRAME_RTP_FAILED;
-                        goto END;
+                // https://www.webmproject.org/docs/webm-sdk/structvpx__codec__cx__pkt.html
+                // pkt->data.frame.sz -> size_t
+                uint32_t frame_length_in_bytes = pkt->data.frame.sz;
+
+                if (LOWER_31_BITS(frame_length_in_bytes) > 0x1FFFFFFF) {
+                } else {
+                    if (keyframe == 1) {
+                        frame_length_in_bytes = ((uint32_t)1 << 31) | LOWER_31_BITS(frame_length_in_bytes);
                     }
+                }
 
-                    buf += size;
+                // TOX RTP V3 --- hack to give frame type to function ---
+
+
+                int res = rtp_send_data
+                          (
+                              call->video.first,
+                              (const uint8_t *)pkt->data.frame.buf,
+                              frame_length_in_bytes,
+                              av->m->log
+                          );
+
+                LOGGER_DEBUG(av->m->log, "+ _sending_FRAME_TYPE_==%s bytes=%d frame_len=%d", keyframe ? "K" : ".",
+                             (int)pkt->data.frame.sz, (int)frame_length_in_bytes);
+                LOGGER_DEBUG(av->m->log, "+ _sending_FRAME_ b0=%d b1=%d", ((const uint8_t *)pkt->data.frame.buf)[0] ,
+                             ((const uint8_t *)pkt->data.frame.buf)[1]);
+
+                if (res < 0) {
+                    pthread_mutex_unlock(call->mutex_video);
+                    LOGGER_WARNING(av->m->log, "Could not send video frame: %s", strerror(errno));
+                    rc = TOXAV_ERR_SEND_FRAME_RTP_FAILED;
+                    goto END;
                 }
             }
         }
     }
+
+
 
     pthread_mutex_unlock(call->mutex_video);
 
@@ -844,6 +915,9 @@ END:
 
     return rc == TOXAV_ERR_SEND_FRAME_OK;
 }
+
+
+
 void toxav_callback_audio_receive_frame(ToxAV *av, toxav_audio_receive_frame_cb *callback, void *user_data)
 {
     pthread_mutex_lock(av->mutex);
@@ -879,7 +953,8 @@ void callback_bwc(BWController *bwc, uint32_t friend_number, float loss, void *u
 
     LOGGER_DEBUG(call->av->m->log, "Reported loss of %f%%", loss * 100);
 
-    if (loss < .01f) {
+    /* if less than 10% data loss we do nothing! */
+    if (loss < 0.1f) {
         return;
     }
 
@@ -1034,6 +1109,8 @@ bool invoke_call_state_callback(ToxAV *av, uint32_t friend_number, uint32_t stat
 
     return true;
 }
+
+
 ToxAVCall *call_new(ToxAV *av, uint32_t friend_number, TOXAV_ERR_CALL *error)
 {
     /* Assumes mutex locked */
@@ -1116,6 +1193,8 @@ END:
 
     return call;
 }
+
+
 ToxAVCall *call_get(ToxAV *av, uint32_t friend_number)
 {
     /* Assumes mutex locked */
@@ -1125,6 +1204,8 @@ ToxAVCall *call_get(ToxAV *av, uint32_t friend_number)
 
     return av->calls[friend_number];
 }
+
+
 ToxAVCall *call_remove(ToxAVCall *call)
 {
     if (call == NULL) {
@@ -1172,6 +1253,8 @@ CLEAR:
 
     return NULL;
 }
+
+
 bool call_prepare_transmission(ToxAVCall *call)
 {
     /* Assumes mutex locked */
@@ -1260,6 +1343,8 @@ FAILURE_3:
     pthread_mutex_destroy(call->mutex_audio);
     return false;
 }
+
+
 void call_kill_transmission(ToxAVCall *call)
 {
     if (call == NULL || call->active == 0) {
@@ -1291,3 +1376,5 @@ void call_kill_transmission(ToxAVCall *call)
     pthread_mutex_destroy(call->mutex_video);
     pthread_mutex_destroy(call->mutex);
 }
+
+
