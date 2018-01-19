@@ -71,7 +71,6 @@ ACSession *ac_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_audio_re
     }
 
     ac->log = log;
-
     /* Initialize encoders with default values */
     ac->encoder = create_audio_encoder(log, AUDIO_START_BITRATE, AUDIO_START_SAMPLE_RATE, AUDIO_START_CHANNEL_COUNT);
 
@@ -86,7 +85,6 @@ ACSession *ac_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_audio_re
     ac->ld_channel_count = AUDIO_DECODER_START_CHANNEL_COUNT;
     ac->ld_sample_rate = AUDIO_DECODER_START_SAMPLE_RATE;
     ac->ldrts = 0; /* Make it possible to reconfigure straight away */
-
     /* These need to be set in order to properly
      * do error correction with opus */
     ac->lp_frame_duration = AUDIO_MAX_FRAME_DURATION_MS;
@@ -97,9 +95,7 @@ ACSession *ac_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_audio_re
     ac->friend_number = friend_number;
     ac->acb.first = cb;
     ac->acb.second = cb_data;
-
     return ac;
-
 DECODER_CLEANUP:
     opus_decoder_destroy(ac->decoder);
     jbuf_free((struct JitterBuffer *)ac->j_buf);
@@ -118,9 +114,7 @@ void ac_kill(ACSession *ac)
     opus_encoder_destroy(ac->encoder);
     opus_decoder_destroy(ac->decoder);
     jbuf_free((struct JitterBuffer *)ac->j_buf);
-
     pthread_mutex_destroy(ac->queue_mutex);
-
     LOGGER_DEBUG(ac->log, "Terminated audio handler: %p", ac);
     free(ac);
 }
@@ -132,13 +126,11 @@ void ac_iterate(ACSession *ac)
     }
 
     /* TODO(mannol): fix this and jitter buffering */
-
     /* Enough space for the maximum frame size (120 ms 48 KHz stereo audio) */
     int16_t temp_audio_buffer[AUDIO_MAX_BUFFER_SIZE_PCM16 * AUDIO_MAX_CHANNEL_COUNT];
 
     struct RTPMessage *msg;
     int rc = 0;
-
     pthread_mutex_lock(ac->queue_mutex);
 
     while ((msg = jbuf_read((struct JitterBuffer *)ac->j_buf, &rc)) || rc == 2) {
@@ -163,12 +155,9 @@ void ac_iterate(ACSession *ac)
             }
 
 #endif
-
-
             /* Pick up sampling rate from packet */
             memcpy(&ac->lp_sampling_rate, msg->data, 4);
             ac->lp_sampling_rate = net_ntohl(ac->lp_sampling_rate);
-
             ac->lp_channel_count = opus_packet_get_nb_channels(msg->data + 4);
 
             /** NOTE: even though OPUS supports decoding mono frames with stereo decoder and vice versa,
@@ -289,6 +278,7 @@ static struct JitterBuffer *jbuf_new(uint32_t capacity)
     q->capacity = capacity;
     return q;
 }
+
 static void jbuf_clear(struct JitterBuffer *q)
 {
     for (; q->bottom != q->top; ++q->bottom) {
@@ -298,6 +288,7 @@ static void jbuf_clear(struct JitterBuffer *q)
         }
     }
 }
+
 static void jbuf_free(struct JitterBuffer *q)
 {
     if (!q) {
@@ -308,15 +299,14 @@ static void jbuf_free(struct JitterBuffer *q)
     free(q->queue);
     free(q);
 }
+
 static int jbuf_write(Logger *log, struct JitterBuffer *q, struct RTPMessage *m)
 {
     uint16_t sequnum = m->header.sequnum;
-
     unsigned int num = sequnum % q->size;
 
     if ((uint32_t)(sequnum - q->bottom) > q->size) {
         LOGGER_DEBUG(log, "Clearing filled jitter buffer: %p", q);
-
         jbuf_clear(q);
         q->bottom = sequnum - q->capacity;
         q->queue[num] = m;
@@ -336,6 +326,7 @@ static int jbuf_write(Logger *log, struct JitterBuffer *q, struct RTPMessage *m)
 
     return 0;
 }
+
 static struct RTPMessage *jbuf_read(struct JitterBuffer *q, int32_t *success)
 {
     if (q->top == q->bottom) {
@@ -362,6 +353,7 @@ static struct RTPMessage *jbuf_read(struct JitterBuffer *q, int32_t *success)
     *success = 0;
     return NULL;
 }
+
 OpusEncoder *create_audio_encoder(Logger *log, int32_t bit_rate, int32_t sampling_rate, int32_t channel_count)
 {
     int status = OPUS_OK;
@@ -376,7 +368,6 @@ OpusEncoder *create_audio_encoder(Logger *log, int32_t bit_rate, int32_t samplin
         LOGGER_ERROR(log, "Error while starting audio encoder: %s", opus_strerror(status));
         return NULL;
     }
-
 
     /*
      * Rates from 500 to 512000 bits per second are meaningful as well as the special
@@ -394,7 +385,6 @@ OpusEncoder *create_audio_encoder(Logger *log, int32_t bit_rate, int32_t samplin
         goto FAILURE;
     }
 
-
     /*
      * Configures the encoder's use of inband forward error correction.
      * Note:
@@ -409,7 +399,6 @@ OpusEncoder *create_audio_encoder(Logger *log, int32_t bit_rate, int32_t samplin
         LOGGER_ERROR(log, "Error while setting encoder ctl: %s", opus_strerror(status));
         goto FAILURE;
     }
-
 
     /*
      * Configures the encoder's expected packet loss percentage.
@@ -430,7 +419,6 @@ OpusEncoder *create_audio_encoder(Logger *log, int32_t bit_rate, int32_t samplin
         goto FAILURE;
     }
 
-
     /*
      * Configures the encoder's computational complexity.
      *
@@ -449,7 +437,6 @@ OpusEncoder *create_audio_encoder(Logger *log, int32_t bit_rate, int32_t samplin
     }
 
     return rc;
-
 FAILURE:
     opus_encoder_destroy(rc);
     return NULL;
@@ -482,7 +469,6 @@ bool reconfigure_audio_encoder(Logger *log, OpusEncoder **e, int32_t new_br, int
     *old_br = new_br;
     *old_sr = new_sr;
     *old_ch = new_ch;
-
     LOGGER_DEBUG(log, "Reconfigured audio encoder br: %d sr: %d cc:%d", new_br, new_sr, new_ch);
     return true;
 }
@@ -505,12 +491,11 @@ bool reconfigure_audio_decoder(ACSession *ac, int32_t sampling_rate, int8_t chan
         ac->ld_sample_rate = sampling_rate;
         ac->ld_channel_count = channels;
         ac->ldrts = current_time_monotonic();
-
         opus_decoder_destroy(ac->decoder);
         ac->decoder = new_dec;
-
         LOGGER_DEBUG(ac->log, "Reconfigured audio decoder sr: %d cc: %d", sampling_rate, channels);
     }
 
     return true;
 }
+
