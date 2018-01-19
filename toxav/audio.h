@@ -28,7 +28,6 @@
 #include <opus.h>
 #include <pthread.h>
 
-
 #define AUDIO_JITTERBUFFER_COUNT 3
 #define AUDIO_MAX_SAMPLE_RATE 48000
 #define AUDIO_MAX_CHANNEL_COUNT 2
@@ -45,6 +44,7 @@
 #define AUDIO_MAX_FRAME_DURATION_MS 120
 
 // ((sampling_rate_in_hz * frame_duration_in_ms) / 1000) * 2 // because PCM16 needs 2 bytes for 1 sample
+// These are per frame and per channel.
 #define AUDIO_MAX_BUFFER_SIZE_PCM16 ((AUDIO_MAX_SAMPLE_RATE * AUDIO_MAX_FRAME_DURATION_MS) / 1000)
 #define AUDIO_MAX_BUFFER_SIZE_BYTES (AUDIO_MAX_BUFFER_SIZE_PCM16 * 2)
 
