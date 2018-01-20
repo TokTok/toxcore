@@ -814,9 +814,6 @@ static int handle_announce_response(void *object, IP_Port source, const uint8_t 
             if (added_peers < 0) {
                 return 1;
             }
-            if (added_peers > 0) {
-                fprintf(stderr, "added peers count: %d\n", added_peers);
-            }
         }
     }
 
