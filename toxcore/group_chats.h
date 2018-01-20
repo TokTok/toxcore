@@ -214,6 +214,8 @@ typedef struct GC_Connection GC_Connection;
 
 typedef struct GC_Chat {
     const Mono_Time *mono_time;
+    Node_format announced_node;
+
     Networking_Core *net;
     TCP_Connections *tcp_conn;
 

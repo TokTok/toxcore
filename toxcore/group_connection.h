@@ -41,7 +41,7 @@
 /* The time before the direct UDP connection is considered dead */
 #define GCC_UDP_DIRECT_TIMEOUT (GC_PING_INTERVAL * 2 + 2)
 
-#define HANDSHAKE_SENDING_TIMEOUT 3
+#define HANDSHAKE_SENDING_TIMEOUT 5
 
 struct GC_Message_Ary_Entry {
     uint8_t *data;
