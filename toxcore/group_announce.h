@@ -91,6 +91,7 @@ int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Announce *gc_annou
 GC_Announce* add_gc_announce(GC_Announces_List *gc_announces_list, const uint8_t *node,
                              const uint8_t *chat_id, const uint8_t *peer_id);
 
+GC_Announce* add_self_announce(GC_Announces_List *gc_announces_list, const uint8_t *chat_id, Node_format *node);
 
 //TODO: pack && unpack announces?
 

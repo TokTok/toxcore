@@ -213,6 +213,8 @@ typedef struct {
 typedef struct GC_Connection GC_Connection;
 
 typedef struct GC_Chat {
+    Node_format announced_node;
+
     Networking_Core *net;
     TCP_Connections *tcp_conn;
 

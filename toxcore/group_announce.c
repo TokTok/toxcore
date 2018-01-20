@@ -2,8 +2,6 @@
 #include "group_announce.h"
 #include "util.h"
 
-#ifndef VANILLA_NACL
-
 GC_Announces_List *new_gca_list()
 {
     GC_Announces_List *announces_list = (GC_Announces_List *)malloc(sizeof(GC_Announce));
@@ -121,7 +119,7 @@ static GC_Announces* get_announces_by_chat_id(const GC_Announces_List *gc_announ
 int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Announce *gc_announces, uint8_t max_nodes,
                      const uint8_t *chat_id, const uint8_t *except_public_key)
 {
-    if (!gc_announces || !gc_announces_list || !chat_id || !max_nodes) {
+    if (!gc_announces || !gc_announces_list || !chat_id || !max_nodes || !except_public_key) {
         return -1;
     }
 
@@ -131,15 +129,27 @@ int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Announce *gc_annou
     }
 
     // TODO: add proper selection
-    int gc_announces_count = 0, i;
-    for (i = 0; i < announces->index && gc_announces_count < max_nodes; i++) {
+    int gc_announces_count = 0, i, j;
+    for (i = 0; i < announces->index && i < MAX_GCA_SAVED_ANNOUNCES_PER_GC && gc_announces_count < max_nodes; i++) {
         int index = i % MAX_GCA_SAVED_ANNOUNCES_PER_GC;
         if (!memcmp(except_public_key, &announces->announces[index].peer_public_key, ENC_PUBLIC_KEY)) {
             continue;
         }
 
-        memcpy(&gc_announces[gc_announces_count], &announces->announces[index], sizeof(GC_Announce));
-        gc_announces_count++;
+        bool already_added = false;
+        for (j = 0; j < gc_announces_count; j++) {
+            if (!memcmp(&gc_announces[j].peer_public_key,
+                        &announces->announces[index].peer_public_key,
+                        ENC_PUBLIC_KEY)) {
+                already_added = true;
+                break;
+            }
+        }
+
+        if (!already_added) {
+            memcpy(&gc_announces[gc_announces_count], &announces->announces[index], sizeof(GC_Announce));
+            gc_announces_count++;
+        }
     }
 
     return gc_announces_count;
@@ -175,4 +185,7 @@ GC_Announce* add_gc_announce(GC_Announces_List *gc_announces_list, const uint8_t
     return gc_announce;
 }
 
-#endif /* VANILLA_NACL */
+GC_Announce* add_self_announce(GC_Announces_List *gc_announces_list, const uint8_t *chat_id, Node_format *node)
+{
+    return add_gc_announce(gc_announces_list, node, chat_id, 0);
+}
