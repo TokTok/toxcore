@@ -461,7 +461,7 @@ endfunction()
 
 if(BUILD_TOXAV)
   add_c_executable(auto_monolith_test
-    auto_tests/monolith_test.c
+    auto_tests/monolith_test.cpp
     ${ANDROID_CPU_FEATURES})
   target_link_modules(auto_monolith_test
     ${LIBSODIUM_LIBRARIES}
