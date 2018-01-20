@@ -12,8 +12,8 @@ cc_library(
     size = "small",
     srcs = [src],
     copts = [
-        "-std=c99",
         "-Wno-parentheses",
+        "-Wno-sign-compare",
     ],
     deps = [
         ":helpers",
@@ -23,4 +23,4 @@ cc_library(
         "//c-toxcore/toxcore",
         "@check",
     ],
-) for src in glob(["*_test.c"])]
+) for src in glob(["*_test.c*"])]
