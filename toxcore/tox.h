@@ -172,7 +172,7 @@ uint32_t tox_version_major(void);
  * breaking the API or ABI. Set to 0 when the major version number is
  * incremented.
  */
-#define TOX_VERSION_MINOR              1
+#define TOX_VERSION_MINOR              2
 
 uint32_t tox_version_minor(void);
 
@@ -180,7 +180,7 @@ uint32_t tox_version_minor(void);
  * The patch or revision number. Incremented when bugfixes are applied without
  * changing any functionality or API or ABI.
  */
-#define TOX_VERSION_PATCH              11
+#define TOX_VERSION_PATCH              0
 
 uint32_t tox_version_patch(void);
 
@@ -370,6 +370,12 @@ typedef enum TOX_MESSAGE_TYPE {
      * on IRC.
      */
     TOX_MESSAGE_TYPE_ACTION,
+
+    /**
+     * Correction of the last message. With empty message body can be used to mark
+     * last message as deleted.
+     */
+    TOX_MESSAGE_TYPE_CORRECTION,
 
 } TOX_MESSAGE_TYPE;
 

@@ -140,26 +140,25 @@ typedef union {
     uint16_t uint16[8];
     uint32_t uint32[4];
     uint64_t uint64[2];
-}
-IP6;
+} IP6;
 
 IP6 get_ip6_loopback(void);
 extern const IP6 IP6_BROADCAST;
 
+#define IP_DEFINED
 typedef struct {
     uint8_t family;
     GNU_EXTENSION union {
         IP4 ip4;
         IP6 ip6;
     };
-}
-IP;
+} IP;
 
-typedef struct {
+#define IP_PORT_DEFINED
+typedef struct IP_Port {
     IP ip;
     uint16_t port;
-}
-IP_Port;
+} IP_Port;
 
 /* Convert values between host and network byte order.
  */
@@ -303,20 +302,10 @@ int addr_resolve_or_parse_ip(const char *address, IP *to, IP *extra);
 typedef int (*packet_handler_callback)(void *object, IP_Port ip_port, const uint8_t *data, uint16_t len,
                                        void *userdata);
 
-typedef struct {
-    packet_handler_callback function;
-    void *object;
-} Packet_Handles;
+typedef struct Networking_Core Networking_Core;
 
-typedef struct {
-    Logger *log;
-    Packet_Handles packethandlers[256];
-
-    Family family;
-    uint16_t port;
-    /* Our UDP socket. */
-    Socket sock;
-} Networking_Core;
+Family net_family(const Networking_Core *net);
+uint16_t net_port(const Networking_Core *net);
 
 /* Run this before creating sockets.
  *
@@ -403,8 +392,6 @@ void net_freeipport(IP_Port *ip_ports);
  */
 int bind_to_port(Socket sock, int family, uint16_t port);
 
-size_t net_sendto_ip4(Socket sock, const char *buf, size_t n, IP_Port ip_port);
-
 /* Initialize networking.
  * bind to ip and port.
  * ip must be in network order EX: 127.0.0.1 = (7F000001).
@@ -417,6 +404,7 @@ size_t net_sendto_ip4(Socket sock, const char *buf, size_t n, IP_Port ip_port);
  */
 Networking_Core *new_networking(Logger *log, IP ip, uint16_t port);
 Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint16_t port_to, unsigned int *error);
+Networking_Core *new_networking_no_udp(Logger *log);
 
 /* Function to cleanup networking stuff (doesn't do much right now). */
 void kill_networking(Networking_Core *net);

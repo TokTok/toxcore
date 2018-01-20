@@ -1,5 +1,6 @@
+%{
 /*
- * Textual frontend for Tox.
+ * LAN discovery implementation.
  */
 
 /*
@@ -21,19 +22,52 @@
  * You should have received a copy of the GNU General Public License
  * along with Tox.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef NTOX_H
-#define NTOX_H
+#ifndef LAN_DISCOVERY_H
+#define LAN_DISCOVERY_H
 
-/*
- * module actually exports nothing for the outside
+#include "DHT.h"
+%}
+
+class dHT { struct this; }
+class iP { struct this; }
+
+namespace lan_discovery {
+
+/**
+ * Interval in seconds between LAN discovery packet sending.
  */
+const INTERVAL = 10;
 
-#include <ctype.h>
-#include <curses.h>
+/**
+ * Send a LAN discovery pcaket to the broadcast address with port port.
+ */
+static int32_t send(uint16_t port, dHT::this *dht);
 
-#include "../toxcore/tox.h"
+/**
+ * Sets up packet handlers.
+ */
+static void init(dHT::this *dht);
 
-#define STRING_LENGTH 256
-#define HISTORY 50
+/**
+ * Clear packet handlers.
+ */
+static void kill(dHT::this *dht);
 
+}
+
+/**
+ * Is IP a local ip or not.
+ */
+static bool ip_is_local(iP::this ip);
+
+/**
+ * checks if a given IP isn't routable
+ *
+ *  return 0 if ip is a LAN ip.
+ *  return -1 if it is not.
+ */
+static int32_t ip_is_lan(iP::this ip);
+
+%{
 #endif
+%}

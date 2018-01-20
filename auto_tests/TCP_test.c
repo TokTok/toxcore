@@ -137,6 +137,7 @@ START_TEST(test_basic)
     ck_assert_msg(packet_resp_plain[0] == 1, "wrong packet id %u", packet_resp_plain[0]);
     ck_assert_msg(packet_resp_plain[1] == 0, "connection not refused %u", packet_resp_plain[1]);
     ck_assert_msg(public_key_cmp(packet_resp_plain + 2, f_public_key) == 0, "key in packet wrong");
+    kill_sock(sock);
     kill_TCP_server(tcp_s);
 }
 END_TEST
@@ -426,26 +427,26 @@ START_TEST(test_client)
     TCP_Client_Connection *conn = new_TCP_connection(ip_port_tcp_s, self_public_key, f_public_key, f_secret_key, 0);
     c_sleep(50);
     do_TCP_connection(conn, NULL);
-    ck_assert_msg(conn->status == TCP_CLIENT_UNCONFIRMED, "Wrong status. Expected: %u, is: %u", TCP_CLIENT_UNCONFIRMED,
-                  conn->status);
+    ck_assert_msg(tcp_con_status(conn) == TCP_CLIENT_UNCONFIRMED, "Wrong status. Expected: %u, is: %u",
+                  TCP_CLIENT_UNCONFIRMED, tcp_con_status(conn));
     c_sleep(50);
     do_TCP_server(tcp_s);
     c_sleep(50);
     do_TCP_connection(conn, NULL);
-    ck_assert_msg(conn->status == TCP_CLIENT_CONFIRMED, "Wrong status. Expected: %u, is: %u", TCP_CLIENT_CONFIRMED,
-                  conn->status);
+    ck_assert_msg(tcp_con_status(conn) == TCP_CLIENT_CONFIRMED, "Wrong status. Expected: %u, is: %u", TCP_CLIENT_CONFIRMED,
+                  tcp_con_status(conn));
     c_sleep(500);
     do_TCP_connection(conn, NULL);
-    ck_assert_msg(conn->status == TCP_CLIENT_CONFIRMED, "Wrong status. Expected: %u, is: %u", TCP_CLIENT_CONFIRMED,
-                  conn->status);
+    ck_assert_msg(tcp_con_status(conn) == TCP_CLIENT_CONFIRMED, "Wrong status. Expected: %u, is: %u", TCP_CLIENT_CONFIRMED,
+                  tcp_con_status(conn));
     c_sleep(500);
     do_TCP_connection(conn, NULL);
-    ck_assert_msg(conn->status == TCP_CLIENT_CONFIRMED, "Wrong status. Expected: %u, is: %u", TCP_CLIENT_CONFIRMED,
-                  conn->status);
+    ck_assert_msg(tcp_con_status(conn) == TCP_CLIENT_CONFIRMED, "Wrong status. Expected: %u, is: %u", TCP_CLIENT_CONFIRMED,
+                  tcp_con_status(conn));
     do_TCP_server(tcp_s);
     c_sleep(50);
-    ck_assert_msg(conn->status == TCP_CLIENT_CONFIRMED, "Wrong status. Expected: %u, is: %u", TCP_CLIENT_CONFIRMED,
-                  conn->status);
+    ck_assert_msg(tcp_con_status(conn) == TCP_CLIENT_CONFIRMED, "Wrong status. Expected: %u, is: %u", TCP_CLIENT_CONFIRMED,
+                  tcp_con_status(conn));
 
     uint8_t f2_public_key[CRYPTO_PUBLIC_KEY_SIZE];
     uint8_t f2_secret_key[CRYPTO_SECRET_KEY_SIZE];
@@ -523,16 +524,16 @@ START_TEST(test_client_invalid)
     TCP_Client_Connection *conn = new_TCP_connection(ip_port_tcp_s, self_public_key, f_public_key, f_secret_key, 0);
     c_sleep(50);
     do_TCP_connection(conn, NULL);
-    ck_assert_msg(conn->status == TCP_CLIENT_CONNECTING, "Wrong status. Expected: %u, is: %u", TCP_CLIENT_CONNECTING,
-                  conn->status);
+    ck_assert_msg(tcp_con_status(conn) == TCP_CLIENT_CONNECTING, "Wrong status. Expected: %u, is: %u",
+                  TCP_CLIENT_CONNECTING, tcp_con_status(conn));
     c_sleep(5000);
     do_TCP_connection(conn, NULL);
-    ck_assert_msg(conn->status == TCP_CLIENT_CONNECTING, "Wrong status. Expected: %u, is: %u", TCP_CLIENT_CONNECTING,
-                  conn->status);
+    ck_assert_msg(tcp_con_status(conn) == TCP_CLIENT_CONNECTING, "Wrong status. Expected: %u, is: %u",
+                  TCP_CLIENT_CONNECTING, tcp_con_status(conn));
     c_sleep(6000);
     do_TCP_connection(conn, NULL);
-    ck_assert_msg(conn->status == TCP_CLIENT_DISCONNECTED, "Wrong status. Expected: %u, is: %u", TCP_CLIENT_DISCONNECTED,
-                  conn->status);
+    ck_assert_msg(tcp_con_status(conn) == TCP_CLIENT_DISCONNECTED, "Wrong status. Expected: %u, is: %u",
+                  TCP_CLIENT_DISCONNECTED, tcp_con_status(conn));
 
     kill_TCP_connection(conn);
 }

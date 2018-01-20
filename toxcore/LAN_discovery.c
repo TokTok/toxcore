@@ -256,7 +256,7 @@ static IP broadcast_ip(Family family_socket, Family family_broadcast)
 }
 
 /* Is IP a local ip or not. */
-bool Local_ip(IP ip)
+bool ip_is_local(IP ip)
 {
     if (ip.family == TOX_AF_INET) {
         IP4 ip4 = ip.ip4;
@@ -271,7 +271,7 @@ bool Local_ip(IP ip)
             IP ip4;
             ip4.family = TOX_AF_INET;
             ip4.ip4.uint32 = ip.ip6.uint32[3];
-            return Local_ip(ip4);
+            return ip_is_local(ip4);
         }
 
         /* localhost in IPv6 (::1) */
@@ -286,9 +286,9 @@ bool Local_ip(IP ip)
 /*  return 0 if ip is a LAN ip.
  *  return -1 if it is not.
  */
-int LAN_ip(IP ip)
+int ip_is_lan(IP ip)
 {
-    if (Local_ip(ip)) {
+    if (ip_is_local(ip)) {
         return 0;
     }
 
@@ -335,7 +335,7 @@ int LAN_ip(IP ip)
             IP ip4;
             ip4.family = TOX_AF_INET;
             ip4.ip4.uint32 = ip.ip6.uint32[3];
-            return LAN_ip(ip4);
+            return ip_is_lan(ip4);
         }
     }
 
@@ -346,7 +346,7 @@ static int handle_LANdiscovery(void *object, IP_Port source, const uint8_t *pack
 {
     DHT *dht = (DHT *)object;
 
-    if (LAN_ip(source.ip) == -1) {
+    if (ip_is_lan(source.ip) == -1) {
         return 1;
     }
 
@@ -356,41 +356,40 @@ static int handle_LANdiscovery(void *object, IP_Port source, const uint8_t *pack
 
     char ip_str[IP_NTOA_LEN] = { 0 };
     ip_ntoa(&source.ip, ip_str, sizeof(ip_str));
-    LOGGER_INFO(dht->log, "Found node in LAN: %s", ip_str);
 
     DHT_bootstrap(dht, source, packet + 1);
     return 0;
 }
 
 
-int send_LANdiscovery(uint16_t port, DHT *dht)
+int lan_discovery_send(uint16_t port, DHT *dht)
 {
     uint8_t data[CRYPTO_PUBLIC_KEY_SIZE + 1];
     data[0] = NET_PACKET_LAN_DISCOVERY;
-    id_copy(data + 1, dht->self_public_key);
+    id_copy(data + 1, dht_get_self_public_key(dht));
 
-    send_broadcasts(dht->net, port, data, 1 + CRYPTO_PUBLIC_KEY_SIZE);
+    send_broadcasts(dht_get_net(dht), port, data, 1 + CRYPTO_PUBLIC_KEY_SIZE);
 
     int res = -1;
     IP_Port ip_port;
     ip_port.port = port;
 
     /* IPv6 multicast */
-    if (dht->net->family == TOX_AF_INET6) {
+    if (net_family(dht_get_net(dht)) == TOX_AF_INET6) {
         ip_port.ip = broadcast_ip(TOX_AF_INET6, TOX_AF_INET6);
 
         if (ip_isset(&ip_port.ip)) {
-            if (sendpacket(dht->net, ip_port, data, 1 + CRYPTO_PUBLIC_KEY_SIZE) > 0) {
+            if (sendpacket(dht_get_net(dht), ip_port, data, 1 + CRYPTO_PUBLIC_KEY_SIZE) > 0) {
                 res = 1;
             }
         }
     }
 
     /* IPv4 broadcast (has to be IPv4-in-IPv6 mapping if socket is TOX_AF_INET6 */
-    ip_port.ip = broadcast_ip(dht->net->family, TOX_AF_INET);
+    ip_port.ip = broadcast_ip(net_family(dht_get_net(dht)), TOX_AF_INET);
 
     if (ip_isset(&ip_port.ip)) {
-        if (sendpacket(dht->net, ip_port, data, 1 + CRYPTO_PUBLIC_KEY_SIZE)) {
+        if (sendpacket(dht_get_net(dht), ip_port, data, 1 + CRYPTO_PUBLIC_KEY_SIZE)) {
             res = 1;
         }
     }
@@ -399,12 +398,12 @@ int send_LANdiscovery(uint16_t port, DHT *dht)
 }
 
 
-void LANdiscovery_init(DHT *dht)
+void lan_discovery_init(DHT *dht)
 {
-    networking_registerhandler(dht->net, NET_PACKET_LAN_DISCOVERY, &handle_LANdiscovery, dht);
+    networking_registerhandler(dht_get_net(dht), NET_PACKET_LAN_DISCOVERY, &handle_LANdiscovery, dht);
 }
 
-void LANdiscovery_kill(DHT *dht)
+void lan_discovery_kill(DHT *dht)
 {
-    networking_registerhandler(dht->net, NET_PACKET_LAN_DISCOVERY, NULL, NULL);
+    networking_registerhandler(dht_get_net(dht), NET_PACKET_LAN_DISCOVERY, NULL, NULL);
 }

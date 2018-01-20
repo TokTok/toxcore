@@ -355,13 +355,13 @@ void tox_self_get_address(const Tox *tox, uint8_t *address)
 void tox_self_set_nospam(Tox *tox, uint32_t nospam)
 {
     Messenger *m = tox;
-    set_nospam(&(m->fr), net_htonl(nospam));
+    set_nospam(m->fr, net_htonl(nospam));
 }
 
 uint32_t tox_self_get_nospam(const Tox *tox)
 {
     const Messenger *m = tox;
-    return net_ntohl(get_nospam(&(m->fr)));
+    return net_ntohl(get_nospam(m->fr));
 }
 
 void tox_self_get_public_key(const Tox *tox, uint8_t *public_key)
@@ -369,7 +369,7 @@ void tox_self_get_public_key(const Tox *tox, uint8_t *public_key)
     const Messenger *m = tox;
 
     if (public_key) {
-        memcpy(public_key, m->net_crypto->self_public_key, CRYPTO_PUBLIC_KEY_SIZE);
+        memcpy(public_key, nc_get_self_public_key(m->net_crypto), CRYPTO_PUBLIC_KEY_SIZE);
     }
 }
 
@@ -378,7 +378,7 @@ void tox_self_get_secret_key(const Tox *tox, uint8_t *secret_key)
     const Messenger *m = tox;
 
     if (secret_key) {
-        memcpy(secret_key, m->net_crypto->self_secret_key, CRYPTO_SECRET_KEY_SIZE);
+        memcpy(secret_key, nc_get_self_secret_key(m->net_crypto), CRYPTO_SECRET_KEY_SIZE);
     }
 }
 
@@ -1300,8 +1300,10 @@ bool tox_conference_send_message(Tox *tox, uint32_t conference_number, TOX_MESSA
 
     if (type == TOX_MESSAGE_TYPE_NORMAL) {
         ret = group_message_send((Group_Chats *)m->conferences_object, conference_number, message, length);
-    } else {
+    } else if (type == TOX_MESSAGE_TYPE_ACTION) {
         ret = group_action_send((Group_Chats *)m->conferences_object, conference_number, message, length);
+    } else if (type == TOX_MESSAGE_TYPE_CORRECTION) {
+        ret = group_correction_send((Group_Chats *)m->conferences_object, conference_number, message, length);
     }
 
     switch (ret) {
@@ -1519,14 +1521,14 @@ void tox_self_get_dht_id(const Tox *tox, uint8_t *dht_id)
 {
     if (dht_id) {
         const Messenger *m = tox;
-        memcpy(dht_id, m->dht->self_public_key, CRYPTO_PUBLIC_KEY_SIZE);
+        memcpy(dht_id, dht_get_self_public_key(m->dht), CRYPTO_PUBLIC_KEY_SIZE);
     }
 }
 
 uint16_t tox_self_get_udp_port(const Tox *tox, TOX_ERR_GET_PORT *error)
 {
     const Messenger *m = tox;
-    uint16_t port = net_htons(m->net->port);
+    uint16_t port = net_htons(net_port(m->net));
 
     if (port) {
         SET_ERROR_PARAMETER(error, TOX_ERR_GET_PORT_OK);

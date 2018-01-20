@@ -31,6 +31,63 @@
 
 #define PORTS_PER_DISCOVERY 10
 
+typedef struct {
+    uint8_t status;
+
+    uint8_t real_public_key[CRYPTO_PUBLIC_KEY_SIZE];
+    uint8_t dht_temp_pk[CRYPTO_PUBLIC_KEY_SIZE];
+    uint16_t dht_lock;
+    IP_Port dht_ip_port;
+    uint64_t dht_pk_lastrecv, dht_ip_port_lastrecv;
+
+    int onion_friendnum;
+    int crypt_connection_id;
+
+    uint64_t ping_lastrecv, ping_lastsent;
+    uint64_t share_relays_lastsent;
+
+    struct {
+        int (*status_callback)(void *object, int id, uint8_t status, void *userdata);
+        int (*data_callback)(void *object, int id, const uint8_t *data, uint16_t length, void *userdata);
+        int (*lossy_data_callback)(void *object, int id, const uint8_t *data, uint16_t length, void *userdata);
+
+        void *callback_object;
+        int callback_id;
+    } callbacks[MAX_FRIEND_CONNECTION_CALLBACKS];
+
+    uint16_t lock_count;
+
+    Node_format tcp_relays[FRIEND_MAX_STORED_TCP_RELAYS];
+    uint16_t tcp_relay_counter;
+
+    bool hosting_tcp_relay;
+} Friend_Conn;
+
+
+struct Friend_Connections {
+    Net_Crypto *net_crypto;
+    DHT *dht;
+    Onion_Client *onion_c;
+
+    Friend_Conn *conns;
+    uint32_t num_cons;
+
+    int (*fr_request_callback)(void *object, const uint8_t *source_pubkey, const uint8_t *data, uint16_t len,
+                               void *userdata);
+    void *fr_request_object;
+
+    uint64_t last_LANdiscovery;
+    uint16_t next_LANport;
+
+    bool local_discovery_enabled;
+};
+
+Net_Crypto *friendconn_net_crypto(const Friend_Connections *fr_c)
+{
+    return fr_c->net_crypto;
+}
+
+
 /* return 1 if the friendcon_id is not valid.
  * return 0 if the friendcon_id is valid.
  */
@@ -95,7 +152,7 @@ static int create_friend_conn(Friend_Connections *fr_c)
     if (realloc_friendconns(fr_c, fr_c->num_cons + 1) == 0) {
         id = fr_c->num_cons;
         ++fr_c->num_cons;
-        memset(&(fr_c->conns[id]), 0, sizeof(Friend_Conn));
+        memset(&fr_c->conns[id], 0, sizeof(Friend_Conn));
     }
 
     return id;
@@ -113,7 +170,7 @@ static int wipe_friend_conn(Friend_Connections *fr_c, int friendcon_id)
     }
 
     uint32_t i;
-    memset(&(fr_c->conns[friendcon_id]), 0 , sizeof(Friend_Conn));
+    memset(&fr_c->conns[friendcon_id], 0, sizeof(Friend_Conn));
 
     for (i = fr_c->num_cons; i != 0; --i) {
         if (fr_c->conns[i - 1].status != FRIENDCONN_STATUS_NONE) {
@@ -172,7 +229,7 @@ int friend_add_tcp_relay(Friend_Connections *fr_c, int friendcon_id, IP_Port ip_
     }
 
     /* Local ip and same pk means that they are hosting a TCP relay. */
-    if (Local_ip(ip_port.ip) && public_key_cmp(friend_con->dht_temp_pk, public_key) == 0) {
+    if (ip_is_local(ip_port.ip) && public_key_cmp(friend_con->dht_temp_pk, public_key) == 0) {
         if (friend_con->dht_ip_port.ip.family != 0) {
             ip_port.ip = friend_con->dht_ip_port.ip;
         } else {
@@ -825,8 +882,8 @@ Friend_Connections *new_friend_connections(Onion_Client *onion_c, bool local_dis
         return NULL;
     }
 
-    temp->dht = onion_c->dht;
-    temp->net_crypto = onion_c->c;
+    temp->dht = onion_get_dht(onion_c);
+    temp->net_crypto = onion_get_net_crypto(onion_c);
     temp->onion_c = onion_c;
     temp->local_discovery_enabled = local_discovery_enabled;
     // Don't include default port in port range
@@ -835,7 +892,7 @@ Friend_Connections *new_friend_connections(Onion_Client *onion_c, bool local_dis
     new_connection_handler(temp->net_crypto, &handle_new_connections, temp);
 
     if (temp->local_discovery_enabled) {
-        LANdiscovery_init(temp->dht);
+        lan_discovery_init(temp->dht);
     }
 
     return temp;
@@ -850,11 +907,11 @@ static void LANdiscovery(Friend_Connections *fr_c)
         last = last > TOX_PORTRANGE_TO ? TOX_PORTRANGE_TO : last;
 
         // Always send to default port
-        send_LANdiscovery(net_htons(TOX_PORT_DEFAULT), fr_c->dht);
+        lan_discovery_send(net_htons(TOX_PORT_DEFAULT), fr_c->dht);
 
         // And check some extra ports
         for (uint16_t port = first; port < last; port++) {
-            send_LANdiscovery(net_htons(port), fr_c->dht);
+            lan_discovery_send(net_htons(port), fr_c->dht);
         }
 
         // Don't include default port in port range
@@ -930,7 +987,7 @@ void kill_friend_connections(Friend_Connections *fr_c)
     }
 
     if (fr_c->local_discovery_enabled) {
-        LANdiscovery_kill(fr_c->dht);
+        lan_discovery_kill(fr_c->dht);
     }
 
     free(fr_c);

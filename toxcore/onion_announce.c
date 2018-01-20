@@ -37,6 +37,34 @@
 #define DATA_REQUEST_MIN_SIZE ONION_DATA_REQUEST_MIN_SIZE
 #define DATA_REQUEST_MIN_SIZE_RECV (DATA_REQUEST_MIN_SIZE + ONION_RETURN_3)
 
+typedef struct {
+    uint8_t public_key[CRYPTO_PUBLIC_KEY_SIZE];
+    IP_Port ret_ip_port;
+    uint8_t ret[ONION_RETURN_3];
+    uint8_t data_public_key[CRYPTO_PUBLIC_KEY_SIZE];
+    uint64_t time;
+} Onion_Announce_Entry;
+
+struct Onion_Announce {
+    DHT     *dht;
+    Networking_Core *net;
+    Onion_Announce_Entry entries[ONION_ANNOUNCE_MAX_ENTRIES];
+    /* This is CRYPTO_SYMMETRIC_KEY_SIZE long just so we can use new_symmetric_key() to fill it */
+    uint8_t secret_bytes[CRYPTO_SYMMETRIC_KEY_SIZE];
+
+    Shared_Keys shared_keys_recv;
+};
+
+uint8_t *onion_announce_entry_public_key(Onion_Announce *onion_a, uint32_t entry)
+{
+    return onion_a->entries[entry].public_key;
+}
+
+void onion_announce_entry_set_time(Onion_Announce *onion_a, uint32_t entry, uint64_t time)
+{
+    onion_a->entries[entry].time = time;
+}
+
 /* Create an onion announce request packet in packet of max_packet_length (recommended size ONION_ANNOUNCE_REQUEST_SIZE).
  *
  * dest_client_id is the public key of the node the packet will be sent to.
@@ -315,7 +343,7 @@ static int add_to_entries(Onion_Announce *onion_a, IP_Port ret_ip_port, const ui
     }
 
     if (pos == -1) {
-        if (id_closest(onion_a->dht->self_public_key, public_key, onion_a->entries[0].public_key) == 1) {
+        if (id_closest(dht_get_self_public_key(onion_a->dht), public_key, onion_a->entries[0].public_key) == 1) {
             pos = 0;
         }
     }
@@ -330,7 +358,7 @@ static int add_to_entries(Onion_Announce *onion_a, IP_Port ret_ip_port, const ui
     memcpy(onion_a->entries[pos].data_public_key, data_public_key, CRYPTO_PUBLIC_KEY_SIZE);
     onion_a->entries[pos].time = unix_time();
 
-    sort_onion_announce_list(onion_a->entries, ONION_ANNOUNCE_MAX_ENTRIES, onion_a->dht->self_public_key);
+    sort_onion_announce_list(onion_a->entries, ONION_ANNOUNCE_MAX_ENTRIES, dht_get_self_public_key(onion_a->dht));
     return in_entries(onion_a, public_key);
 }
 
@@ -344,7 +372,7 @@ static int handle_announce_request(void *object, IP_Port source, const uint8_t *
 
     const uint8_t *packet_public_key = packet + 1 + CRYPTO_NONCE_SIZE;
     uint8_t shared_key[CRYPTO_SHARED_KEY_SIZE];
-    get_shared_key(&onion_a->shared_keys_recv, shared_key, onion_a->dht->self_secret_key, packet_public_key);
+    get_shared_key(&onion_a->shared_keys_recv, shared_key, dht_get_self_secret_key(onion_a->dht), packet_public_key);
 
     uint8_t plain[ONION_PING_ID_SIZE + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_PUBLIC_KEY_SIZE +
                   ONION_ANNOUNCE_SENDBACK_DATA_LENGTH];
@@ -377,7 +405,7 @@ static int handle_announce_request(void *object, IP_Port source, const uint8_t *
     /*Respond with a announce response packet*/
     Node_format nodes_list[MAX_SENT_NODES];
     unsigned int num_nodes = get_close_nodes(onion_a->dht, plain + ONION_PING_ID_SIZE, nodes_list, 0,
-                             LAN_ip(source.ip) == 0, 1);
+                             ip_is_lan(source.ip) == 0, 1);
     uint8_t nonce[CRYPTO_NONCE_SIZE];
     random_nonce(nonce);
 
@@ -476,7 +504,7 @@ Onion_Announce *new_onion_announce(DHT *dht)
     }
 
     onion_a->dht = dht;
-    onion_a->net = dht->net;
+    onion_a->net = dht_get_net(dht);
     new_symmetric_key(onion_a->secret_bytes);
 
     networking_registerhandler(onion_a->net, NET_PACKET_ANNOUNCE_REQUEST, &handle_announce_request, onion_a);

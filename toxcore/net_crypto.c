@@ -33,6 +33,146 @@
 
 #include <math.h>
 
+typedef struct {
+    uint64_t sent_time;
+    uint16_t length;
+    uint8_t data[MAX_CRYPTO_DATA_SIZE];
+} Packet_Data;
+
+typedef struct {
+    Packet_Data *buffer[CRYPTO_PACKET_BUFFER_SIZE];
+    uint32_t  buffer_start;
+    uint32_t  buffer_end; /* packet numbers in array: {buffer_start, buffer_end) */
+} Packets_Array;
+
+typedef struct {
+    uint8_t public_key[CRYPTO_PUBLIC_KEY_SIZE]; /* The real public key of the peer. */
+    uint8_t recv_nonce[CRYPTO_NONCE_SIZE]; /* Nonce of received packets. */
+    uint8_t sent_nonce[CRYPTO_NONCE_SIZE]; /* Nonce of sent packets. */
+    uint8_t sessionpublic_key[CRYPTO_PUBLIC_KEY_SIZE]; /* Our public key for this session. */
+    uint8_t sessionsecret_key[CRYPTO_SECRET_KEY_SIZE]; /* Our private key for this session. */
+    uint8_t peersessionpublic_key[CRYPTO_PUBLIC_KEY_SIZE]; /* The public key of the peer. */
+    uint8_t shared_key[CRYPTO_SHARED_KEY_SIZE]; /* The precomputed shared key from encrypt_precompute. */
+    uint8_t status; /* 0 if no connection, 1 we are sending cookie request packets,
+                     * 2 if we are sending handshake packets
+                     * 3 if connection is not confirmed yet (we have received a handshake but no data packets yet),
+                     * 4 if the connection is established.
+                     */
+    uint64_t cookie_request_number; /* number used in the cookie request packets for this connection */
+    uint8_t dht_public_key[CRYPTO_PUBLIC_KEY_SIZE]; /* The dht public key of the peer */
+
+    uint8_t *temp_packet; /* Where the cookie request/handshake packet is stored while it is being sent. */
+    uint16_t temp_packet_length;
+    uint64_t temp_packet_sent_time; /* The time at which the last temp_packet was sent in ms. */
+    uint32_t temp_packet_num_sent;
+
+    IP_Port ip_portv4; /* The ip and port to contact this guy directly.*/
+    IP_Port ip_portv6;
+    uint64_t direct_lastrecv_timev4; /* The Time at which we last received a direct packet in ms. */
+    uint64_t direct_lastrecv_timev6;
+
+    uint64_t last_tcp_sent; /* Time the last TCP packet was sent. */
+
+    Packets_Array send_array;
+    Packets_Array recv_array;
+
+    int (*connection_status_callback)(void *object, int id, uint8_t status, void *userdata);
+    void *connection_status_callback_object;
+    int connection_status_callback_id;
+
+    int (*connection_data_callback)(void *object, int id, const uint8_t *data, uint16_t length, void *userdata);
+    void *connection_data_callback_object;
+    int connection_data_callback_id;
+
+    int (*connection_lossy_data_callback)(void *object, int id, const uint8_t *data, uint16_t length, void *userdata);
+    void *connection_lossy_data_callback_object;
+    int connection_lossy_data_callback_id;
+
+    uint64_t last_request_packet_sent;
+    uint64_t direct_send_attempt_time;
+
+    uint32_t packet_counter;
+    double packet_recv_rate;
+    uint64_t packet_counter_set;
+
+    double packet_send_rate;
+    uint32_t packets_left;
+    uint64_t last_packets_left_set;
+    double last_packets_left_rem;
+
+    double packet_send_rate_requested;
+    uint32_t packets_left_requested;
+    uint64_t last_packets_left_requested_set;
+    double last_packets_left_requested_rem;
+
+    uint32_t last_sendqueue_size[CONGESTION_QUEUE_ARRAY_SIZE], last_sendqueue_counter;
+    long signed int last_num_packets_sent[CONGESTION_LAST_SENT_ARRAY_SIZE],
+         last_num_packets_resent[CONGESTION_LAST_SENT_ARRAY_SIZE];
+    uint32_t packets_sent, packets_resent;
+    uint64_t last_congestion_event;
+    uint64_t rtt_time;
+
+    /* TCP_connection connection_number */
+    unsigned int connection_number_tcp;
+
+    uint8_t maximum_speed_reached;
+
+    pthread_mutex_t mutex;
+
+    void (*dht_pk_callback)(void *data, int32_t number, const uint8_t *dht_public_key, void *userdata);
+    void *dht_pk_callback_object;
+    uint32_t dht_pk_callback_number;
+} Crypto_Connection;
+
+struct Net_Crypto {
+    Logger *log;
+
+    DHT *dht;
+    TCP_Connections *tcp_c;
+
+    Crypto_Connection *crypto_connections;
+    pthread_mutex_t tcp_mutex;
+
+    pthread_mutex_t connections_mutex;
+    unsigned int connection_use_counter;
+
+    uint32_t crypto_connections_length; /* Length of connections array. */
+
+    /* Our public and secret keys. */
+    uint8_t self_public_key[CRYPTO_PUBLIC_KEY_SIZE];
+    uint8_t self_secret_key[CRYPTO_SECRET_KEY_SIZE];
+
+    /* The secret key used for cookies */
+    uint8_t secret_symmetric_key[CRYPTO_SYMMETRIC_KEY_SIZE];
+
+    int (*new_connection_callback)(void *object, New_Connection *n_c);
+    void *new_connection_callback_object;
+
+    /* The current optimal sleep time */
+    uint32_t current_sleep_time;
+
+    BS_LIST ip_port_list;
+};
+
+const uint8_t *nc_get_self_public_key(const Net_Crypto *c)
+{
+    return c->self_public_key;
+}
+
+const uint8_t *nc_get_self_secret_key(const Net_Crypto *c)
+{
+    return c->self_secret_key;
+}
+
+TCP_Connections *nc_get_tcp_c(const Net_Crypto *c)
+{
+    return c->tcp_c;
+}
+
+DHT *nc_get_dht(const Net_Crypto *c)
+{
+    return c->dht;
+}
 
 static uint8_t crypt_connection_id_not_valid(const Net_Crypto *c, int crypt_connection_id)
 {
@@ -83,7 +223,7 @@ static int create_cookie_request(const Net_Crypto *c, uint8_t *packet, uint8_t *
     uint8_t nonce[CRYPTO_NONCE_SIZE];
     random_nonce(nonce);
     packet[0] = NET_PACKET_COOKIE_REQUEST;
-    memcpy(packet + 1, c->dht->self_public_key, CRYPTO_PUBLIC_KEY_SIZE);
+    memcpy(packet + 1, dht_get_self_public_key(c->dht), CRYPTO_PUBLIC_KEY_SIZE);
     memcpy(packet + 1 + CRYPTO_PUBLIC_KEY_SIZE, nonce, CRYPTO_NONCE_SIZE);
     int len = encrypt_data_symmetric(shared_key, nonce, plain, sizeof(plain),
                                      packet + 1 + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE);
@@ -222,7 +362,7 @@ static int udp_handle_cookie_request(void *object, IP_Port source, const uint8_t
         return 1;
     }
 
-    if ((uint32_t)sendpacket(c->dht->net, source, data, sizeof(data)) != sizeof(data)) {
+    if ((uint32_t)sendpacket(dht_get_net(c->dht), source, data, sizeof(data)) != sizeof(data)) {
         return 1;
     }
 
@@ -432,7 +572,7 @@ static int add_ip_port_connection(Net_Crypto *c, int crypt_connection_id, IP_Por
     }
 
     if (ip_port.ip.family == TOX_AF_INET) {
-        if (!ipport_equal(&ip_port, &conn->ip_portv4) && LAN_ip(conn->ip_portv4.ip) != 0) {
+        if (!ipport_equal(&ip_port, &conn->ip_portv4) && ip_is_lan(conn->ip_portv4.ip) != 0) {
             if (!bs_list_add(&c->ip_port_list, (uint8_t *)&ip_port, crypt_connection_id)) {
                 return -1;
             }
@@ -482,7 +622,7 @@ static IP_Port return_ip_port_connection(Net_Crypto *c, int crypt_connection_id)
         v6 = 1;
     }
 
-    if (v4 && LAN_ip(conn->ip_portv4.ip) == 0) {
+    if (v4 && ip_is_lan(conn->ip_portv4.ip) == 0) {
         return conn->ip_portv4;
     }
 
@@ -522,7 +662,7 @@ static int send_packet_to(Net_Crypto *c, int crypt_connection_id, const uint8_t 
         crypto_connection_status(c, crypt_connection_id, &direct_connected, NULL);
 
         if (direct_connected) {
-            if ((uint32_t)sendpacket(c->dht->net, ip_port, data, length) == length) {
+            if ((uint32_t)sendpacket(dht_get_net(c->dht), ip_port, data, length) == length) {
                 pthread_mutex_unlock(&conn->mutex);
                 return 0;
             }
@@ -536,7 +676,7 @@ static int send_packet_to(Net_Crypto *c, int crypt_connection_id, const uint8_t 
 
         if ((((UDP_DIRECT_TIMEOUT / 2) + conn->direct_send_attempt_time) > current_time && length < 96)
                 || data[0] == NET_PACKET_COOKIE_REQUEST || data[0] == NET_PACKET_CRYPTO_HS) {
-            if ((uint32_t)sendpacket(c->dht->net, ip_port, data, length) == length) {
+            if ((uint32_t)sendpacket(dht_get_net(c->dht), ip_port, data, length) == length) {
                 direct_send_attempt = 1;
                 conn->direct_send_attempt_time = unix_time();
             }
@@ -1608,7 +1748,7 @@ static int create_crypto_connection(Net_Crypto *c)
     if (realloc_cryptoconnection(c, c->crypto_connections_length + 1) == 0) {
         id = c->crypto_connections_length;
         ++c->crypto_connections_length;
-        memset(&(c->crypto_connections[id]), 0, sizeof(Crypto_Connection));
+        memset(&c->crypto_connections[id], 0, sizeof(Crypto_Connection));
         // Memsetting float/double to 0 is non-portable, so we explicitly set them to 0
         c->crypto_connections[id].packet_recv_rate = 0;
         c->crypto_connections[id].packet_send_rate = 0;
@@ -1641,7 +1781,7 @@ static int wipe_crypto_connection(Net_Crypto *c, int crypt_connection_id)
 
     /* Keep mutex, only destroy it when connection is realloced out. */
     pthread_mutex_t mutex = c->crypto_connections[crypt_connection_id].mutex;
-    crypto_memzero(&(c->crypto_connections[crypt_connection_id]), sizeof(Crypto_Connection));
+    crypto_memzero(&c->crypto_connections[crypt_connection_id], sizeof(Crypto_Connection));
     c->crypto_connections[crypt_connection_id].mutex = mutex;
 
     for (i = c->crypto_connections_length; i != 0; --i) {
@@ -1892,7 +2032,7 @@ int new_crypto_connection(Net_Crypto *c, const uint8_t *real_public_key, const u
     conn->rtt_time = DEFAULT_PING_CONNECTION;
     memcpy(conn->dht_public_key, dht_public_key, CRYPTO_PUBLIC_KEY_SIZE);
 
-    conn->cookie_request_number = random_64b();
+    conn->cookie_request_number = random_u64();
     uint8_t cookie_request[COOKIE_REQUEST_LENGTH];
 
     if (create_cookie_request(c, cookie_request, conn->dht_public_key, conn->cookie_request_number,
@@ -2801,7 +2941,7 @@ Net_Crypto *new_net_crypto(Logger *log, DHT *dht, TCP_Proxy_Info *proxy_info)
 
     temp->log = log;
 
-    temp->tcp_c = new_tcp_connections(dht->self_secret_key, proxy_info);
+    temp->tcp_c = new_tcp_connections(dht_get_self_secret_key(dht), proxy_info);
 
     if (temp->tcp_c == NULL) {
         free(temp);
@@ -2825,10 +2965,10 @@ Net_Crypto *new_net_crypto(Logger *log, DHT *dht, TCP_Proxy_Info *proxy_info)
 
     temp->current_sleep_time = CRYPTO_SEND_PACKET_INTERVAL;
 
-    networking_registerhandler(dht->net, NET_PACKET_COOKIE_REQUEST, &udp_handle_cookie_request, temp);
-    networking_registerhandler(dht->net, NET_PACKET_COOKIE_RESPONSE, &udp_handle_packet, temp);
-    networking_registerhandler(dht->net, NET_PACKET_CRYPTO_HS, &udp_handle_packet, temp);
-    networking_registerhandler(dht->net, NET_PACKET_CRYPTO_DATA, &udp_handle_packet, temp);
+    networking_registerhandler(dht_get_net(dht), NET_PACKET_COOKIE_REQUEST, &udp_handle_cookie_request, temp);
+    networking_registerhandler(dht_get_net(dht), NET_PACKET_COOKIE_RESPONSE, &udp_handle_packet, temp);
+    networking_registerhandler(dht_get_net(dht), NET_PACKET_CRYPTO_HS, &udp_handle_packet, temp);
+    networking_registerhandler(dht_get_net(dht), NET_PACKET_CRYPTO_DATA, &udp_handle_packet, temp);
 
     bs_list_init(&temp->ip_port_list, sizeof(IP_Port), 8);
 
@@ -2899,10 +3039,10 @@ void kill_net_crypto(Net_Crypto *c)
 
     kill_tcp_connections(c->tcp_c);
     bs_list_free(&c->ip_port_list);
-    networking_registerhandler(c->dht->net, NET_PACKET_COOKIE_REQUEST, NULL, NULL);
-    networking_registerhandler(c->dht->net, NET_PACKET_COOKIE_RESPONSE, NULL, NULL);
-    networking_registerhandler(c->dht->net, NET_PACKET_CRYPTO_HS, NULL, NULL);
-    networking_registerhandler(c->dht->net, NET_PACKET_CRYPTO_DATA, NULL, NULL);
+    networking_registerhandler(dht_get_net(c->dht), NET_PACKET_COOKIE_REQUEST, NULL, NULL);
+    networking_registerhandler(dht_get_net(c->dht), NET_PACKET_COOKIE_RESPONSE, NULL, NULL);
+    networking_registerhandler(dht_get_net(c->dht), NET_PACKET_CRYPTO_HS, NULL, NULL);
+    networking_registerhandler(dht_get_net(c->dht), NET_PACKET_CRYPTO_DATA, NULL, NULL);
     crypto_memzero(c, sizeof(Net_Crypto));
     free(c);
 }

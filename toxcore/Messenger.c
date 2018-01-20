@@ -140,8 +140,8 @@ static uint16_t address_checksum(const uint8_t *address, uint32_t len)
  */
 void getaddress(const Messenger *m, uint8_t *address)
 {
-    id_copy(address, m->net_crypto->self_public_key);
-    uint32_t nospam = get_nospam(&(m->fr));
+    id_copy(address, nc_get_self_public_key(m->net_crypto));
+    uint32_t nospam = get_nospam(m->fr);
     memcpy(address + CRYPTO_PUBLIC_KEY_SIZE, &nospam, sizeof(nospam));
     uint16_t checksum = address_checksum(address, FRIEND_ADDRESS_SIZE - sizeof(checksum));
     memcpy(address + CRYPTO_PUBLIC_KEY_SIZE + sizeof(nospam), &checksum, sizeof(checksum));
@@ -177,7 +177,7 @@ static int32_t init_new_friend(Messenger *m, const uint8_t *real_pk, uint8_t sta
         return FAERR_NOMEM;
     }
 
-    memset(&(m->friendlist[m->numfriends]), 0, sizeof(Friend));
+    memset(&m->friendlist[m->numfriends], 0, sizeof(Friend));
 
     int friendcon_id = new_friend_connection(m->fr_c, real_pk);
 
@@ -255,7 +255,7 @@ int32_t m_addfriend(Messenger *m, const uint8_t *address, const uint8_t *data, u
         return FAERR_NOMESSAGE;
     }
 
-    if (id_equal(real_pk, m->net_crypto->self_public_key)) {
+    if (id_equal(real_pk, nc_get_self_public_key(m->net_crypto))) {
         return FAERR_OWNKEY;
     }
 
@@ -286,7 +286,7 @@ int32_t m_addfriend(Messenger *m, const uint8_t *address, const uint8_t *data, u
     m->friendlist[ret].friendrequest_timeout = FRIENDREQUEST_TIMEOUT;
     memcpy(m->friendlist[ret].info, data, length);
     m->friendlist[ret].info_size = length;
-    memcpy(&(m->friendlist[ret].friendrequest_nospam), address + CRYPTO_PUBLIC_KEY_SIZE, sizeof(uint32_t));
+    memcpy(&m->friendlist[ret].friendrequest_nospam, address + CRYPTO_PUBLIC_KEY_SIZE, sizeof(uint32_t));
 
     return ret;
 }
@@ -301,7 +301,7 @@ int32_t m_addfriend_norequest(Messenger *m, const uint8_t *real_pk)
         return FAERR_BADCHECKSUM;
     }
 
-    if (id_equal(real_pk, m->net_crypto->self_public_key)) {
+    if (id_equal(real_pk, nc_get_self_public_key(m->net_crypto))) {
         return FAERR_OWNKEY;
     }
 
@@ -415,7 +415,7 @@ int m_delfriend(Messenger *m, int32_t friendnumber)
     }
 
     clear_receipts(m, friendnumber);
-    remove_request_received(&(m->fr), m->friendlist[friendnumber].real_pk);
+    remove_request_received(m->fr, m->friendlist[friendnumber].real_pk);
     friend_connection_callbacks(m->fr_c, m->friendlist[friendnumber].friendcon_id, MESSENGER_CALLBACK_INDEX, 0, 0, 0, 0, 0);
 
     if (friend_con_connected(m->fr_c, m->friendlist[friendnumber].friendcon_id) == FRIENDCONN_STATUS_CONNECTED) {
@@ -423,7 +423,7 @@ int m_delfriend(Messenger *m, int32_t friendnumber)
     }
 
     kill_friend_connection(m->fr_c, m->friendlist[friendnumber].friendcon_id);
-    memset(&(m->friendlist[friendnumber]), 0, sizeof(Friend));
+    memset(&m->friendlist[friendnumber], 0, sizeof(Friend));
     uint32_t i;
 
     for (i = m->numfriends; i != 0; --i) {
@@ -488,7 +488,8 @@ int m_friend_exists(const Messenger *m, int32_t friendnumber)
 int m_send_message_generic(Messenger *m, int32_t friendnumber, uint8_t type, const uint8_t *message, uint32_t length,
                            uint32_t *message_id)
 {
-    if (type > MESSAGE_ACTION) {
+    /* MESSAGE_LAST itself is incorrect value */
+    if (type >= MESSAGE_LAST) {
         return -5;
     }
 
@@ -837,7 +838,7 @@ void m_callback_log(Messenger *m, logger_cb *function, void *context, void *user
 void m_callback_friendrequest(Messenger *m, void (*function)(Messenger *m, const uint8_t *, const uint8_t *, size_t,
                               void *))
 {
-    callback_friendrequest(&(m->fr), (void (*)(void *, const uint8_t *, const uint8_t *, size_t, void *))function, m);
+    callback_friendrequest(m->fr, (void (*)(void *, const uint8_t *, const uint8_t *, size_t, void *))function, m);
 }
 
 /* Set the function that will be executed when a message from a friend is received. */
@@ -1921,13 +1922,20 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
         return NULL;
     }
 
-    Messenger *m = (Messenger *)calloc(1, sizeof(Messenger));
-
     if (error) {
         *error = MESSENGER_ERROR_OTHER;
     }
 
+    Messenger *m = (Messenger *)calloc(1, sizeof(Messenger));
+
     if (!m) {
+        return NULL;
+    }
+
+    m->fr = friendreq_new();
+
+    if (!m->fr) {
+        free(m);
         return NULL;
     }
 
@@ -1946,8 +1954,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
     unsigned int net_err = 0;
 
     if (options->udp_disabled) {
-        /* this is the easiest way to completely disable UDP without changing too much code. */
-        m->net = (Networking_Core *)calloc(1, sizeof(Networking_Core));
+        m->net = new_networking_no_udp(log);
     } else {
         IP ip;
         ip_init(&ip, options->ipv6enabled);
@@ -1955,6 +1962,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
     }
 
     if (m->net == NULL) {
+        friendreq_kill(m->fr);
         free(m);
 
         if (error && net_err == 1) {
@@ -1968,6 +1976,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
 
     if (m->dht == NULL) {
         kill_networking(m->net);
+        friendreq_kill(m->fr);
         free(m);
         return NULL;
     }
@@ -1977,6 +1986,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
     if (m->net_crypto == NULL) {
         kill_networking(m->net);
         kill_DHT(m->dht);
+        friendreq_kill(m->fr);
         free(m);
         return NULL;
     }
@@ -1994,12 +2004,14 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
         kill_net_crypto(m->net_crypto);
         kill_DHT(m->dht);
         kill_networking(m->net);
+        friendreq_kill(m->fr);
         free(m);
         return NULL;
     }
 
     if (options->tcp_server_port) {
-        m->tcp_server = new_TCP_server(options->ipv6enabled, 1, &options->tcp_server_port, m->dht->self_secret_key, m->onion);
+        m->tcp_server = new_TCP_server(options->ipv6enabled, 1, &options->tcp_server_port, dht_get_self_secret_key(m->dht),
+                                       m->onion);
 
         if (m->tcp_server == NULL) {
             kill_friend_connections(m->fr_c);
@@ -2009,6 +2021,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
             kill_net_crypto(m->net_crypto);
             kill_DHT(m->dht);
             kill_networking(m->net);
+            friendreq_kill(m->fr);
             free(m);
 
             if (error) {
@@ -2020,9 +2033,9 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
     }
 
     m->options = *options;
-    friendreq_init(&(m->fr), m->fr_c);
-    set_nospam(&(m->fr), random_int());
-    set_filter_function(&(m->fr), &friend_already_added, m);
+    friendreq_init(m->fr, m->fr_c);
+    set_nospam(m->fr, random_u32());
+    set_filter_function(m->fr, &friend_already_added, m);
 
     m->lastdump = 0;
 
@@ -2060,6 +2073,7 @@ void kill_messenger(Messenger *m)
 
     logger_kill(m->log);
     free(m->friendlist);
+    friendreq_kill(m->fr);
     free(m);
 }
 
@@ -2201,7 +2215,8 @@ static int m_handle_packet(void *object, int i, const uint8_t *temp, uint16_t le
         }
 
         case PACKET_ID_MESSAGE: // fall-through
-        case PACKET_ID_ACTION: {
+        case PACKET_ID_ACTION:
+        case PACKET_ID_CORRECTION: {
             if (data_length == 0) {
                 break;
             }
@@ -2557,8 +2572,8 @@ void do_messenger(Messenger *m, void *userdata)
         uint32_t client, last_pinged;
 
         for (client = 0; client < LCLIENT_LIST; client++) {
-            Client_data *cptr = &m->dht->close_clientlist[client];
-            IPPTsPng *assoc = NULL;
+            const Client_data *cptr = dht_get_close_client(m->dht, client);
+            const IPPTsPng *assoc = NULL;
             uint32_t a;
 
             for (a = 0, assoc = &cptr->assoc4; a < 2; a++, assoc = &cptr->assoc6) {
@@ -2583,7 +2598,7 @@ void do_messenger(Messenger *m, void *userdata)
         uint32_t friend_idx, dhtfriend;
 
         /* dht contains additional "friends" (requests) */
-        uint32_t num_dhtfriends = m->dht->num_friends;
+        uint32_t num_dhtfriends = dht_get_num_friends(m->dht);
         VLA(int32_t, m2dht, num_dhtfriends);
         VLA(int32_t, dht2m, num_dhtfriends);
 
@@ -2595,8 +2610,8 @@ void do_messenger(Messenger *m, void *userdata)
                 continue;
             }
 
-            for (dhtfriend = 0; dhtfriend < m->dht->num_friends; dhtfriend++) {
-                if (id_equal(m->friendlist[friend_idx].real_pk, m->dht->friends_list[dhtfriend].public_key)) {
+            for (dhtfriend = 0; dhtfriend < dht_get_num_friends(m->dht); dhtfriend++) {
+                if (id_equal(m->friendlist[friend_idx].real_pk, dht_get_friend_public_key(m->dht, dhtfriend))) {
                     m2dht[friend_idx] = dhtfriend;
                     break;
                 }
@@ -2609,8 +2624,8 @@ void do_messenger(Messenger *m, void *userdata)
             }
         }
 
-        if (m->numfriends != m->dht->num_friends) {
-            LOGGER_TRACE(m->log, "Friend num in DHT %u != friend num in msger %u\n", m->dht->num_friends, m->numfriends);
+        if (m->numfriends != dht_get_num_friends(m->dht)) {
+            LOGGER_TRACE(m->log, "Friend num in DHT %u != friend num in msger %u\n", dht_get_num_friends(m->dht), m->numfriends);
         }
 
         Friend *msgfptr;
@@ -2623,7 +2638,7 @@ void do_messenger(Messenger *m, void *userdata)
                 msgfptr = NULL;
             }
 
-            dhtfptr = &m->dht->friends_list[friend_idx];
+            dhtfptr = dht_get_friend(m->dht, friend_idx);
 
             if (msgfptr) {
                 char id_str[IDSTRING_LEN];
@@ -2877,7 +2892,7 @@ static int friends_list_load(Messenger *m, const uint8_t *data, uint32_t length)
             /* TODO(irungentoo): This is not a good way to do this. */
             uint8_t address[FRIEND_ADDRESS_SIZE];
             id_copy(address, temp.real_pk);
-            memcpy(address + CRYPTO_PUBLIC_KEY_SIZE, &(temp.friendrequest_nospam), sizeof(uint32_t));
+            memcpy(address + CRYPTO_PUBLIC_KEY_SIZE, &temp.friendrequest_nospam, sizeof(uint32_t));
             uint16_t checksum = address_checksum(address, FRIEND_ADDRESS_SIZE - sizeof(checksum));
             memcpy(address + CRYPTO_PUBLIC_KEY_SIZE + sizeof(uint32_t), &checksum, sizeof(checksum));
             m_addfriend(m, address, temp.info, net_ntohs(temp.info_size));
@@ -2926,11 +2941,11 @@ void messenger_save(const Messenger *m, uint8_t *data)
     host_to_lendian32(data, MESSENGER_STATE_COOKIE_GLOBAL);
     data += size32;
 
-    assert(sizeof(get_nospam(&m->fr)) == sizeof(uint32_t));
+    assert(sizeof(get_nospam(m->fr)) == sizeof(uint32_t));
     len = size32 + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_SECRET_KEY_SIZE;
     type = MESSENGER_STATE_TYPE_NOSPAMKEYS;
     data = messenger_save_subheader(data, len, type);
-    *(uint32_t *)data = get_nospam(&(m->fr));
+    *(uint32_t *)data = get_nospam(m->fr);
     save_keys(m->net_crypto, data + size32);
     data += len;
 
@@ -3001,10 +3016,10 @@ static int messenger_load_state_callback(void *outer, const uint8_t *data, uint3
     switch (type) {
         case MESSENGER_STATE_TYPE_NOSPAMKEYS:
             if (length == CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_SECRET_KEY_SIZE + sizeof(uint32_t)) {
-                set_nospam(&(m->fr), *(const uint32_t *)data);
+                set_nospam(m->fr, *(const uint32_t *)data);
                 load_secret_key(m->net_crypto, (&data[sizeof(uint32_t)]) + CRYPTO_PUBLIC_KEY_SIZE);
 
-                if (public_key_cmp((&data[sizeof(uint32_t)]), m->net_crypto->self_public_key) != 0) {
+                if (public_key_cmp((&data[sizeof(uint32_t)]), nc_get_self_public_key(m->net_crypto)) != 0) {
                     return -1;
                 }
             } else {
