@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2017 The TokTok team.
+ * Copyright © 2016-2018 The TokTok team.
  * Copyright © 2013-2015 Tox project.
  *
  * This file is part of Tox, the free peer to peer instant messenger.
@@ -26,6 +26,15 @@
 #include "../toxcore/logger.h"
 
 #include <stdbool.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * RTPHeader serialised size in bytes.
+ */
+#define RTP_HEADER_SIZE 80
 
 /**
  * Payload type identifier. Also used as rtp callback prefix.
@@ -115,7 +124,7 @@ struct RTPHeader {
 } __attribute__((packed));
 
 /* Check alignment */
-typedef char __fail_if_misaligned_1 [ sizeof(struct RTPHeader) == 80 ? 1 : -1 ];
+typedef char __fail_if_misaligned_1 [ sizeof(struct RTPHeader) == RTP_HEADER_SIZE ? 1 : -1 ];
 
 struct RTPMessage {
     uint16_t len;
@@ -147,6 +156,23 @@ typedef struct {
     int (*mcb)(void *, struct RTPMessage *msg);
 } RTPSession;
 
+/**
+ * Serialise an RTPHeader to bytes to be sent over the network.
+ *
+ * @param rdata A byte array of length RTP_HEADER_SIZE. Does not need to be
+ *   initialised. All RTP_HEADER_SIZE bytes will be initialised after a call
+ *   to this function.
+ * @param header The RTPHeader to serialise.
+ */
+size_t rtp_header_pack(uint8_t *rdata, const struct RTPHeader *header);
+
+/**
+ * Deserialise an RTPHeader from bytes received over the network.
+ *
+ * @param rdata A byte array of length RTP_HEADER_SIZE.
+ * @param header The RTPHeader to write the unpacked values to.
+ */
+size_t rtp_header_unpack(const uint8_t *data, struct RTPHeader *header);
 
 RTPSession *rtp_new(int payload_type, Messenger *m, uint32_t friendnumber,
                     BWController *bwc, void *cs,
@@ -155,5 +181,9 @@ void rtp_kill(RTPSession *session);
 int rtp_allow_receiving(RTPSession *session);
 int rtp_stop_receiving(RTPSession *session);
 int rtp_send_data(RTPSession *session, const uint8_t *data, uint16_t length, Logger *log);
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
 
 #endif /* RTP_H */
