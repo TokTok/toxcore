@@ -139,8 +139,8 @@ void send_update(BWController *bwc)
 
             if (bwc->cycle.lost) {
                 LOGGER_DEBUG(bwc->m->log, "%p Sent update rcv: %u lost: %u percent: %f %%",
-                            bwc, bwc->cycle.recv, bwc->cycle.lost,
-                            (((float) bwc->cycle.lost / (bwc->cycle.recv + bwc->cycle.lost)) * 100.0f));
+                             bwc, bwc->cycle.recv, bwc->cycle.lost,
+                             (((float) bwc->cycle.lost / (bwc->cycle.recv + bwc->cycle.lost)) * 100.0f));
                 uint8_t bwc_packet[sizeof(struct BWCMessage) + 1];
                 struct BWCMessage *msg = (struct BWCMessage *)(bwc_packet + 1);
                 bwc_packet[0] = BWC_PACKET_ID; // set packet ID
@@ -176,7 +176,7 @@ static int on_update(BWController *bwc, const struct BWCMessage *msg)
 
     if (lost && bwc->mcb) {
         LOGGER_DEBUG(bwc->m->log, "recved: %u lost: %u percentage: %f %%", recv, lost,
-                    (((float) lost / (recv + lost)) * 100.0f));
+                     (((float) lost / (recv + lost)) * 100.0f));
         bwc->mcb(bwc, bwc->friend_number,
                  ((float) lost / (recv + lost)),
                  bwc->mcb_data);

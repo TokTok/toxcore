@@ -72,7 +72,9 @@ bool rb_read(RingBuffer *b, void **p, uint8_t *data_type)
     }
 
     *p = b->data[b->start];
-    *data_type = b->type[b->start];
+    if (data_type != NULL) {
+        *data_type = b->type[b->start];
+    }
     b->start = (b->start + 1) % b->size;
     return true;
 }
@@ -95,7 +97,7 @@ RingBuffer *rb_new(int size)
     if (!(buf->type = (uint8_t *)calloc(buf->size, sizeof(uint8_t)))) {
         free(buf->data);
         free(buf);
-        return NULL;        
+        return NULL;
     }
 
     return buf;
