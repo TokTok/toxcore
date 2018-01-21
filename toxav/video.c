@@ -146,8 +146,6 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
 #endif
 }
 
-
-
 VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_receive_frame_cb *cb, void *cb_data)
 {
     VCSession *vc = (VCSession *)calloc(sizeof(VCSession), 1);
@@ -366,8 +364,6 @@ void vc_kill(VCSession *vc)
     free(vc);
 }
 
-
-
 void video_switch_decoder(VCSession *vc)
 {
     /*
@@ -442,7 +438,6 @@ void video_switch_decoder(VCSession *vc)
     memcpy(vc->decoder, &new_d, sizeof(new_d));
     LOGGER_ERROR(vc->log, "Re-initialize decoder OK: %s", vpx_codec_err_to_string(rc));
 }
-
 
 void vc_iterate(VCSession *vc)
 {
@@ -522,7 +517,6 @@ void vc_iterate(VCSession *vc)
 
     pthread_mutex_unlock(vc->queue_mutex);
 }
-
 
 int vc_queue_message(void *vcp, struct RTPMessage *msg)
 {

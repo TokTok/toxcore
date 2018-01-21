@@ -138,7 +138,6 @@ void bwc_add_lost_v3(BWController *bwc, uint32_t bytes_lost)
     }
 }
 
-
 void bwc_add_recv(BWController *bwc, uint32_t recv_bytes)
 {
     if (!bwc || !recv_bytes) {
@@ -149,7 +148,6 @@ void bwc_add_recv(BWController *bwc, uint32_t recv_bytes)
     bwc->cycle.recv = bwc->cycle.recv + recv_bytes;
     send_update(bwc);
 }
-
 
 void send_update(BWController *bwc)
 {

@@ -34,7 +34,7 @@
 #include <stdlib.h>
 
 
-int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, uint16_t length, void *object);
+static int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, uint16_t length, void *object);
 
 
 RTPSession *rtp_new(int payload_type, Messenger *m, uint32_t friendnumber,
@@ -129,7 +129,6 @@ int rtp_stop_receiving(RTPSession *session)
     LOGGER_DEBUG(session->m->log, "Stopped receiving on session: %p", session);
     return 0;
 }
-
 
 /*
  * input is raw vpx data. length_v3 is the length of the raw data
@@ -249,7 +248,6 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length_v3, 
     session->sequnum ++;
     return 0;
 }
-
 
 static bool chloss(const RTPSession *session, const struct RTPHeader *header)
 {
@@ -371,7 +369,6 @@ static int8_t get_slot(Logger *log, struct RTPWorkBufferList *wkbl, uint8_t is_k
 
     return result_slot;
 }
-
 
 static struct RTPMessage *process_oldest_frame(Logger *log, struct RTPWorkBufferList *wkbl)
 {
@@ -673,8 +670,7 @@ int handle_rtp_packet_v3(Messenger *m, uint32_t friendnumber, const uint8_t *dat
     return 0;
 }
 
-
-int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, uint16_t length, void *object)
+static int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, uint16_t length, void *object)
 {
     (void) m;
     (void) friendnumber;
