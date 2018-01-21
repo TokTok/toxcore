@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2017 The TokTok team.
+ * Copyright © 2016-2018 The TokTok team.
  * Copyright © 2013-2015 Tox project.
  *
  * This file is part of Tox, the free peer to peer instant messenger.
@@ -32,6 +32,34 @@
 #include <assert.h>
 #include <errno.h>
 #include <stdlib.h>
+
+
+void rtp_header_pack(uint8_t *const rdata, const struct RTPHeader *header)
+{
+    uint8_t *p = rdata;
+    *p++ = (header->protocol_version & (1 << 2) - 1) << 6
+           | (header->pe & (1 << 1) - 1) << 5
+           | (header->xe & (1 << 1) - 1) << 4
+           | (header->cc & (1 << 4) - 1);
+    *p++ = (header->ma & (1 << 1) - 1) << 7
+           | (header->pt & (1 << 7) - 1);
+
+    p += net_pack_u16(p, header->sequnum);
+    p += net_pack_u32(p, header->timestamp);
+    p += net_pack_u32(p, header->ssrc);
+    p += net_pack_u64(p, header->flags);
+    p += net_pack_u32(p, header->offset_full);
+    p += net_pack_u32(p, header->data_length_full);
+    p += net_pack_u32(p, header->received_length_full);
+
+    for (size_t i = 0; i < sizeof header->csrc / sizeof header->csrc[0]; i++) {
+        p += net_pack_u32(p, header->csrc[i]);
+    }
+
+    p += net_pack_u16(p, header->offset_lower);
+    p += net_pack_u16(p, header->data_length_lower);
+    assert(p == rdata + RTP_HEADER_SIZE);
+}
 
 
 int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, uint16_t length, void *object);
@@ -121,22 +149,22 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint16_t length, Log
 
     rdata[0] = session->payload_type;
 
-    struct RTPHeader *header = (struct RTPHeader *)(rdata + 1);
+    struct RTPHeader header = {0};
 
-    header->protocol_version = 2;
-    header->pe = 0;
-    header->xe = 0;
-    header->cc = 0;
+    header.protocol_version = 2;
+    header.pe = 0;
+    header.xe = 0;
+    header.cc = 0;
 
-    header->ma = 0;
-    header->pt = session->payload_type % 128;
+    header.ma = 0;
+    header.pt = session->payload_type % 128;
 
-    header->sequnum = net_htons(session->sequnum);
-    header->timestamp = net_htonl(current_time_monotonic());
-    header->ssrc = net_htonl(session->ssrc);
+    header.sequnum = session->sequnum;
+    header.timestamp = current_time_monotonic();
+    header.ssrc = session->ssrc;
 
-    header->offset_lower = 0;
-    header->data_length_lower = net_htons(length);
+    header.offset_lower = 0;
+    header.data_length_lower = length;
 
     if (MAX_CRYPTO_DATA_SIZE > length + sizeof(struct RTPHeader) + 1) {
 
@@ -145,6 +173,7 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint16_t length, Log
          * Send the packet in single piece.
          */
 
+        rtp_header_pack(rdata + 1, &header);
         memcpy(rdata + 1 + sizeof(struct RTPHeader), data, length);
 
         if (-1 == m_send_custom_lossy_packet(session->m, session->friend_number, rdata, SIZEOF_VLA(rdata))) {
@@ -161,6 +190,7 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint16_t length, Log
         uint16_t piece = MAX_CRYPTO_DATA_SIZE - (sizeof(struct RTPHeader) + 1);
 
         while ((length - sent) + sizeof(struct RTPHeader) + 1 > MAX_CRYPTO_DATA_SIZE) {
+            rtp_header_pack(rdata + 1, &header);
             memcpy(rdata + 1 + sizeof(struct RTPHeader), data + sent, piece);
 
             if (-1 == m_send_custom_lossy_packet(session->m, session->friend_number,
@@ -170,13 +200,14 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint16_t length, Log
             }
 
             sent += piece;
-            header->offset_lower = net_htons(sent);
+            header.offset_lower = sent;
         }
 
         /* Send remaining */
         piece = length - sent;
 
         if (piece) {
+            rtp_header_pack(rdata + 1, &header);
             memcpy(rdata + 1 + sizeof(struct RTPHeader), data + sent, piece);
 
             if (-1 == m_send_custom_lossy_packet(session->m, session->friend_number, rdata,
