@@ -300,7 +300,7 @@ static struct RTPMessage *new_message_v3(size_t allocate_len, const uint8_t *dat
     msg->header.cpart = net_ntohs(msg->header.cpart);
     msg->header.tlen = net_ntohs(msg->header.tlen); // without header
     msg->header.pt = (rtp_TypeVideo % 128);
-    struct RTPHeaderV3 *header_v3 = (struct RTPHeaderV3 *) &msg->header;
+    struct RTPHeaderV3 *header_v3 = (struct RTPHeaderV3 *)&msg->header;
     header_v3->data_length_full = full_data_length; // without header
     header_v3->offset_full = offset;
     header_v3->is_keyframe = is_keyframe;
@@ -470,7 +470,7 @@ static uint8_t fill_data_into_slot(Logger *log, struct RTPWorkBufferList *wkbl, 
     wkbl->work_buffer[slot].received_len = wkbl->work_buffer[slot].received_len + (length - sizeof(struct RTPHeader));
 
     // update received length also in the Header of the Message, for later use
-    struct RTPHeaderV3 *header_v3_new = (struct RTPHeaderV3 *) &mm2->header;
+    struct RTPHeaderV3 *header_v3_new = (struct RTPHeaderV3 *)&mm2->header;
 
     header_v3_new->received_length_full = wkbl->work_buffer[slot].received_len;
 
@@ -488,7 +488,7 @@ static void update_bwc_values(Logger *log, RTPSession *session, struct RTPMessag
     if (session->first_packets_counter < DISMISS_FIRST_LOST_VIDEO_PACKET_COUNT) {
         session->first_packets_counter++;
     } else {
-        struct RTPHeaderV3 *header_v3 = (struct RTPHeaderV3 *) &msg->header;
+        struct RTPHeaderV3 *header_v3 = (struct RTPHeaderV3 *)&msg->header;
         uint32_t data_length_full = header_v3->data_length_full; // without header
         uint32_t received_length_full = header_v3->received_length_full; // without header
         bwc_add_recv(session->bwc, data_length_full);
@@ -691,9 +691,8 @@ static int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t 
     const struct RTPHeaderV3 *header_v3 = (const struct RTPHeaderV3 *)data;
     LOGGER_DEBUG(m->log, "header->pt %d, video %d", (uint8_t)header_v3->pt, (rtp_TypeVideo % 128));
 
-    if ((((uint8_t)header_v3->protocol_version) == 3) &&
-            (((uint8_t)header_v3->pt) == (rtp_TypeVideo % 128))
-       ) {
+    if ((uint8_t)header_v3->protocol_version == 3 &&
+            (uint8_t)header_v3->pt == (rtp_TypeVideo % 128)) {
         // use V3 only for Video payload (at the moment)
         return handle_rtp_packet_v3(m, friendnumber, data_orig, length_orig, object);
     }
