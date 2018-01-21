@@ -46,6 +46,7 @@ struct GC_Announce {
 struct GC_Announces {
     uint8_t chat_id[CHAT_ID_SIZE];
     uint64_t index;
+    uint64_t last_announce_received_timestamp;
 
     GC_Announce announces[MAX_GCA_SAVED_ANNOUNCES_PER_GC];
 };
