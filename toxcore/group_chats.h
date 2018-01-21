@@ -218,9 +218,9 @@ typedef struct GC_Chat {
     Networking_Core *net;
     TCP_Connections *tcp_conn;
 
-    GC_GroupPeer          *group;
-    GC_Connection  *gcc;
-    GC_Moderation         moderation;
+    GC_GroupPeer    *group;
+    GC_Connection   *gcc;
+    GC_Moderation   moderation;
 
     GC_SharedState  shared_state;
     uint8_t         shared_state_sig[SIGNATURE_SIZE];    /* Signed by founder using the chat secret key */
@@ -243,9 +243,7 @@ typedef struct GC_Chat {
     uint8_t     connection_state;
     uint64_t    last_join_attempt;
     uint8_t     get_nodes_attempts;
-    uint64_t    last_get_nodes_attempt;
     uint64_t    last_sent_ping_time;
-    uint64_t    announce_search_timer;
     uint8_t     join_type;   /* How we joined the group (invite or DHT) */
 
     /* keeps track of frequency of new inbound connections */

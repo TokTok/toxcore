@@ -128,6 +128,9 @@ int set_tcp_onion_status(TCP_Connections *tcp_c, bool status);
 int tcp_send_oob_packet(TCP_Connections *tcp_c, unsigned int tcp_connections_number, const uint8_t *public_key,
                         const uint8_t *packet, uint16_t length);
 
+int tcp_send_oob_packet_using_relay(TCP_Connections *tcp_c, const uint8_t *relay_pk, const uint8_t *public_key,
+                                    const uint8_t *packet, uint16_t length);
+
 typedef int tcp_data_cb(void *object, int id, const uint8_t *data, uint16_t length, void *userdata);
 
 /* Set the callback for TCP data packets.
