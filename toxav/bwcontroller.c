@@ -66,7 +66,6 @@ struct BWCMessage {
     uint32_t recv;
 };
 
-
 int bwc_handle_data(Messenger *m, uint32_t friendnumber, const uint8_t *data, uint16_t length, void *object);
 void send_update(BWController *bwc);
 
