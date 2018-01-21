@@ -1816,7 +1816,7 @@ bool tox_group_leave(Tox *tox, uint32_t groupnumber, const uint8_t *partmessage,
         return 0;
     }
 
-    if (chat->shared_state.privacy_state == TOX_GROUP_PRIVACY_STATE_PRIVATE) {
+    if (chat->shared_state.privacy_state != TOX_GROUP_PRIVACY_STATE_PRIVATE) {
         m_remove_friend_gc(m, chat);
     }
 
