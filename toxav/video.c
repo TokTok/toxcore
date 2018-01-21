@@ -367,10 +367,10 @@ void video_switch_decoder(VCSession *vc)
 {
     vpx_codec_err_t rc;
 
-    if (vc->is_using_vp9 == 1) {
-        vc->is_using_vp9 = 0;
+    if (vc->is_using_vp9 == true) {
+        vc->is_using_vp9 = false;
     } else {
-        vc->is_using_vp9 = 1;
+        vc->is_using_vp9 = true;
     }
 
     vpx_codec_ctx_t new_d;
@@ -380,7 +380,7 @@ void video_switch_decoder(VCSession *vc)
     dec_cfg.w = VIDEO_CODEC_DECODER_MAX_WIDTH;
     dec_cfg.h = VIDEO_CODEC_DECODER_MAX_HEIGHT;
 
-    if (vc->is_using_vp9 == 0) {
+    if (vc->is_using_vp9 == true) {
         rc = vpx_codec_dec_init(&new_d, VIDEO_CODEC_DECODER_INTERFACE_VP8, &dec_cfg,
                                 VPX_CODEC_USE_FRAME_THREADING | VPX_CODEC_USE_POSTPROC);
 
