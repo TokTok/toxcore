@@ -93,7 +93,9 @@ RingBuffer *rb_new(int size)
     }
 
     if (!(buf->type = (uint8_t *)calloc(buf->size, sizeof(uint8_t)))) {
-        // TODO: ???
+        free(buf->data);
+        free(buf);
+        return NULL;        
     }
 
     return buf;
