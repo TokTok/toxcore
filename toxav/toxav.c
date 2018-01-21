@@ -1376,5 +1376,3 @@ void call_kill_transmission(ToxAVCall *call)
     pthread_mutex_destroy(call->mutex_video);
     pthread_mutex_destroy(call->mutex);
 }
-
-

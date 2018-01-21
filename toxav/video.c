@@ -671,5 +671,3 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
 
     return 0;
 }
-
-

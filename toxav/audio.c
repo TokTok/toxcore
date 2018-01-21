@@ -498,4 +498,3 @@ bool reconfigure_audio_decoder(ACSession *ac, int32_t sampling_rate, int8_t chan
 
     return true;
 }
-
