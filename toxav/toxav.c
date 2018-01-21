@@ -872,13 +872,11 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 
                 // TOX RTP V3 --- hack to give frame type to function ---
 
-                int res = rtp_send_data
-                          (
+                int res = rtp_send_data(
                               call->video.first,
                               (const uint8_t *)pkt->data.frame.buf,
                               frame_length_in_bytes,
-                              av->m->log
-                          );
+                              av->m->log);
 
                 LOGGER_DEBUG(av->m->log, "+ _sending_FRAME_TYPE_==%s bytes=%d frame_len=%d", keyframe ? "K" : ".",
                              (int)pkt->data.frame.sz, (int)frame_length_in_bytes);
