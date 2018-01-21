@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2017 The TokTok team.
+ * Copyright © 2016-2018 The TokTok team.
  * Copyright © 2013-2015 Tox project.
  *
  * This file is part of Tox, the free peer to peer instant messenger.
@@ -26,6 +26,10 @@
 #include "../toxcore/logger.h"
 
 #include <stdbool.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * Payload type identifier. Also used as rtp callback prefix.
@@ -147,6 +151,14 @@ typedef struct {
     int (*mcb)(void *, struct RTPMessage *msg);
 } RTPSession;
 
+/**
+ * Serialise an RTPHeader to bytes to be sent over the network.
+ *
+ * @param rdata A byte array of length 80. Does not need to be initialised.
+ *   All 80 bytes will be initialised after a call to this function.
+ * @param header The RTPHeader to serialise.
+ */
+void rtp_header_pack(uint8_t *rdata, const struct RTPHeader *header);
 
 RTPSession *rtp_new(int payload_type, Messenger *m, uint32_t friendnumber,
                     BWController *bwc, void *cs,
@@ -155,5 +167,9 @@ void rtp_kill(RTPSession *session);
 int rtp_allow_receiving(RTPSession *session);
 int rtp_stop_receiving(RTPSession *session);
 int rtp_send_data(RTPSession *session, const uint8_t *data, uint16_t length, Logger *log);
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
 
 #endif /* RTP_H */
