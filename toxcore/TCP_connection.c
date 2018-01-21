@@ -424,6 +424,24 @@ int tcp_send_oob_packet(TCP_Connections *tcp_c, unsigned int tcp_connections_num
     return -1;
 }
 
+static int find_tcp_connection_relay(TCP_Connections *tcp_c, const uint8_t *relay_pk);
+
+/* Send an oob packet via the TCP relay corresponding to relay_pk.
+ *
+ * return 0 on success.
+ * return -1 on failure.
+ */
+int tcp_send_oob_packet_using_relay(TCP_Connections *tcp_c, const uint8_t *relay_pk, const uint8_t *public_key,
+                                    const uint8_t *packet, uint16_t length)
+{
+    int tcp_con_number = find_tcp_connection_relay(tcp_c, relay_pk);
+    if (tcp_con_number < 0) {
+        return -1;
+    }
+
+    return tcp_send_oob_packet(tcp_c, tcp_con_number, public_key, packet, length);
+}
+
 /* Set the callback for TCP data packets.
  */
 void set_packet_tcp_connection_callback(TCP_Connections *tcp_c, int (*tcp_data_callback)(void *object, int id,
