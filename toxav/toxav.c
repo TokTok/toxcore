@@ -35,7 +35,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 // TODO: don't hardcode this, let the application choose it
 // VPX Info: Time to spend encoding, in microseconds (it's a *soft* deadline)
 #define WANTED_MAX_ENCODER_FPS (40)
@@ -734,7 +733,6 @@ bool toxav_audio_send_frame(ToxAV *av, uint32_t friend_number, const int16_t *pc
         }
     }
 
-
     pthread_mutex_unlock(call->mutex_audio);
 
 END:
@@ -745,7 +743,6 @@ END:
 
     return rc == TOXAV_ERR_SEND_FRAME_OK;
 }
-
 
 bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, uint16_t height, const uint8_t *y,
                             const uint8_t *u, const uint8_t *v, TOXAV_ERR_SEND_FRAME *error)
@@ -821,8 +818,6 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 
     // we start with I-frames (full frames) and then switch to normal mode later
 
-
-
     { /* Encode */
         vpx_image_t img;
         img.w = img.h = img.d_w = img.d_h = 0;
@@ -849,8 +844,6 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
     }
 
     ++call->video.second->frame_counter;
-
-
 
     { /* Send frames */
         vpx_codec_iter_t iter = NULL;
@@ -879,18 +872,15 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 
                 // TOX RTP V3 --- hack to give frame type to function ---
 
-
-                int res = rtp_send_data
-                          (
+                int res = rtp_send_data(
                               call->video.first,
                               (const uint8_t *)pkt->data.frame.buf,
                               frame_length_in_bytes,
-                              av->m->log
-                          );
+                              av->m->log);
 
                 LOGGER_DEBUG(av->m->log, "+ _sending_FRAME_TYPE_==%s bytes=%d frame_len=%d", keyframe ? "K" : ".",
                              (int)pkt->data.frame.sz, (int)frame_length_in_bytes);
-                LOGGER_DEBUG(av->m->log, "+ _sending_FRAME_ b0=%d b1=%d", ((const uint8_t *)pkt->data.frame.buf)[0] ,
+                LOGGER_DEBUG(av->m->log, "+ _sending_FRAME_ b0=%d b1=%d", ((const uint8_t *)pkt->data.frame.buf)[0],
                              ((const uint8_t *)pkt->data.frame.buf)[1]);
 
                 if (res < 0) {
@@ -903,8 +893,6 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         }
     }
 
-
-
     pthread_mutex_unlock(call->mutex_video);
 
 END:
@@ -916,8 +904,6 @@ END:
     return rc == TOXAV_ERR_SEND_FRAME_OK;
 }
 
-
-
 void toxav_callback_audio_receive_frame(ToxAV *av, toxav_audio_receive_frame_cb *callback, void *user_data)
 {
     pthread_mutex_lock(av->mutex);
@@ -925,6 +911,7 @@ void toxav_callback_audio_receive_frame(ToxAV *av, toxav_audio_receive_frame_cb 
     av->acb.second = user_data;
     pthread_mutex_unlock(av->mutex);
 }
+
 void toxav_callback_video_receive_frame(ToxAV *av, toxav_video_receive_frame_cb *callback, void *user_data)
 {
     pthread_mutex_lock(av->mutex);
@@ -932,7 +919,6 @@ void toxav_callback_video_receive_frame(ToxAV *av, toxav_video_receive_frame_cb 
     av->vcb.second = user_data;
     pthread_mutex_unlock(av->mutex);
 }
-
 
 /*******************************************************************************
  *
@@ -1110,7 +1096,6 @@ bool invoke_call_state_callback(ToxAV *av, uint32_t friend_number, uint32_t stat
     return true;
 }
 
-
 ToxAVCall *call_new(ToxAV *av, uint32_t friend_number, TOXAV_ERR_CALL *error)
 {
     /* Assumes mutex locked */
@@ -1131,7 +1116,6 @@ ToxAVCall *call_new(ToxAV *av, uint32_t friend_number, TOXAV_ERR_CALL *error)
         rc = TOXAV_ERR_CALL_FRIEND_ALREADY_IN_CALL;
         goto END;
     }
-
 
     call = (ToxAVCall *)calloc(sizeof(ToxAVCall), 1);
 
@@ -1194,7 +1178,6 @@ END:
     return call;
 }
 
-
 ToxAVCall *call_get(ToxAV *av, uint32_t friend_number)
 {
     /* Assumes mutex locked */
@@ -1204,7 +1187,6 @@ ToxAVCall *call_get(ToxAV *av, uint32_t friend_number)
 
     return av->calls[friend_number];
 }
-
 
 ToxAVCall *call_remove(ToxAVCall *call)
 {
@@ -1253,7 +1235,6 @@ CLEAR:
 
     return NULL;
 }
-
 
 bool call_prepare_transmission(ToxAVCall *call)
 {
@@ -1344,7 +1325,6 @@ FAILURE_3:
     return false;
 }
 
-
 void call_kill_transmission(ToxAVCall *call)
 {
     if (call == NULL || call->active == 0) {
@@ -1376,5 +1356,3 @@ void call_kill_transmission(ToxAVCall *call)
     pthread_mutex_destroy(call->mutex_video);
     pthread_mutex_destroy(call->mutex);
 }
-
-

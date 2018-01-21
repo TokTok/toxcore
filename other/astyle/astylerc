@@ -8,7 +8,6 @@
 --indent-switches
 
 # Padding Options
---delete-empty-lines
 --pad-header
 --break-blocks
 --pad-oper

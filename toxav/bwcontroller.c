@@ -32,8 +32,8 @@
 #include <errno.h>
 
 #define BWC_PACKET_ID 196
-#define BWC_SEND_INTERVAL_MS (950)     /* 0.95s  */
-#define BWC_REFRESH_INTERVAL_MS (2000) /* 2.00s */
+#define BWC_SEND_INTERVAL_MS 950     /* 0.95s  */
+#define BWC_REFRESH_INTERVAL_MS 2000 /* 2.00s */
 #define BWC_AVG_PKT_COUNT 20
 #define BWC_AVG_LOSS_OVER_CYCLES_COUNT 30
 
@@ -66,7 +66,6 @@ struct BWCMessage {
     uint32_t recv;
 };
 
-
 int bwc_handle_data(Messenger *m, uint32_t friendnumber, const uint8_t *data, uint16_t length, void *object);
 void send_update(BWController *bwc);
 
@@ -75,7 +74,7 @@ BWController *bwc_new(Messenger *m, uint32_t friendnumber,
                       void *udata)
 {
     BWController *retu = (BWController *)calloc(sizeof(struct BWController_s), 1);
-    LOGGER_WARNING(m->log, "BWC: new");
+    LOGGER_DEBUG(m->log, "Creating bandwidth controller");
     retu->mcb = mcb;
     retu->mcb_data = udata;
     retu->m = m;
@@ -108,24 +107,6 @@ void bwc_kill(BWController *bwc)
     free(bwc);
 }
 
-/*
- * TODO: remove in 0.2.0
- */
-void bwc_feed_avg(BWController *bwc, uint32_t bytes)
-{
-    // DISABLE
-    return;
-}
-
-/*
- * TODO: remove in 0.2.0
- */
-void bwc_add_lost(BWController *bwc, uint32_t bytes_received_ok)
-{
-    // DISABLE
-    return;
-}
-
 void bwc_add_lost_v3(BWController *bwc, uint32_t bytes_lost)
 {
     if (!bwc) {
@@ -139,7 +120,6 @@ void bwc_add_lost_v3(BWController *bwc, uint32_t bytes_lost)
     }
 }
 
-
 void bwc_add_recv(BWController *bwc, uint32_t recv_bytes)
 {
     if (!bwc || !recv_bytes) {
@@ -151,7 +131,6 @@ void bwc_add_recv(BWController *bwc, uint32_t recv_bytes)
     send_update(bwc);
 }
 
-
 void send_update(BWController *bwc)
 {
     if (bwc->packet_loss_counted_cycles > BWC_AVG_LOSS_OVER_CYCLES_COUNT) {
@@ -159,7 +138,7 @@ void send_update(BWController *bwc)
             bwc->packet_loss_counted_cycles = 0;
 
             if (bwc->cycle.lost) {
-                LOGGER_INFO(bwc->m->log, "%p Sent update rcv: %u lost: %u percent: %f %%",
+                LOGGER_DEBUG(bwc->m->log, "%p Sent update rcv: %u lost: %u percent: %f %%",
                             bwc, bwc->cycle.recv, bwc->cycle.lost,
                             (((float) bwc->cycle.lost / (bwc->cycle.recv + bwc->cycle.lost)) * 100.0f));
                 uint8_t bwc_packet[sizeof(struct BWCMessage) + 1];
@@ -196,7 +175,7 @@ static int on_update(BWController *bwc, const struct BWCMessage *msg)
     uint32_t lost = net_ntohl(msg->lost);
 
     if (lost && bwc->mcb) {
-        LOGGER_INFO(bwc->m->log, "recved: %u lost: %u percentage: %f %%", recv, lost,
+        LOGGER_DEBUG(bwc->m->log, "recved: %u lost: %u percentage: %f %%", recv, lost,
                     (((float) lost / (recv + lost)) * 100.0f));
         bwc->mcb(bwc, bwc->friend_number,
                  ((float) lost / (recv + lost)),
