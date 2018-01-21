@@ -1474,3 +1474,24 @@ uint16_t net_ntohs(uint16_t hostshort)
 {
     return ntohs(hostshort);
 }
+
+size_t net_pack_u16(uint8_t *bytes, uint16_t v)
+{
+    bytes[0] = (v >> 8) & 0xff;
+    bytes[1] = v & 0xff;
+    return sizeof(v);
+}
+
+size_t net_pack_u32(uint8_t *bytes, uint32_t v)
+{
+    bytes += net_pack_u16(bytes, (v >> 16) & 0xffff);
+    bytes += net_pack_u16(bytes, v & 0xffff);
+    return sizeof(v);
+}
+
+size_t net_pack_u64(uint8_t *bytes, uint64_t v)
+{
+    bytes += net_pack_u32(bytes, (v >> 32) & 0xffffffff);
+    bytes += net_pack_u32(bytes, v & 0xffffffff);
+    return sizeof(v);
+}
