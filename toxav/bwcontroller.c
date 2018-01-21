@@ -74,7 +74,7 @@ BWController *bwc_new(Messenger *m, uint32_t friendnumber,
                       void *udata)
 {
     BWController *retu = (BWController *)calloc(sizeof(struct BWController_s), 1);
-    LOGGER_WARNING(m->log, "Creating bandwidth controller");
+    LOGGER_DEBUG(m->log, "Creating bandwidth controller");
     retu->mcb = mcb;
     retu->mcb_data = udata;
     retu->m = m;
@@ -138,7 +138,7 @@ void send_update(BWController *bwc)
             bwc->packet_loss_counted_cycles = 0;
 
             if (bwc->cycle.lost) {
-                LOGGER_INFO(bwc->m->log, "%p Sent update rcv: %u lost: %u percent: %f %%",
+                LOGGER_DEBUG(bwc->m->log, "%p Sent update rcv: %u lost: %u percent: %f %%",
                             bwc, bwc->cycle.recv, bwc->cycle.lost,
                             (((float) bwc->cycle.lost / (bwc->cycle.recv + bwc->cycle.lost)) * 100.0f));
                 uint8_t bwc_packet[sizeof(struct BWCMessage) + 1];
@@ -175,7 +175,7 @@ static int on_update(BWController *bwc, const struct BWCMessage *msg)
     uint32_t lost = net_ntohl(msg->lost);
 
     if (lost && bwc->mcb) {
-        LOGGER_INFO(bwc->m->log, "recved: %u lost: %u percentage: %f %%", recv, lost,
+        LOGGER_DEBUG(bwc->m->log, "recved: %u lost: %u percentage: %f %%", recv, lost,
                     (((float) lost / (recv + lost)) * 100.0f));
         bwc->mcb(bwc, bwc->friend_number,
                  ((float) lost / (recv + lost)),
