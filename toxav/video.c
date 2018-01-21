@@ -65,7 +65,7 @@ Note
 #define VIDEO_BITRATE_INITIAL_VALUE 5000 // initialize encoder with this value. Target bandwidth to use for this stream, in kilobits per second.
 #define VIDEO_DECODE_BUFFER_SIZE 5 // this buffer has normally max. 1 entry
 
-void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_dist)
+void vc_init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_dist)
 {
     vpx_codec_err_t rc;
 
@@ -78,7 +78,7 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
     }
 
     if (rc != VPX_CODEC_OK) {
-        LOGGER_ERROR(log, "vc__init_encoder_cfg:Failed to get config: %s", vpx_codec_err_to_string(rc));
+        LOGGER_ERROR(log, "vc_init_encoder_cfg:Failed to get config: %s", vpx_codec_err_to_string(rc));
     }
 
     cfg->rc_target_bitrate =
@@ -86,7 +86,6 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
     cfg->g_w = VIDEO_CODEC_DECODER_MAX_WIDTH;
     cfg->g_h = VIDEO_CODEC_DECODER_MAX_HEIGHT;
     cfg->g_pass = VPX_RC_ONE_PASS;
-    /* zoff (in 2017) */
     cfg->g_error_resilient = VPX_ERROR_RESILIENT_DEFAULT | VPX_ERROR_RESILIENT_PARTITIONS;
     cfg->g_lag_in_frames = 0;
     /* Allow lagged encoding
@@ -179,7 +178,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     dec_cfg.h = VIDEO_CODEC_DECODER_MAX_HEIGHT;
 
     if (VPX_DECODER_USED == VPX_VP8_CODEC) {
-        LOGGER_WARNING(log, "Using VP8 codec for decoder (0)");
+        LOGGER_DEBUG(log, "Using VP8 codec for decoder (0)");
         rc = vpx_codec_dec_init(vc->decoder, VIDEO_CODEC_DECODER_INTERFACE_VP8, &dec_cfg,
                                 VPX_CODEC_USE_FRAME_THREADING | VPX_CODEC_USE_POSTPROC);
 
@@ -188,7 +187,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
             rc = vpx_codec_dec_init(vc->decoder, VIDEO_CODEC_DECODER_INTERFACE_VP8, &dec_cfg, VPX_CODEC_USE_FRAME_THREADING);
         }
     } else {
-        LOGGER_WARNING(log, "Using VP9 codec for decoder (0)");
+        LOGGER_DEBUG(log, "Using VP9 codec for decoder (0)");
         rc = vpx_codec_dec_init(vc->decoder, VIDEO_CODEC_DECODER_INTERFACE_VP9, &dec_cfg, VPX_CODEC_USE_FRAME_THREADING);
     }
 
@@ -221,7 +220,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     /* Set encoder to some initial values
      */
     vpx_codec_enc_cfg_t  cfg;
-    vc__init_encoder_cfg(log, &cfg, 1);
+    vc_init_encoder_cfg(log, &cfg, 1);
 
     if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
         LOGGER_WARNING(log, "Using VP8 codec for encoder (0.1)");
@@ -366,27 +365,14 @@ void vc_kill(VCSession *vc)
 
 void video_switch_decoder(VCSession *vc)
 {
-    /*
-    vpx_codec_err_t vpx_codec_peek_stream_info  (   vpx_codec_iface_t *     iface,
-            const uint8_t *     data,
-            unsigned int    data_sz,
-            vpx_codec_stream_info_t *   si
-        )
-
-    Parse stream info from a buffer.
-    Performs high level parsing of the bitstream. Construction of a decoder context is not necessary.
-    Can be used to determine if the bitstream is of the proper format, and to extract information from the stream.
-    */
     vpx_codec_err_t rc;
 
-    // Zoff --
     if (vc->is_using_vp9 == 1) {
         vc->is_using_vp9 = 0;
     } else {
         vc->is_using_vp9 = 1;
     }
 
-    // Zoff --
     vpx_codec_ctx_t new_d;
     LOGGER_WARNING(vc->log, "Switch:Re-initializing DEcoder to: %d", (int)vc->is_using_vp9);
     vpx_codec_dec_cfg_t dec_cfg;
@@ -457,7 +443,7 @@ void vc_iterate(VCSession *vc)
 
     if (rb_read((RingBuffer *)vc->vbuf_raw, (void **)&p, &data_type)) {
         pthread_mutex_unlock(vc->queue_mutex);
-        const struct RTPHeaderV3 *header_v3 = (void *)&p->header;
+        const struct RTPHeaderV3 *header_v3 = (struct RTPHeaderV3 *)&p->header;
         LOGGER_DEBUG(vc->log, "vc_iterate:00:pv=%d", (uint8_t)header_v3->protocol_version);
 
         if ((uint8_t)header_v3->protocol_version == 3) {
@@ -511,8 +497,7 @@ void vc_iterate(VCSession *vc)
 
         return;
     } else {
-        // no frame data available
-        // LOGGER_WARNING(vc->log, "Error decoding video: rb_read");
+        LOGGER_TRACE(vc->log, "no Video frame data available");
     }
 
     pthread_mutex_unlock(vc->queue_mutex);
@@ -529,8 +514,7 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
     }
 
     VCSession *vc = (VCSession *)vcp;
-    // const struct RTPHeader *header = (void *)&(msg->header);
-    const struct RTPHeaderV3 *header_v3 = (void *)&msg->header;
+    const struct RTPHeaderV3 *header_v3 = (struct RTPHeaderV3 *)&msg->header;
 
     if (msg->header.pt == (rtp_TypeVideo + 2) % 128) {
         LOGGER_WARNING(vc->log, "Got dummy!");
@@ -592,7 +576,7 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
         LOGGER_DEBUG(vc->log, "Have to reinitialize vpx encoder on session %p", vc);
         vpx_codec_ctx_t new_c;
         vpx_codec_enc_cfg_t  cfg;
-        vc__init_encoder_cfg(vc->log, &cfg, kf_max_dist);
+        vc_init_encoder_cfg(vc->log, &cfg, kf_max_dist);
         cfg.rc_target_bitrate = bit_rate;
         cfg.g_w = width;
         cfg.g_h = height;
