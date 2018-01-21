@@ -366,9 +366,8 @@ static struct RTPMessage *process_oldest_frame(Logger *log, struct RTPWorkBuffer
         LOGGER_DEBUG(log, "process_oldest_frame:m_new->len=%d b0=%d b1=%d", m_new->len, (int)m_new->data[0],
                      (int)m_new->data[1]);
         LOGGER_DEBUG(log, "process_oldest_frame:001a next_free_entry=%d", wkbl->next_free_entry);
-        int i;
 
-        for (i = 0; i < (wkbl->next_free_entry - 1); i++) {
+        for (int i = 0; i < (wkbl->next_free_entry - 1); i++) {
             // move entry (i+1) into entry (i)
             move_slot(wkbl, i, i + 1);
         }
@@ -402,9 +401,7 @@ static struct RTPMessage *process_frame(Logger *log, struct RTPWorkBufferList *w
         wkbl->next_free_entry--;
     } else {
         // move entries to fill the gap
-        int i;
-
-        for (i = slot; i < (wkbl->next_free_entry - 1); i++) {
+        for (int i = slot; i < (wkbl->next_free_entry - 1); i++) {
             // move entry (i+1) into entry (i)
             move_slot(wkbl, i, i + 1);
         }
