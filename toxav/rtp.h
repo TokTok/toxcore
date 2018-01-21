@@ -32,7 +32,7 @@
  */
 enum {
     rtp_TypeAudio = 192,
-    rtp_TypeVideo,
+    rtp_TypeVideo = 193,
 };
 
 struct RTPHeader {
