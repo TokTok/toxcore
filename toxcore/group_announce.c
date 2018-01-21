@@ -178,6 +178,7 @@ GC_Announce* add_gc_announce(const Mono_Time *mono_time, GC_Announces_List *gc_a
         memcpy(announces->chat_id, chat_id, CHAT_ID_SIZE);
     }
     uint64_t index = announces->index % MAX_GCA_SAVED_ANNOUNCES_PER_GC;
+    announces->last_announce_received_timestamp = unix_time();
     GC_Announce *gc_announce = &announces->announces[index];
     memcpy(&gc_announce->peer_public_key, peer_id, ENC_PUBLIC_KEY);
     memcpy(&gc_announce->node, node, sizeof(Node_format));
