@@ -91,11 +91,6 @@ void rtp_kill(RTPSession *session)
     if (session_v3->work_buffer_list) {
         LOGGER_DEBUG(session->m->log, "Terminated RTP session V3 next_free_entry: %d",
                      (int)session_v3->work_buffer_list->next_free_entry);
-
-        if (session_v3->work_buffer_list->next_free_entry > 0) {
-            // TODO: is there something to free?
-        }
-
         free(session_v3->work_buffer_list);
         session_v3->work_buffer_list = NULL;
     }
@@ -180,7 +175,7 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length_v3, 
     header->ssrc = net_htonl(session->ssrc);
     header->cpart = 0;
     header->tlen = net_htons(length);
-// Zoff -- new stuff --
+
     struct RTPHeaderV3 *header_v3 = (struct RTPHeaderV3 *)header;
     header_v3->protocol_version = 3; // TOX RTP V3
     uint16_t length_safe = (uint16_t)length_v3;
@@ -191,12 +186,9 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length_v3, 
 
     header_v3->data_length_lower = net_htons(length_safe);
     header_v3->data_length_full = net_htonl(length_v3); // without header
-    header_v3->offset_lower = net_htons(0);
-    header_v3->offset_full = net_htonl(0);
+    header_v3->offset_lower = 0;
+    header_v3->offset_full = 0;
     header_v3->is_keyframe = is_keyframe;
-    // TODO: bigendian ??
-
-// Zoff -- new stuff --
 
     if (MAX_CRYPTO_DATA_SIZE > (length_v3 + sizeof(struct RTPHeader) + 1)) {
         /**
@@ -228,7 +220,6 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length_v3, 
             sent += piece;
             header->cpart = net_htons((uint16_t)sent);
             header_v3->offset_full = net_htonl(sent); // raw data offset, without any header
-            // TODO: bigendian ??
         }
 
         /* Send remaining */
@@ -683,7 +674,6 @@ static int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t 
         return -1;
     }
 
-// Zoff -- new stuff --
     const struct RTPHeaderV3 *header_v3 = (const struct RTPHeaderV3 *)data;
     LOGGER_DEBUG(m->log, "header->pt %d, video %d", (uint8_t)header_v3->pt, (rtp_TypeVideo % 128));
 
@@ -693,7 +683,6 @@ static int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t 
         return handle_rtp_packet_v3(m, friendnumber, data_orig, length_orig, object);
     }
 
-// Zoff -- new stuff --
     // everything below here is protocol version 2 ------------------
     const struct RTPHeader *header = (const struct RTPHeader *) data;
 
