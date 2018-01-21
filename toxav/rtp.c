@@ -259,10 +259,6 @@ static bool chloss(const RTPSession *session, const struct RTPHeader *header)
                session->rsequnum - hosq;
         LOGGER_WARNING(session->m->log, "Lost packet");
 
-        while (lost --) {
-            bwc_add_lost(session->bwc, 0);
-        }
-
         return true;
     }
 
@@ -711,8 +707,6 @@ static int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t 
         return -1;
     }
 
-    bwc_feed_avg(session->bwc, length);
-
     if (net_ntohs(header->tlen) == length - sizeof(struct RTPHeader)) {
         /* The message is sent in single part */
 
@@ -798,13 +792,6 @@ static int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t 
                  */
                 return 0;
             }
-
-            /* Measure missing parts of the old message */
-            bwc_add_lost(session->bwc,
-                         (session->mp->header.tlen - session->mp->len) +
-                         /* Must account sizes of rtp headers too */
-                         ((session->mp->header.tlen - session->mp->len) /
-                          MAX_CRYPTO_DATA_SIZE) * sizeof(struct RTPHeader));
 
             /* Push the previous message for processing */
             if (session->mcb) {

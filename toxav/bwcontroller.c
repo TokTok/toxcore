@@ -74,7 +74,7 @@ BWController *bwc_new(Messenger *m, uint32_t friendnumber,
                       void *udata)
 {
     BWController *retu = (BWController *)calloc(sizeof(struct BWController_s), 1);
-    LOGGER_WARNING(m->log, "BWC: new");
+    LOGGER_WARNING(m->log, "Creating bandwidth controller");
     retu->mcb = mcb;
     retu->mcb_data = udata;
     retu->m = m;
@@ -105,24 +105,6 @@ void bwc_kill(BWController *bwc)
     m_callback_rtp_packet(bwc->m, bwc->friend_number, BWC_PACKET_ID, NULL, NULL);
     rb_kill(bwc->rcvpkt.rb);
     free(bwc);
-}
-
-/*
- * TODO: remove in 0.2.0
- */
-void bwc_feed_avg(BWController *bwc, uint32_t bytes)
-{
-    // DISABLE
-    return;
-}
-
-/*
- * TODO: remove in 0.2.0
- */
-void bwc_add_lost(BWController *bwc, uint32_t bytes_received_ok)
-{
-    // DISABLE
-    return;
 }
 
 void bwc_add_lost_v3(BWController *bwc, uint32_t bytes_lost)
