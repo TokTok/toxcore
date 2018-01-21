@@ -41,7 +41,7 @@
 /* The time before the direct UDP connection is considered dead */
 #define GCC_UDP_DIRECT_TIMEOUT (GC_PING_INTERVAL * 2 + 2)
 
-#define HANDSHAKE_SENDING_TIMEOUT 5
+#define HANDSHAKE_SENDING_TIMEOUT 3
 
 struct GC_Message_Ary_Entry {
     uint8_t *data;
@@ -83,6 +83,7 @@ struct GC_Connection {
     uint64_t    pending_handshake;
     uint8_t     pending_handshake_type;
     bool        is_oob_handshake;
+    uint8_t     oob_relay_pk[ENC_PUBLIC_KEY];
     bool        confirmed;  /* true if this peer has given us their info */
 };
 
