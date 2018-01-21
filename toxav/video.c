@@ -201,7 +201,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
 
     if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 1) {
         // vp8_postproc_cfg_t pp = {VP8_DEBLOCK | VP8_DEMACROBLOCK | VP8_MFQE, 4, 0};
-        vp8_postproc_cfg_t pp = {VP8_DEBLOCK , 1, 0};
+        vp8_postproc_cfg_t pp = {VP8_DEBLOCK, 1, 0};
         vpx_codec_err_t cc_res = vpx_codec_control(vc->decoder, VP8_SET_POSTPROC, &pp);
 
         if (cc_res != VPX_CODEC_OK) {
@@ -418,7 +418,7 @@ void video_switch_decoder(VCSession *vc)
 
     if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 1) {
         // vp8_postproc_cfg_t pp = {VP8_DEBLOCK | VP8_DEMACROBLOCK | VP8_MFQE, 4, 0};
-        vp8_postproc_cfg_t pp = {VP8_DEBLOCK , 1, 0};
+        vp8_postproc_cfg_t pp = {VP8_DEBLOCK, 1, 0};
         vpx_codec_err_t cc_res = vpx_codec_control(&new_d, VP8_SET_POSTPROC, &pp);
 
         if (cc_res != VPX_CODEC_OK) {

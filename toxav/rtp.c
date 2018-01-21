@@ -184,7 +184,7 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length_v3, 
 // Zoff -- new stuff --
     struct RTPHeaderV3 *header_v3 = (struct RTPHeaderV3 *)header;
     header_v3->protocol_version = 3; // TOX RTP V3
-    uint16_t length_safe = (uint16_t)(length_v3);
+    uint16_t length_safe = (uint16_t)length_v3;
 
     if (length_v3 > UINT16_MAX) {
         length_safe = UINT16_MAX;
@@ -275,8 +275,8 @@ static bool chloss(const RTPSession *session, const struct RTPHeader *header)
 static struct RTPMessage *new_message(size_t allocate_len, const uint8_t *data, uint16_t data_length)
 {
     assert(allocate_len >= data_length);
-    struct RTPMessage *msg = (struct RTPMessage *)calloc(sizeof(struct RTPMessage) + (allocate_len - sizeof(
-                                 struct RTPHeader)), 1);
+    struct RTPMessage *msg = (struct RTPMessage *)calloc(sizeof(struct RTPMessage) +
+                             (allocate_len - sizeof(struct RTPHeader)), 1);
     msg->len = data_length - sizeof(struct RTPHeader); // result without header
     memcpy(&msg->header, data, data_length);
     msg->header.sequnum = net_ntohs(msg->header.sequnum);
@@ -293,8 +293,7 @@ static struct RTPMessage *new_message(size_t allocate_len, const uint8_t *data, 
 static struct RTPMessage *new_message_v3(size_t allocate_len, const uint8_t *data, uint16_t data_length,
         uint32_t offset, uint32_t full_data_length, uint8_t is_keyframe)
 {
-    struct RTPMessage *msg = (struct RTPMessage *)calloc(1,
-                             sizeof(struct RTPMessage) + (allocate_len));
+    struct RTPMessage *msg = (struct RTPMessage *)calloc(1, sizeof(struct RTPMessage) + allocate_len);
     msg->len = data_length - sizeof(struct RTPHeader); // without header
     memcpy(&msg->header, data, data_length);
     msg->header.sequnum = net_ntohs(msg->header.sequnum);
@@ -303,7 +302,7 @@ static struct RTPMessage *new_message_v3(size_t allocate_len, const uint8_t *dat
     msg->header.cpart = net_ntohs(msg->header.cpart);
     msg->header.tlen = net_ntohs(msg->header.tlen); // without header
     msg->header.pt = (rtp_TypeVideo % 128);
-    struct RTPHeaderV3 *header_v3 = (struct RTPHeaderV3 *) & (msg->header);
+    struct RTPHeaderV3 *header_v3 = (struct RTPHeaderV3 *) &msg->header;
     header_v3->data_length_full = full_data_length; // without header
     header_v3->offset_full = offset;
     header_v3->is_keyframe = is_keyframe;
@@ -474,7 +473,7 @@ static uint8_t fill_data_into_slot(Logger *log, struct RTPWorkBufferList *wkbl, 
     wkbl->work_buffer[slot].received_len = wkbl->work_buffer[slot].received_len + (length - sizeof(struct RTPHeader));
 
     // update received length also in the Header of the Message, for later use
-    struct RTPHeaderV3 *header_v3_new = (struct RTPHeaderV3 *) & (mm2->header);
+    struct RTPHeaderV3 *header_v3_new = (struct RTPHeaderV3 *) &mm2->header;
 
     header_v3_new->received_length_full = wkbl->work_buffer[slot].received_len;
 
@@ -492,7 +491,7 @@ static void update_bwc_values(Logger *log, RTPSession *session, struct RTPMessag
     if (session->first_packets_counter < DISMISS_FIRST_LOST_VIDEO_PACKET_COUNT) {
         session->first_packets_counter++;
     } else {
-        struct RTPHeaderV3 *header_v3 = (struct RTPHeaderV3 *) & (msg->header);
+        struct RTPHeaderV3 *header_v3 = (struct RTPHeaderV3 *) &msg->header;
         uint32_t data_length_full = header_v3->data_length_full; // without header
         uint32_t received_length_full = header_v3->received_length_full; // without header
         bwc_add_recv(session->bwc, data_length_full);
