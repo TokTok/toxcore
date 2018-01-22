@@ -260,8 +260,6 @@ int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t *data, 
         return -1;
     }
 
-    bwc_feed_avg(session->bwc, length);
-
     if (net_ntohs(header->tlen) == length - sizeof(struct RTPHeader)) {
         /* The message is sent in single part */
 
