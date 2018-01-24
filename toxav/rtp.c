@@ -548,7 +548,7 @@ static uint8_t fill_data_into_slot(Logger *log, struct RTPWorkBufferList *wkbl, 
     if (slot > -1) {
         if (wkbl->work_buffer[slot].received_len == 0) {
             // this is the first time this slot is used. initialize it
-            wkbl->work_buffer[slot].buf = (void *)new_message_v3(
+            wkbl->work_buffer[slot].buf = (uint8_t *)new_message_v3(
                                               length_v3, data, length,
                                               offset_v3, length_v3, is_keyframe);
 

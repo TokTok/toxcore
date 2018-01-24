@@ -259,7 +259,7 @@ uint8_t ac_iterate(ACSession *ac, uint64_t *a_r_timestamp, uint64_t *a_l_timesta
             if (rc >= 0)
             {
                 // what is the audio to video latency?
-                const struct RTPHeaderV3 *header_v3 = (void *) & (msg->header);
+                const struct RTPHeaderV3 *header_v3 = (const struct RTPHeaderV3 *) & (msg->header);
                 // LOGGER_ERROR(ac->log, "AUDIO:TTx: %llu %lld now=%llu", header_v3->frame_record_timestamp, (long long)*a_r_timestamp, current_time_monotonic());
                 if (header_v3->frame_record_timestamp > 0)
                 {
@@ -416,7 +416,7 @@ static int jbuf_write(Logger *log, ACSession *ac, struct RingBuffer *q, struct R
                 for(j=0;j<(diff - 1);j++)
                 {
                     uint16_t lenx = (m->len + sizeof(struct RTPHeader));
-                    struct RTPMessage *empty_m = new_empty_message((size_t)lenx, (void *)&(m->header), lenx);
+                    struct RTPMessage *empty_m = new_empty_message((size_t)lenx, (const uint8_t *)&(m->header), lenx);
                     empty_m->header.sequnum = (ac->lp_seqnum + 1 + j);
                     if (rb_write(q, (void *)empty_m, 1) != NULL)
                     {

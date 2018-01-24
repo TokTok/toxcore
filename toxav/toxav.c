@@ -1071,8 +1071,10 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         goto END;
     }
 
-    int vpx_encode_flags = 0;
-    unsigned long max_encode_time_in_us = MAX_ENCODE_TIME_US;
+    int vpx_encode_flags;
+    vpx_encode_flags = 0;
+    unsigned long max_encode_time_in_us;
+    max_encode_time_in_us = MAX_ENCODE_TIME_US;
 
 
     if (call->video.first->ssrc < VIDEO_SEND_X_KEYFRAMES_FIRST) {
