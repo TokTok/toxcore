@@ -55,12 +55,12 @@ static Group_JitterBuffer *create_queue(unsigned int capacity)
     Group_JitterBuffer *q;
 
     if (!(q = (Group_JitterBuffer *)calloc(sizeof(Group_JitterBuffer), 1))) {
-        return nullptr;
+        return NULL;
     }
 
     if (!(q->queue = (Group_Audio_Packet **)calloc(sizeof(Group_Audio_Packet *), size))) {
         free(q);
-        return nullptr;
+        return NULL;
     }
 
     q->size = size;
@@ -73,7 +73,7 @@ static void clear_queue(Group_JitterBuffer *q)
     for (; q->bottom != q->top; ++q->bottom) {
         if (q->queue[q->bottom % q->size]) {
             free(q->queue[q->bottom % q->size]);
-            q->queue[q->bottom % q->size] = nullptr;
+            q->queue[q->bottom % q->size] = NULL;
         }
     }
 }
@@ -132,14 +132,14 @@ static Group_Audio_Packet *dequeue(Group_JitterBuffer *q, int *success)
 {
     if (q->top == q->bottom) {
         *success = 0;
-        return nullptr;
+        return NULL;
     }
 
     unsigned int num = q->bottom % q->size;
 
     if (q->queue[num]) {
         Group_Audio_Packet *ret = q->queue[num];
-        q->queue[num] = nullptr;
+        q->queue[num] = NULL;
         ++q->bottom;
         *success = 1;
         return ret;
@@ -148,11 +148,11 @@ static Group_Audio_Packet *dequeue(Group_JitterBuffer *q, int *success)
     if ((uint32_t)(q->top - q->bottom) > q->capacity) {
         ++q->bottom;
         *success = 2;
-        return nullptr;
+        return NULL;
     }
 
     *success = 0;
-    return nullptr;
+    return NULL;
 }
 
 typedef struct {
@@ -190,7 +190,7 @@ static int recreate_encoder(Group_AV *group_av)
 {
     if (group_av->audio_encoder) {
         opus_encoder_destroy(group_av->audio_encoder);
-        group_av->audio_encoder = nullptr;
+        group_av->audio_encoder = NULL;
     }
 
     int rc = OPUS_OK;
@@ -199,7 +199,7 @@ static int recreate_encoder(Group_AV *group_av)
 
     if (rc != OPUS_OK) {
         LOGGER_ERROR(group_av->log, "Error while starting audio encoder: %s", opus_strerror(rc));
-        group_av->audio_encoder = nullptr;
+        group_av->audio_encoder = NULL;
         return -1;
     }
 
@@ -208,7 +208,7 @@ static int recreate_encoder(Group_AV *group_av)
     if (rc != OPUS_OK) {
         LOGGER_ERROR(group_av->log, "Error while setting encoder ctl: %s", opus_strerror(rc));
         opus_encoder_destroy(group_av->audio_encoder);
-        group_av->audio_encoder = nullptr;
+        group_av->audio_encoder = NULL;
         return -1;
     }
 
@@ -217,7 +217,7 @@ static int recreate_encoder(Group_AV *group_av)
     if (rc != OPUS_OK) {
         LOGGER_ERROR(group_av->log, "Error while setting encoder ctl: %s", opus_strerror(rc));
         opus_encoder_destroy(group_av->audio_encoder);
-        group_av->audio_encoder = nullptr;
+        group_av->audio_encoder = NULL;
         return -1;
     }
 
@@ -228,13 +228,13 @@ static Group_AV *new_group_av(Logger *log, Group_Chats *g_c, void (*audio_callba
                               const int16_t *, unsigned int, uint8_t, uint32_t, void *), void *userdata)
 {
     if (!g_c) {
-        return nullptr;
+        return NULL;
     }
 
     Group_AV *group_av = (Group_AV *)calloc(1, sizeof(Group_AV));
 
     if (!group_av) {
-        return nullptr;
+        return NULL;
     }
 
     group_av->log = log;
@@ -296,7 +296,7 @@ static int decode_audio_packet(Group_AV *group_av, Group_Peer_AV *peer_av, uint3
         return -1;
     }
 
-    int16_t *out_audio = nullptr;
+    int16_t *out_audio = NULL;
     int out_audio_samples = 0;
 
     unsigned int sample_rate = 48000;
@@ -317,7 +317,7 @@ static int decode_audio_packet(Group_AV *group_av, Group_Peer_AV *peer_av, uint3
         if (channels != peer_av->decoder_channels) {
             if (peer_av->audio_decoder) {
                 opus_decoder_destroy(peer_av->audio_decoder);
-                peer_av->audio_decoder = nullptr;
+                peer_av->audio_decoder = NULL;
             }
 
             int rc;
@@ -366,7 +366,7 @@ static int decode_audio_packet(Group_AV *group_av, Group_Peer_AV *peer_av, uint3
             return -1;
         }
 
-        out_audio_samples = opus_decode(peer_av->audio_decoder, nullptr, 0, out_audio, peer_av->last_packet_samples, 1);
+        out_audio_samples = opus_decode(peer_av->audio_decoder, NULL, 0, out_audio, peer_av->last_packet_samples, 1);
 
         if (out_audio_samples <= 0) {
             free(out_audio);
@@ -432,7 +432,7 @@ static int groupchat_enable_av(Logger *log, Group_Chats *g_c, uint32_t groupnumb
 {
     Group_AV *group_av = new_group_av(log, g_c, audio_callback, userdata);
 
-    if (group_av == nullptr) {
+    if (group_av == NULL) {
         return -1;
     }
 

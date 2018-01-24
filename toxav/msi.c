@@ -104,21 +104,21 @@ void msi_register_callback(MSISession *session, msi_action_cb *callback, MSICall
 }
 MSISession *msi_new(Messenger *m)
 {
-    if (m == nullptr) {
-        return nullptr;
+    if (m == NULL) {
+        return NULL;
     }
 
     MSISession *retu = (MSISession *)calloc(sizeof(MSISession), 1);
 
-    if (retu == nullptr) {
+    if (retu == NULL) {
         LOGGER_ERROR(m->log, "Allocation failed! Program might misbehave!");
-        return nullptr;
+        return NULL;
     }
 
     if (create_recursive_mutex(retu->mutex) != 0) {
         LOGGER_ERROR(m->log, "Failed to init mutex! Program might misbehave");
         free(retu);
-        return nullptr;
+        return NULL;
     }
 
     retu->messenger = m;
@@ -133,12 +133,12 @@ MSISession *msi_new(Messenger *m)
 }
 int msi_kill(MSISession *session, Logger *log)
 {
-    if (session == nullptr) {
+    if (session == NULL) {
         LOGGER_ERROR(log, "Tried to terminate non-existing session");
         return -1;
     }
 
-    m_callback_msi_packet((struct Messenger *) session->messenger, nullptr, nullptr);
+    m_callback_msi_packet((struct Messenger *) session->messenger, NULL, NULL);
 
     if (pthread_mutex_trylock(session->mutex) != 0) {
         LOGGER_ERROR(session->messenger->log, "Failed to acquire lock on msi mutex");
@@ -179,7 +179,7 @@ int msi_invite(MSISession *session, MSICall **call, uint32_t friend_number, uint
         return -1;
     }
 
-    if (get_call(session, friend_number) != nullptr) {
+    if (get_call(session, friend_number) != NULL) {
         LOGGER_ERROR(session->messenger->log, "Already in a call");
         pthread_mutex_unlock(session->mutex);
         return -1;
@@ -187,7 +187,7 @@ int msi_invite(MSISession *session, MSICall **call, uint32_t friend_number, uint
 
     (*call) = new_call(session, friend_number);
 
-    if (*call == nullptr) {
+    if (*call == NULL) {
         pthread_mutex_unlock(session->mutex);
         return -1;
     }
@@ -278,6 +278,7 @@ int msi_answer(MSICall *call, uint8_t capabilities)
 
     return 0;
 }
+
 int msi_change_capabilities(MSICall *call, uint8_t capabilities)
 {
     if (!call || !call->session) {
@@ -499,8 +500,8 @@ static MSICall *get_call(MSISession *session, uint32_t friend_number)
 {
     assert(session);
 
-    if (session->calls == nullptr || session->calls_tail < friend_number) {
-        return nullptr;
+    if (session->calls == NULL || session->calls_tail < friend_number) {
+        return NULL;
     }
 
     return session->calls[friend_number];
@@ -511,28 +512,28 @@ MSICall *new_call(MSISession *session, uint32_t friend_number)
 
     MSICall *rc = (MSICall *)calloc(sizeof(MSICall), 1);
 
-    if (rc == nullptr) {
-        return nullptr;
+    if (rc == NULL) {
+        return NULL;
     }
 
     rc->session = session;
     rc->friend_number = friend_number;
 
-    if (session->calls == nullptr) { /* Creating */
+    if (session->calls == NULL) { /* Creating */
         session->calls = (MSICall **)calloc(sizeof(MSICall *), friend_number + 1);
 
-        if (session->calls == nullptr) {
+        if (session->calls == NULL) {
             free(rc);
-            return nullptr;
+            return NULL;
         }
 
         session->calls_tail = session->calls_head = friend_number;
     } else if (session->calls_tail < friend_number) { /* Appending */
         MSICall **tmp = (MSICall **)realloc(session->calls, sizeof(MSICall *) * (friend_number + 1));
 
-        if (tmp == nullptr) {
+        if (tmp == NULL) {
             free(rc);
-            return nullptr;
+            return NULL;
         }
 
         session->calls = tmp;
@@ -541,7 +542,7 @@ MSICall *new_call(MSISession *session, uint32_t friend_number)
         uint32_t i = session->calls_tail + 1;
 
         for (; i < friend_number; i ++) {
-            session->calls[i] = nullptr;
+            session->calls[i] = NULL;
         }
 
         rc->prev = session->calls[session->calls_tail];
@@ -560,7 +561,7 @@ MSICall *new_call(MSISession *session, uint32_t friend_number)
 void kill_call(MSICall *call)
 {
     /* Assume that session mutex is locked */
-    if (call == nullptr) {
+    if (call == NULL) {
         return;
     }
 
@@ -587,7 +588,7 @@ void kill_call(MSICall *call)
         goto CLEAR_CONTAINER;
     }
 
-    session->calls[call->friend_number] = nullptr;
+    session->calls[call->friend_number] = NULL;
     free(call);
     return;
 
@@ -595,7 +596,7 @@ CLEAR_CONTAINER:
     session->calls_head = session->calls_tail = 0;
     free(session->calls);
     free(call);
-    session->calls = nullptr;
+    session->calls = NULL;
 }
 void on_peer_status(Messenger *m, uint32_t friend_number, uint8_t status, void *data)
 {
@@ -609,7 +610,7 @@ void on_peer_status(Messenger *m, uint32_t friend_number, uint8_t status, void *
             pthread_mutex_lock(session->mutex);
             MSICall *call = get_call(session, friend_number);
 
-            if (call == nullptr) {
+            if (call == NULL) {
                 pthread_mutex_unlock(session->mutex);
                 return;
             }
@@ -803,7 +804,7 @@ void handle_msi_packet(Messenger *m, uint32_t friend_number, const uint8_t *data
     pthread_mutex_lock(session->mutex);
     MSICall *call = get_call(session, friend_number);
 
-    if (call == nullptr) {
+    if (call == NULL) {
         if (msg.request.value != requ_init) {
             send_error(m, friend_number, msi_EStrayMessage);
             pthread_mutex_unlock(session->mutex);
@@ -812,7 +813,7 @@ void handle_msi_packet(Messenger *m, uint32_t friend_number, const uint8_t *data
 
         call = new_call(session, friend_number);
 
-        if (call == nullptr) {
+        if (call == NULL) {
             send_error(m, friend_number, msi_ESystem);
             pthread_mutex_unlock(session->mutex);
             return;

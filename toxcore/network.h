@@ -316,6 +316,12 @@ typedef int (*packet_handler_callback)(void *object, IP_Port ip_port, const uint
 
 typedef struct Networking_Core Networking_Core;
 
+// 64 bit hton and ntoh functions ------
+#define htonll(x) ((1==htonl(1)) ? (x) : ((uint64_t)htonl((x) & 0xFFFFFFFF) << 32) | htonl((x) >> 32))
+#define ntohll(x) ((1==ntohl(1)) ? (x) : ((uint64_t)ntohl((x) & 0xFFFFFFFF) << 32) | ntohl((x) >> 32))
+// 64 bit hton and ntoh functions ------
+
+
 Family net_family(const Networking_Core *net);
 uint16_t net_port(const Networking_Core *net);
 
