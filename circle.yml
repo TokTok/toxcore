@@ -16,6 +16,7 @@ dependencies:
   - sudo apt-get update
   - sudo apt-get install astyle/trusty-backports
   - sudo apt-get install clang
+  - sudo apt-get install astyle ; exit 0
   - sudo apt-get install build-essential libtool autotools-dev automake checkinstall check git yasm
   - sudo apt-get install libopus-dev libvpx-dev pkg-config
 

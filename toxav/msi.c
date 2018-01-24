@@ -277,6 +277,7 @@ int msi_answer(MSICall *call, uint8_t capabilities)
 
     return 0;
 }
+
 int msi_change_capabilities(MSICall *call, uint8_t capabilities)
 {
     if (!call || !call->session) {
