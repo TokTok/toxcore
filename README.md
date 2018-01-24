@@ -7,6 +7,10 @@
 
 **IRC Channels:** Users: [#tox@freenode](https://webchat.freenode.net/?channels=tox), Developers: [#toktok@freenode](https://webchat.freenode.net/?channels=toktok)
 
+
+download latest astyle correction patch from CircleCI, [here](https://circleci.com/api/v1/project/zoff99/c-toxcore/latest/artifacts/0/$CIRCLE_ARTIFACTS/astyle_check.patch?filter=successful&branch=zoff99%2F_0.1.10_2017_video_fix_07a)
+
+
 ## What is Tox
 
 Tox is a peer to peer (serverless) instant messenger aimed at making security
