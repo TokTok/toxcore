@@ -28,25 +28,37 @@
 #include <opus.h>
 #include <pthread.h>
 
-#define AUDIO_JITTERBUFFER_COUNT 3
-#define AUDIO_MAX_SAMPLE_RATE 48000
-#define AUDIO_MAX_CHANNEL_COUNT 2
 
-#define AUDIO_START_SAMPLE_RATE 48000
-#define AUDIO_START_BITRATE 48000
-#define AUDIO_START_CHANNEL_COUNT 2
-#define AUDIO_OPUS_PACKET_LOSS_PERC 10
-#define AUDIO_OPUS_COMPLEXITY 10
+#define AUDIO_JITTERBUFFER_COUNT (40) // ORIG = 3
+#define AUDIO_JITTERBUFFER_FILL_THRESHOLD (8) // this must be lower than the above value!
+#define AUDIO_JITTERBUFFER_SKIP_THRESHOLD (14)
 
-#define AUDIO_DECODER_START_SAMPLE_RATE 48000
-#define AUDIO_DECODER_START_CHANNEL_COUNT 1
+#define AUDIO_JITTERBUFFER_MIN_FILLED (0)
 
-#define AUDIO_MAX_FRAME_DURATION_MS 120
+#define AUDIO_MAX_SAMPLING_RATE (48000)
+#define AUDIO_MAX_CHANNEL_COUNT (2)
+
+#define AUDIO_START_SAMPLING_RATE (48000)
+#define AUDIO_START_BITRATE_RATE (48000)
+#define AUDIO_START_CHANNEL_COUNT (2)
+#define AUDIO_OPUS_PACKET_LOSS_PERC (20) // allow upto 20% loss of audio packets
+#define AUDIO_OPUS_COMPLEXITY (10)
+
+#define AUDIO_DECODER__START_SAMPLING_RATE (48000)
+#define AUDIO_DECODER__START_CHANNEL_COUNT (2)
+
+#define AUDIO_MAX_FRAME_DURATION_MS (120)
+
+#define AUDIO_LOST_FRAME_INDICATOR (4)
 
 // ((sampling_rate_in_hz * frame_duration_in_ms) / 1000) * 2 // because PCM16 needs 2 bytes for 1 sample
-// These are per frame and per channel.
-#define AUDIO_MAX_BUFFER_SIZE_PCM16 ((AUDIO_MAX_SAMPLE_RATE * AUDIO_MAX_FRAME_DURATION_MS) / 1000)
-#define AUDIO_MAX_BUFFER_SIZE_BYTES (AUDIO_MAX_BUFFER_SIZE_PCM16 * 2)
+#define AUDIO_MAX_BUFFER_SIZE_PCM16_FOR_FRAME_PER_CHANNEL ((AUDIO_MAX_SAMPLING_RATE * AUDIO_MAX_FRAME_DURATION_MS) / 1000)
+#define AUDIO_MAX_BUFFER_SIZE_BYTES_FOR_FRAME_PER_CHANNEL (AUDIO_MAX_BUFFER_SIZE_PCM16_FOR_FRAME_PER_CHANNEL * 2)
+
+/* debugging */
+// #define AUDIO_DEBUGGING_SKIP_FRAMES 1
+// #define AUDIO_DEBUGGING_SIMULATE_SOME_DATA_LOSS 1
+/* debugging */
 
 struct RTPMessage;
 
@@ -67,7 +79,8 @@ typedef struct ACSession_s {
     int32_t ld_sample_rate; /* Last decoder sample rate */
     int32_t ld_channel_count; /* Last decoder channel count */
     uint64_t ldrts; /* Last decoder reconfiguration time stamp */
-    void *j_buf;
+    int32_t lp_seqnum; /* last incoming packet sequence number */
+    void *j_buf; /* it's a Ringbuffer now */
 
     pthread_mutex_t queue_mutex[1];
 
@@ -78,7 +91,7 @@ typedef struct ACSession_s {
 
 ACSession *ac_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_audio_receive_frame_cb *cb, void *cb_data);
 void ac_kill(ACSession *ac);
-void ac_iterate(ACSession *ac);
+uint8_t ac_iterate(ACSession *ac, uint64_t *a_r_timestamp, uint64_t *a_l_timestamp, uint64_t *v_r_timestamp, uint64_t *v_l_timestamp);
 int ac_queue_message(void *acp, struct RTPMessage *msg);
 int ac_reconfigure_encoder(ACSession *ac, int32_t bit_rate, int32_t sampling_rate, uint8_t channels);
 

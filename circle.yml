@@ -16,6 +16,7 @@ dependencies:
   - sudo apt-get update
   - sudo apt-get install astyle/trusty-backports
   - sudo apt-get install clang
+  - sudo apt-get install astyle ; exit 0
   - sudo apt-get install build-essential libtool autotools-dev automake checkinstall check git yasm
   - sudo apt-get install libopus-dev libvpx-dev pkg-config
 
@@ -137,4 +138,4 @@ compile:
 
 test:
   override:
-  - make VERBOSE=1 test || make VERBOSE=1 ARGS="--rerun-failed" test || make VERBOSE=1 ARGS="--rerun-failed" test || make VERBOSE=1 ARGS="--rerun-failed" test
+  - make test V=1 ARGS="-V" ; ex1=$? ; if [ $ex1 -ne 0 ]; then sleep 60; make test V=1 ARGS="-V" ; exit $? ; fi
