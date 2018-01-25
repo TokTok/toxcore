@@ -4,7 +4,7 @@
 
 GC_Announces_List *new_gca_list()
 {
-    GC_Announces_List *announces_list = (GC_Announces_List *)malloc(sizeof(GC_Announce));
+    GC_Announces_List *announces_list = malloc(sizeof(GC_Announces_List));
 
     if (announces_list) {
         announces_list->announces_count = 0;
@@ -19,6 +19,36 @@ void kill_gca(GC_Announces_List *announces_list)
     free(announces_list->announces);
     free(announces_list);
     announces_list = NULL;
+}
+
+static void remove_announces(GC_Announces *announces) {
+    if (announces->prev_announce) {
+        announces->prev_announce->next_announce = announces->next_announce;
+    }
+    if (announces->next_announce) {
+        announces->next_announce->prev_announce = announces->prev_announce;
+    }
+
+    free(announces);
+}
+
+void do_gca(GC_Announces_List *gc_announces_list) {
+    if (!gc_announces_list) {
+        return;
+    }
+
+    GC_Announces *announces = gc_announces_list->announces;
+    while (announces) {
+        if (announces->last_announce_received_timestamp <= unix_time() - GC_ANNOUNCE_SAVING_TIMEOUT) {
+            GC_Announces *announces_to_delete = announces;
+            announces = announces->next_announce;
+            remove_announces(announces_to_delete);
+            gc_announces_list->announces_count--;
+
+            continue;
+        }
+        announces = announces->next_announce;
+    }
 }
 
 /* Pack number of nodes into data of maxlength length.
@@ -105,18 +135,34 @@ int make_self_gca_node(const DHT *dht, GC_Announce_Node *node, const uint8_t *pu
 
 static GC_Announces* get_announces_by_chat_id(const GC_Announces_List *gc_announces_list,  const uint8_t *chat_id)
 {
-    int i;
-    for (i = 0; i < gc_announces_list->announces_count; i++) {
-        int index = i % MAX_GCA_SAVED_ANNOUNCES_PER_GC;
-        if (!memcmp(gc_announces_list->announces[index].chat_id, chat_id, CHAT_ID_SIZE)) {
-            return &gc_announces_list->announces[index];
+    GC_Announces *announces = gc_announces_list->announces;
+    while (announces) {
+        if (!memcmp(announces->chat_id, chat_id, CHAT_ID_SIZE)) {
+            return announces;
         }
+        announces = announces->next_announce;
     }
 
     return NULL;
 }
 
-int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Announce *gc_announces, uint8_t max_nodes,
+bool cleanup_gca(GC_Announces_List *gc_announces_list, const uint8_t *chat_id) {
+    if (!gc_announces_list || !chat_id) {
+        return false;
+    }
+
+    GC_Announces *announces = get_announces_by_chat_id(gc_announces_list, chat_id);
+    if (announces) {
+        remove_announces(announces);
+        gc_announces_list->announces_count--;
+
+        return true;
+    }
+
+    return false;
+}
+
+int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Peer_Announce *gc_announces, uint8_t max_nodes,
                      const uint8_t *chat_id, const uint8_t *except_public_key)
 {
     if (!gc_announces || !gc_announces_list || !chat_id || !max_nodes || !except_public_key) {
@@ -147,7 +193,7 @@ int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Announce *gc_annou
         }
 
         if (!already_added) {
-            memcpy(&gc_announces[gc_announces_count], &announces->announces[index], sizeof(GC_Announce));
+            memcpy(&gc_announces[gc_announces_count], &announces->announces[index], sizeof(GC_Peer_Announce));
             gc_announces_count++;
         }
     }
@@ -155,7 +201,7 @@ int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Announce *gc_annou
     return gc_announces_count;
 }
 
-GC_Announce* add_gc_announce(GC_Announces_List *gc_announces_list, const uint8_t *node,
+GC_Peer_Announce* add_gc_announce(GC_Announces_List *gc_announces_list, const Node_format *node,
                              const uint8_t *chat_id, const uint8_t *peer_id)
 {
     if (!gc_announces_list || !node || !chat_id || !peer_id) {
@@ -165,28 +211,28 @@ GC_Announce* add_gc_announce(GC_Announces_List *gc_announces_list, const uint8_t
     GC_Announces *announces = get_announces_by_chat_id(gc_announces_list, chat_id);
     if (!announces) {
         gc_announces_list->announces_count++;
-        gc_announces_list->announces = realloc(gc_announces_list->announces, gc_announces_list->announces_count * sizeof(GC_Announces));
-        if (!gc_announces_list->announces) {
-            gc_announces_list->announces_count = 0;
-
-            return NULL;
-        }
-        announces = &gc_announces_list->announces[gc_announces_list->announces_count - 1];
+        announces = malloc(sizeof(GC_Announces));
         announces->index = 0;
+        announces->prev_announce = NULL;
+        if (gc_announces_list->announces) {
+            gc_announces_list->announces->prev_announce = announces;
+        }
+        announces->next_announce = gc_announces_list->announces;
+        gc_announces_list->announces = announces;
         memcpy(announces->chat_id, chat_id, CHAT_ID_SIZE);
     }
     uint64_t index = announces->index % MAX_GCA_SAVED_ANNOUNCES_PER_GC;
     announces->last_announce_received_timestamp = unix_time();
-    GC_Announce *gc_announce = &announces->announces[index];
-    memcpy(&gc_announce->peer_public_key, peer_id, ENC_PUBLIC_KEY);
-    memcpy(&gc_announce->node, node, sizeof(Node_format));
-    gc_announce->timestamp = unix_time();
+    GC_Peer_Announce *gc_peer_announce = &announces->announces[index];
+    memcpy(&gc_peer_announce->peer_public_key, peer_id, ENC_PUBLIC_KEY);
+    memcpy(&gc_peer_announce->node, node, sizeof(Node_format));
+    gc_peer_announce->timestamp = unix_time();
     announces->index++;
     // TODO; lock
-    return gc_announce;
+    return gc_peer_announce;
 }
 
-GC_Announce* add_self_announce(GC_Announces_List *gc_announces_list, const uint8_t *chat_id, Node_format *node)
+GC_Peer_Announce* add_self_announce(GC_Announces_List *gc_announces_list, const uint8_t *chat_id, Node_format *node)
 {
     return add_gc_announce(gc_announces_list, node, chat_id, 0);
 }

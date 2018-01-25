@@ -24,20 +24,20 @@
 #include "DHT.h"
 #include "stdbool.h"
 
-#define MAX_GCA_SELF_REQUESTS 30
 #define MAX_GCA_SAVED_ANNOUNCES_PER_GC 100
-#define GC_ANNOUNCE_PACKED_SIZE (sizeof(GC_Announce))
+#define GC_ANNOUNCE_PACKED_SIZE (sizeof(GC_Peer_Announce))
+#define GC_ANNOUNCE_SAVING_TIMEOUT 30
 
 typedef struct {
     uint8_t public_key[ENC_PUBLIC_KEY];
     IP_Port ip_port;
 } GC_Announce_Node;
 
-typedef struct GC_Announce GC_Announce;
+typedef struct GC_Peer_Announce GC_Peer_Announce;
 typedef struct GC_Announces GC_Announces;
 typedef struct GC_Announces_List GC_Announces_List;
 
-struct GC_Announce {
+struct GC_Peer_Announce {
     uint64_t timestamp;
     Node_format node;
     uint8_t peer_public_key[ENC_PUBLIC_KEY];
@@ -48,7 +48,10 @@ struct GC_Announces {
     uint64_t index;
     uint64_t last_announce_received_timestamp;
 
-    GC_Announce announces[MAX_GCA_SAVED_ANNOUNCES_PER_GC];
+    GC_Peer_Announce announces[MAX_GCA_SAVED_ANNOUNCES_PER_GC];
+
+    GC_Announces *next_announce;
+    GC_Announces *prev_announce;
 };
 
 struct GC_Announces_List {
@@ -60,6 +63,10 @@ struct GC_Announces_List {
 GC_Announces_List *new_gca_list();
 
 void kill_gca(GC_Announces_List *announces_list);
+
+void do_gca(GC_Announces_List *gc_announces_list);
+
+bool cleanup_gca(GC_Announces_List *announces_list, const uint8_t *chat_id);
 
 /* Pack number of nodes into data of maxlength length.
  *
@@ -86,13 +93,13 @@ int unpack_gca_nodes(GC_Announce_Node *nodes, uint32_t max_num_nodes, uint16_t *
 int make_self_gca_node(const DHT *dht, GC_Announce_Node *node, const uint8_t *client_id);
 
 
-int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Announce *gc_announces, uint8_t max_nodes,
+int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Peer_Announce *gc_announces, uint8_t max_nodes,
                      const uint8_t *chat_id, const uint8_t *except_public_key);
 
-GC_Announce* add_gc_announce(GC_Announces_List *gc_announces_list, const uint8_t *node,
+GC_Peer_Announce* add_gc_announce(GC_Announces_List *gc_announces_list, const Node_format *node,
                              const uint8_t *chat_id, const uint8_t *peer_id);
 
-GC_Announce* add_self_announce(GC_Announces_List *gc_announces_list, const uint8_t *chat_id, Node_format *node);
+GC_Peer_Announce* add_self_announce(GC_Announces_List *gc_announces_list, const uint8_t *chat_id, Node_format *node);
 
 //TODO: pack && unpack announces?
 
