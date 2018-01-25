@@ -361,11 +361,11 @@ uint64_t current_time_monotonic(void)
 
 static uint32_t data_0(uint16_t buflen, const uint8_t *buffer)
 {
-    return buflen > 4 ? net_ntohl(*(const uint32_t *)&buffer[1]) : 0;
+    return buflen > 4 ? ntohl(*(const uint32_t *)&buffer[1]) : 0;
 }
 static uint32_t data_1(uint16_t buflen, const uint8_t *buffer)
 {
-    return buflen > 7 ? net_ntohl(*(const uint32_t *)&buffer[5]) : 0;
+    return buflen > 7 ? ntohl(*(const uint32_t *)&buffer[5]) : 0;
 }
 
 static void loglogdata(Logger *log, const char *message, const uint8_t *buffer,
@@ -376,17 +376,17 @@ static void loglogdata(Logger *log, const char *message, const uint8_t *buffer,
     if (res < 0) { /* Windows doesn't necessarily know %zu */
         LOGGER_TRACE(log, "[%2u] %s %3hu%c %s:%hu (%u: %s) | %04x%04x",
                      buffer[0], message, (buflen < 999 ? (uint16_t)buflen : 999), 'E',
-                     ip_ntoa(&ip_port.ip, ip_str, sizeof(ip_str)), net_ntohs(ip_port.port), errno,
+                     ip_ntoa(&ip_port.ip, ip_str, sizeof(ip_str)), ntohs(ip_port.port), errno,
                      strerror(errno), data_0(buflen, buffer), data_1(buflen, buffer));
     } else if ((res > 0) && ((size_t)res <= buflen)) {
         LOGGER_TRACE(log, "[%2u] %s %3zu%c %s:%hu (%u: %s) | %04x%04x",
                      buffer[0], message, (res < 999 ? (size_t)res : 999), ((size_t)res < buflen ? '<' : '='),
-                     ip_ntoa(&ip_port.ip, ip_str, sizeof(ip_str)), net_ntohs(ip_port.port), 0, "OK",
+                     ip_ntoa(&ip_port.ip, ip_str, sizeof(ip_str)), ntohs(ip_port.port), 0, "OK",
                      data_0(buflen, buffer), data_1(buflen, buffer));
     } else { /* empty or overwrite */
         LOGGER_TRACE(log, "[%2u] %s %zu%c%zu %s:%hu (%u: %s) | %04x%04x",
                      buffer[0], message, (size_t)res, (!res ? '!' : '>'), buflen,
-                     ip_ntoa(&ip_port.ip, ip_str, sizeof(ip_str)), net_ntohs(ip_port.port), 0, "OK",
+                     ip_ntoa(&ip_port.ip, ip_str, sizeof(ip_str)), ntohs(ip_port.port), 0, "OK",
                      data_0(buflen, buffer), data_1(buflen, buffer));
     }
 }
@@ -449,7 +449,7 @@ int sendpacket(Networking_Core *net, IP_Port ip_port, const uint8_t *data, uint1
 
             ip6.uint32[0] = 0;
             ip6.uint32[1] = 0;
-            ip6.uint32[2] = net_htonl(0xFFFF);
+            ip6.uint32[2] = htonl(0xFFFF);
             ip6.uint32[3] = ip_port.ip.ip4.uint32;
             fill_addr6(ip6, &addr6->sin6_addr);
 
@@ -795,7 +795,7 @@ Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint1
      *   it worked ok (which it did previously without a successful bind)
      */
     uint16_t port_to_try = port_from;
-    *portptr = net_htons(port_to_try);
+    *portptr = htons(port_to_try);
     int tries;
 
     for (tries = port_from; tries <= port_to; tries++) {
@@ -806,7 +806,7 @@ Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint1
 
             char ip_str[IP_NTOA_LEN];
             LOGGER_DEBUG(log, "Bound successfully to %s:%u", ip_ntoa(&ip, ip_str, sizeof(ip_str)),
-                         net_ntohs(temp->port));
+                         ntohs(temp->port));
 
             /* errno isn't reset on success, only set on failure, the failed
              * binds with parallel clients yield a -EPERM to the outside if
@@ -828,7 +828,7 @@ Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint1
             port_to_try = port_from;
         }
 
-        *portptr = net_htons(port_to_try);
+        *portptr = htons(port_to_try);
     }
 
     char ip_str[IP_NTOA_LEN];
@@ -1371,13 +1371,13 @@ int bind_to_port(Socket sock, int family, uint16_t port)
 
         addrsize = sizeof(struct sockaddr_in);
         addr4->sin_family = AF_INET;
-        addr4->sin_port = net_htons(port);
+        addr4->sin_port = htons(port);
     } else if (family == TOX_AF_INET6) {
         struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *)&addr;
 
         addrsize = sizeof(struct sockaddr_in6);
         addr6->sin6_family = AF_INET6;
-        addr6->sin6_port = net_htons(port);
+        addr6->sin6_port = htons(port);
     } else {
         return 0;
     }
@@ -1453,24 +1453,4 @@ Socket net_socket(int domain, int type, int protocol)
     int platform_type = make_socktype(type);
     int platform_prot = make_proto(protocol);
     return socket(platform_domain, platform_type, platform_prot);
-}
-
-uint32_t net_htonl(uint32_t hostlong)
-{
-    return htonl(hostlong);
-}
-
-uint16_t net_htons(uint16_t hostshort)
-{
-    return htons(hostshort);
-}
-
-uint32_t net_ntohl(uint32_t hostlong)
-{
-    return ntohl(hostlong);
-}
-
-uint16_t net_ntohs(uint16_t hostshort)
-{
-    return ntohs(hostshort);
 }

@@ -160,15 +160,8 @@ typedef struct IP_Port {
     uint16_t port;
 } IP_Port;
 
-/* Convert values between host and network byte order.
- */
-uint32_t net_htonl(uint32_t hostlong);
-uint16_t net_htons(uint16_t hostshort);
-uint32_t net_ntohl(uint32_t hostlong);
-uint16_t net_ntohs(uint16_t hostshort);
-
 /* Does the IP6 struct a contain an IPv4 address in an IPv6 one? */
-#define IPV6_IPV4_IN_V6(a) ((a.uint64[0] == 0) && (a.uint32[2] == net_htonl (0xffff)))
+#define IPV6_IPV4_IN_V6(a) ((a.uint64[0] == 0) && (a.uint32[2] == htonl (0xffff)))
 
 #define SIZE_IP4 4
 #define SIZE_IP6 16

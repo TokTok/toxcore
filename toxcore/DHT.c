@@ -648,9 +648,9 @@ static void update_client(Logger *log, int index, Client_data *client, IP_Port i
         LOGGER_TRACE(log, "coipil[%u]: switching ipv%d from %s:%u to %s:%u",
                      index, ip_version,
                      ip_ntoa(&assoc->ip_port.ip, ip_str, sizeof(ip_str)),
-                     net_ntohs(assoc->ip_port.port),
+                     ntohs(assoc->ip_port.port),
                      ip_ntoa(&ip_port.ip, ip_str, sizeof(ip_str)),
-                     net_ntohs(ip_port.port));
+                     ntohs(ip_port.port));
     }
 
     if (ip_is_lan(assoc->ip_port.ip) != 0 && ip_is_lan(ip_port.ip) == 0) {
@@ -2126,7 +2126,7 @@ static uint16_t NAT_getports(uint16_t *portlist, IP_Port *ip_portlist, uint16_t 
 
     for (uint32_t i = 0; i < len; ++i) {
         if (ip_equal(&ip_portlist[i].ip, &ip)) {
-            portlist[num] = net_ntohs(ip_portlist[i].port);
+            portlist[num] = ntohs(ip_portlist[i].port);
             ++num;
         }
     }
@@ -2156,7 +2156,7 @@ static void punch_holes(DHT *dht, IP ip, uint16_t *port_list, uint16_t numports,
     if (i == numports) { /* If all ports are the same, only try that one port. */
         IP_Port pinging;
         ip_copy(&pinging.ip, &ip);
-        pinging.port = net_htons(first_port);
+        pinging.port = htons(first_port);
         ping_send_request(dht->ping, pinging, dht->friends_list[friend_num].public_key);
     } else {
         for (i = 0; i < MAX_PUNCHING_PORTS; ++i) {
@@ -2168,7 +2168,7 @@ static void punch_holes(DHT *dht, IP ip, uint16_t *port_list, uint16_t numports,
             uint16_t port = port_list[index] + delta;
             IP_Port pinging;
             ip_copy(&pinging.ip, &ip);
-            pinging.port = net_htons(port);
+            pinging.port = htons(port);
             ping_send_request(dht->ping, pinging, dht->friends_list[friend_num].public_key);
         }
 
@@ -2182,7 +2182,7 @@ static void punch_holes(DHT *dht, IP ip, uint16_t *port_list, uint16_t numports,
 
         for (i = 0; i < MAX_PUNCHING_PORTS; ++i) {
             uint32_t it = i + dht->friends_list[friend_num].nat.punching_index2;
-            pinging.port = net_htons(port + it);
+            pinging.port = htons(port + it);
             ping_send_request(dht->ping, pinging, dht->friends_list[friend_num].public_key);
         }
 
