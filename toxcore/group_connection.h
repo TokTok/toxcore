@@ -82,6 +82,7 @@ struct GC_Connection {
     bool        handshaked; /* true if we've successfully handshaked with this peer */
     uint64_t    pending_handshake;
     uint8_t     pending_handshake_type;
+    bool        is_pending_handshake_response;
     bool        is_oob_handshake;
     uint8_t     oob_relay_pk[ENC_PUBLIC_KEY];
     bool        confirmed;  /* true if this peer has given us their info */

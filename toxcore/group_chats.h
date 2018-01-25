@@ -720,6 +720,6 @@ int handle_gc_invite_confirmed_packet(GC_Session *c, int friend_number, const ui
 
 GC_Chat *gc_get_group_by_public_key(const GC_Session *c, const uint8_t *public_key);
 
-int add_peers_from_announces(const GC_Session *gc_session, const GC_Chat *chat, GC_Announce *announces, uint8_t gc_announces_count);
+int add_peers_from_announces(const GC_Session *gc_session, const GC_Chat *chat, GC_Peer_Announce *announces, uint8_t gc_announces_count);
 
 #endif  /* GROUP_CHATS_H */
