@@ -794,7 +794,7 @@ static int handle_announce_response(void *object, IP_Port source, const uint8_t 
     }
 
     if (len_nodes + 2 < length - ONION_ANNOUNCE_RESPONSE_MIN_SIZE) {
-        GC_Announce announces[MAX_SENT_NODES];
+        GC_Peer_Announce announces[MAX_SENT_NODES];
         uint8_t gc_announces_count = plain[2 + ONION_PING_ID_SIZE + len_nodes];
 
         if (gc_announces_count > MAX_SENT_NODES) { // TODO: check real length everywhere!!!111

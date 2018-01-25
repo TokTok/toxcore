@@ -449,7 +449,7 @@ static int handle_gc_announce_request(Onion_Announce *onion_a, IP_Port source, c
 
     /*Respond with a announce response packet*/
     Node_format nodes_list[MAX_SENT_NODES];
-    GC_Announce gc_announces[MAX_SENT_NODES];
+    GC_Peer_Announce gc_announces[MAX_SENT_NODES];
     unsigned int num_nodes = get_close_nodes(onion_a->dht, plain + ONION_PING_ID_SIZE, nodes_list, 0,
                                              ip_is_lan(source.ip) == 0, 1);
     uint8_t nonce[CRYPTO_NONCE_SIZE];
@@ -487,7 +487,7 @@ static int handle_gc_announce_request(Onion_Announce *onion_a, IP_Port source, c
     pl[1 + ONION_PING_ID_SIZE] = (uint8_t)num_nodes;
 
     GC_Announces_List *gc_announces_list = onion_a->gc_announces_list;
-    GC_Announce *new_announce = add_gc_announce(gc_announces_list,
+    GC_Peer_Announce *new_announce = add_gc_announce(gc_announces_list,
                                                 plain + ONION_PING_ID_SIZE + ENC_PUBLIC_KEY * 2 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH,
                                                 plain + ONION_PING_ID_SIZE,
                                                 plain + ONION_PING_ID_SIZE + ENC_PUBLIC_KEY * 2 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH + sizeof(Node_format));
@@ -499,7 +499,7 @@ static int handle_gc_announce_request(Onion_Announce *onion_a, IP_Port source, c
     fprintf(stderr, "NUM_ANN: %d ", num_ann);
 
     pl[2 + ONION_PING_ID_SIZE + nodes_length] = num_ann;
-    size_t announces_length = num_ann * sizeof(GC_Announce);
+    size_t announces_length = num_ann * sizeof(GC_Peer_Announce);
 
     memcpy(pl + 3 + ONION_PING_ID_SIZE + nodes_length, gc_announces, announces_length);
 
