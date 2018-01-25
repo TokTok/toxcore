@@ -2731,6 +2731,7 @@ void do_messenger(Messenger *m, void *userdata)
     do_onion_client(m->onion_c);
     do_friend_connections(m->fr_c, userdata);
     do_gc(m->group_handler, userdata);
+    do_gca(m->mono_time, m->group_announce);
     do_friends(m, userdata);
     update_gc_friends_data(m);
     connection_status_callback(m, userdata);
