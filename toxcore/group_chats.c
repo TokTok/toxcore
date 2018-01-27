@@ -6103,6 +6103,8 @@ static int group_delete(GC_Session *c, GC_Chat *chat)
         return -1;
     }
 
+    m_remove_friend_gc(c->messenger, chat);
+
     mod_list_cleanup(chat);
     sanctions_list_cleanup(chat);
     kill_tcp_connections(chat->tcp_conn);
