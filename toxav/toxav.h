@@ -480,6 +480,7 @@ bool toxav_call_control(ToxAV *av, uint32_t friend_number, TOXAV_CALL_CONTROL co
  ******************************************************************************/
 
 
+
 typedef enum TOXAV_ERR_BIT_RATE_SET {
 
     /**
@@ -513,12 +514,14 @@ typedef enum TOXAV_ERR_BIT_RATE_SET {
      * This client is currently not in a call with the friend.
      */
     TOXAV_ERR_BIT_RATE_SET_FRIEND_NOT_IN_CALL,
+
     /**
      * The bit rate passed was not one of the supported values.
      */
     TOXAV_ERR_BIT_RATE_SET_INVALID_BIT_RATE,
 
 } TOXAV_ERR_BIT_RATE_SET;
+
 
 /**
  * @deprecated: function will be removed in c-toxcore 0.3.0
@@ -533,8 +536,7 @@ typedef enum TOXAV_ERR_BIT_RATE_SET {
  * video sending. Set to -1 to leave unchanged.
  *
  */
-bool toxav_bit_rate_set(ToxAV *av, uint32_t friend_number, int32_t audio_bit_rate,
-                        int32_t video_bit_rate, TOXAV_ERR_BIT_RATE_SET *error);
+bool toxav_bit_rate_set(ToxAV *av, uint32_t friend_number, int32_t audio_bit_rate, int32_t video_bit_rate);
 
 /**
  * Set the bit rate to be used in subsequent audio frames.

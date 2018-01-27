@@ -392,6 +392,7 @@ error for bit_rate_set {
      */
     SYNC,
     /**
+     * @deprecated: will be removed in c-toxcore 0.3.0
      * The audio bit rate passed was not one of the supported values.
      */
     INVALID_AUDIO_BIT_RATE,
@@ -401,7 +402,6 @@ error for bit_rate_set {
      */
     INVALID_VIDEO_BIT_RATE,
     /**
-     * @deprecated: will be removed in c-toxcore 0.3.0
      * The friend_number passed did not designate a valid friend.
      */
     FRIEND_NOT_FOUND,
