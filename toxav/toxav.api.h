@@ -387,26 +387,52 @@ bool call_control(uint32_t friend_number, CALL_CONTROL control) {
 
 
 error for bit_rate_set {
-  /**
-   * Synchronization error occurred.
-   */
-  SYNC,
-  /**
-   * The bit rate passed was not one of the supported values.
-   */
-  INVALID_BIT_RATE,
-  /**
-   * The friend_number passed did not designate a valid friend.
-   */
-  FRIEND_NOT_FOUND,
-  /**
-   * This client is currently not in a call with the friend.
-   */
-  FRIEND_NOT_IN_CALL,
+    /**
+     * Synchronization error occurred.
+     */
+    SYNC,
+    /**
+     * The audio bit rate passed was not one of the supported values.
+     */
+    INVALID_AUDIO_BIT_RATE,
+    /**
+     * @Deprecated: will be removed in c-toxcore 0.3.0
+     * The video bit rate passed was not one of the supported values.
+     */
+    INVALID_VIDEO_BIT_RATE,
+    /**
+     * @Deprecated: will be removed in c-toxcore 0.3.0
+     * The friend_number passed did not designate a valid friend.
+     */
+    FRIEND_NOT_FOUND,
+    /**
+     * This client is currently not in a call with the friend.
+     */
+    FRIEND_NOT_IN_CALL,
+    /**
+     * @New: this will be used instead of the deprecated values
+     * The bit rate passed was not one of the supported values.
+     */
+    INVALID_BIT_RATE,
 }
 
 namespace bit_rate {
   /**
+   * @Deprecated: function will be removed in c-toxcore 0.3.0
+   *
+   * Set the bit rate to be used in subsequent audio/video frames.
+   *
+   * @param friend_number The friend number of the friend for which to set the
+   * bit rate.
+   * @param audio_bit_rate The new audio bit rate in Kb/sec. Set to 0 to disable
+   * audio sending. Set to -1 to leave unchanged.
+   * @param video_bit_rate The new video bit rate in Kb/sec. Set to 0 to disable
+   * video sending. Set to -1 to leave unchanged.
+   *
+   */
+  bool set(uint32_t friend_number, int32_t audio_bit_rate, int32_t video_bit_rate);
+
+ /**
    * Set the bit rate to be used in subsequent audio frames.
    *
    * @param friend_number The friend number of the friend for which to set the
@@ -414,8 +440,8 @@ namespace bit_rate {
    * @param audio_bit_rate The new audio bit rate in Kb/sec. Set to 0 to disable.
    *
    */
-
   bool set_audio(uint32_t friend_number, uint32_t audio_bit_rate) with error for bit_rate_set;
+
   /**
    * Set the bit rate to be used in subsequent video frames.
    *
