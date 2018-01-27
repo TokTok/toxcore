@@ -544,7 +544,7 @@ bool toxav_bit_rate_set(ToxAV *av, uint32_t friend_number, int32_t audio_bit_rat
                                              audio_bit_rate, &error_audio);
     }
 
-    if (video_bit_rate >= 0) {
+    if ((video_bit_rate >= 0) && (res_audio == true) {
         res_video = toxav_bit_rate_set_video(av, friend_number,
                                              video_bit_rate, &error_video);
     }
