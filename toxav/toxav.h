@@ -537,7 +537,7 @@ typedef enum TOXAV_ERR_BIT_RATE_SET {
  *
  */
 bool toxav_bit_rate_set(ToxAV *av, uint32_t friend_number, int32_t audio_bit_rate,
-                        int32_t video_bit_rate, TOXAV_ERR_BIT_RATE_SET *error)
+                        int32_t video_bit_rate, TOXAV_ERR_BIT_RATE_SET *error);
 
 /**
  * Set the bit rate to be used in subsequent audio frames.
