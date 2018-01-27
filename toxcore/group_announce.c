@@ -202,7 +202,7 @@ int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Peer_Announce *gc_
 }
 
 GC_Peer_Announce* add_gc_announce(GC_Announces_List *gc_announces_list, const Node_format *node,
-                             const uint8_t *chat_id, const uint8_t *peer_id)
+                                  const uint8_t *chat_id, const uint8_t *peer_id)
 {
     if (!gc_announces_list || !node || !chat_id || !peer_id) {
         return NULL;
