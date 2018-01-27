@@ -262,7 +262,7 @@ int main(int argc, char *argv[])
     }
 
     Onion *onion = new_onion(dht);
-    GC_Announces_List *gc_announces_list = new_gca_list()
+    GC_Announces_List *gc_announces_list = new_gca_list();
     Onion_Announce *onion_a = new_onion_announce(dht, gc_announces_list);
 
     if (!(onion && onion_a)) {
