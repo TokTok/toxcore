@@ -396,12 +396,12 @@ error for bit_rate_set {
      */
     INVALID_AUDIO_BIT_RATE,
     /**
-     * @Deprecated: will be removed in c-toxcore 0.3.0
+     * @deprecated: will be removed in c-toxcore 0.3.0
      * The video bit rate passed was not one of the supported values.
      */
     INVALID_VIDEO_BIT_RATE,
     /**
-     * @Deprecated: will be removed in c-toxcore 0.3.0
+     * @deprecated: will be removed in c-toxcore 0.3.0
      * The friend_number passed did not designate a valid friend.
      */
     FRIEND_NOT_FOUND,
@@ -410,7 +410,6 @@ error for bit_rate_set {
      */
     FRIEND_NOT_IN_CALL,
     /**
-     * @New: this will be used instead of the deprecated values
      * The bit rate passed was not one of the supported values.
      */
     INVALID_BIT_RATE,
@@ -418,7 +417,7 @@ error for bit_rate_set {
 
 namespace bit_rate {
   /**
-   * @Deprecated: function will be removed in c-toxcore 0.3.0
+   * @deprecated: function will be removed in c-toxcore 0.3.0
    *
    * Set the bit rate to be used in subsequent audio/video frames.
    *

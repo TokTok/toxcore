@@ -493,13 +493,13 @@ typedef enum TOXAV_ERR_BIT_RATE_SET {
     TOXAV_ERR_BIT_RATE_SET_SYNC,
 
     /**
-     * @Deprecated: will be removed in c-toxcore 0.3.0
+     * @deprecated: will be removed in c-toxcore 0.3.0
      * The audio bit rate passed was not one of the supported values.
      */
     TOXAV_ERR_BIT_RATE_SET_INVALID_AUDIO_BIT_RATE,
 
     /**
-     * @Deprecated: will be removed in c-toxcore 0.3.0
+     * @deprecated: will be removed in c-toxcore 0.3.0
      * The video bit rate passed was not one of the supported values.
      */
     TOXAV_ERR_BIT_RATE_SET_INVALID_VIDEO_BIT_RATE,
@@ -514,7 +514,6 @@ typedef enum TOXAV_ERR_BIT_RATE_SET {
      */
     TOXAV_ERR_BIT_RATE_SET_FRIEND_NOT_IN_CALL,
     /**
-     * @New: this will be used instead of the deprecated values
      * The bit rate passed was not one of the supported values.
      */
     TOXAV_ERR_BIT_RATE_SET_INVALID_BIT_RATE,
@@ -522,7 +521,7 @@ typedef enum TOXAV_ERR_BIT_RATE_SET {
 } TOXAV_ERR_BIT_RATE_SET;
 
 /**
- * @Deprecated: function will be removed in c-toxcore 0.3.0
+ * @deprecated: function will be removed in c-toxcore 0.3.0
  *
  * Set the bit rate to be used in subsequent audio/video frames.
  *

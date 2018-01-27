@@ -527,7 +527,7 @@ END:
 }
 
 /*
- * @Deprecated: function will be removed in c-toxcore 0.3.0
+ * @deprecated: function will be removed in c-toxcore 0.3.0
  */
 bool toxav_bit_rate_set(ToxAV *av, uint32_t friend_number, int32_t audio_bit_rate,
                         int32_t video_bit_rate, TOXAV_ERR_BIT_RATE_SET *error)
