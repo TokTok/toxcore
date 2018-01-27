@@ -480,7 +480,6 @@ bool toxav_call_control(ToxAV *av, uint32_t friend_number, TOXAV_CALL_CONTROL co
  ******************************************************************************/
 
 
-
 typedef enum TOXAV_ERR_BIT_RATE_SET {
 
     /**
@@ -494,9 +493,16 @@ typedef enum TOXAV_ERR_BIT_RATE_SET {
     TOXAV_ERR_BIT_RATE_SET_SYNC,
 
     /**
-     * The bit rate passed was not one of the supported values.
+     * @Deprecated: will be removed in c-toxcore 0.3.0
+     * The audio bit rate passed was not one of the supported values.
      */
-    TOXAV_ERR_BIT_RATE_SET_INVALID_BIT_RATE,
+    TOXAV_ERR_BIT_RATE_SET_INVALID_AUDIO_BIT_RATE,
+
+    /**
+     * @Deprecated: will be removed in c-toxcore 0.3.0
+     * The video bit rate passed was not one of the supported values.
+     */
+    TOXAV_ERR_BIT_RATE_SET_INVALID_VIDEO_BIT_RATE,
 
     /**
      * The friend_number passed did not designate a valid friend.
@@ -507,9 +513,29 @@ typedef enum TOXAV_ERR_BIT_RATE_SET {
      * This client is currently not in a call with the friend.
      */
     TOXAV_ERR_BIT_RATE_SET_FRIEND_NOT_IN_CALL,
+    /**
+     * @New: this will be used instead of the deprecated values
+     * The bit rate passed was not one of the supported values.
+     */
+    TOXAV_ERR_BIT_RATE_SET_INVALID_BIT_RATE,
 
 } TOXAV_ERR_BIT_RATE_SET;
 
+/**
+ * @Deprecated: function will be removed in c-toxcore 0.3.0
+ *
+ * Set the bit rate to be used in subsequent audio/video frames.
+ *
+ * @param friend_number The friend number of the friend for which to set the
+ * bit rate.
+ * @param audio_bit_rate The new audio bit rate in Kb/sec. Set to 0 to disable
+ * audio sending. Set to -1 to leave unchanged.
+ * @param video_bit_rate The new video bit rate in Kb/sec. Set to 0 to disable
+ * video sending. Set to -1 to leave unchanged.
+ *
+ */
+bool toxav_bit_rate_set(ToxAV *av, uint32_t friend_number, int32_t audio_bit_rate,
+                        int32_t video_bit_rate, TOXAV_ERR_BIT_RATE_SET *error);
 
 /**
  * Set the bit rate to be used in subsequent audio frames.

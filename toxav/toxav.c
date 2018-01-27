@@ -525,6 +525,58 @@ END:
 
     return rc == TOXAV_ERR_CALL_CONTROL_OK;
 }
+
+/*
+ * @Deprecated: function will be removed in c-toxcore 0.3.0
+ */
+bool toxav_bit_rate_set(ToxAV *av, uint32_t friend_number, int32_t audio_bit_rate,
+                        int32_t video_bit_rate, TOXAV_ERR_BIT_RATE_SET *error)
+{
+    TOXAV_ERR_BIT_RATE_SET rc = TOXAV_ERR_BIT_RATE_SET_OK;
+    TOXAV_ERR_BIT_RATE_SET error_audio = TOXAV_ERR_BIT_RATE_SET_OK;
+    TOXAV_ERR_BIT_RATE_SET error_video = TOXAV_ERR_BIT_RATE_SET_OK;
+
+    bool res_audio = true;
+    bool res_video = true;
+
+    if (audio_bit_rate >= 0)
+    {
+        res_audio = toxav_bit_rate_set_audio(av, friend_number,
+        audio_bit_rate, &error_audio);
+    }
+
+    if (video_bit_rate >= 0)
+    {
+        res_video = toxav_bit_rate_set_video(av, friend_number,
+        video_bit_rate, &error_video);
+    }
+    
+    if (error_audio == TOXAV_ERR_BIT_RATE_SET_INVALID_BIT_RATE)
+    {
+        error = TOXAV_ERR_BIT_RATE_SET_INVALID_AUDIO_BIT_RATE
+    }
+    
+    if ((error_video == TOXAV_ERR_BIT_RATE_SET_INVALID_BIT_RATE) &&
+       (error != TOXAV_ERR_BIT_RATE_SET_OK))
+    {
+        error = TOXAV_ERR_BIT_RATE_SET_INVALID_VIDEO_BIT_RATE
+    }
+    
+    if (error == TOXAV_ERR_BIT_RATE_SET_OK)
+    {
+        if (error_audio != TOXAV_ERR_BIT_RATE_SET_OK)
+        {
+            error = error_audio;
+        }
+        else if (error_video != TOXAV_ERR_BIT_RATE_SET_OK)
+        {
+            error = error_audio;
+        }
+    }
+
+    return res_audio || res_video;
+}
+
 bool toxav_bit_rate_set_audio(ToxAV *av, uint32_t friend_number, uint32_t audio_bit_rate,
                               TOXAV_ERR_BIT_RATE_SET *error)
 {
