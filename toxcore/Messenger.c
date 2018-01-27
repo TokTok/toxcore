@@ -3281,7 +3281,7 @@ static State_Load_Status groups_load(Messenger *m, const uint8_t *data, uint32_t
         else {
             GC_Chat *chat = gc_get_group(m->group_handler, ret);
             if (chat->shared_state.privacy_state == GI_PUBLIC) {
-                //m_add_friend_gc(m, chat);
+                m_add_friend_gc(m, chat);
             }
         }
     }
