@@ -476,7 +476,7 @@ namespace audio {
      *
      * @param friend_number The friend number of the friend for which to set the
      * bit rate.
-     * @param audio_bit_rate The new audio bit rate in Kb/sec. Set to 0 to disable.
+     * @param bit_rate The new audio bit rate in Kb/sec. Set to 0 to disable.
      *
      * @return true on success.
      */
@@ -522,7 +522,7 @@ namespace video {
      *
      * @param friend_number The friend number of the friend for which to set the
      * bit rate.
-     * @param video_bit_rate The new video bit rate in Kb/sec. Set to 0 to disable.
+     * @param bit_rate The new video bit rate in Kb/sec. Set to 0 to disable.
      *
      * @return true on success.
      */

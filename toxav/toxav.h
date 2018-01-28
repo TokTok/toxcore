@@ -596,7 +596,7 @@ bool toxav_audio_send_frame(ToxAV *av, uint32_t friend_number, const int16_t *pc
  *
  * @param friend_number The friend number of the friend for which to set the
  * bit rate.
- * @param audio_bit_rate The new audio bit rate in Kb/sec. Set to 0 to disable.
+ * @param bit_rate The new audio bit rate in Kb/sec. Set to 0 to disable.
  *
  * @return true on success.
  */
@@ -643,7 +643,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
  *
  * @param friend_number The friend number of the friend for which to set the
  * bit rate.
- * @param video_bit_rate The new video bit rate in Kb/sec. Set to 0 to disable.
+ * @param bit_rate The new video bit rate in Kb/sec. Set to 0 to disable.
  *
  * @return true on success.
  */
