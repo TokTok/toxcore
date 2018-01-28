@@ -371,6 +371,31 @@ bool tox_get_salt(const uint8_t *ciphertext, uint8_t *salt, TOX_ERR_GET_SALT *er
 bool tox_is_data_encrypted(const uint8_t *data);
 
 
+/**
+ * Tox interface in the form of a structure.
+ */
+
+typedef struct {
+    bool (*tox_pass_encrypt)(const uint8_t *plaintext, size_t plaintext_len, const uint8_t *passphrase, size_t passphrase_len,
+                             uint8_t *ciphertext, TOX_ERR_ENCRYPTION *error);
+    bool (*tox_pass_decrypt)(const uint8_t *ciphertext, size_t ciphertext_len, const uint8_t *passphrase,
+                             size_t passphrase_len, uint8_t *plaintext, TOX_ERR_DECRYPTION *error);
+    struct Tox_Pass_Key* (*tox_pass_key_new)(void);
+    void (*tox_pass_key_free)(struct Tox_Pass_Key *_key);
+    bool (*tox_pass_key_derive)(struct Tox_Pass_Key *_key, const uint8_t *passphrase, size_t passphrase_len,
+                                TOX_ERR_KEY_DERIVATION *error);
+    bool (*tox_pass_key_derive_with_salt)(struct Tox_Pass_Key *_key, const uint8_t *passphrase, size_t passphrase_len,
+                                          const uint8_t *salt, TOX_ERR_KEY_DERIVATION *error);
+    bool (*tox_pass_key_encrypt)(const struct Tox_Pass_Key *_key, const uint8_t *plaintext, size_t plaintext_len,
+                                 uint8_t *ciphertext, TOX_ERR_ENCRYPTION *error);
+    bool (*tox_pass_key_decrypt)(const struct Tox_Pass_Key *_key, const uint8_t *ciphertext, size_t ciphertext_len,
+                                 uint8_t *plaintext, TOX_ERR_DECRYPTION *error);
+    bool (*tox_get_salt)(const uint8_t *ciphertext, uint8_t *salt, TOX_ERR_GET_SALT *error);
+    bool (*tox_is_data_encrypted)(const uint8_t *data);
+} ToxencryptsaveApi;
+
+extern const ToxencryptsaveApi toxencryptsave_api;
+
 #ifdef __cplusplus
 }
 #endif

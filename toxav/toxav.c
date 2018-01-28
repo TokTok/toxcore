@@ -1336,3 +1336,26 @@ void call_kill_transmission(ToxAVCall *call)
     pthread_mutex_destroy(call->mutex_video);
     pthread_mutex_destroy(call->mutex);
 }
+
+const ToxavApi toxav_api = {
+    &toxav_new,
+    &toxav_kill,
+    &toxav_get_tox,
+    &toxav_iteration_interval,
+    &toxav_iterate,
+    &toxav_call,
+    &toxav_callback_call,
+    &toxav_answer,
+    &toxav_callback_call_state,
+    &toxav_call_control,
+    &toxav_bit_rate_set,
+    &toxav_callback_bit_rate_status,
+    &toxav_audio_send_frame,
+    &toxav_video_send_frame,
+    &toxav_callback_audio_receive_frame,
+    &toxav_callback_video_receive_frame,
+    &toxav_add_av_groupchat,
+    &toxav_join_av_groupchat,
+    &toxav_group_send_audio
+};
+

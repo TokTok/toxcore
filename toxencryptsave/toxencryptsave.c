@@ -343,3 +343,17 @@ bool tox_is_data_encrypted(const uint8_t *data)
 
     return 0;
 }
+
+const ToxencryptsaveApi toxencryptsave_api = {
+    &tox_pass_encrypt,
+    &tox_pass_decrypt,
+    &tox_pass_key_new,
+    &tox_pass_key_free,
+    &tox_pass_key_derive,
+    &tox_pass_key_derive_with_salt,
+    &tox_pass_key_encrypt,
+    &tox_pass_key_decrypt,
+    &tox_get_salt,
+    &tox_is_data_encrypted
+};
+

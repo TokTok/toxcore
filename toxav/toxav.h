@@ -776,6 +776,41 @@ int toxav_join_av_groupchat(Tox *tox, int32_t friendnumber, const uint8_t *data,
 int toxav_group_send_audio(Tox *tox, int groupnumber, const int16_t *pcm, unsigned int samples, uint8_t channels,
                            unsigned int sample_rate);
 
+/**
+ * Toxav interface in the form of a structure.
+ */
+typedef struct {
+    ToxAV* (*toxav_new)(Tox *tox, TOXAV_ERR_NEW *error);
+    void (*toxav_kill)(ToxAV *av);
+    Tox* (*toxav_get_tox)(const ToxAV *av);
+    uint32_t (*toxav_iteration_interval)(const ToxAV *av);
+    void (*toxav_iterate)(ToxAV *av);
+    bool (*toxav_call)(ToxAV *av, uint32_t friend_number, uint32_t audio_bit_rate, uint32_t video_bit_rate,
+                       TOXAV_ERR_CALL *error);
+    void (*toxav_callback_call)(ToxAV *av, toxav_call_cb *callback, void *user_data);
+    bool (*toxav_answer)(ToxAV *av, uint32_t friend_number, uint32_t audio_bit_rate, uint32_t video_bit_rate,
+                         TOXAV_ERR_ANSWER *error);
+    void (*toxav_callback_call_state)(ToxAV *av, toxav_call_state_cb *callback, void *user_data);
+    bool (*toxav_call_control)(ToxAV *av, uint32_t friend_number, TOXAV_CALL_CONTROL control, TOXAV_ERR_CALL_CONTROL *error);
+    bool (*toxav_bit_rate_set)(ToxAV *av, uint32_t friend_number, int32_t audio_bit_rate, int32_t video_bit_rate,
+                               TOXAV_ERR_BIT_RATE_SET *error);
+    void (*toxav_callback_bit_rate_status)(ToxAV *av, toxav_bit_rate_status_cb *callback, void *user_data);
+    bool (*toxav_audio_send_frame)(ToxAV *av, uint32_t friend_number, const int16_t *pcm, size_t sample_count,
+                                   uint8_t channels, uint32_t sampling_rate, TOXAV_ERR_SEND_FRAME *error);
+    bool (*toxav_video_send_frame)(ToxAV *av, uint32_t friend_number, uint16_t width, uint16_t height, const uint8_t *y,
+                                   const uint8_t *u, const uint8_t *v, TOXAV_ERR_SEND_FRAME *error);
+    void (*toxav_callback_audio_receive_frame)(ToxAV *av, toxav_audio_receive_frame_cb *callback, void *user_data);
+    void (*toxav_callback_video_receive_frame)(ToxAV *av, toxav_video_receive_frame_cb *callback, void *user_data);
+    int (*toxav_add_av_groupchat)(Tox *tox, void (*audio_callback)(void *, int, int, const int16_t *, unsigned int, uint8_t,
+                                  unsigned int, void *), void *userdata);
+    int (*toxav_join_av_groupchat)(Tox *tox, int32_t friendnumber, const uint8_t *data, uint16_t length,
+                                   void (*audio_callback)(void *, int, int, const int16_t *, unsigned int, uint8_t, unsigned int, void *), void *userdata);
+    int (*toxav_group_send_audio)(Tox *tox, int groupnumber, const int16_t *pcm, unsigned int samples, uint8_t channels,
+                                  unsigned int sample_rate);
+} ToxavApi;
+
+extern const ToxavApi toxav_api;
+
 #ifdef __cplusplus
 }
 #endif
