@@ -341,7 +341,7 @@ END_TEST
 
 #define CRYPTO_TEST_MEMCMP_SIZE 1024*1024  // 1MiB
 #define CRYPTO_TEST_MEMCMP_COUNT 2000
-#define CRYPTO_TEST_MEMCMP_EPS 10
+#define CRYPTO_TEST_MEMCMP_EPS 10  // Should be within 0.5% of ~2 seconds.
 
 static int cmp(const void *a, const void *b)
 {
@@ -366,17 +366,23 @@ static clock_t memcmp_time(void *a, void *b, size_t len)
     return clock() - start;
 }
 
-static clock_t memcmp_median(void *a, void *b, size_t len)
+static void memcmp_median(void *src, void *same, void *not_same,
+                          size_t len,
+                          clock_t *same_median, clock_t *not_same_median)
 {
     size_t i;
-    clock_t results[CRYPTO_TEST_MEMCMP_COUNT];
+    clock_t same_results[CRYPTO_TEST_MEMCMP_COUNT];
+    clock_t not_same_results[CRYPTO_TEST_MEMCMP_COUNT];
 
     for (i = 0; i < CRYPTO_TEST_MEMCMP_COUNT; i++) {
-        results[i] = memcmp_time(a, b, len);
+        same_results[i] = memcmp_time(src, same, len);
+        not_same_results[i] = memcmp_time(src, not_same, len);
     }
 
-    qsort(results, CRYPTO_TEST_MEMCMP_COUNT, sizeof(*results), cmp);
-    return results[CRYPTO_TEST_MEMCMP_COUNT / 2];
+    qsort(same_results, CRYPTO_TEST_MEMCMP_COUNT, sizeof(*same_results), cmp);
+    *same_median = same_results[CRYPTO_TEST_MEMCMP_COUNT / 2];
+    qsort(not_same_results, CRYPTO_TEST_MEMCMP_COUNT, sizeof(*not_same_results), cmp);
+    *not_same_median = not_same_results[CRYPTO_TEST_MEMCMP_COUNT / 2];
 }
 
 START_TEST(test_memcmp)
@@ -390,11 +396,10 @@ START_TEST(test_memcmp)
     uint8_t *not_same = (uint8_t *)malloc(CRYPTO_TEST_MEMCMP_SIZE);
     rand_bytes(not_same, CRYPTO_TEST_MEMCMP_SIZE);
 
-    printf("timing memcmp (equal arrays)\n");
-    clock_t same_median = memcmp_median(src, same, CRYPTO_TEST_MEMCMP_SIZE);
-    printf("timing memcmp (non-equal arrays)\n");
-    clock_t not_same_median = memcmp_median(src, not_same, CRYPTO_TEST_MEMCMP_SIZE);
-    printf("comparing times\n");
+    printf("timing memcmp\n");
+    clock_t same_median;
+    clock_t not_same_median;
+    memcmp_median(src, same, not_same, CRYPTO_TEST_MEMCMP_SIZE, &same_median, &not_same_median);
 
     free(not_same);
     free(same);
@@ -408,11 +413,12 @@ START_TEST(test_memcmp)
         delta = not_same_median - same_median;
     }
 
+    printf("Time of the same data comparation: %d\n"
+           "Time of the different data comparation: %d\n",
+           (int)same_median, (int)not_same_median);
     ck_assert_msg(delta < CRYPTO_TEST_MEMCMP_EPS,
-                  "Delta time is too long (%d >= %d)\n"
-                  "Time of the same data comparation: %d\n"
-                  "Time of the different data comparation: %d",
-                  delta, CRYPTO_TEST_MEMCMP_EPS, same_median, not_same_median);
+                  "Delta time is too long (%d >= %d)\n",
+                  delta, CRYPTO_TEST_MEMCMP_EPS);
 }
 END_TEST
 
