@@ -341,7 +341,7 @@ END_TEST
 
 #define CRYPTO_TEST_MEMCMP_SIZE 1024*1024  // 1MiB
 #define CRYPTO_TEST_MEMCMP_COUNT 2000
-#define CRYPTO_TEST_MEMCMP_EPS 10
+#define CRYPTO_TEST_MEMCMP_EPS 100  // 4.5% of 2.2 seconds
 
 static int cmp(const void *a, const void *b)
 {
