@@ -1641,6 +1641,11 @@ namespace file {
      * has no avatar.
      */
     AVATAR,
+    /**
+     * This file kind is aimed for clients to implement inline features such as :
+     * Stickers, inline images, inline videoclips, inline music, and so on.
+     */
+    INLINE,
   }
 
 
