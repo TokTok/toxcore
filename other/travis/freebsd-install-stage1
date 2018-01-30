@@ -115,7 +115,8 @@ if [ ! -f ./$IMAGE_NAME.tgz ] || [ ! -f ./freebsd-install-stage1.sha256 ] || [ "
                                                   portaudio \
                                                   libsndfile \
                                                   texinfo \
-                                                  autotools
+                                                  autotools \
+                                                  msgpack
 
   # === Cache the VM image ===
 
