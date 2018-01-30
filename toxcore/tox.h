@@ -1824,6 +1824,12 @@ enum TOX_FILE_KIND {
      */
     TOX_FILE_KIND_AVATAR,
 
+    /**
+     * This file kind is aimed for clients to implement inline features such as:
+     * Stickers, inline images, inline videoclips, inline music, and so on.
+     */
+    TOX_FILE_KIND_INLINE,
+
 };
 
 
