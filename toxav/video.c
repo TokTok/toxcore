@@ -38,7 +38,7 @@
   By convention, the value 1 is used to mean "return as fast as possible."
 */
 // TODO: don't hardcode this, let the application choose it
-#define WANTED_MAX_DECODER_FPS (40)
+#define WANTED_MAX_DECODER_FPS (20)
 #define MAX_DECODE_TIME_US (1000000 / WANTED_MAX_DECODER_FPS) // to allow x fps
 /*
 VPX_DL_REALTIME       (1)
