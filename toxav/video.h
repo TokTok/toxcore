@@ -79,7 +79,7 @@
 #define VIDEO_DECODER_MINFPS_AUTOTUNE (8)
 #define VIDEO_DECODER_LEEWAY_IN_MS_AUTOTUNE (3)
 
-// #define VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE 1
+#define VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE 1
 #define VIDEO_ENCODER_MINFPS_AUTOTUNE (8)
 #define VIDEO_ENCODER_LEEWAY_IN_MS_AUTOTUNE (3)
 
@@ -91,6 +91,7 @@
 #define VPX_DECODER_USED VPX_VP8_CODEC // this will switch automatically
 
 #define VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES 20
+#define VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES 20
 
 #include <pthread.h>
 
@@ -117,7 +118,7 @@ typedef struct VCSession_s {
     int32_t  last_seen_fragment_seqnum;
     uint32_t decoder_soft_deadline[VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES];
     uint8_t  decoder_soft_deadline_index;
-    uint32_t encoder_soft_deadline[3];
+    uint32_t encoder_soft_deadline[VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES];
     uint8_t  encoder_soft_deadline_index;
 
 	// options ---

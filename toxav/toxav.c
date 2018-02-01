@@ -39,7 +39,7 @@
 
 // TODO: don't hardcode this, let the application choose it
 // VPX Info: Time to spend encoding, in microseconds (it's a *soft* deadline)
-#define WANTED_MAX_ENCODER_FPS (10)
+#define WANTED_MAX_ENCODER_FPS (20)
 #define MAX_ENCODE_TIME_US (1000000 / WANTED_MAX_ENCODER_FPS) // to allow x fps
 /*
 VPX_DL_REALTIME       (1)       deadline parameter analogous to VPx REALTIME mode.
@@ -1116,17 +1116,15 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 #endif
 
             call->video.second->encoder_soft_deadline[call->video.second->encoder_soft_deadline_index] = encode_time_auto_tune;
-            call->video.second->encoder_soft_deadline_index = (call->video.second->encoder_soft_deadline_index + 1) % 3;
+            call->video.second->encoder_soft_deadline_index = (call->video.second->encoder_soft_deadline_index + 1) % VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES;
 
             // calc mean value
-            encode_time_auto_tune = (
-                (
-                call->video.second->encoder_soft_deadline[0] +
-                call->video.second->encoder_soft_deadline[1] +
-                call->video.second->encoder_soft_deadline[2]
-                )
-                / 3
-            );
+            encode_time_auto_tune = 0;
+            for (int k=0;k<VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES;k++)
+            {
+                encode_time_auto_tune = encode_time_auto_tune + vc->encoder_soft_deadline[k];
+            }
+            encode_time_auto_tune = encode_time_auto_tune / VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES;
 
             if (encode_time_auto_tune > (1000000 / VIDEO_ENCODER_MINFPS_AUTOTUNE))
             {
@@ -1140,7 +1138,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         }
 
         max_encode_time_in_us = encode_time_auto_tune;
-        LOGGER_DEBUG(av->m->log, "AUTOTUNE:MAX_ENCODE_TIME_US=%ld us = %.1f fps", (long)encode_time_auto_tune, (float)(1000000.0f / encode_time_auto_tune));
+        LOGGER_ERROR(av->m->log, "AUTOTUNE:MAX_ENCODE_TIME_US=%ld us = %.1f fps", (long)encode_time_auto_tune, (float)(1000000.0f / encode_time_auto_tune));
 
 #endif
     }

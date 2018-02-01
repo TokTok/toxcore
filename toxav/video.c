@@ -431,15 +431,17 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc->last_seen_fragment_num = 0;
     vc->last_seen_fragment_seqnum = -1;
     vc->fragment_buf_counter = 0;
+
     for (int k=0;k<VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES;k++)
     {
         vc->decoder_soft_deadline[k] = 0;
     }
     vc->decoder_soft_deadline_index = 0;
 
-    vc->encoder_soft_deadline[0] = 0;
-    vc->encoder_soft_deadline[1] = 0;
-    vc->encoder_soft_deadline[2] = 0;
+    for (int k=0;k<VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES;k++)
+    {
+        vc->encoder_soft_deadline[k] = 0;
+    }
     vc->encoder_soft_deadline_index = 0;
 
     uint16_t jk=0;
