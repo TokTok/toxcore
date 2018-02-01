@@ -622,7 +622,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 		if (header_v3_0->sequnum < vc->last_seen_fragment_seqnum)
 		{
 			// drop frame with too old sequence number
-			LOGGER_DEBUG(vc->log, "skipping incoming video frame (0) with sn=%d", (int)header_v3_0->sequnum);
+			LOGGER_WARNING(vc->log, "skipping incoming video frame (0) with sn=%d", (int)header_v3_0->sequnum);
 			vc->last_seen_fragment_seqnum = header_v3_0->sequnum;
 			free(p);
 			pthread_mutex_unlock(vc->queue_mutex);
@@ -636,7 +636,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 			if ((int)data_type != (int)video_frame_type_KEYFRAME)
 			{
 				free(p);
-				LOGGER_DEBUG(vc->log, "skipping incoming video frame (1)");
+				LOGGER_WARNING(vc->log, "skipping incoming video frame (1)");
 				if (rb_read((RingBuffer *)vc->vbuf_raw, (void **)&p, &data_type)) {
 				}
 				else
@@ -713,6 +713,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 	    if (header_v3->frame_record_timestamp > 0)
 	    {
 #ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
+        // --- //
 #else
 			struct vpx_frame_user_data *vpx_u_data = calloc(1, sizeof(struct vpx_frame_user_data));
 			vpx_u_data->record_timestamp = header_v3->frame_record_timestamp;
@@ -723,7 +724,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 		if ((int)rb_size((RingBuffer *)vc->vbuf_raw) > (int)VIDEO_RINGBUFFER_FILL_THRESHOLD)
 		{
 			rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, VPX_DL_REALTIME);
-			LOGGER_DEBUG(vc->log, "skipping:REALTIME");
+			LOGGER_WARNING(vc->log, "skipping:REALTIME");
 		}
 #ifdef VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE
 		else
@@ -762,14 +763,14 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 			decoder_soft_dealine_value_used = decode_time_auto_tune;
 			rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, (long)decode_time_auto_tune);
 
-			LOGGER_DEBUG(vc->log, "AUTOTUNE:MAX_DECODE_TIME_US=%ld us = %.1f fps", (long)decode_time_auto_tune, (float)(1000000.0f / decode_time_auto_tune));
+			LOGGER_WARNING(vc->log, "AUTOTUNE:MAX_DECODE_TIME_US=%ld us = %.1f fps", (long)decode_time_auto_tune, (float)(1000000.0f / decode_time_auto_tune));
 		}
 #else
 		else
 		{
 			decoder_soft_dealine_value_used = MAX_DECODE_TIME_US;
 			rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, MAX_DECODE_TIME_US);
-			// LOGGER_WARNING(vc->log, "skipping:MAX_DECODE_TIME_US=%d", (int)MAX_DECODE_TIME_US);
+			// LOGGER_WARNING(vc->log, "NORMAL:MAX_DECODE_TIME_US=%d", (int)MAX_DECODE_TIME_US);
 		}
 #endif
 

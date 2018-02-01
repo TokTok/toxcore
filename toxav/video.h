@@ -45,11 +45,11 @@
 #define VIDEO_CODEC_DECODER_MAX_WIDTH  (800) // (16384) // thats just some initial dummy value
 #define VIDEO_CODEC_DECODER_MAX_HEIGHT (600) // (16384) // so don't worry
 
-#define VPX_MAX_ENCODER_THREADS (8)
-#define VPX_MAX_DECODER_THREADS (8)
+#define VPX_MAX_ENCODER_THREADS (4)
+#define VPX_MAX_DECODER_THREADS (4)
 #define VIDEO__VP9E_SET_TILE_COLUMNS (2)
 #define VIDEO__VP9E_SET_TILE_ROWS (2)
-#define VIDEO__VP9_KF_MAX_DIST (40)
+#define VIDEO__VP9_KF_MAX_DIST (999)
 #define VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED (0) // 0, 1, 2, 3 # 0->none, 3->maximum
 // #define VIDEO_CODEC_ENCODER_USE_FRAGMENTS 1
 #define VIDEO_CODEC_FRAGMENT_NUMS (5)
@@ -60,8 +60,8 @@
 
 
 #define VIDEO_SEND_X_KEYFRAMES_FIRST (10) // force the first n frames to be keyframes!
-#define VPX_MAX_DIST_NORMAL (30)
-#define VPX_MAX_DIST_START (30)
+#define VPX_MAX_DIST_NORMAL (4)
+#define VPX_MAX_DIST_START (4)
 
 
 #ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
