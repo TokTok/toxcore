@@ -59,9 +59,9 @@
 #define VIDEO_MAX_FRAGMENT_BUFFER_COUNT (100)
 
 
-#define VIDEO_SEND_X_KEYFRAMES_FIRST (10) // force the first n frames to be keyframes!
-#define VPX_MAX_DIST_NORMAL (10)
-#define VPX_MAX_DIST_START (10)
+#define VIDEO_SEND_X_KEYFRAMES_FIRST (5) // force the first n frames to be keyframes!
+#define VPX_MAX_DIST_NORMAL (25)
+#define VPX_MAX_DIST_START (25)
 
 
 #ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
