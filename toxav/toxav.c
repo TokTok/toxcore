@@ -1122,7 +1122,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
             encode_time_auto_tune = 0;
             for (int k=0;k<VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES;k++)
             {
-                encode_time_auto_tune = encode_time_auto_tune + call->video.second->->encoder_soft_deadline[k];
+                encode_time_auto_tune = encode_time_auto_tune + call->video.second->encoder_soft_deadline[k];
             }
             encode_time_auto_tune = encode_time_auto_tune / VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES;
 
