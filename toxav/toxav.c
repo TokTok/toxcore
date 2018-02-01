@@ -1139,10 +1139,6 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 
         max_encode_time_in_us = encode_time_auto_tune;
         LOGGER_ERROR(av->m->log, "AUTOTUNE:MAX_ENCODE_TIME_US=%ld us = %.1f fps", (long)encode_time_auto_tune, (float)(1000000.0f / encode_time_auto_tune));
-
-        printf("AUTOTUNE:MAX_ENCODE_TIME_US=%ld us = %.1f fps",
-            (long)encode_time_auto_tune,
-            (float)(1000000.0f / encode_time_auto_tune));
 #endif
     }
     // we start with I-frames (full frames) and then switch to normal mode later
