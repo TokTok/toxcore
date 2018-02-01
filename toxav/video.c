@@ -431,10 +431,12 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc->last_seen_fragment_num = 0;
     vc->last_seen_fragment_seqnum = -1;
     vc->fragment_buf_counter = 0;
-    vc->decoder_soft_deadline[0] = 0;
-    vc->decoder_soft_deadline[1] = 0;
-    vc->decoder_soft_deadline[2] = 0;
+    for (int k=0;k<VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES;k++)
+    {
+        vc->decoder_soft_deadline[k] = 0;
+    }
     vc->decoder_soft_deadline_index = 0;
+
     vc->encoder_soft_deadline[0] = 0;
     vc->encoder_soft_deadline[1] = 0;
     vc->encoder_soft_deadline[2] = 0;
@@ -738,17 +740,15 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 #endif
 
 				vc->decoder_soft_deadline[vc->decoder_soft_deadline_index] = decode_time_auto_tune;
-				vc->decoder_soft_deadline_index = (vc->decoder_soft_deadline_index + 1) % 3;
+				vc->decoder_soft_deadline_index = (vc->decoder_soft_deadline_index + 1) % VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES;
 
 				// calc mean value
-				decode_time_auto_tune = (
-					(
-					vc->decoder_soft_deadline[0] +
-					vc->decoder_soft_deadline[1] +
-					vc->decoder_soft_deadline[2]
-					)
-					/ 3
-				);
+                decode_time_auto_tune = 0;
+                for (int k=0;k<VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES;k++)
+                {
+                    decode_time_auto_tune = decode_time_auto_tune + vc->decoder_soft_deadline[k];
+                }
+				decode_time_auto_tune = decode_time_auto_tune / VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES;
 
 				if (decode_time_auto_tune > (1000000 / VIDEO_DECODER_MINFPS_AUTOTUNE))
 				{

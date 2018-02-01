@@ -45,8 +45,8 @@
 #define VIDEO_CODEC_DECODER_MAX_WIDTH  (800) // (16384) // thats just some initial dummy value
 #define VIDEO_CODEC_DECODER_MAX_HEIGHT (600) // (16384) // so don't worry
 
-#define VPX_MAX_ENCODER_THREADS (4)
-#define VPX_MAX_DECODER_THREADS (4)
+#define VPX_MAX_ENCODER_THREADS (8)
+#define VPX_MAX_DECODER_THREADS (8)
 #define VIDEO__VP9E_SET_TILE_COLUMNS (2)
 #define VIDEO__VP9E_SET_TILE_ROWS (2)
 #define VIDEO__VP9_KF_MAX_DIST (999)
@@ -60,8 +60,8 @@
 
 
 #define VIDEO_SEND_X_KEYFRAMES_FIRST (10) // force the first n frames to be keyframes!
-#define VPX_MAX_DIST_NORMAL (4)
-#define VPX_MAX_DIST_START (4)
+#define VPX_MAX_DIST_NORMAL (10)
+#define VPX_MAX_DIST_START (10)
 
 
 #ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
@@ -74,14 +74,14 @@
 #define VIDEO_RINGBUFFER_DROP_THRESHOLD (5) // start dropping incoming frames (except index frames)
 #endif
 
-// #define VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE 1
+#define VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE 1
 // #define VIDEO_DECODER_AUTOSWITCH_CODEC 1
 #define VIDEO_DECODER_MINFPS_AUTOTUNE (8)
-#define VIDEO_DECODER_LEEWAY_IN_MS_AUTOTUNE (10)
+#define VIDEO_DECODER_LEEWAY_IN_MS_AUTOTUNE (5)
 
 // #define VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE 1
-#define VIDEO_ENCODER_MINFPS_AUTOTUNE (20)
-#define VIDEO_ENCODER_LEEWAY_IN_MS_AUTOTUNE (10)
+#define VIDEO_ENCODER_MINFPS_AUTOTUNE (8)
+#define VIDEO_ENCODER_LEEWAY_IN_MS_AUTOTUNE (5)
 
 
 #define VPX_VP8_CODEC (0)
@@ -90,6 +90,7 @@
 #define VPX_ENCODER_USED VPX_VP8_CODEC
 #define VPX_DECODER_USED VPX_VP8_CODEC // this will switch automatically
 
+#define VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES 20
 
 #include <pthread.h>
 
@@ -114,7 +115,7 @@ typedef struct VCSession_s {
     uint8_t  flag_end_video_fragment;
     int32_t  last_seen_fragment_num;
     int32_t  last_seen_fragment_seqnum;
-    uint32_t decoder_soft_deadline[3];
+    uint32_t decoder_soft_deadline[VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES];
     uint8_t  decoder_soft_deadline_index;
     uint32_t encoder_soft_deadline[3];
     uint8_t  encoder_soft_deadline_index;

@@ -39,7 +39,7 @@
 
 // TODO: don't hardcode this, let the application choose it
 // VPX Info: Time to spend encoding, in microseconds (it's a *soft* deadline)
-#define WANTED_MAX_ENCODER_FPS (20)
+#define WANTED_MAX_ENCODER_FPS (10)
 #define MAX_ENCODE_TIME_US (1000000 / WANTED_MAX_ENCODER_FPS) // to allow x fps
 /*
 VPX_DL_REALTIME       (1)       deadline parameter analogous to VPx REALTIME mode.
@@ -1071,7 +1071,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
     }
 
     int vpx_encode_flags = 0;
-    unsigned long max_encode_time_in_us = VPX_DL_BEST_QUALITY; // MAX_ENCODE_TIME_US;
+    unsigned long max_encode_time_in_us = MAX_ENCODE_TIME_US;
 
 
     if (call->video.first->ssrc < VIDEO_SEND_X_KEYFRAMES_FIRST) {
@@ -1080,7 +1080,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
             // Key frame flag for first frames
             vpx_encode_flags = VPX_EFLAG_FORCE_KF;
-            max_encode_time_in_us = VPX_DL_BEST_QUALITY; // VPX_DL_REALTIME;
+            max_encode_time_in_us = VPX_DL_REALTIME;
             uint32_t lowered_bitrate = (800 * 1000);
             vc_reconfigure_encoder_bitrate_only(call->video.second, lowered_bitrate);
             // HINT: Zoff: this does not seem to work
@@ -1094,7 +1094,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
             // normal keyframe placement
             vpx_encode_flags = 0;
-            max_encode_time_in_us = VPX_DL_BEST_QUALITY; // MAX_ENCODE_TIME_US;
+            max_encode_time_in_us = MAX_ENCODE_TIME_US;
             vc_reconfigure_encoder_bitrate_only(call->video.second, call->video_bit_rate * 1000);
             // HINT: Zoff: this does not seem to work
             // vpx_codec_control(call->video.second->encoder, VP8E_SET_FRAME_FLAGS, vpx_encode_flags);
