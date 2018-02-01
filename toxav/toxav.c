@@ -39,7 +39,7 @@
 
 // TODO: don't hardcode this, let the application choose it
 // VPX Info: Time to spend encoding, in microseconds (it's a *soft* deadline)
-#define WANTED_MAX_ENCODER_FPS (20)
+#define WANTED_MAX_ENCODER_FPS (40)
 #define MAX_ENCODE_TIME_US (1000000 / WANTED_MAX_ENCODER_FPS) // to allow x fps
 /*
 VPX_DL_REALTIME       (1)       deadline parameter analogous to VPx REALTIME mode.
@@ -1115,7 +1115,16 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
             encode_time_auto_tune = encode_time_auto_tune * VIDEO_CODEC_FRAGMENT_NUMS;
 #endif
 
-            call->video.second->encoder_soft_deadline[call->video.second->encoder_soft_deadline_index] = encode_time_auto_tune;
+            if (call->video.second->encoder_soft_deadline[call->video.second->encoder_soft_deadline_index] == 0)
+            {
+                call->video.second->encoder_soft_deadline[call->video.second->encoder_soft_deadline_index] = 1;
+                LOGGER_ERROR(av->m->log, "AUTOTUNE: delay=[1]");
+            }
+            else
+            {
+                call->video.second->encoder_soft_deadline[call->video.second->encoder_soft_deadline_index] = encode_time_auto_tune;
+                LOGGER_ERROR(av->m->log, "AUTOTUNE: delay=%d", (int)encode_time_auto_tune);
+            }
             call->video.second->encoder_soft_deadline_index = (call->video.second->encoder_soft_deadline_index + 1) % VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES;
 
             // calc mean value
