@@ -34,8 +34,6 @@
 #include <limits.h>
 #include <stddef.h>
 
-typedef ptrdiff_t aint;
-
 typedef enum {
     UNS_NONE,
     UNS_TEMP,
@@ -3432,8 +3430,8 @@ typedef struct {
     Group_c *g;
     Group_Join_Peer *j;
 
-    aint gn;
-    aint jpi;
+    uint16_t gn;
+    uint32_t jpi;
 } jp_iterator;
 
 static Group_Join_Peer *jp_iterator_next(jp_iterator *itr)
@@ -3503,7 +3501,7 @@ static void restore_conference(Group_Chats *g_c)
     Group_Join_Peer *jd = NULL;
     Group_c *g = NULL;
 
-    aint min_num = MAX_FAILED_JOIN_ATTEMPTS;
+    int8_t min_num = MAX_FAILED_JOIN_ATTEMPTS;
 
     bool at_max = false;
     bool on_try = false;
