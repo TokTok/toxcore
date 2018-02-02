@@ -1115,6 +1115,12 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
             encode_time_auto_tune = encode_time_auto_tune * VIDEO_CODEC_FRAGMENT_NUMS;
 #endif
 
+            if (encode_time_auto_tune == 0)
+            {
+                // if the real delay was 0ms then still use 1ms
+                encode_time_auto_tune = 1;
+            }
+
             if (call->video.second->encoder_soft_deadline[call->video.second->encoder_soft_deadline_index] == 0)
             {
                 call->video.second->encoder_soft_deadline[call->video.second->encoder_soft_deadline_index] = 1;
