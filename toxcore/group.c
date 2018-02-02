@@ -465,7 +465,7 @@ static void apply_changes_in_peers(Group_Chats *g_c, int32_t groupnumber, void *
                 if (g->peers_list[j] == INVALID_PEER_INDEX) {
                     --g->numpeers_in_list;
                     /* g->peers_list[j] = g->peers_list[g->numpeers_in_list]; */ /* faster */
-                    memcpy(&g->peers_list[j], &g->peers_list[j] + 1,
+                    memcpy(&g->peers_list[j], &g->peers_list[j + 1],
                            sizeof(uint16_t) * (g->numpeers_in_list - j)); /* slower, but accurate */
                     some_changes = true;
                     continue;
@@ -1473,7 +1473,7 @@ int join_groupchat(Group_Chats *g_c, int32_t friendnumber, uint8_t expected_type
         int groupnumber = conference_by_uid(g_c, data);
 
         if (groupnumber != -1) {
-            Group_c *g = g_c->chats + groupnumber;
+            Group_c *g = &g_c->chats[groupnumber];
             g->invite_called |= g->fake_join;
             return groupnumber;
         }
@@ -1502,7 +1502,7 @@ int join_groupchat(Group_Chats *g_c, int32_t friendnumber, uint8_t expected_type
         return -5;
     }
 
-    Group_c *g = g_c->chats + groupnumber;
+    Group_c *g = &g_c->chats[groupnumber];
 
     if (g->fake_join) {
         g->need_send_name = true;
@@ -2061,7 +2061,7 @@ static void handle_friend_invite_packet(Messenger *m, uint32_t friendnumber, con
                 }
 
                 if (g_c->invite_callback) {
-                    g_c->invite_callback(m, friendnumber, *(invite_data + sizeof(uint16_t)),
+                    g_c->invite_callback(m, friendnumber, invite_data[sizeof(uint16_t)],
                                          invite_data, invite_length, userdata);
                 }
             } else {
@@ -2074,7 +2074,7 @@ static void handle_friend_invite_packet(Messenger *m, uint32_t friendnumber, con
                 g->join_mode = false;
                 g->disable_auto_join = false;
                 g->invite_called = false;
-                join_groupchat(g_c, friendnumber, *(invite_data + sizeof(uint16_t)), invite_data, invite_length);
+                join_groupchat(g_c, friendnumber, invite_data[sizeof(uint16_t)], invite_data, invite_length);
             }
 
             return;
@@ -3385,7 +3385,7 @@ static Group_Join_Peer *keep_join_mode(Group_Chats *g_c, Group_c *g, uint64_t ct
         }
 
         int next_time = 333;
-        Group_Join_Peer *jd = g->joinpeers + g->keep_join_index;
+        Group_Join_Peer *jd = &g->joinpeers[g->keep_join_index];
 
         int friend_index = getfriend_id(g_c->m, jd->real_pk);
         int friendcon_id = friend_index >= 0 ? getfriendcon_id(g_c->m, friend_index) : -1;
@@ -3919,7 +3919,7 @@ static int conferences_load(Messenger *m, const uint8_t *data, uint32_t length)
 
     g_c->num_chats = 0;
 
-    size_t numgchats = lendian_to_host16(*(const uint16_t *)data);
+    const size_t numgchats = lendian_to_host16(*(const uint16_t *)data);
     data += sizeof(uint16_t);
     length -= sizeof(uint16_t);
 
@@ -3928,11 +3928,11 @@ static int conferences_load(Messenger *m, const uint8_t *data, uint32_t length)
             return -1;
         }
 
-        int grounumber = add_groupchat(g_c, *data, data + 1);
+        const int groupnumber = add_groupchat(g_c, *data, data + 1);
         data += GROUP_IDENTIFIER_LENGTH;
         length -= GROUP_IDENTIFIER_LENGTH;
 
-        Group_c *g = get_group_c(g_c, grounumber);
+        Group_c *g = get_group_c(g_c, groupnumber);
         if (!g) {
             return -1;
         }
@@ -3950,7 +3950,7 @@ static int conferences_load(Messenger *m, const uint8_t *data, uint32_t length)
         --length;
 
         if (*data > sizeof(g->title)) {
-            del_groupchat_internal(g_c, grounumber, UNS_NONE);
+            del_groupchat_internal(g_c, groupnumber, UNS_NONE);
             return -1;
         }
 
@@ -3959,7 +3959,7 @@ static int conferences_load(Messenger *m, const uint8_t *data, uint32_t length)
         --length;
 
         if (length < g->title_len) {
-            del_groupchat_internal(g_c, grounumber, UNS_NONE);
+            del_groupchat_internal(g_c, groupnumber, UNS_NONE);
             return -1;
         }
 
@@ -3974,13 +3974,13 @@ static int conferences_load(Messenger *m, const uint8_t *data, uint32_t length)
         g->joinpeers = (Group_Join_Peer *)calloc(g->numjoinpeers, sizeof(Group_Join_Peer));
 
         if (length < g->numjoinpeers * CRYPTO_PUBLIC_KEY_SIZE) {
-            del_groupchat_internal(g_c, grounumber, UNS_NONE);
+            del_groupchat_internal(g_c, groupnumber, UNS_NONE);
             return -1;
         }
 
         length -= g->numjoinpeers * CRYPTO_PUBLIC_KEY_SIZE;
 
-        uint64_t t = current_time_monotonic() + 5000;
+        const uint64_t t = current_time_monotonic() + 5000;
 
         for (uint32_t j = 0; j < g->numjoinpeers; ++j) {
             memcpy(g->joinpeers[j].real_pk, data, CRYPTO_PUBLIC_KEY_SIZE);
