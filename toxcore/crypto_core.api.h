@@ -122,6 +122,11 @@ namespace random {
 static uint16_t u16();
 
 /**
+ * Return a random 16 bit integer.
+ */
+static uint16_t random_16b();
+
+/**
  * Return a random 32 bit integer.
  */
 static uint32_t u32();

@@ -579,7 +579,7 @@ add_executable(DHT_test testing/DHT_test.c)
 target_link_modules(DHT_test toxdht)
 
 add_executable(Messenger_test testing/Messenger_test.c)
-target_link_modules(Messenger_test toxmessenger)
+target_link_modules(Messenger_test toxmessenger toxgroup)
 
 if(NOT WIN32)
   add_executable(tox_sync testing/tox_sync.c)
