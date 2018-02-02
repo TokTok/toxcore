@@ -50,22 +50,6 @@ tox_sync_LDADD =        $(LIBSODIUM_LDFLAGS) \
                         $(NACL_LIBS)
 
 
-noinst_PROGRAMS +=      tox_shell
-
-tox_shell_SOURCES =      ../testing/tox_shell.c
-
-tox_shell_CFLAGS =       $(LIBSODIUM_CFLAGS) \
-                        $(NACL_CFLAGS)
-
-tox_shell_LDADD =        $(LIBSODIUM_LDFLAGS) \
-                        $(NACL_LDFLAGS) \
-                        libtoxcore.la \
-                        $(LIBSODIUM_LIBS) \
-                        $(NACL_OBJECTS) \
-                        $(NACL_LIBS) \
-                        -lutil
-
-
 noinst_PROGRAMS +=      irc_syncbot
 
 irc_syncbot_SOURCES =   ../testing/irc_syncbot.c

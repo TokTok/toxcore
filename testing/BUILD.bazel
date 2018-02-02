@@ -53,16 +53,6 @@ cc_binary(
 )
 
 cc_binary(
-    name = "tox_shell",
-    srcs = ["tox_shell.c"],
-    linkopts = ["-lutil"],
-    deps = [
-        ":misc_tools",
-        "//c-toxcore/toxcore",
-    ],
-)
-
-cc_binary(
     name = "tox_sync",
     srcs = ["tox_sync.c"],
     deps = [
