@@ -47,7 +47,6 @@ There are some testing programs that you might find interesting. Note that they 
 
 | Name        | Type       | Dependencies           | Platform  | Description                                                                                                                             |
 |-------------|------------|------------------------|-----------|-----------------------------------------------------------------------------------------------------------------------------------------|
-| irc_syncbot | Executable | libtoxcore             | Unix-like | Bot that synchronizes an IRC channel and a Tox group chat (conference).                                                                      |
 | tox_shell   | Executable | libtoxcore, libutil    | Unix-like | Proof of concept SSH-like server software using Tox. Testing program, not intended for actual use.                                      |
 | tox_sync    | Executable | libtoxcore             | Unix-like | Bittorrent-sync-like software using Tox. Syncs two directories together.                                                                |
 
