@@ -2914,9 +2914,21 @@ static int friends_list_load(Messenger *m, const uint8_t *data, uint32_t length)
     return num;
 }
 
-uint32_t (*saved_conferences_size_ptr)(const Messenger *m);
-void (*conferences_save_ptr)(const Messenger *m, uint8_t *data);
-int (*conferences_load_ptr)(Messenger *m, const uint8_t *data, uint32_t length);
+static uint32_t saved_conferences_size_default(const Messenger *m)
+{
+    return 0;
+}
+static void conferences_save_default(const Messenger *m, uint8_t *data)
+{
+}
+static int conferences_load_default(Messenger *m, const uint8_t *data, uint32_t length)
+{
+    return 0;
+}
+
+uint32_t (*saved_conferences_size_ptr)(const Messenger *m) = saved_conferences_size_default;
+void (*conferences_save_ptr)(const Messenger *m, uint8_t *data) = conferences_save_default;
+int (*conferences_load_ptr)(Messenger *m, const uint8_t *data, uint32_t length) = conferences_load_default;
 
 
 /*  return size of the messenger data (for saving) */

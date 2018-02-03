@@ -1116,7 +1116,7 @@ void tox_callback_conference_namelist_change(Tox *tox, tox_conference_namelist_c
 uint32_t tox_conference_new(Tox *tox, TOX_ERR_CONFERENCE_NEW *error)
 {
     Messenger *m = tox;
-    int ret = add_groupchat((Group_Chats *)m->conferences_object, GROUPCHAT_TYPE_TEXT, NULL);
+    int ret = add_groupchat((Group_Chats *)m->conferences_object, GROUPCHAT_TYPE_TEXT, nullptr);
 
     if (ret == -1) {
         SET_ERROR_PARAMETER(error, TOX_ERR_CONFERENCE_NEW_INIT);

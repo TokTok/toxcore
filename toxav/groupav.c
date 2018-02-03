@@ -461,7 +461,7 @@ int add_av_groupchat(Logger *log, Group_Chats *g_c, void (*audio_callback)(Messe
                      unsigned int,
                      uint8_t, unsigned int, void *), void *userdata)
 {
-    int groupnumber = add_groupchat(g_c, GROUPCHAT_TYPE_AV, NULL);
+    int groupnumber = add_groupchat(g_c, GROUPCHAT_TYPE_AV, nullptr);
 
     if (groupnumber == -1) {
         return -1;
