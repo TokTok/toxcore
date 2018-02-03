@@ -30,19 +30,21 @@
 #include "../toxcore/tox.h"
 #include "../toxencryptsave/toxencryptsave.h"
 
+#include "../toxcore/ccompat.h"
+
 static const char *pphrase = "bar", *name = "foo", *savefile = "./save";
 
 static void save_data_encrypted(void)
 {
-    struct Tox_Options options;
-    tox_options_default(&options);
-    Tox *t = tox_new(&options, NULL);
+    struct Tox_Options *options = tox_options_new(nullptr);
+    Tox *t = tox_new(options, nullptr);
+    tox_options_free(options);
 
-    tox_self_set_name(t, (const uint8_t *)name, strlen(name), NULL);
+    tox_self_set_name(t, (const uint8_t *)name, strlen(name), nullptr);
 
     FILE *f = fopen(savefile, "w");
 
-    off_t size = tox_get_savedata_size(t);
+    size_t size = tox_get_savedata_size(t);
     uint8_t *clear = (uint8_t *)malloc(size);
 
     /*this function does not write any data at all*/
@@ -87,19 +89,19 @@ static void load_data_decrypted(void)
         exit(3);
     }
 
-    struct Tox_Options options;
+    struct Tox_Options *options = tox_options_new(nullptr);
 
-    tox_options_default(&options);
+    tox_options_set_savedata_type(options, TOX_SAVEDATA_TYPE_TOX_SAVE);
 
-    tox_options_set_savedata_type(&options, TOX_SAVEDATA_TYPE_TOX_SAVE);
-
-    tox_options_set_savedata_data(&options, clear, size);
+    tox_options_set_savedata_data(options, clear, size);
 
     TOX_ERR_NEW err;
 
-    Tox *t = tox_new(&options, &err);
+    Tox *t = tox_new(options, &err);
 
-    if (t == NULL) {
+    tox_options_free(options);
+
+    if (t == nullptr) {
         fprintf(stderr, "error: tox_new returned the error value %d\n", err);
         return;
     }

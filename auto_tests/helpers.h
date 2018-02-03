@@ -3,6 +3,8 @@
 
 #include "../toxcore/tox.h"
 
+#include "../toxcore/ccompat.h"
+
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -42,12 +44,18 @@ static const char *tox_log_level_name(TOX_LOG_LEVEL level)
         case TOX_LOG_LEVEL_ERROR:
             return "ERROR";
     }
+
+    return "<unknown>";
 }
 
 static void print_debug_log(Tox *m, TOX_LOG_LEVEL level, const char *path, uint32_t line, const char *func,
                             const char *message, void *user_data)
 {
     if (level == TOX_LOG_LEVEL_TRACE) {
+        return;
+    }
+
+    if (strncmp(message, "Bound successfully to ", strlen("Bound successfully to "))) {
         return;
     }
 
@@ -61,17 +69,17 @@ Tox *tox_new_log(struct Tox_Options *options, TOX_ERR_NEW *err, void *log_user_d
 {
     struct Tox_Options *log_options = options;
 
-    if (log_options == NULL) {
-        log_options = tox_options_new(NULL);
+    if (log_options == nullptr) {
+        log_options = tox_options_new(nullptr);
     }
 
-    assert(log_options != NULL);
+    assert(log_options != nullptr);
 
     tox_options_set_log_callback(log_options, &print_debug_log);
     tox_options_set_log_user_data(log_options, log_user_data);
     Tox *tox = tox_new(log_options, err);
 
-    if (options == NULL) {
+    if (options == nullptr) {
         tox_options_free(log_options);
     }
 

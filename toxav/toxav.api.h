@@ -386,56 +386,24 @@ bool call_control(uint32_t friend_number, CALL_CONTROL control) {
  ******************************************************************************/
 
 
-namespace bit_rate {
+error for bit_rate_set {
   /**
-   * Set the bit rate to be used in subsequent audio/video frames.
-   *
-   * @param friend_number The friend number of the friend for which to set the
-   * bit rate.
-   * @param audio_bit_rate The new audio bit rate in Kb/sec. Set to 0 to disable
-   * audio sending. Set to -1 to leave unchanged.
-   * @param video_bit_rate The new video bit rate in Kb/sec. Set to 0 to disable
-   * video sending. Set to -1 to leave unchanged.
-   *
+   * Synchronization error occurred.
    */
-  bool set(uint32_t friend_number, int32_t audio_bit_rate, int32_t video_bit_rate) {
-    /**
-     * Synchronization error occurred.
-     */
-    SYNC,
-    /**
-     * The audio bit rate passed was not one of the supported values.
-     */
-    INVALID_AUDIO_BIT_RATE,
-    /**
-     * The video bit rate passed was not one of the supported values.
-     */
-    INVALID_VIDEO_BIT_RATE,
-    /**
-     * The friend_number passed did not designate a valid friend.
-     */
-    FRIEND_NOT_FOUND,
-    /**
-     * This client is currently not in a call with the friend.
-     */
-    FRIEND_NOT_IN_CALL,
-  }
-
-  event status {
-    /**
-     * The function type for the ${event status} callback. The event is triggered
-     * when the network becomes too saturated for current bit rates at which
-     * point core suggests new bit rates.
-     *
-     * @param friend_number The friend number of the friend for which to set the
-     * bit rate.
-     * @param audio_bit_rate Suggested maximum audio bit rate in Kb/sec.
-     * @param video_bit_rate Suggested maximum video bit rate in Kb/sec.
-     */
-    typedef void(uint32_t friend_number, uint32_t audio_bit_rate, uint32_t video_bit_rate);
-  }
+  SYNC,
+  /**
+   * The bit rate passed was not one of the supported values.
+   */
+  INVALID_BIT_RATE,
+  /**
+   * The friend_number passed did not designate a valid friend.
+   */
+  FRIEND_NOT_FOUND,
+  /**
+   * This client is currently not in a call with the friend.
+   */
+  FRIEND_NOT_IN_CALL,
 }
-
 
 /*******************************************************************************
  *
@@ -501,6 +469,32 @@ namespace audio {
    */
   bool send_frame(uint32_t friend_number, const int16_t *pcm, size_t sample_count,
                   uint8_t channels, uint32_t sampling_rate) with error for send_frame;
+
+  uint32_t bit_rate {
+    /**
+     * Set the bit rate to be used in subsequent video frames.
+     *
+     * @param friend_number The friend number of the friend for which to set the
+     * bit rate.
+     * @param bit_rate The new audio bit rate in Kb/sec. Set to 0 to disable.
+     *
+     * @return true on success.
+     */
+    set(uint32_t friend_number) with error for bit_rate_set;
+  }
+
+  event bit_rate {
+    /**
+     * The function type for the ${event bit_rate} callback. The event is triggered
+     * when the network becomes too saturated for current bit rates at which
+     * point core suggests new bit rates.
+     *
+     * @param friend_number The friend number of the friend for which to set the
+     * bit rate.
+     * @param audio_bit_rate Suggested maximum audio bit rate in Kb/sec.
+     */
+    typedef void(uint32_t friend_number, uint32_t audio_bit_rate);
+  }
 }
 
 namespace video {
@@ -521,6 +515,32 @@ namespace video {
    */
   bool send_frame(uint32_t friend_number, uint16_t width, uint16_t height,
                   const uint8_t *y, const uint8_t *u, const uint8_t *v) with error for send_frame;
+
+  uint32_t bit_rate {
+    /**
+     * Set the bit rate to be used in subsequent video frames.
+     *
+     * @param friend_number The friend number of the friend for which to set the
+     * bit rate.
+     * @param bit_rate The new video bit rate in Kb/sec. Set to 0 to disable.
+     *
+     * @return true on success.
+     */
+    set(uint32_t friend_number) with error for bit_rate_set;
+  }
+
+  event bit_rate {
+    /**
+     * The function type for the ${event bit_rate} callback. The event is triggered
+     * when the network becomes too saturated for current bit rates at which
+     * point core suggests new bit rates.
+     *
+     * @param friend_number The friend number of the friend for which to set the
+     * bit rate.
+     * @param video_bit_rate Suggested maximum video bit rate in Kb/sec.
+     */
+    typedef void(uint32_t friend_number, uint32_t video_bit_rate);
+  }
 }
 
 

@@ -95,6 +95,7 @@ static uint32_t add_filesender(Tox *m, uint16_t friendnum, char *filename)
                                      strlen(filename), 0);
 
     if (filenum == -1) {
+        fclose(tempfile);
         return -1;
     }
 
@@ -311,7 +312,7 @@ int main(int argc, char *argv[])
             d = opendir(path);
 
             if (d) {
-                while ((dir = readdir(d)) != NULL) {
+                while ((dir = readdir(d)) != nullptr) {
                     VLA(char, filepath, strlen(path) + strlen(dir->d_name) + 1);
                     memcpy(filepath, path, strlen(path));
                     memcpy(filepath + strlen(path), dir->d_name, strlen(dir->d_name) + 1);
@@ -337,7 +338,7 @@ int main(int argc, char *argv[])
             }
         }
 
-        tox_iterate(tox, NULL);
+        tox_iterate(tox, nullptr);
         c_sleep(1);
     }
 }

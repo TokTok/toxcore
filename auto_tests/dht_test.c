@@ -1,4 +1,6 @@
+#ifndef _XOPEN_SOURCE
 #define _XOPEN_SOURCE 600
+#endif
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -11,7 +13,9 @@
 
 #include "helpers.h"
 
+#ifndef DHT_C_INCLUDED
 #include "../toxcore/DHT.c"
+#endif // DHT_C_INCLUDED
 #include "../toxcore/tox.h"
 
 
@@ -25,6 +29,22 @@ static bool enable_broken_tests = false;
      memcpy(&x,swap_temp,sizeof(x)); \
     } while(0)
 
+#ifndef USE_IPV6
+#define USE_IPV6 1
+#endif
+
+static inline IP get_loopback()
+{
+    IP ip;
+#if USE_IPV6
+    ip.family = TOX_AF_INET6;
+    ip.ip6 = get_ip6_loopback();
+#else
+    ip.family = TOX_AF_INET;
+    ip.ip4 = get_ip4_loopback();
+#endif
+    return ip;
+}
 
 static void mark_bad(IPPTsPng *ipptp)
 {
@@ -99,7 +119,7 @@ static void test_addto_lists_update(DHT            *dht,
     int used, test, test1, test2, found;
     IP_Port test_ipp;
     uint8_t test_id[CRYPTO_PUBLIC_KEY_SIZE];
-    uint8_t ipv6 = ip_port->ip.family == AF_INET6 ? 1 : 0;
+    uint8_t ipv6 = ip_port->ip.family == TOX_AF_INET6 ? 1 : 0;
 
     // check id update for existing ip_port
     test = rand() % length;
@@ -174,7 +194,7 @@ static void test_addto_lists_bad(DHT            *dht,
     int used, test1, test2, test3;
     uint8_t public_key[CRYPTO_PUBLIC_KEY_SIZE], test_id1[CRYPTO_PUBLIC_KEY_SIZE], test_id2[CRYPTO_PUBLIC_KEY_SIZE],
             test_id3[CRYPTO_PUBLIC_KEY_SIZE];
-    uint8_t ipv6 = ip_port->ip.family == AF_INET6 ? 1 : 0;
+    uint8_t ipv6 = ip_port->ip.family == TOX_AF_INET6 ? 1 : 0;
 
     random_bytes(public_key, sizeof(public_key));
     mark_all_good(list, length, ipv6);
@@ -218,7 +238,7 @@ static void test_addto_lists_possible_bad(DHT            *dht,
     int used, test1, test2, test3;
     uint8_t public_key[CRYPTO_PUBLIC_KEY_SIZE], test_id1[CRYPTO_PUBLIC_KEY_SIZE], test_id2[CRYPTO_PUBLIC_KEY_SIZE],
             test_id3[CRYPTO_PUBLIC_KEY_SIZE];
-    uint8_t ipv6 = ip_port->ip.family == AF_INET6 ? 1 : 0;
+    uint8_t ipv6 = ip_port->ip.family == TOX_AF_INET6 ? 1 : 0;
 
     random_bytes(public_key, sizeof(public_key));
     mark_all_good(list, length, ipv6);
@@ -280,7 +300,7 @@ static void test_addto_lists_good(DHT            *dht,
                                   const uint8_t  *comp_client_id)
 {
     uint8_t public_key[CRYPTO_PUBLIC_KEY_SIZE];
-    uint8_t ipv6 = ip_port->ip.family == AF_INET6 ? 1 : 0;
+    uint8_t ipv6 = ip_port->ip.family == TOX_AF_INET6 ? 1 : 0;
 
     mark_all_good(list, length, ipv6);
 
@@ -309,11 +329,11 @@ static void test_addto_lists_good(DHT            *dht,
 
 static void test_addto_lists(IP ip)
 {
-    Networking_Core *net = new_networking(NULL, ip, TOX_PORT_DEFAULT);
-    ck_assert_msg(net != 0, "Failed to create Networking_Core");
+    Networking_Core *net = new_networking(nullptr, ip, TOX_PORT_DEFAULT);
+    ck_assert_msg(net != nullptr, "Failed to create Networking_Core");
 
-    DHT *dht = new_DHT(NULL, net, true);
-    ck_assert_msg(dht != 0, "Failed to create DHT");
+    DHT *dht = new_DHT(nullptr, net, true);
+    ck_assert_msg(dht != nullptr, "Failed to create DHT");
 
     IP_Port ip_port = { .ip = ip, .port = TOX_PORT_DEFAULT };
     uint8_t public_key[CRYPTO_PUBLIC_KEY_SIZE];
@@ -450,9 +470,9 @@ static void test_list_main(void)
         IP ip;
         ip_init(&ip, 1);
 
-        dhts[i] = new_DHT(NULL, new_networking(NULL, ip, DHT_DEFAULT_PORT + i), true);
-        ck_assert_msg(dhts[i] != 0, "Failed to create dht instances %u", i);
-        ck_assert_msg(dhts[i]->net->port != DHT_DEFAULT_PORT + i, "Bound to wrong port");
+        dhts[i] = new_DHT(nullptr, new_networking(nullptr, ip, DHT_DEFAULT_PORT + i), true);
+        ck_assert_msg(dhts[i] != nullptr, "Failed to create dht instances %u", i);
+        ck_assert_msg(net_port(dhts[i]->net) != DHT_DEFAULT_PORT + i, "Bound to wrong port");
     }
 
     for (j = 0; j < NUM_DHT; ++j) {
@@ -586,9 +606,9 @@ START_TEST(test_DHT_test)
         IP ip;
         ip_init(&ip, 1);
 
-        dhts[i] = new_DHT(NULL, new_networking(NULL, ip, DHT_DEFAULT_PORT + i), true);
-        ck_assert_msg(dhts[i] != 0, "Failed to create dht instances %u", i);
-        ck_assert_msg(dhts[i]->net->port != DHT_DEFAULT_PORT + i, "Bound to wrong port");
+        dhts[i] = new_DHT(nullptr, new_networking(nullptr, ip, DHT_DEFAULT_PORT + i), true);
+        ck_assert_msg(dhts[i] != nullptr, "Failed to create dht instances %u", i);
+        ck_assert_msg(net_port(dhts[i]->net) != DHT_DEFAULT_PORT + i, "Bound to wrong port");
     }
 
     struct {
@@ -615,8 +635,7 @@ loop_top:
 
     for (i = 0; i < NUM_DHT; ++i) {
         IP_Port ip_port;
-        ip_init(&ip_port.ip, 1);
-        ip_port.ip.ip6.uint8[15] = 1;
+        ip_port.ip = get_loopback();
         ip_port.port = net_htons(DHT_DEFAULT_PORT + i);
         DHT_bootstrap(dhts[(i - 1) % NUM_DHT], ip_port, dhts[i]->self_public_key);
     }
@@ -637,7 +656,7 @@ loop_top:
         }
 
         for (i = 0; i < NUM_DHT; ++i) {
-            networking_poll(dhts[i]->net, NULL);
+            networking_poll(dhts[i]->net, nullptr);
             do_DHT(dhts[i]);
         }
 
@@ -700,13 +719,13 @@ static void dht_pack_unpack(const Node_format *nodes, size_t size, uint8_t *data
 
 static void random_ip(IP_Port *ipp, int family)
 {
-    uint8_t *ip = NULL;
+    uint8_t *ip = nullptr;
     size_t size;
 
-    if (family == AF_INET || family == TCP_INET) {
+    if (family == TOX_AF_INET || family == TCP_INET) {
         ip = (uint8_t *)&ipp->ip.ip4;
         size = sizeof(ipp->ip.ip4);
-    } else if (family == AF_INET6 || family == TCP_INET6) {
+    } else if (family == TOX_AF_INET6 || family == TCP_INET6) {
         ip = (uint8_t *)&ipp->ip.ip6;
         size = sizeof(ipp->ip.ip6);
     } else {
@@ -734,18 +753,18 @@ START_TEST(test_dht_node_packing)
     random_bytes(nodes[1].public_key, pk_size);
     random_bytes(nodes[2].public_key, pk_size);
 
-    random_ip(&nodes[0].ip_port, AF_INET);
-    random_ip(&nodes[1].ip_port, AF_INET);
-    random_ip(&nodes[2].ip_port, AF_INET);
+    random_ip(&nodes[0].ip_port, TOX_AF_INET);
+    random_ip(&nodes[1].ip_port, TOX_AF_INET);
+    random_ip(&nodes[2].ip_port, TOX_AF_INET);
     dht_pack_unpack(nodes, 3, data, length);
 
-    random_ip(&nodes[0].ip_port, AF_INET);
-    random_ip(&nodes[1].ip_port, AF_INET);
+    random_ip(&nodes[0].ip_port, TOX_AF_INET);
+    random_ip(&nodes[1].ip_port, TOX_AF_INET);
     random_ip(&nodes[2].ip_port, TCP_INET);
     dht_pack_unpack(nodes, 3, data, length);
 
-    random_ip(&nodes[0].ip_port, AF_INET);
-    random_ip(&nodes[1].ip_port, AF_INET6);
+    random_ip(&nodes[0].ip_port, TOX_AF_INET);
+    random_ip(&nodes[1].ip_port, TOX_AF_INET6);
     random_ip(&nodes[2].ip_port, TCP_INET6);
     dht_pack_unpack(nodes, 3, data, length);
 
@@ -754,9 +773,9 @@ START_TEST(test_dht_node_packing)
     random_ip(&nodes[2].ip_port, TCP_INET);
     dht_pack_unpack(nodes, 3, data, length);
 
-    random_ip(&nodes[0].ip_port, AF_INET6);
-    random_ip(&nodes[1].ip_port, AF_INET6);
-    random_ip(&nodes[2].ip_port, AF_INET6);
+    random_ip(&nodes[0].ip_port, TOX_AF_INET6);
+    random_ip(&nodes[1].ip_port, TOX_AF_INET6);
+    random_ip(&nodes[2].ip_port, TOX_AF_INET6);
     dht_pack_unpack(nodes, 3, data, length);
 
     free(data);
@@ -782,7 +801,7 @@ static Suite *dht_suite(void)
 
 int main(int argc, char *argv[])
 {
-    srand((unsigned int) time(NULL));
+    srand((unsigned int) time(nullptr));
 
     Suite *dht = dht_suite();
     SRunner *test_runner = srunner_create(dht);

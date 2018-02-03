@@ -51,8 +51,6 @@ static void change_symmetric_key(Onion *onion)
 /* packing and unpacking functions */
 static void ip_pack(uint8_t *data, IP source)
 {
-    to_net_family(&source);
-
     data[0] = source.family;
 
     if (source.family == TOX_AF_INET || source.family == TOX_TCP_INET) {
@@ -78,12 +76,11 @@ static int ip_unpack(IP *target, const uint8_t *data, unsigned int data_size, bo
         memcpy(target->ip6.uint8, data + 1, SIZE_IP6);
     }
 
-    if (!disable_family_check) {
-        return to_host_family(target);
-    }
+    bool valid = disable_family_check ||
+                 target->family == TOX_AF_INET ||
+                 target->family == TOX_AF_INET6;
 
-    to_host_family(target);
-    return 0;
+    return valid ? 0 : -1;
 }
 
 static void ipport_pack(uint8_t *data, const IP_Port *source)
@@ -123,8 +120,8 @@ int create_onion_path(const DHT *dht, Onion_Path *new_path, const Node_format *n
         return -1;
     }
 
-    encrypt_precompute(nodes[0].public_key, dht->self_secret_key, new_path->shared_key1);
-    memcpy(new_path->public_key1, dht->self_public_key, CRYPTO_PUBLIC_KEY_SIZE);
+    encrypt_precompute(nodes[0].public_key, dht_get_self_secret_key(dht), new_path->shared_key1);
+    memcpy(new_path->public_key1, dht_get_self_public_key(dht), CRYPTO_PUBLIC_KEY_SIZE);
 
     uint8_t random_public_key[CRYPTO_PUBLIC_KEY_SIZE];
     uint8_t random_secret_key[CRYPTO_SECRET_KEY_SIZE];
@@ -341,7 +338,7 @@ static int handle_send_initial(void *object, IP_Port source, const uint8_t *pack
 
     uint8_t plain[ONION_MAX_PACKET_SIZE];
     uint8_t shared_key[CRYPTO_SHARED_KEY_SIZE];
-    get_shared_key(&onion->shared_keys_1, shared_key, onion->dht->self_secret_key, packet + 1 + CRYPTO_NONCE_SIZE);
+    get_shared_key(&onion->shared_keys_1, shared_key, dht_get_self_secret_key(onion->dht), packet + 1 + CRYPTO_NONCE_SIZE);
     int len = decrypt_data_symmetric(shared_key, packet + 1, packet + 1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE,
                                      length - (1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE), plain);
 
@@ -410,7 +407,7 @@ static int handle_send_1(void *object, IP_Port source, const uint8_t *packet, ui
 
     uint8_t plain[ONION_MAX_PACKET_SIZE];
     uint8_t shared_key[CRYPTO_SHARED_KEY_SIZE];
-    get_shared_key(&onion->shared_keys_2, shared_key, onion->dht->self_secret_key, packet + 1 + CRYPTO_NONCE_SIZE);
+    get_shared_key(&onion->shared_keys_2, shared_key, dht_get_self_secret_key(onion->dht), packet + 1 + CRYPTO_NONCE_SIZE);
     int len = decrypt_data_symmetric(shared_key, packet + 1, packet + 1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE,
                                      length - (1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE + RETURN_1), plain);
 
@@ -466,7 +463,7 @@ static int handle_send_2(void *object, IP_Port source, const uint8_t *packet, ui
 
     uint8_t plain[ONION_MAX_PACKET_SIZE];
     uint8_t shared_key[CRYPTO_SHARED_KEY_SIZE];
-    get_shared_key(&onion->shared_keys_3, shared_key, onion->dht->self_secret_key, packet + 1 + CRYPTO_NONCE_SIZE);
+    get_shared_key(&onion->shared_keys_3, shared_key, dht_get_self_secret_key(onion->dht), packet + 1 + CRYPTO_NONCE_SIZE);
     int len = decrypt_data_symmetric(shared_key, packet + 1, packet + 1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE,
                                      length - (1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE + RETURN_2), plain);
 
@@ -617,7 +614,9 @@ static int handle_recv_1(void *object, IP_Port source, const uint8_t *packet, ui
 
     uint16_t data_len = length - (1 + RETURN_1);
 
-    if (onion->recv_1_function && send_to.ip.family != AF_INET && send_to.ip.family != AF_INET6) {
+    if (onion->recv_1_function &&
+            send_to.ip.family != TOX_AF_INET &&
+            send_to.ip.family != TOX_AF_INET6) {
         return onion->recv_1_function(onion->callback_object, send_to, packet + (1 + RETURN_1), data_len);
     }
 
@@ -636,18 +635,18 @@ void set_callback_handle_recv_1(Onion *onion, int (*function)(void *, IP_Port, c
 
 Onion *new_onion(DHT *dht)
 {
-    if (dht == NULL) {
-        return NULL;
+    if (dht == nullptr) {
+        return nullptr;
     }
 
     Onion *onion = (Onion *)calloc(1, sizeof(Onion));
 
-    if (onion == NULL) {
-        return NULL;
+    if (onion == nullptr) {
+        return nullptr;
     }
 
     onion->dht = dht;
-    onion->net = dht->net;
+    onion->net = dht_get_net(dht);
     new_symmetric_key(onion->secret_symmetric_key);
     onion->timestamp = unix_time();
 
@@ -664,17 +663,17 @@ Onion *new_onion(DHT *dht)
 
 void kill_onion(Onion *onion)
 {
-    if (onion == NULL) {
+    if (onion == nullptr) {
         return;
     }
 
-    networking_registerhandler(onion->net, NET_PACKET_ONION_SEND_INITIAL, NULL, NULL);
-    networking_registerhandler(onion->net, NET_PACKET_ONION_SEND_1, NULL, NULL);
-    networking_registerhandler(onion->net, NET_PACKET_ONION_SEND_2, NULL, NULL);
+    networking_registerhandler(onion->net, NET_PACKET_ONION_SEND_INITIAL, nullptr, nullptr);
+    networking_registerhandler(onion->net, NET_PACKET_ONION_SEND_1, nullptr, nullptr);
+    networking_registerhandler(onion->net, NET_PACKET_ONION_SEND_2, nullptr, nullptr);
 
-    networking_registerhandler(onion->net, NET_PACKET_ONION_RECV_3, NULL, NULL);
-    networking_registerhandler(onion->net, NET_PACKET_ONION_RECV_2, NULL, NULL);
-    networking_registerhandler(onion->net, NET_PACKET_ONION_RECV_1, NULL, NULL);
+    networking_registerhandler(onion->net, NET_PACKET_ONION_RECV_3, nullptr, nullptr);
+    networking_registerhandler(onion->net, NET_PACKET_ONION_RECV_2, nullptr, nullptr);
+    networking_registerhandler(onion->net, NET_PACKET_ONION_RECV_1, nullptr, nullptr);
 
     free(onion);
 }

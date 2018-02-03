@@ -37,6 +37,10 @@
 /* This cannot be bigger than 256 */
 #define MAX_CONCURRENT_FILE_PIPES 256
 
+#if MAX_CONCURRENT_FILE_PIPES > UINT8_MAX + 1
+#error "uint8_t cannot represent all file transfer numbers"
+#endif
+
 
 #define FRIEND_ADDRESS_SIZE (CRYPTO_PUBLIC_KEY_SIZE + sizeof(uint32_t) + sizeof(uint16_t))
 
@@ -228,7 +232,7 @@ struct Messenger {
     Friend_Connections *fr_c;
 
     TCP_Server *tcp_server;
-    Friend_Requests fr;
+    Friend_Requests *fr;
     uint8_t name[MAX_NAME_LENGTH];
     uint16_t name_length;
 
