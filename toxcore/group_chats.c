@@ -3972,12 +3972,14 @@ static int handle_gc_hs_response_ack(Messenger *m, int groupnumber, GC_Connectio
     gconn->handshaked = true;
     gconn->pending_handshake = 0;
 
-    if (gcc_handle_ack(gconn, 1) == -1) {
-        fprintf(stderr, "handle_gc_hs_response_ack error\n");
-        return -1;
+    uint64_t message_id;
+    for (message_id =  1; message_id <= 2; message_id++) {  // in case of handshakes race condition
+        if (!gcc_handle_ack(gconn, message_id)) {
+            return 0;
+        }
     }
-
-    return 0;
+    fprintf(stderr, "handle_gc_hs_response_ack error\n");
+    return -1;
 }
 
 /* Toggles ignore for peer_id.
