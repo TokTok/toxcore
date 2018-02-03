@@ -496,7 +496,6 @@ static int handle_gc_announce_request(Onion_Announce *onion_a, IP_Port source, c
     }
     uint8_t num_ann = (uint8_t)get_gc_announces(gc_announces_list, gc_announces, MAX_SENT_NODES,
                                                 plain + ONION_PING_ID_SIZE, new_announce->peer_public_key);
-    fprintf(stderr, "NUM_ANN: %d ", num_ann);
 
     pl[2 + ONION_PING_ID_SIZE + nodes_length] = num_ann;
     size_t announces_length = num_ann * sizeof(GC_Peer_Announce);

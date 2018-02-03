@@ -42,12 +42,12 @@
 #define MAX_GC_MODERATORS 128
 #define MAX_GC_SAVED_INVITES 50
 
-
 #define GC_MOD_LIST_ENTRY_SIZE SIG_PUBLIC_KEY
 #define GC_MODERATION_HASH_SIZE CRYPTO_SHA256_SIZE
 #define GC_PING_INTERVAL 12
 #define GC_CONFIRMED_PEER_TIMEOUT (GC_PING_INTERVAL * 4 + 10)
-#define GC_UNCONFIRMED_PEER_TIMEOUT GC_PING_INTERVAL
+#define GC_UNCONFIRMED_PEER_TIMEOUT (GC_PING_INTERVAL * 2)
+
 
 typedef enum GROUP_PRIVACY_STATE {
     GI_PUBLIC,
@@ -475,6 +475,8 @@ uint8_t gc_get_status(const GC_Chat *chat, uint32_t peer_id);
  * Returns (uint8_t) -1 on failure.
  */
 uint8_t gc_get_role(const GC_Chat *chat, uint32_t peer_id);
+
+int gc_get_peer_public_key(const GC_Chat *chat, uint32_t peernumber, uint8_t *public_key);
 
 /* Sets the role of peer_id. role must be one of: GR_MODERATOR, GR_USER, GR_OBSERVER
  *
