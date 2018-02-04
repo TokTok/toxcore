@@ -60,27 +60,6 @@ sed -i -e '/^import sys$/a import urllib3.contrib.pyopenssl\nurllib3.contrib.pyo
   # cd - # popd
 }
 
-# Install libconfig (version in ubuntu-precise too old).
-[ -f $CACHE_DIR/lib/libconfig.a ] || {
-  git clone --depth=1 --branch=v1.7.1 https://github.com/hyperrealm/libconfig ../libconfig
-  cd ../libconfig # pushd
-  autoreconf -fi
-  ./configure --prefix=$CACHE_DIR
-  touch lib/scanner.l
-  make install -j$NPROC
-  cd - # popd
-}
-
-# Install libopus (not in ubuntu-precise).
-[ -f $CACHE_DIR/lib/libopus.a ] || {
-  git clone --depth=1 --branch=1.1.2 https://github.com/xiph/opus ../opus
-  cd ../opus # pushd
-  ./autogen.sh
-  ./configure --prefix=$CACHE_DIR
-  make install -j$NPROC
-  cd - # popd
-}
-
 if [ "$CC" = "clang" ]; then
   # An initial update is required or the cabal cache will be empty and no packages
   # can be installed.
