@@ -1050,9 +1050,9 @@ static int handle_gc_sync_response(Messenger *m, int groupnumber, int peernumber
                                      tcp_relays[i].public_key);
             save_tcp_relay(peer_conn, &tcp_relays[i]);
 
-            peer_conn->pending_handshake_type = chat->join_type == HJ_PRIVATE ? HS_PEER_INFO_EXCHANGE : HS_INVITE_REQUEST;
-            peer_conn->is_pending_handshake_response = false;
-            peer_conn->is_oob_handshake = chat->join_type == HJ_PUBLIC;
+            fprintf(stderr, "handle_gc_sync_response - added peer\n");
+            peer_conn->pending_handshake_type = HS_PEER_INFO_EXCHANGE;
+            peer_conn->is_pending_handshake_response = peer_conn->is_oob_handshake = false;
             peer_conn->pending_handshake = unix_time() + HANDSHAKE_SENDING_TIMEOUT;
         }
 
@@ -1889,6 +1889,7 @@ static int handle_gc_peer_announcement(Messenger *m, int groupnumber, uint32_t p
         return -1;
     }
 
+    //TODO: check sender?
     uint8_t peer_pk[ENC_PUBLIC_KEY];
     memcpy(peer_pk, data, ENC_PUBLIC_KEY);
 
