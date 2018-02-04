@@ -47,6 +47,7 @@
 #define GC_PING_INTERVAL 12
 #define GC_CONFIRMED_PEER_TIMEOUT (GC_PING_INTERVAL * 4 + 10)
 #define GC_UNCONFIRMED_PEER_TIMEOUT (GC_PING_INTERVAL * 2)
+#define MAX_GC_CONFIRMED_PEERS 20
 
 
 typedef enum GROUP_PRIVACY_STATE {
@@ -214,6 +215,8 @@ typedef struct GC_Connection GC_Connection;
 
 typedef struct GC_Chat {
     const Mono_Time *mono_time;
+    uint8_t confirmed_peers[MAX_GC_CONFIRMED_PEERS][ENC_PUBLIC_KEY];
+    uint8_t confirmed_peers_index;
     Node_format announced_node;
 
     Networking_Core *net;
