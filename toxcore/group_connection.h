@@ -86,6 +86,7 @@ struct GC_Connection {
     bool        is_oob_handshake;
     uint8_t     oob_relay_pk[ENC_PUBLIC_KEY];
     bool        confirmed;  /* true if this peer has given us their info */
+    uint32_t    friend_shared_state_version;
 };
 
 /* Return connection object for peernumber.
