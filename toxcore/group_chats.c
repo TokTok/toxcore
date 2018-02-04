@@ -46,7 +46,7 @@ enum {
 #define GC_PACKET_PADDING_LENGTH(length) (((MAX_GC_PACKET_SIZE - (length)) % GC_MAX_PACKET_PADDING))
 
     GC_PLAIN_HS_PACKET_SIZE = sizeof(uint8_t) + HASH_ID_BYTES + ENC_PUBLIC_KEY + SIG_PUBLIC_KEY
-                              + sizeof(uint8_t) + sizeof(uint8_t),
+                                  + sizeof(uint8_t) + sizeof(uint8_t) + sizeof(uint32_t),
 
     GC_ENCRYPTED_HS_PACKET_SIZE = sizeof(uint8_t) + HASH_ID_BYTES + ENC_PUBLIC_KEY + CRYPTO_NONCE_SIZE
                                   + GC_PLAIN_HS_PACKET_SIZE + CRYPTO_MAC_SIZE,
@@ -111,6 +111,18 @@ void print_peer(const GC_GroupPeer *peer, const GC_Connection *gconn)
     fprintf(stderr, "Status: %u\n", peer->status);
     fprintf(stderr, "Role: %u\n", peer->role);
     fprintf(stderr, "Ignore: %d\n", peer->ignore);
+}
+
+static bool is_peer_confirmed(const GC_Chat *chat, const uint8_t *peer_pk)
+{
+    int i;
+    for (i = 0; i < MAX_GC_CONFIRMED_PEERS; i++) {
+        if (!memcmp(chat->confirmed_peers[i], peer_pk, ENC_PUBLIC_KEY)) { // peer on our list
+            return true;
+        }
+    }
+
+    return false;
 }
 
 static bool is_public_chat(const GC_Chat *chat)
@@ -1038,12 +1050,10 @@ static int handle_gc_sync_response(Messenger *m, int groupnumber, int peernumber
                                      tcp_relays[i].public_key);
             save_tcp_relay(peer_conn, &tcp_relays[i]);
 
-            if (!gconn->pending_handshake) {
-                gconn->pending_handshake_type = chat->join_type == HJ_PRIVATE ? HS_PEER_INFO_EXCHANGE : HS_INVITE_REQUEST;
-                gconn->is_pending_handshake_response = false;
-                gconn->is_oob_handshake = chat->join_type == HJ_PUBLIC;
-                gconn->pending_handshake = unix_time() + HANDSHAKE_SENDING_TIMEOUT;
-            }
+            peer_conn->pending_handshake_type = chat->join_type == HJ_PRIVATE ? HS_PEER_INFO_EXCHANGE : HS_INVITE_REQUEST;
+            peer_conn->is_pending_handshake_response = false;
+            peer_conn->is_oob_handshake = chat->join_type == HJ_PUBLIC;
+            peer_conn->pending_handshake = unix_time() + HANDSHAKE_SENDING_TIMEOUT;
         }
 
         free(peer_numbers);
@@ -1109,26 +1119,27 @@ static int handle_gc_sync_request(const Messenger *m, int groupnumber, int peern
 
     uint32_t confirmed_peers_count = get_gc_confirmed_numpeers(chat);
 
-    if (chat->connection_state != CS_CONNECTED /*|| chat->shared_state.version == 0*/) {
+    if (chat->connection_state != CS_CONNECTED || chat->shared_state.version == 0) {
         fprintf(stderr, "handle gc sync request resend sync request\n");
-        return send_gc_sync_request(chat, gconn, confirmed_peers_count);
+        return -1;
+        //return send_gc_sync_request(chat, gconn, confirmed_peers_count);
     }
 
     uint32_t req_num_peers;
     bytes_to_U32(&req_num_peers, data);
 
-    if (req_num_peers > 0 && req_num_peers >= confirmed_peers_count) {
-        if (req_num_peers > confirmed_peers_count) {
-            fprintf(stderr, "handle gc sync request resend sync request\n");
-            return send_gc_sync_request(chat, gconn, confirmed_peers_count);  // our peer list is outdated - try to sync
-        }
-
-        return 0;
-    }
-
-    if (gconn->pending_sync_request && req_num_peers < confirmed_peers_count) {
-        gconn->pending_sync_request = false;
-    }
+//    if (req_num_peers > 0 && req_num_peers >= confirmed_peers_count) {
+//        if (req_num_peers > confirmed_peers_count) {
+//            fprintf(stderr, "handle gc sync request resend sync request\n");
+//            return send_gc_sync_request(chat, gconn, confirmed_peers_count);  // our peer list is outdated - try to sync
+//        }
+//
+//        return 0;
+//    }
+//
+//    if (gconn->pending_sync_request && req_num_peers < confirmed_peers_count) {
+//        gconn->pending_sync_request = false;
+//    }
 
     if (chat->shared_state.passwd_len > 0) {
         uint8_t passwd[MAX_GC_PASSWD_SIZE];
@@ -1495,6 +1506,7 @@ static int send_gc_invite_response_reject(GC_Chat *chat, GC_Connection *gconn, u
 int handle_gc_invite_request(Messenger *m, int groupnumber, uint32_t peernumber, const uint8_t *data,
                              uint32_t length)
 {
+    fprintf(stderr, "handle_gc_invite_request\n");
     if (length <= sizeof(uint16_t) + MAX_GC_PASSWD_SIZE) {
         fprintf(stderr, "invite fail1\n");
         return -1;
@@ -1514,9 +1526,10 @@ int handle_gc_invite_request(Messenger *m, int groupnumber, uint32_t peernumber,
         return -1;
     }
 
-    if (chat->connection_state != CS_CONNECTED) { // todo: 2 peers with disconnected state?
+    if (chat->connection_state != CS_CONNECTED || chat->shared_state.version == 0) {
         fprintf(stderr, "not connected - send request back\n");
-        return send_gc_invite_request(chat, gconn);
+        return -1;
+        //return send_gc_invite_request(chat, gconn);
     }
 
     uint8_t invite_error = GJ_INVITE_FAILED;
@@ -3982,6 +3995,15 @@ static int handle_gc_hs_response_ack(Messenger *m, int groupnumber, GC_Connectio
     gconn->handshaked = true;
     gconn->pending_handshake = 0;
 
+    if (gconn->friend_shared_state_version > chat->shared_state.version
+        || (gconn->friend_shared_state_version == chat->shared_state.version
+            && id_cmp(chat->self_public_key, gconn->addr.public_key) < 0)) {
+        int ret = send_gc_invite_request(chat, gconn);
+        if (ret == -1) {
+            return -1;
+        }
+    }
+
     uint64_t message_id;
     for (message_id =  1; message_id <= 2; message_id++) {  // in case of handshakes race condition
         if (!gcc_handle_ack(gconn, message_id)) {
@@ -4184,6 +4206,10 @@ int make_gc_handshake_packet(GC_Chat *chat, const GC_Connection *gconn, uint8_t 
     memcpy(data + length, &join_type, sizeof(uint8_t));
     length += sizeof(uint8_t);
 
+    uint32_t state = chat->connection_state == CS_CONNECTED ? chat->shared_state.version : 0;
+    U32_to_bytes(data + length, state);
+    length += sizeof(uint32_t);
+
     int enc_len = wrap_group_handshake_packet(chat->self_public_key, chat->self_secret_key,
                                               gconn->addr.public_key, packet, packet_size,
                                               data, length, chat->chat_id_hash);
@@ -4348,6 +4374,12 @@ static int handle_gc_handshake_response(Messenger *m, int groupnumber, const uin
 
     switch (request_type) {
         case HS_INVITE_REQUEST:
+            bytes_to_U32(&gconn->friend_shared_state_version, data + ENC_PUBLIC_KEY + SIG_PUBLIC_KEY + 2);
+            if (gconn->friend_shared_state_version < chat->shared_state.version
+                || (gconn->friend_shared_state_version == chat->shared_state.version
+                    && id_cmp(chat->self_public_key, gconn->addr.public_key) > 0)) {
+                return peernumber;
+            }
             ret = send_gc_invite_request(chat, gconn);
             break;
 
@@ -4418,7 +4450,7 @@ static int handle_gc_handshake_request(Messenger *m, int groupnumber, IP_Port *i
     bool is_new_peer = false;
 
     if (peernumber < 0) {
-        if (chat->shared_state.privacy_state == GI_PUBLIC) {
+        if (is_public_chat(chat) || is_peer_confirmed(chat, sender_pk)) {
             peernumber = peer_add(m, chat->groupnumber, ipp, sender_pk);
             is_new_peer = true;
             if (peernumber < 0) {
@@ -4461,6 +4493,8 @@ static int handle_gc_handshake_request(Messenger *m, int groupnumber, IP_Port *i
 
     uint8_t request_type = data[ENC_PUBLIC_KEY + SIG_PUBLIC_KEY];
     uint8_t join_type = data[ENC_PUBLIC_KEY + SIG_PUBLIC_KEY + 1];
+
+    bytes_to_U32(&gconn->friend_shared_state_version, data + ENC_PUBLIC_KEY + SIG_PUBLIC_KEY + 2);
 
     if (join_type == HJ_PUBLIC && chat->shared_state.privacy_state != GI_PUBLIC) {
         gc_peer_delete(m, groupnumber, peernumber, NULL, 0);
@@ -5020,6 +5054,11 @@ int gc_peer_delete(Messenger *m, int groupnumber, uint32_t peernumber, const uin
 
     if (gconn == nullptr) {
         return -1;
+    }
+
+    if (gconn->handshaked && !is_peer_confirmed(chat, gconn->addr.public_key)) {
+        memcpy(chat->confirmed_peers[chat->confirmed_peers_index], gconn->addr.public_key, ENC_PUBLIC_KEY);
+        chat->confirmed_peers_index = (chat->confirmed_peers_index + 1) % MAX_GC_CONFIRMED_PEERS;
     }
 
     /* Needs to occur before peer is removed*/
