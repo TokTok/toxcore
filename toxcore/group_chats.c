@@ -3995,9 +3995,9 @@ static int handle_gc_hs_response_ack(Messenger *m, int groupnumber, GC_Connectio
     gconn->handshaked = true;
     gconn->pending_handshake = 0;
 
-    if (gconn->friend_shared_state_version > chat->shared_state.version
-        || (gconn->friend_shared_state_version == chat->shared_state.version
-            && id_cmp(chat->self_public_key, gconn->addr.public_key) < 0)) {
+    if (gconn->friend_shared_state_version > gconn->self_sent_shared_state_version
+        || (gconn->friend_shared_state_version == gconn->self_sent_shared_state_version
+            && id_cmp(chat->self_public_key, gconn->addr.public_key) > 0)) {
         int ret = send_gc_invite_request(chat, gconn);
         if (ret == -1) {
             return -1;
@@ -4180,7 +4180,7 @@ static int wrap_group_handshake_packet(const uint8_t *self_pk, const uint8_t *se
  * Returns length of encrypted packet on success.
  * Returns -1 on failure.
  */
-int make_gc_handshake_packet(GC_Chat *chat, const GC_Connection *gconn, uint8_t handshake_type,
+int make_gc_handshake_packet(GC_Chat *chat, GC_Connection *gconn, uint8_t handshake_type,
                              uint8_t request_type, uint8_t join_type, uint8_t *packet, size_t packet_size)
 {
     if (packet_size != GC_ENCRYPTED_HS_PACKET_SIZE) {
@@ -4207,6 +4207,7 @@ int make_gc_handshake_packet(GC_Chat *chat, const GC_Connection *gconn, uint8_t 
     length += sizeof(uint8_t);
 
     uint32_t state = chat->connection_state == CS_CONNECTED ? chat->shared_state.version : 0;
+    gconn->self_sent_shared_state_version = state;
     U32_to_bytes(data + length, state);
     length += sizeof(uint32_t);
 
@@ -4375,8 +4376,8 @@ static int handle_gc_handshake_response(Messenger *m, int groupnumber, const uin
     switch (request_type) {
         case HS_INVITE_REQUEST:
             bytes_to_U32(&gconn->friend_shared_state_version, data + ENC_PUBLIC_KEY + SIG_PUBLIC_KEY + 2);
-            if (gconn->friend_shared_state_version < chat->shared_state.version
-                || (gconn->friend_shared_state_version == chat->shared_state.version
+            if (gconn->friend_shared_state_version < gconn->self_sent_shared_state_version
+                || (gconn->friend_shared_state_version == gconn->self_sent_shared_state_version
                     && id_cmp(chat->self_public_key, gconn->addr.public_key) > 0)) {
                 return peernumber;
             }
@@ -4496,7 +4497,7 @@ static int handle_gc_handshake_request(Messenger *m, int groupnumber, IP_Port *i
 
     bytes_to_U32(&gconn->friend_shared_state_version, data + ENC_PUBLIC_KEY + SIG_PUBLIC_KEY + 2);
 
-    if (join_type == HJ_PUBLIC && chat->shared_state.privacy_state != GI_PUBLIC) {
+    if (join_type == HJ_PUBLIC && !is_public_chat(chat)) {
         gc_peer_delete(m, groupnumber, peernumber, NULL, 0);
         return -1;
     }
