@@ -340,6 +340,8 @@ struct Saved_Group {
     uint8_t   self_status;
 };
 
+bool is_public_chat(const GC_Chat *chat);
+
 /* Sends a plain message or an action, depending on type.
  *
  * Returns 0 on success.

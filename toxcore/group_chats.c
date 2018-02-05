@@ -126,7 +126,7 @@ static bool is_peer_confirmed(const GC_Chat *chat, const uint8_t *peer_pk)
     return false;
 }
 
-static bool is_public_chat(const GC_Chat *chat)
+bool is_public_chat(const GC_Chat *chat)
 {
     return chat->shared_state.privacy_state == GI_PUBLIC;
 }
@@ -1006,6 +1006,7 @@ static int handle_gc_sync_response(Messenger *m, int groupnumber, int peernumber
 
     mono_time_update(m->mono_time);
 
+    fprintf(stderr, "got peers in response: %d\n", num_peers);
     if (num_peers) {
 
         Node_format *tcp_relays = (Node_format *)malloc(sizeof(Node_format) * num_peers);
@@ -1051,7 +1052,7 @@ static int handle_gc_sync_response(Messenger *m, int groupnumber, int peernumber
                                      tcp_relays[i].public_key);
             save_tcp_relay(peer_conn, &tcp_relays[i]);
 
-            fprintf(stderr, "handle_gc_sync_response - added peer\n");
+            fprintf(stderr, "handle_gc_sync_response - added peer %s\n", id_toa(chat_pk - ENC_PUBLIC_KEY));
             peer_conn->pending_handshake_type = HS_PEER_INFO_EXCHANGE;
             peer_conn->is_pending_handshake_response = peer_conn->is_oob_handshake = false;
             peer_conn->pending_handshake = mono_time_get(chat->mono_time) + HANDSHAKE_SENDING_TIMEOUT;
@@ -1889,8 +1890,8 @@ static int handle_gc_peer_announcement(Messenger *m, int groupnumber, uint32_t p
     if (length <= ENC_PUBLIC_KEY) {
         return -1;
     }
-
-    //TODO: check sender?
+    fprintf(stderr, "in handle_gc_peer_announcement\n");
+    //TODO: check sender and peer pk?
     uint8_t peer_pk[ENC_PUBLIC_KEY];
     memcpy(peer_pk, data, ENC_PUBLIC_KEY);
 
@@ -2058,7 +2059,7 @@ static void do_gc_shared_state_changes(GC_Session *c, GC_Chat *chat, const GC_Sh
                                 c->privacy_state_userdata);
         }
 
-        if (chat->shared_state.privacy_state == GI_PUBLIC) {
+        if (is_public_chat(chat)) {
             m_add_friend_gc(c->messenger, chat);
         } else if (chat->shared_state.privacy_state == GI_PRIVATE) {
             m_remove_friend_gc(c->messenger, chat);
@@ -4283,15 +4284,17 @@ static int send_gc_oob_handshake_packet(GC_Chat *chat, uint32_t peernumber, uint
     int length = make_gc_handshake_packet(chat, gconn, handshake_type, request_type, join_type, packet, sizeof(packet));
 
     if (length != sizeof(packet)) {
+        fprintf(stderr, "length error\n");
         return -1;
     }
 
     if (gcc_add_send_ary(chat->mono_time, gconn, packet, length, -1) == -1) {
+        fprintf(stderr, "send array error\n");
         return -1;
     }
 
     int ret = tcp_send_oob_packet_using_relay(chat->tcp_conn, gconn->oob_relay_pk, gconn->addr.public_key, packet, length);
-
+    fprintf(stderr, "result: %d\n", ret);
     return ret;
 }
 
@@ -5048,7 +5051,7 @@ void gc_callback_rejected(Messenger *m, void (*function)(Messenger *m, uint32_t,
  */
 int gc_peer_delete(Messenger *m, int groupnumber, uint32_t peernumber, const uint8_t *data, uint16_t length)
 {
-    fprintf(stderr, "delete: %s\n", data);
+    if (data) fprintf(stderr, "delete: %s\n", data);
     GC_Session *c = m->group_handler;
 
     GC_Chat *chat = gc_get_group(c, groupnumber);
@@ -5324,10 +5327,6 @@ static int send_pending_handshake(GC_Chat *chat, GC_Connection *gconn, uint32_t 
         return 1;
     }
 
-    if (!peernumber_valid(chat, peer_id)) {
-        return 2;
-    }
-
     if (!gconn->pending_handshake || mono_time_get(chat->mono_time) < gconn->pending_handshake) {
         return 0;
     }
@@ -5342,9 +5341,11 @@ static int send_pending_handshake(GC_Chat *chat, GC_Connection *gconn, uint32_t 
     if (gconn->is_pending_handshake_response) {
         result = send_gc_handshake_response(chat, peer_id, gconn->pending_handshake_type);
     } else if (gconn->is_oob_handshake) {
+        fprintf(stderr, "in send pending gc oob handshake\n");
         result = send_gc_oob_handshake_packet(chat, peer_id, GH_REQUEST,
                                               gconn->pending_handshake_type, chat->join_type);
     } else {
+        fprintf(stderr, "in send pending gc handshake\n");
         result = send_gc_handshake_packet(chat, peer_id, GH_REQUEST,
                                           gconn->pending_handshake_type, chat->join_type);
     }
