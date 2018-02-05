@@ -338,7 +338,7 @@ int32_t m_add_friend_gc(Messenger *m, GC_Chat *chat)
 
 int32_t m_remove_friend_gc(Messenger *m, const GC_Chat *chat)
 {
-    int friend_number = getfriend_id(m, chat->chat_public_key);
+    int friend_number = getfriend_id(m, get_chat_id(chat->chat_public_key));
     if (friend_number >= 0) {
         m_delfriend(m, friend_number);
     }
@@ -3255,7 +3255,7 @@ static State_Load_Status groups_load(Messenger *m, const uint8_t *data, uint32_t
         }
         else {
             GC_Chat *chat = gc_get_group(m->group_handler, ret);
-            if (chat->shared_state.privacy_state == GI_PUBLIC) {
+            if (is_public_chat(chat)) {
                 m_add_friend_gc(m, chat);
             }
         }
