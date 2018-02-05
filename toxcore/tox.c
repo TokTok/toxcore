@@ -1816,6 +1816,10 @@ bool tox_group_leave(Tox *tox, uint32_t groupnumber, const uint8_t *partmessage,
         return 0;
     }
 
+    if (is_public_chat(chat)) {
+        m_remove_friend_gc(m, chat);
+    }
+
     int ret = gc_group_exit(m->group_handler, chat, partmessage, length);
 
     switch (ret) {
