@@ -1123,24 +1123,10 @@ static int handle_gc_sync_request(const Messenger *m, int groupnumber, int peern
     if (chat->connection_state != CS_CONNECTED || chat->shared_state.version == 0) {
         fprintf(stderr, "handle gc sync request resend sync request\n");
         return -1;
-        //return send_gc_sync_request(chat, gconn, confirmed_peers_count);
     }
 
     uint32_t req_num_peers;
     bytes_to_U32(&req_num_peers, data);
-
-//    if (req_num_peers > 0 && req_num_peers >= confirmed_peers_count) {
-//        if (req_num_peers > confirmed_peers_count) {
-//            fprintf(stderr, "handle gc sync request resend sync request\n");
-//            return send_gc_sync_request(chat, gconn, confirmed_peers_count);  // our peer list is outdated - try to sync
-//        }
-//
-//        return 0;
-//    }
-//
-//    if (gconn->pending_sync_request && req_num_peers < confirmed_peers_count) {
-//        gconn->pending_sync_request = false;
-//    }
 
     if (chat->shared_state.passwd_len > 0) {
         uint8_t passwd[MAX_GC_PASSWD_SIZE];
@@ -1445,10 +1431,6 @@ static int handle_gc_invite_response(Messenger *m, int groupnumber, GC_Connectio
     if (chat == nullptr) {
         return -1;
     }
-//
-//    if (chat->connection_state == CS_CONNECTED) {
-//        return 0;
-//    }
 
     return send_gc_sync_request(chat, gconn, 0);
 }
