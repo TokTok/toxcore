@@ -1528,9 +1528,8 @@ int handle_gc_invite_request(Messenger *m, int groupnumber, uint32_t peernumber,
     }
 
     if (chat->connection_state != CS_CONNECTED || chat->shared_state.version == 0) {
-        fprintf(stderr, "not connected - send request back\n");
+        fprintf(stderr, "not connected - return\n");
         return -1;
-        //return send_gc_invite_request(chat, gconn);
     }
 
     uint8_t invite_error = GJ_INVITE_FAILED;
@@ -1556,7 +1555,8 @@ int handle_gc_invite_request(Messenger *m, int groupnumber, uint32_t peernumber,
     uint8_t nick[MAX_GC_NICK_SIZE];
     memcpy(nick, data + sizeof(uint16_t), nick_len);
 
-    if (get_nick_peernumber(chat, nick, nick_len) != -1) {
+    int peer_number_by_nick = get_nick_peernumber(chat, nick, nick_len);
+    if (peer_number_by_nick != -1 && peer_number_by_nick != peernumber) { // in case of duplicate invite
         fprintf(stderr, "nick taken\n");
         invite_error = GJ_NICK_TAKEN;
         goto failed_invite;
@@ -1567,10 +1567,10 @@ int handle_gc_invite_request(Messenger *m, int groupnumber, uint32_t peernumber,
     }
 
     if (chat->shared_state.passwd_len > 0) {
-        uint8_t passwd[MAX_GC_PASSWD_SIZE];
-        memcpy(passwd, data + sizeof(uint16_t) + nick_len, MAX_GC_PASSWD_SIZE);
+        uint8_t password[MAX_GC_PASSWD_SIZE];
+        memcpy(password, data + sizeof(uint16_t) + nick_len, MAX_GC_PASSWD_SIZE);
 
-        if (memcmp(chat->shared_state.passwd, passwd, chat->shared_state.passwd_len) != 0) {
+        if (memcmp(chat->shared_state.passwd, password, chat->shared_state.passwd_len) != 0) {
             invite_error = GJ_INVALID_PASSWORD;
             fprintf(stderr, "invite pass\n");
             goto failed_invite;

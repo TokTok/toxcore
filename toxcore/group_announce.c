@@ -2,6 +2,22 @@
 #include "group_announce.h"
 #include "util.h"
 
+
+static void remove_announces(GC_Announces_List *gc_announces_list, GC_Announces *announces) {
+    if (announces->prev_announce) {
+        announces->prev_announce->next_announce = announces->next_announce;
+    } else {
+        gc_announces_list->announces = announces->next_announce;
+    }
+
+    if (announces->next_announce) {
+        announces->next_announce->prev_announce = announces->prev_announce;
+    }
+
+    free(announces);
+    gc_announces_list->announces_count--;
+}
+
 GC_Announces_List *new_gca_list()
 {
     GC_Announces_List *announces_list = malloc(sizeof(GC_Announces_List));
@@ -16,20 +32,11 @@ GC_Announces_List *new_gca_list()
 
 void kill_gca(GC_Announces_List *announces_list)
 {
-    free(announces_list->announces);
+    while (announces_list->announces) {
+        remove_announces(announces_list, announces_list->announces);
+    }
     free(announces_list);
     announces_list = NULL;
-}
-
-static void remove_announces(GC_Announces *announces) {
-    if (announces->prev_announce) {
-        announces->prev_announce->next_announce = announces->next_announce;
-    }
-    if (announces->next_announce) {
-        announces->next_announce->prev_announce = announces->prev_announce;
-    }
-
-    free(announces);
 }
 
 void do_gca(GC_Announces_List *gc_announces_list) {
@@ -42,8 +49,7 @@ void do_gca(GC_Announces_List *gc_announces_list) {
         if (announces->last_announce_received_timestamp <= unix_time() - GC_ANNOUNCE_SAVING_TIMEOUT) {
             GC_Announces *announces_to_delete = announces;
             announces = announces->next_announce;
-            remove_announces(announces_to_delete);
-            gc_announces_list->announces_count--;
+            remove_announces(gc_announces_list, announces_to_delete);
 
             continue;
         }
@@ -153,7 +159,7 @@ bool cleanup_gca(GC_Announces_List *gc_announces_list, const uint8_t *chat_id) {
 
     GC_Announces *announces = get_announces_by_chat_id(gc_announces_list, chat_id);
     if (announces) {
-        remove_announces(announces);
+        remove_announces(gc_announces_list, announces);
         gc_announces_list->announces_count--;
 
         return true;
