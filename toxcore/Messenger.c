@@ -1499,6 +1499,9 @@ uint64_t file_dataremaining(const Messenger *m, int32_t friendnumber, uint8_t fi
            m->friendlist[friendnumber].file_receiving[filenumber].transferred;
 }
 
+/*
+ * TODO: this functions needs refactoring
+ */
 static void do_reqchunk_filecb(Messenger *m, int32_t friendnumber, void *userdata)
 {
     if (!m->friendlist[friendnumber].num_sending_files) {
@@ -1514,9 +1517,14 @@ static void do_reqchunk_filecb(Messenger *m, int32_t friendnumber, void *userdat
         free_slots -= MIN_SLOTS_FREE;
     }
 
+    LOGGER_WARN(m->log, "free_slots start:%d", free_slots);
+
     unsigned int i, num = m->friendlist[friendnumber].num_sending_files;
 
     for (i = 0; i < MAX_CONCURRENT_FILE_PIPES; ++i) {
+
+        LOGGER_WARN(m->log, "FT loop i:%d", (int)i);
+
         struct File_Transfers *ft = &m->friendlist[friendnumber].file_sending[i];
 
         if (ft->status != FILESTATUS_NONE) {
@@ -1550,7 +1558,8 @@ static void do_reqchunk_filecb(Messenger *m, int32_t friendnumber, void *userdat
             }
 
             if (free_slots == 0) {
-                break;
+                // break;
+                continue;
             }
 
             uint16_t length = MAX_FILE_DATA_SIZE;
@@ -1558,11 +1567,13 @@ static void do_reqchunk_filecb(Messenger *m, int32_t friendnumber, void *userdat
             if (ft->size == 0) {
                 /* Send 0 data to friend if file is 0 length. */
                 file_data(m, friendnumber, i, 0, nullptr, 0);
-                break;
+                // break;
+                continue;
             }
 
             if (ft->size == ft->requested) {
-                break;
+                // break;
+                continue;
             }
 
             if (ft->size - ft->requested < length) {
@@ -1582,7 +1593,18 @@ static void do_reqchunk_filecb(Messenger *m, int32_t friendnumber, void *userdat
         }
 
         if (num == 0) {
-            break;
+            // break;
+            continue;
+        }
+
+        // HINT: if there is more to do, go another round
+        if (i == (MAX_CONCURRENT_FILE_PIPES - 1)) {
+            LOGGER_WARN(m->log, "FT loop:LAST");
+            if ((num > 0) && (free_slots > 0)) {
+                LOGGER_WARN(m->log, "FT loop:new loop:num=%d free_slots=%d", (int)num, free_slots);
+                num = m->friendlist[friendnumber].num_sending_files;
+                i = 0;
+            }
         }
     }
 }
