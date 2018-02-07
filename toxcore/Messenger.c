@@ -1157,13 +1157,11 @@ long int new_filesender(const Messenger *m, int32_t friendnumber, uint32_t file_
     }
 
     if ((file_type == TOX_FILE_KIND_MESSAGEV2_SEND)
-       ||
-       (file_type == TOX_FILE_KIND_MESSAGEV2_ANSWER)
-       ||
-       (file_type == TOX_FILE_KIND_MESSAGEV2_ALTER))
-    {
-        if ((uint64_t)filesize > (uint64_t)TOX_MAX_FILETRANSFER_SIZE_MSGV2)
-        {
+            ||
+            (file_type == TOX_FILE_KIND_MESSAGEV2_ANSWER)
+            ||
+            (file_type == TOX_FILE_KIND_MESSAGEV2_ALTER)) {
+        if ((uint64_t)filesize > (uint64_t)TOX_MAX_FILETRANSFER_SIZE_MSGV2) {
             // TODO: define a new error code for this
             return -2;
         }
@@ -1188,15 +1186,12 @@ long int new_filesender(const Messenger *m, int32_t friendnumber, uint32_t file_
     struct File_Transfers *ft = &m->friendlist[friendnumber].file_sending[i];
 
     if ((file_type == TOX_FILE_KIND_MESSAGEV2_SEND)
-       ||
-       (file_type == TOX_FILE_KIND_MESSAGEV2_ANSWER)
-       ||
-       (file_type == TOX_FILE_KIND_MESSAGEV2_ALTER))
-    {
+            ||
+            (file_type == TOX_FILE_KIND_MESSAGEV2_ANSWER)
+            ||
+            (file_type == TOX_FILE_KIND_MESSAGEV2_ALTER)) {
         ft->status = FILESTATUS_TRANSFERRING;
-    }
-    else
-    {
+    } else {
         ft->status = FILESTATUS_NOT_ACCEPTED;
     }
 
@@ -2358,21 +2353,17 @@ static int m_handle_packet(void *object, int i, const uint8_t *temp, uint16_t le
 
 
             if ((file_type == TOX_FILE_KIND_MESSAGEV2_SEND)
-               ||
-               (file_type == TOX_FILE_KIND_MESSAGEV2_ANSWER)
-               ||
-               (file_type == TOX_FILE_KIND_MESSAGEV2_ALTER))
-            {
+                    ||
+                    (file_type == TOX_FILE_KIND_MESSAGEV2_ANSWER)
+                    ||
+                    (file_type == TOX_FILE_KIND_MESSAGEV2_ALTER)) {
                 ft->status = FILESTATUS_TRANSFERRING;
 
-                if ((uint64_t)filesize > (uint64_t)TOX_MAX_FILETRANSFER_SIZE_MSGV2)
-                {
+                if ((uint64_t)filesize > (uint64_t)TOX_MAX_FILETRANSFER_SIZE_MSGV2) {
                     break;
                 }
 
-            }
-            else
-            {
+            } else {
                 ft->status = FILESTATUS_NOT_ACCEPTED;
             }
 
