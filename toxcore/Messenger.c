@@ -38,6 +38,7 @@
 #include "network.h"
 #include "state.h"
 #include "util.h"
+#include "tox.h"
 
 static int write_cryptpacket_id(const Messenger *m, int32_t friendnumber, uint8_t packet_id, const uint8_t *data,
                                 uint32_t length, uint8_t congestion_control);
@@ -1155,6 +1156,19 @@ long int new_filesender(const Messenger *m, int32_t friendnumber, uint32_t file_
         return -2;
     }
 
+    if ((file_type == TOX_FILE_KIND_MESSAGEV2_SEND)
+       ||
+       (file_type == TOX_FILE_KIND_MESSAGEV2_ANSWER)
+       ||
+       (file_type == TOX_FILE_KIND_MESSAGEV2_ALTER))
+    {
+        if ((uint64_t)filesize > (uint64_t)TOX_MAX_FILETRANSFER_SIZE_MSGV2)
+        {
+            // TODO: define a new error code for this
+            return -2;
+        }
+    }
+
     uint32_t i;
 
     for (i = 0; i < MAX_CONCURRENT_FILE_PIPES; ++i) {
@@ -1173,7 +1187,18 @@ long int new_filesender(const Messenger *m, int32_t friendnumber, uint32_t file_
 
     struct File_Transfers *ft = &m->friendlist[friendnumber].file_sending[i];
 
-    ft->status = FILESTATUS_NOT_ACCEPTED;
+    if ((file_type == TOX_FILE_KIND_MESSAGEV2_SEND)
+       ||
+       (file_type == TOX_FILE_KIND_MESSAGEV2_ANSWER)
+       ||
+       (file_type == TOX_FILE_KIND_MESSAGEV2_ALTER))
+    {
+        ft->status = FILESTATUS_TRANSFERRING;
+    }
+    else
+    {
+        ft->status = FILESTATUS_NOT_ACCEPTED;
+    }
 
     ft->size = filesize;
 
@@ -2331,7 +2356,26 @@ static int m_handle_packet(void *object, int i, const uint8_t *temp, uint16_t le
                 break;
             }
 
-            ft->status = FILESTATUS_NOT_ACCEPTED;
+
+            if ((file_type == TOX_FILE_KIND_MESSAGEV2_SEND)
+               ||
+               (file_type == TOX_FILE_KIND_MESSAGEV2_ANSWER)
+               ||
+               (file_type == TOX_FILE_KIND_MESSAGEV2_ALTER))
+            {
+                ft->status = FILESTATUS_TRANSFERRING;
+
+                if ((uint64_t)filesize > (uint64_t)TOX_MAX_FILETRANSFER_SIZE_MSGV2)
+                {
+                    break;
+                }
+
+            }
+            else
+            {
+                ft->status = FILESTATUS_NOT_ACCEPTED;
+            }
+
             ft->size = filesize;
             ft->transferred = 0;
             ft->paused = FILE_PAUSE_NOT;
