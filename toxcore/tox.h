@@ -322,9 +322,19 @@ uint32_t tox_max_custom_packet_size(void);
 
 
 /**
+ * Maximum size of MessageV2 Messagetext
+ */
+#define TOX_MESSAGEV2_MAX_TEXT_LENGTH   4096
+
+/**
+ * Maximum size of MessageV2 Messagetext
+ */
+#define TOX_MESSAGEV2_MAX_HEADER_SIZE   (32 + 4 + 2 + 1)
+
+/**
  * Maximum size of MessageV2 Filetransfers (overall size including any overhead)
  */
-#define TOX_MAX_FILETRANSFER_SIZE_MSGV2     4096
+#define TOX_MAX_FILETRANSFER_SIZE_MSGV2  (TOX_MESSAGEV2_MAX_TEXT_LENGTH + TOX_MESSAGEV2_MAX_HEADER_SIZE)
 
 
 
@@ -2099,6 +2109,28 @@ typedef enum TOX_ERR_FILE_GET {
  */
 bool tox_file_get_file_id(const Tox *tox, uint32_t friend_number, uint32_t file_number, uint8_t *file_id,
                           TOX_ERR_FILE_GET *error);
+
+
+/*******************************************************************************
+ *
+ * :: Message V2 functions
+ *
+ ******************************************************************************/
+/*
+ * sending
+ */
+uint32_t tox_messagev2_size(uint32_t text_length, uint32_t type);
+bool tox_messagev2_wrap(uint32_t text_length, uint32_t type, uint8_t *message_text, uint32_t ts_sec,
+                        uint16_t ts_ms, uint8_t *raw_message);
+
+/*
+ * receiving
+ */
+bool tox_messagev2_get_message_id(uint8_t *raw_message, uint8_t *msg_id);
+uint32_t tox_messagev2_get_ts_sec(uint8_t *raw_message);
+uint16_t tox_messagev2_get_ts_ms(uint8_t *raw_message);
+bool tox_messagev2_get_message_text(uint8_t *raw_message, uint8_t *is_alter_msg,
+                                    uint32_t *alter_type, uint8_t *message_text);
 
 
 /*******************************************************************************

@@ -1616,3 +1616,30 @@ uint16_t tox_self_get_tcp_port(const Tox *tox, Tox_Err_Get_Port *error)
     SET_ERROR_PARAMETER(error, TOX_ERR_GET_PORT_NOT_BOUND);
     return 0;
 }
+
+
+/*
+ * MessageV2 functions
+ */
+
+uint32_t tox_messagev2_size(uint32_t text_length, uint32_t type);
+bool tox_messagev2_wrap(uint32_t text_length, uint32_t type, uint8_t *message_text, uint32_t ts_sec,
+                        uint16_t ts_ms, uint8_t *raw_message);
+
+bool tox_messagev2_get_message_id(uint8_t *raw_message, uint8_t *msg_id)
+{
+}
+
+uint32_t tox_messagev2_get_ts_sec(uint8_t *raw_message)
+{
+}
+
+uint16_t tox_messagev2_get_ts_ms(uint8_t *raw_message)
+{
+}
+
+bool tox_messagev2_get_message_text(uint8_t *raw_message, uint8_t *is_alter_msg,
+                                    uint32_t *alter_type, uint8_t *message_text)
+{
+}
+
