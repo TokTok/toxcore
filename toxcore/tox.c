@@ -1635,9 +1635,9 @@ uint32_t tox_messagev2_size(uint32_t text_length, uint32_t type, uint32_t alter_
         return (32 + 4 + 2);
     } else { // TOX_FILE_KIND_MESSAGEV2_ALTER
         if (alter_type == TOX_MESSAGEV2_ALTER_TYPE_CORRECT) {
-            return (32 + 4 + 2 + 1 + text_length);
+            return (32 + 32 + 4 + 2 + 1 + text_length);
         } else { // TOX_MESSAGEV2_ALTER_TYPE_DELETE
-            return (32 + 4 + 2 + 1);
+            return (32 + 32 + 4 + 2 + 1);
         }
 
     }
@@ -1646,12 +1646,17 @@ uint32_t tox_messagev2_size(uint32_t text_length, uint32_t type, uint32_t alter_
 bool tox_messagev2_wrap(uint32_t text_length, uint32_t type,
                         uint32_t alter_type,
                         uint8_t *message_text, uint32_t ts_sec,
-                        uint16_t ts_ms, uint8_t *raw_message)
+                        uint16_t ts_ms, uint8_t *raw_message,
+                        uint8_t *msgid)
 {
 
     bool result_code = false;
 
     if (raw_message = NULL) {
+        return false;
+    }
+
+    if (msgid == NULL) {
         return false;
     }
 
@@ -1673,12 +1678,49 @@ bool tox_messagev2_wrap(uint32_t text_length, uint32_t type,
         return false;
     }
 
+    // uint8_t nonce[CRYPTO_NONCE_SIZE];
+    // random_nonce(nonce);
+
 
     if (type == TOX_FILE_KIND_MESSAGEV2_SEND) {
+
+        /* Tox keys are 32 bytes, so we use this directly as new "message id" */
+        new_symmetric_key(msgid);
+
+        memcpy(raw_message, msgid, 32);
+        raw_message += 32;
+
+        memcpy(raw_message, &ts_sec, 4);
+        raw_message += 4;
+
+        memcpy(raw_message, &ts_ms, 2);
+        raw_message += 2;
+
+        memcpy(raw_message, message_text, text_length);
+        raw_message += text_length;
+
+        result_code = true;
+
     } else if (type == TOX_FILE_KIND_MESSAGEV2_ANSWER) {
+
+        memcpy(raw_message, msgid, 32);
+        raw_message += 32;
+
+        memcpy(raw_message, &ts_sec, 4);
+        raw_message += 4;
+
+        memcpy(raw_message, &ts_ms, 2);
+        raw_message += 2;
+
+        result_code = true;
+
     } else { // TOX_FILE_KIND_MESSAGEV2_ALTER
         if (alter_type == TOX_MESSAGEV2_ALTER_TYPE_CORRECT) {
+            // TODO: * write me *
+            // TODO: * write me *
         } else { // TOX_MESSAGEV2_ALTER_TYPE_DELETE
+            // TODO: * write me *
+            // TODO: * write me *
         }
     }
 
@@ -1690,18 +1732,106 @@ bool tox_messagev2_wrap(uint32_t text_length, uint32_t type,
  */
 bool tox_messagev2_get_message_id(uint8_t *raw_message, uint8_t *msg_id)
 {
+    if (raw_message == NULL) {
+        return false;
+    }
+
+    if (msg_id == NULL) {
+        return false;
+    }
+
+    memcpy(msg_id, raw_message, 32);
+
+    return true;
+}
+
+bool tox_messagev2_get_message_alter_id(uint8_t *raw_message, uint8_t *alter_id)
+{
+    if (raw_message == NULL) {
+        return false;
+    }
+
+    if (alter_id == NULL) {
+        return false;
+    }
+
+    memcpy(alter_id, raw_message + 32 + 4 + 2 + 1, 32);
+
+    return true;
+}
+
+uint8_t tox_messagev2_get_alter_type(uint8_t *raw_message)
+{
+    if (raw_message == NULL) {
+        return false;
+    }
+
+    uint8_t return_value;
+    memcpy(&return_value, raw_message + 32 + 4 + 2, sizeof(return_value));
+
+    // HINT: crude check, that type will be a valid value
+    if (return_value != TOX_MESSAGEV2_ALTER_TYPE_DELETE) {
+        return_value = TOX_MESSAGEV2_ALTER_TYPE_CORRECT;
+    }
+
+    return return_value;
 }
 
 uint32_t tox_messagev2_get_ts_sec(uint8_t *raw_message)
 {
+    if (raw_message == NULL) {
+        return false;
+    }
+
+    uint32_t return_value;
+    memcpy(&return_value, raw_message + 32, sizeof(return_value));
+
+    return return_value;
 }
 
 uint16_t tox_messagev2_get_ts_ms(uint8_t *raw_message)
 {
+    if (raw_message == NULL) {
+        return false;
+    }
+
+    uint16_t return_value;
+    memcpy(&return_value, raw_message + 32 + 4, sizeof(return_value));
+
+    return return_value;
 }
 
-bool tox_messagev2_get_message_text(uint8_t *raw_message, uint8_t *is_alter_msg,
-                                    uint32_t *alter_type, uint8_t *message_text)
+bool tox_messagev2_get_message_text(uint8_t *raw_message, uint32_t raw_message_len,
+                                    bool is_alter_msg,
+                                    uint32_t alter_type, uint8_t *message_text)
 {
+    bool result = false;
+
+    if (raw_message == NULL) {
+        return false;
+    }
+
+    if (message_text == NULL) {
+        return false;
+    }
+
+    if (is_alter_msg == true) {
+        if (alter_type == TOX_MESSAGEV2_ALTER_TYPE_DELETE) {
+            // TODO: * write me *
+            return false;
+        } else { // TOX_MESSAGEV2_ALTER_TYPE_CORRECT
+            // TODO: * write me *
+            return false;
+        }
+    } else { // TOX_FILE_KIND_MESSAGEV2_SEND
+        // HINT: we want at least 1 byte of real message text
+        if (raw_message_len < (32 + 4 + 2 + 1)) {
+            return false;
+        }
+
+        memcpy(message_text, raw_message + 32 + 4 + 2, (raw_message_len - (32 + 4 + 2)));
+    }
+
+    return result;
 }
 
