@@ -1618,19 +1618,76 @@ uint16_t tox_self_get_tcp_port(const Tox *tox, Tox_Err_Get_Port *error)
 }
 
 
-/*
+/* * * * * * * * * * * * * * *
+ *
  * MessageV2 functions
- */
+ *
+ * * * * * * * * * * * * * * */
 
-uint32_t tox_messagev2_size(uint32_t text_length, uint32_t type)
+/*
+ * sending
+ */
+uint32_t tox_messagev2_size(uint32_t text_length, uint32_t type, uint32_t alter_type)
 {
+    if (type == TOX_FILE_KIND_MESSAGEV2_SEND) {
+        return (32 + 4 + 2 + text_length);
+    } else if (type == TOX_FILE_KIND_MESSAGEV2_ANSWER) {
+        return (32 + 4 + 2);
+    } else { // TOX_FILE_KIND_MESSAGEV2_ALTER
+        if (alter_type == TOX_MESSAGEV2_ALTER_TYPE_CORRECT) {
+            return (32 + 4 + 2 + 1 + text_length);
+        } else { // TOX_MESSAGEV2_ALTER_TYPE_DELETE
+            return (32 + 4 + 2 + 1);
+        }
+
+    }
 }
 
-bool tox_messagev2_wrap(uint32_t text_length, uint32_t type, uint8_t *message_text, uint32_t ts_sec,
+bool tox_messagev2_wrap(uint32_t text_length, uint32_t type,
+                        uint32_t alter_type,
+                        uint8_t *message_text, uint32_t ts_sec,
                         uint16_t ts_ms, uint8_t *raw_message)
 {
+
+    bool result_code = false;
+
+    if (raw_message = NULL) {
+        return false;
+    }
+
+    if ((message_text == NULL) && (type == TOX_FILE_KIND_MESSAGEV2_SEND)) {
+        return false;
+    }
+
+    if ((text_length == 0) && (type == TOX_FILE_KIND_MESSAGEV2_SEND)) {
+        return false;
+    }
+
+    if ((message_text == NULL) && (type == TOX_FILE_KIND_MESSAGEV2_ALTER) &&
+            (alter_type == TOX_MESSAGEV2_ALTER_TYPE_CORRECT)) {
+        return false;
+    }
+
+    if ((text_length == NULL) && (type == TOX_FILE_KIND_MESSAGEV2_ALTER) &&
+            (alter_type == TOX_MESSAGEV2_ALTER_TYPE_CORRECT)) {
+        return false;
+    }
+
+
+    if (type == TOX_FILE_KIND_MESSAGEV2_SEND) {
+    } else if (type == TOX_FILE_KIND_MESSAGEV2_ANSWER) {
+    } else { // TOX_FILE_KIND_MESSAGEV2_ALTER
+        if (alter_type == TOX_MESSAGEV2_ALTER_TYPE_CORRECT) {
+        } else { // TOX_MESSAGEV2_ALTER_TYPE_DELETE
+        }
+    }
+
+    return result_code;
 }
 
+/*
+ * receiving
+ */
 bool tox_messagev2_get_message_id(uint8_t *raw_message, uint8_t *msg_id)
 {
 }

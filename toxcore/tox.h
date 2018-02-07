@@ -1912,6 +1912,11 @@ enum TOX_FILE_KIND {
 
 };
 
+typedef enum TOX_MESSAGEV2_ALTER_TYPE {
+    TOX_MESSAGEV2_ALTER_TYPE_DELETE,
+    TOX_MESSAGEV2_ALTER_TYPE_CORRECT,
+} TOX_MESSAGEV2_ALTER_TYPE;
+
 
 typedef enum TOX_FILE_CONTROL {
 
@@ -2119,8 +2124,10 @@ bool tox_file_get_file_id(const Tox *tox, uint32_t friend_number, uint32_t file_
 /*
  * sending
  */
-uint32_t tox_messagev2_size(uint32_t text_length, uint32_t type);
-bool tox_messagev2_wrap(uint32_t text_length, uint32_t type, uint8_t *message_text, uint32_t ts_sec,
+uint32_t tox_messagev2_size(uint32_t text_length, uint32_t type, uint32_t alter_type);
+bool tox_messagev2_wrap(uint32_t text_length, uint32_t type,
+                        uint32_t alter_type,
+                        uint8_t *message_text, uint32_t ts_sec,
                         uint16_t ts_ms, uint8_t *raw_message);
 
 /*
