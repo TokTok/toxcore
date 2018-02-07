@@ -1507,7 +1507,7 @@ uint64_t file_dataremaining(const Messenger *m, int32_t friendnumber, uint8_t fi
 static void do_reqchunk_filecb(Messenger *m, int32_t friendnumber, void *userdata)
 {
 	// HINT: no files to send
-    if (!m->friendlist[friendnumber].num_sending_files == 0)
+    if (m->friendlist[friendnumber].num_sending_files == 0)
 	{
         return;
     }
