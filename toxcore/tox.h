@@ -2121,6 +2121,9 @@ bool tox_file_get_file_id(const Tox *tox, uint32_t friend_number, uint32_t file_
  * :: Message V2 functions
  *
  ******************************************************************************/
+
+#define TOX_MESSAGE_V2_ACTIVE 1
+
 /*
  * sending
  */
