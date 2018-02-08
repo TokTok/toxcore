@@ -8,7 +8,6 @@ include(ModulePackage)
 
 find_package(Threads REQUIRED)
 
-find_library(UTIL_LIBRARIES         util         )
 find_library(RT_LIBRARIES           rt           )
 
 # For toxcore.
@@ -43,7 +42,7 @@ pkg_use_module(SNDFILE              sndfile      )
 #
 ###############################################################################
 
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+if(MSVC)
   # libsodium
   # ---------
   find_library(LIBSODIUM_LIBRARIES

@@ -193,10 +193,12 @@ include(Dependencies)
 
 if(BUILD_TOXAV)
   if(NOT OPUS_FOUND)
-    message(SEND_ERROR "Option BUILD_TOXAV is enabled but required library OPUS was not found.")
+    message(WARNING "Option BUILD_TOXAV is enabled but required library OPUS was not found.")
+    set(BUILD_TOXAV OFF)
   endif()
   if(NOT VPX_FOUND)
-    message(SEND_ERROR "Option BUILD_TOXAV is enabled but required library VPX was not found.")
+    message(WARNING "Option BUILD_TOXAV is enabled but required library VPX was not found.")
+    set(BUILD_TOXAV OFF)
   endif()
 endif()
 
@@ -439,7 +441,51 @@ install_module(toxcore DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/tox)
 
 ################################################################################
 #
-# :: Automated regression tests
+# :: Unit tests: no networking, just pure function calls.
+#
+################################################################################
+
+# Compile the GTest library.
+#
+if(EXISTS "/usr/src/gtest/src/gtest-all.cc")
+  add_library(gtest
+    /usr/src/gtest/src/gtest-all.cc
+    /usr/src/gtest/src/gtest_main.cc)
+  target_include_directories(gtest PRIVATE /usr/src/gtest)
+  check_cxx_compiler_flag("-w" HAVE_CXX_W QUIET)
+  check_cxx_compiler_flag("-Wno-global-constructors" HAVE_CXX_W_NO_GLOBAL_CONSTRUCTORS QUIET)
+  check_cxx_compiler_flag("-Wno-zero-as-null-pointer-constant" HAVE_CXX_W_NO_ZERO_AS_NULL_POINTER_CONSTANT QUIET)
+  if(HAVE_CXX_W)
+    set_target_properties(gtest PROPERTIES COMPILE_FLAGS "-w")
+  endif()
+  set(HAVE_GTEST TRUE)
+endif()
+
+function(unit_test subdir target)
+  if(HAVE_GTEST)
+    add_executable(unit_${target}_test ${subdir}/${target}_test.cpp)
+    target_link_modules(unit_${target}_test ${toxcore_SUBLIBS} gtest)
+    set(gtest_CFLAGS "")
+    if(HAVE_CXX_W_NO_GLOBAL_CONSTRUCTORS)
+      set(gtest_CFLAGS "${gtest_CFLAGS} -Wno-global-constructors")
+    endif()
+    if(HAVE_CXX_W_NO_ZERO_AS_NULL_POINTER_CONSTANT)
+      set(gtest_CFLAGS "${gtest_CFLAGS} -Wno-zero-as-null-pointer-constant")
+    endif()
+    set_target_properties(unit_${target}_test PROPERTIES COMPILE_FLAGS "${gtest_CFLAGS}")
+    add_test(NAME ${target} COMMAND ${CROSSCOMPILING_EMULATOR} unit_${target}_test)
+  endif()
+endfunction()
+
+# The actual unit tests follow.
+#
+unit_test(toxav rtp)
+unit_test(toxcore crypto_core)
+unit_test(toxcore util)
+
+################################################################################
+#
+# :: Automated regression tests: create a tox network and run integration tests
 #
 ################################################################################
 
@@ -460,7 +506,7 @@ elseif(FORMAT_TEST)
 endif()
 
 function(auto_test target)
-  if(CHECK_FOUND AND NOT ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" AND ARGV1 STREQUAL "MSVC_DONT_BUILD"))
+  if(CHECK_FOUND AND NOT (MSVC AND ARGV1 STREQUAL "MSVC_DONT_BUILD"))
     add_executable(auto_${target}_test auto_tests/${target}_test.c)
     target_link_modules(auto_${target}_test
       toxcore
@@ -494,10 +540,12 @@ if(BUILD_TOXAV AND CHECK_FOUND)
 endif()
 
 auto_test(TCP)
+auto_test(bootstrap)
 auto_test(conference)
 auto_test(crypto                        MSVC_DONT_BUILD)
 auto_test(dht                           MSVC_DONT_BUILD)
 auto_test(encryptsave)
+auto_test(lan_discovery)
 auto_test(messenger                     MSVC_DONT_BUILD)
 auto_test(network)
 auto_test(onion)
@@ -536,10 +584,11 @@ if(DHT_BOOTSTRAP)
 endif()
 
 option(BOOTSTRAP_DAEMON "Enable building of tox-bootstrapd" ON)
+if(BOOTSTRAP_DAEMON AND WIN32)
+  message(WARNING "Building tox-bootstrapd for Windows is not supported")
+  set(BOOTSTRAP_DAEMON OFF)
+endif()
 if(BOOTSTRAP_DAEMON)
-  if(WIN32)
-    message(FATAL_ERROR "Building tox-bootstrapd for Windows is not supported")
-  endif()
   if(LIBCONFIG_FOUND)
     add_executable(tox-bootstrapd
       other/bootstrap_daemon/src/command_line_arguments.c
@@ -590,18 +639,3 @@ target_link_modules(DHT_test toxdht)
 
 add_executable(Messenger_test testing/Messenger_test.c)
 target_link_modules(Messenger_test toxmessenger)
-
-if(NOT WIN32)
-  add_executable(tox_sync testing/tox_sync.c)
-  target_link_modules(tox_sync toxcore)
-endif()
-
-if(UTIL_LIBRARIES)
-  add_executable(tox_shell testing/tox_shell.c)
-  target_link_modules(tox_shell toxcore ${UTIL_LIBRARIES})
-endif()
-
-if(NOT WIN32)
-  add_executable(irc_syncbot testing/irc_syncbot.c)
-  target_link_modules(irc_syncbot toxcore toxnetwork)
-endif()
