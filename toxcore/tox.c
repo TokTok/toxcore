@@ -1652,7 +1652,7 @@ bool tox_messagev2_wrap(uint32_t text_length, uint32_t type,
 
     bool result_code = false;
 
-    if (raw_message = NULL) {
+    if (raw_message == NULL) {
         return false;
     }
 
