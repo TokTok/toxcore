@@ -33,6 +33,7 @@
 
 #include "mono_time.h"
 #include "util.h"
+#include "TCP_client.h"
 
 
 struct TCP_Connections {
@@ -531,6 +532,21 @@ static int find_tcp_connection_relay(TCP_Connections *tcp_c, const uint8_t *rela
     }
 
     return -1;
+}
+
+IP_Port* get_tcp_connection_relay_ip_port_by_pk(TCP_Connections *tcp_c, const uint8_t *relay_pk)
+{
+    int connection_number = find_tcp_connection_relay(tcp_c, relay_pk);
+    if (connection_number < 0) {
+        return NULL;
+    }
+
+    TCP_con *tcp_con = get_tcp_connection(tcp_c, connection_number);
+    if (!tcp_con || !tcp_con->connection) {
+        return NULL;
+    }
+
+    return &tcp_con->connection->ip_port;
 }
 
 /* Create a new TCP connection to public_key.

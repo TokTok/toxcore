@@ -160,7 +160,6 @@ bool cleanup_gca(GC_Announces_List *gc_announces_list, const uint8_t *chat_id) {
     GC_Announces *announces = get_announces_by_chat_id(gc_announces_list, chat_id);
     if (announces) {
         remove_announces(gc_announces_list, announces);
-        gc_announces_list->announces_count--;
 
         return true;
     }

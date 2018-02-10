@@ -181,6 +181,11 @@ typedef struct GC_PeerAddress {
     IP_Port     ip_port;
 } GC_PeerAddress;
 
+typedef struct GC_SavedPeerInfo {
+    uint8_t     public_key[EXT_PUBLIC_KEY];
+    Node_format tcp_relay;
+} GC_SavedPeerInfo;
+
 typedef struct {
     uint8_t     role;
     uint8_t     nick[MAX_GC_NICK_SIZE];
@@ -245,7 +250,6 @@ typedef struct GC_Chat {
 
     uint8_t     connection_state;
     uint64_t    last_join_attempt;
-    uint8_t     get_nodes_attempts;
     uint64_t    last_sent_ping_time;
     uint8_t     join_type;   /* How we joined the group (invite or DHT) */
 
@@ -256,7 +260,6 @@ typedef struct GC_Chat {
 
     /* Holder for IP/keys received from announcement requests and loaded from saved groups */
     GC_PeerAddress addr_list[MAX_GC_PEER_ADDRS];
-    uint16_t    num_addrs;
     uint16_t    addrs_idx;
 
     int32_t saved_invites[MAX_GC_SAVED_INVITES];
@@ -326,7 +329,7 @@ struct SAVED_GROUP {
     uint8_t   chat_public_key[EXT_PUBLIC_KEY];
     uint8_t   chat_secret_key[EXT_SECRET_KEY];
     uint16_t  num_addrs;
-    GC_PeerAddress addrs[GROUP_SAVE_MAX_PEERS];
+    GC_SavedPeerInfo addrs[GROUP_SAVE_MAX_PEERS];
     uint16_t  num_mods;
     uint8_t   mod_list[GC_MOD_LIST_ENTRY_SIZE * MAX_GC_MODERATORS];
 
@@ -707,7 +710,7 @@ void pack_gc_mod_list(const GC_Chat *chat, uint8_t *data);
  *
  * Returns number of addresses copied.
  */
-uint16_t gc_copy_peer_addrs(const GC_Chat *chat, GC_PeerAddress *addrs, size_t max_addrs);
+uint16_t gc_copy_peer_addrs(const GC_Chat *chat, GC_SavedPeerInfo *addrs, size_t max_addrs);
 
 /* If read_id is non-zero sends a read-receipt for ack_id's packet.
  * If request_id is non-zero sends a request for the respective id's packet.
