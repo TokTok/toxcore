@@ -84,6 +84,7 @@ const uint8_t *tcp_connections_public_key(const TCP_Connections *tcp_c);
 
 uint32_t tcp_connections_count(const TCP_Connections *tcp_c);
 
+
 /* Send a packet to the TCP connection.
  *
  * return -1 on failure.
@@ -146,6 +147,7 @@ void set_oob_packet_tcp_connection_callback(TCP_Connections *tcp_c, int (*tcp_oo
         const uint8_t *public_key, unsigned int tcp_connections_number, const uint8_t *data, uint16_t length, void *userdata),
         void *object);
 
+IP_Port* get_tcp_connection_relay_ip_port_by_pk(TCP_Connections *tcp_c, const uint8_t *relay_pk);
 /* Create a new TCP connection to public_key.
  *
  * public_key must be the counterpart to the secret key that the other peer used with new_tcp_connections().
