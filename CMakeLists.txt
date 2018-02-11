@@ -77,8 +77,8 @@ if(CMAKE_BUILD_TYPE)
     set(CMAKE_C_FLAGS_RELEASE "")
     set(CMAKE_CXX_FLAGS_RELEASE "")
   elseif(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-    set(CMAKE_C_FLAGS_DEBUG "-g3")
-    set(CMAKE_CXX_FLAGS_DEBUG "-g3")
+    set(CMAKE_C_FLAGS_DEBUG "")
+    set(CMAKE_CXX_FLAGS_DEBUG "")
   else()
     message(FATAL_ERROR "Undefined build type: ${CMAKE_BUILD_TYPE}")
   endif()
@@ -97,14 +97,22 @@ if(NOT MSVC)
   # Warn on non-ISO C.
   add_debug_cflag("-pedantic")
   
-  # Optimization flag
+  # Optimization flag.
   add_debug_flag("-O0")
   add_release_flag("-Ofast" fast_exist)
   if(NOT fast_exist)
-    add_release_flag("-O2")
+    add_release_flag("-O3")
+  endif()
+
+  # Debugging flags.
+  add_debug_flag("-g3")
+  if(MINGW)
+    # Allows wine to display source code file names and line numbers on crash
+    # in its backtrace.
+    add_debug_flag("-gdwarf-2")
   endif()
   
-  # Disable all warnings for release
+  # Disable all warnings for release.
   add_release_flag("-w")
   # Add all warning flags we can.
   add_debug_flag("-Weverything" everything_exist)
@@ -119,6 +127,7 @@ if(NOT MSVC)
   add_debug_flag("-Wno-covered-switch-default")
   add_debug_flag("-Wno-documentation-deprecated-sync")
   add_debug_flag("-Wno-format-nonliteral")
+  add_debug_flag("-Wno-logical-op-parentheses")
   add_debug_flag("-Wno-missing-field-initializers")
   add_debug_flag("-Wno-missing-prototypes")
   add_debug_flag("-Wno-padded")
