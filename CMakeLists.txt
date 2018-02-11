@@ -14,8 +14,8 @@
 #
 ################################################################################
 
-cmake_minimum_required(VERSION 3.0.2)
-cmake_policy(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.1.0)
+cmake_policy(VERSION 3.1.0)
 project(toxcore)
 include(CTest)
 
@@ -84,11 +84,16 @@ if(CMAKE_BUILD_TYPE)
   endif()
 endif()
 
-if(NOT MSVC)
-  # Set standard version for compiler.
-  add_cflag("-std=c99")
-  add_cxxflag("-std=c++11")
+# Set standard version for compiler.
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_C_EXTENSIONS OFF)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
+message(STATUS "Supported C compiler features = ${CMAKE_C_COMPILE_FEATURES}")
+message(STATUS "Supported C++ compiler features = ${CMAKE_CXX_COMPILE_FEATURES}")
+
+if(NOT MSVC)
   # Warn on non-ISO C.
   add_debug_cflag("-pedantic")
   
@@ -233,6 +238,7 @@ add_submodule(toxcore toxnetwork
   toxcore/util.h)
 target_link_modules(toxnetwork toxcrypto)
 
+message("CMAKE_THREAD_LIBS_INIT: ${CMAKE_THREAD_LIBS_INIT}")
 if(CMAKE_THREAD_LIBS_INIT)
   target_link_modules(toxnetwork ${CMAKE_THREAD_LIBS_INIT})
   set(toxnetwork_PKGCONFIG_LIBS ${toxnetwork_PKGCONFIG_LIBS} ${CMAKE_THREAD_LIBS_INIT})
@@ -445,34 +451,13 @@ install_module(toxcore DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/tox)
 #
 ################################################################################
 
-# Compile the GTest library.
-#
-if(EXISTS "/usr/src/gtest/src/gtest-all.cc")
-  add_library(gtest
-    /usr/src/gtest/src/gtest-all.cc
-    /usr/src/gtest/src/gtest_main.cc)
-  target_include_directories(gtest PRIVATE /usr/src/gtest)
-  check_cxx_compiler_flag("-w" HAVE_CXX_W QUIET)
-  check_cxx_compiler_flag("-Wno-global-constructors" HAVE_CXX_W_NO_GLOBAL_CONSTRUCTORS QUIET)
-  check_cxx_compiler_flag("-Wno-zero-as-null-pointer-constant" HAVE_CXX_W_NO_ZERO_AS_NULL_POINTER_CONSTANT QUIET)
-  if(HAVE_CXX_W)
-    set_target_properties(gtest PROPERTIES COMPILE_FLAGS "-w")
-  endif()
-  set(HAVE_GTEST TRUE)
-endif()
+include(CompileGTest)
 
 function(unit_test subdir target)
   if(HAVE_GTEST)
     add_executable(unit_${target}_test ${subdir}/${target}_test.cpp)
     target_link_modules(unit_${target}_test ${toxcore_SUBLIBS} gtest)
-    set(gtest_CFLAGS "")
-    if(HAVE_CXX_W_NO_GLOBAL_CONSTRUCTORS)
-      set(gtest_CFLAGS "${gtest_CFLAGS} -Wno-global-constructors")
-    endif()
-    if(HAVE_CXX_W_NO_ZERO_AS_NULL_POINTER_CONSTANT)
-      set(gtest_CFLAGS "${gtest_CFLAGS} -Wno-zero-as-null-pointer-constant")
-    endif()
-    set_target_properties(unit_${target}_test PROPERTIES COMPILE_FLAGS "${gtest_CFLAGS}")
+    set_target_properties(unit_${target}_test PROPERTIES COMPILE_FLAGS "${TEST_CXX_FLAGS}")
     add_test(NAME ${target} COMMAND ${CROSSCOMPILING_EMULATOR} unit_${target}_test)
   endif()
 endfunction()
@@ -506,14 +491,13 @@ elseif(FORMAT_TEST)
 endif()
 
 function(auto_test target)
-  if(CHECK_FOUND AND NOT (MSVC AND ARGV1 STREQUAL "MSVC_DONT_BUILD"))
+  if(NOT (MSVC AND ARGV1 STREQUAL "MSVC_DONT_BUILD"))
     add_executable(auto_${target}_test auto_tests/${target}_test.c)
     target_link_modules(auto_${target}_test
       toxcore
       toxcrypto
       toxmessenger
-      toxnetcrypto
-      ${CHECK_LIBRARIES})
+      toxnetcrypto)
     if(NOT ARGV1 STREQUAL "DONT_RUN")
       add_test(NAME ${target} COMMAND ${CROSSCOMPILING_EMULATOR} auto_${target}_test)
       set_tests_properties(${target} PROPERTIES TIMEOUT "${TEST_TIMEOUT_SECONDS}")
@@ -521,17 +505,17 @@ function(auto_test target)
   endif()
 endfunction()
 
-if(BUILD_TOXAV AND CHECK_FOUND)
+if(BUILD_TOXAV)
   add_definitions(-D__STDC_LIMIT_MACROS=1)
   add_executable(auto_monolith_test
     auto_tests/monolith_test.cpp
     ${ANDROID_CPU_FEATURES})
   target_link_modules(auto_monolith_test
-    ${CHECK_LIBRARIES}
     ${LIBSODIUM_LIBRARIES}
     ${OPUS_LIBRARIES}
     ${VPX_LIBRARIES}
-    ${toxcore_PKGCONFIG_LIBS})
+    ${toxcore_PKGCONFIG_LIBS}
+  )
   add_test(NAME monolith COMMAND ${CROSSCOMPILING_EMULATOR} auto_monolith_test)
 
   if(ANDROID_CPU_FEATURES)

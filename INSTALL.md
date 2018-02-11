@@ -158,7 +158,20 @@ cmake ..
 
 ###### Microsoft Visual Studio's Developer Command Prompt
 
-There are currently no instructions on how to build toxcore on Windows host in Microsoft Visual Studio's Developer Command Prompt. Contribution of the instructions is welcome!
+In addition to meeting the [requirements](#requirements), you need a version of Visual Studio (the [community edition](https://www.visualstudio.com/vs/visual-studio-express/) is enough) and a CMake version that's compatible with the Visual Studio version you're using.
+
+You must also ensure that the msvc versions of dependencies you're using are placed in the correct folders.
+
+For libsodium that is `c-toxcore/libsodium`, and for pthreads-w32, it's `c-toxcore/pthreads-win32`
+
+Once all of this is done, from the **Developer Command Prompt for VS**, simply run
+
+```
+mkdir _build
+cd _build
+cmake ..
+msbuild ALL_BUILD.vcxproj
+```
 
 ###### MSYS/Cygwin
 
@@ -186,7 +199,6 @@ Build the container image based on the Dockerfile. The following options are ava
 | SUPPORT_ARCH_i686   | Support building 32-bit toxcore.                               | "true" or "false" (case sensitive). | true          |
 | SUPPORT_ARCH_x86_64 | Support building 64-bit toxcore.                               | "true" or "false" (case sensitive). | true          |
 | SUPPORT_TEST        | Support running toxcore automated tests.                       | "true" or "false" (case sensitive). | false         |
-| VERSION_CHECK       | Version of libcheck. Needed only when SUPPORT_TEST is enabled. | Git branch name.                    | 0.12.0        |
 | VERSION_OPUS        | Version of libopus to build toxcore with.                      | Git branch name.                    | v1.2.1        |
 | VERSION_SODIUM      | Version of libsodium to build toxcore with.                    | Git branch name.                    | 1.0.16        |
 | VERSION_VPX         | Version of libvpx to build toxcore with.                       | Git branch name.                    | v1.6.1        |
@@ -197,7 +209,6 @@ Example of building a container image with options
 cd other/docker/windows
 docker build \
   --build-arg SUPPORT_TEST=true \
-  --build-arg VERSION_CHECK=0.11.0 \
   -t toxcore \
   .
 ```
