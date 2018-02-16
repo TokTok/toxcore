@@ -32,55 +32,6 @@ Messenger_test_LDADD =  $(LIBSODIUM_LDFLAGS) \
                         $(WINSOCK2_LIBS)
 
 
-
-if !WIN32
-
-noinst_PROGRAMS +=      tox_sync
-
-tox_sync_SOURCES =      ../testing/tox_sync.c
-
-tox_sync_CFLAGS =       $(LIBSODIUM_CFLAGS) \
-                        $(NACL_CFLAGS)
-
-tox_sync_LDADD =        $(LIBSODIUM_LDFLAGS) \
-                        $(NACL_LDFLAGS) \
-                        libtoxcore.la \
-                        $(LIBSODIUM_LIBS) \
-                        $(NACL_OBJECTS) \
-                        $(NACL_LIBS)
-
-
-noinst_PROGRAMS +=      tox_shell
-
-tox_shell_SOURCES =      ../testing/tox_shell.c
-
-tox_shell_CFLAGS =       $(LIBSODIUM_CFLAGS) \
-                        $(NACL_CFLAGS)
-
-tox_shell_LDADD =        $(LIBSODIUM_LDFLAGS) \
-                        $(NACL_LDFLAGS) \
-                        libtoxcore.la \
-                        $(LIBSODIUM_LIBS) \
-                        $(NACL_OBJECTS) \
-                        $(NACL_LIBS) \
-                        -lutil
-
-
-noinst_PROGRAMS +=      irc_syncbot
-
-irc_syncbot_SOURCES =   ../testing/irc_syncbot.c
-
-irc_syncbot_CFLAGS =    $(LIBSODIUM_CFLAGS) \
-                        $(NACL_CFLAGS)
-
-irc_syncbot_LDADD =    $(LIBSODIUM_LDFLAGS) \
-                        $(NACL_LDFLAGS) \
-                        libtoxcore.la \
-                        $(LIBSODIUM_LIBS) \
-                        $(NACL_OBJECTS) \
-                        $(NACL_LIBS)
-endif
-
 EXTRA_DIST += 			$(top_srcdir)/testing/misc_tools.c
 
 endif
