@@ -1594,7 +1594,7 @@ static bool do_all_filetransfers(Messenger *m, int32_t friendnumber, void *userd
 
 static void do_reqchunk_filecb(Messenger *m, int32_t friendnumber, void *userdata)
 {
-    // HINT: no files to send
+    // We're not currently doing any file transfers.
     if (m->friendlist[friendnumber].num_sending_files == 0) {
         return;
     }
@@ -1607,13 +1607,19 @@ static void do_reqchunk_filecb(Messenger *m, int32_t friendnumber, void *userdat
                                   m->fr_c,
                                   m->friendlist[friendnumber].friendcon_id));
 
-    // HINT: need to keep "MIN_SLOTS_FREE" slots always free
+    // We keep MIN_SLOTS_FREE slots free for other packets, otherwise file
+    // transfers might block other traffic for a long time.
     free_slots = max_s32(0, (int32_t)free_slots - MIN_SLOTS_FREE);
 
 
     bool any_active_fts = true;
     uint32_t loop_counter = 0;
-    // HINT: maximum number of Filetransfer loops
+    // Maximum number of outer loops below. If the client doesn't send file
+    // chunks from within the chunk request callback handler, we never realise
+    // that the file transfer has finished and may end up in an infinite loop.
+    //
+    // TODO(zoff99): Fix this to exit the loop properly when we're done
+    // requesting all chunks for all file transfers.
     const uint32_t MAX_FT_LOOPS = 4;
 
     while (((free_slots > 0) || loop_counter == 0) && any_active_fts && (loop_counter < MAX_FT_LOOPS)) {
