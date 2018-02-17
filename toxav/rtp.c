@@ -664,7 +664,7 @@ RTPSession *rtp_new(int payload_type, Messenger *m, uint32_t friendnumber,
     // First entry is free.
     session->work_buffer_list->next_free_entry = 0;
 
-    session->ssrc = payload_type == rtp_TypeVideo ? 0 : random_u32();
+    session->ssrc = payload_type == rtp_TypeVideo ? 0 : random_int();
     session->payload_type = payload_type;
     session->m = m;
     session->friend_number = friendnumber;

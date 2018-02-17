@@ -621,7 +621,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 
     if (rb_read((RingBuffer *)vc->vbuf_raw, (void **)&p, &data_type))
     {
-        const struct RTPHeaderV3 *header_v3_0 = (void *) & (p->header);
+        const struct RTPHeader *header_v3_0 = (void *) & (p->header);
 
 		if (header_v3_0->sequnum < vc->last_seen_fragment_seqnum)
 		{
@@ -677,7 +677,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 
         pthread_mutex_unlock(vc->queue_mutex);
 
-        const struct RTPHeaderV3 *header_v3 = (void *) & (p->header);
+        const struct RTPHeader *header_v3 = (void *) & (p->header);
         LOGGER_DEBUG(vc->log, "vc_iterate:00:pv=%d", (uint8_t)header_v3->protocol_version);
 
         if (((uint8_t)header_v3->protocol_version) == 3) {
@@ -963,8 +963,8 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
 
     VCSession *vc = (VCSession *)vcp;
 
-    // const struct RTPHeader *header = (void *)&(msg->header);
-    const struct RTPHeaderV3 *header_v3 = (void *) & (msg->header);
+    const struct RTPHeader *header_v3 = (void *) & (msg->header);
+    const struct RTPHeader *const header = &msg->header;
 
     if (msg->header.pt == (rtp_TypeVideo + 2) % 128) {
         LOGGER_WARNING(vc->log, "Got dummy!");
@@ -982,11 +982,14 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
 
     LOGGER_DEBUG(vc->log, "TT:queue:V:fragnum=%ld", (long)header_v3->fragment_num);
 
+
+    if ((header->flags & RTP_LARGE_FRAME) && header->pt == rtp_TypeVideo % 128)
+    {
     if ((((uint8_t)header_v3->protocol_version) == 3) &&
             (((uint8_t)header_v3->pt) == (rtp_TypeVideo % 128))
        ) {
         // LOGGER_WARNING(vc->log, "rb_write msg->len=%d b0=%d b1=%d rb_size=%d", (int)msg->len, (int)msg->data[0], (int)msg->data[1], (int)rb_size((RingBuffer *)vc->vbuf_raw));
-        free(rb_write((RingBuffer *)vc->vbuf_raw, msg, (uint8_t)header_v3->is_keyframe));
+        free(rb_write((RingBuffer *)vc->vbuf_raw, msg, (uint8_t)((header->flags & RTP_LARGE_FRAME) != 0)));
     } else {
         free(rb_write((RingBuffer *)vc->vbuf_raw, msg, 0));
     }

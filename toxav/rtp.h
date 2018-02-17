@@ -52,7 +52,7 @@ enum {
 
 
 
-#define USED_RTP_WORKBUFFER_COUNT (5) // correct size for fragments!!
+#define USED_RTP_WORKBUFFER_COUNT 5 // correct size for fragments!!
 #define VIDEO_FRAGMENT_NUM_NO_FRAG (-1)
 
 
@@ -143,8 +143,6 @@ struct RTPMessage {
     struct RTPHeader header;
     uint8_t data[];
 };
-
-#define USED_RTP_WORKBUFFER_COUNT 3
 
 /**
  * One slot in the work buffer list. Represents one frame that is currently
