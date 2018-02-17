@@ -33,34 +33,36 @@
 #include <assert.h>
 #include <stdlib.h>
 
-/*
-  Soft deadline the decoder should attempt to meet, in "us" (microseconds). Set to zero for unlimited.
-  By convention, the value 1 is used to mean "return as fast as possible."
-*/
+/**
+ * Soft deadline the decoder should attempt to meet, in "us" (microseconds).
+ * Set to zero for unlimited.
+ *
+ * By convention, the value 1 is used to mean "return as fast as possible."
+ */
 // TODO: don't hardcode this, let the application choose it
 #define WANTED_MAX_DECODER_FPS 40
-#define MAX_DECODE_TIME_US (1000000 / WANTED_MAX_DECODER_FPS) // to allow x fps
-/*
-VPX_DL_REALTIME       (1)
-deadline parameter analogous to VPx REALTIME mode.
 
-VPX_DL_GOOD_QUALITY   (1000000)
-deadline parameter analogous to VPx GOOD QUALITY mode.
-
-VPX_DL_BEST_QUALITY   (0)
-deadline parameter analogous to VPx BEST QUALITY mode.
-*/
-
-#define VP8E_SET_CPUUSED_VALUE 16
-/*
-Codec control function to set encoder internal speed settings.
-Changes in this value influences, among others, the encoder's selection of motion estimation methods.
-Values greater than 0 will increase encoder speed at the expense of quality.
-
-Note
-    Valid range for VP8: -16..16
-    Valid range for VP9: -8..8
+/**
+ * VPX_DL_REALTIME       (1)
+ * deadline parameter analogous to VPx REALTIME mode.
+ *
+ * VPX_DL_GOOD_QUALITY   (1000000)
+ * deadline parameter analogous to VPx GOOD QUALITY mode.
+ *
+ * VPX_DL_BEST_QUALITY   (0)
+ * deadline parameter analogous to VPx BEST QUALITY mode.
  */
+#define MAX_DECODE_TIME_US (1000000 / WANTED_MAX_DECODER_FPS) // to allow x fps
+
+/**
+ * Codec control function to set encoder internal speed settings. Changes in
+ * this value influences, among others, the encoder's selection of motion
+ * estimation methods. Values greater than 0 will increase encoder speed at the
+ * expense of quality.
+ *
+ * Note Valid range for VP8: -16..16
+ */
+#define VP8E_SET_CPUUSED_VALUE 16
 
 #define VIDEO_BITRATE_INITIAL_VALUE 5000 // initialize encoder with this value. Target bandwidth to use for this stream, in kilobits per second.
 #define VIDEO_DECODE_BUFFER_SIZE 5 // this buffer has normally max. 1 entry
