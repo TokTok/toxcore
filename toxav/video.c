@@ -196,23 +196,35 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     if (VPX_DECODER_USED == VPX_VP8_CODEC) {
         LOGGER_WARNING(log, "Using VP8 codec for decoder (0)");
 
+        vpx_codec_caps_t decoder_caps = vpx_codec_get_caps(VIDEO_CODEC_DECODER_INTERFACE_VP8);
+        vpx_codec_flags_t dec_flags_ = 0;
+        if (decoder_caps & VPX_CODEC_CAP_ERROR_CONCEALMENT)
+        {
+            dec_flags_ = VPX_CODEC_USE_ERROR_CONCEALMENT;
+            LOGGER_WARNING(log, "Using VP8 VPX_CODEC_USE_ERROR_CONCEALMENT (0)");
+        }
+
 #ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
         rc = vpx_codec_dec_init(vc->decoder, VIDEO_CODEC_DECODER_INTERFACE_VP8, &dec_cfg,
-                                VPX_CODEC_USE_FRAME_THREADING | VPX_CODEC_USE_POSTPROC | VPX_CODEC_USE_INPUT_FRAGMENTS);
+                                dec_flags_ | VPX_CODEC_USE_FRAME_THREADING
+                                | VPX_CODEC_USE_POSTPROC | VPX_CODEC_USE_INPUT_FRAGMENTS);
         LOGGER_WARNING(log, "Using VP8 using input fragments (0) rc=%d", (int)rc);
 #else
         rc = vpx_codec_dec_init(vc->decoder, VIDEO_CODEC_DECODER_INTERFACE_VP8, &dec_cfg,
-                                VPX_CODEC_USE_FRAME_THREADING | VPX_CODEC_USE_POSTPROC);
+                                dec_flags_ | VPX_CODEC_USE_FRAME_THREADING
+                                | VPX_CODEC_USE_POSTPROC);
 #endif
 
         if (rc == VPX_CODEC_INCAPABLE) {
             LOGGER_WARNING(log, "Postproc not supported by this decoder (0)");
-            rc = vpx_codec_dec_init(vc->decoder, VIDEO_CODEC_DECODER_INTERFACE_VP8, &dec_cfg, VPX_CODEC_USE_FRAME_THREADING);
+            rc = vpx_codec_dec_init(vc->decoder, VIDEO_CODEC_DECODER_INTERFACE_VP8, &dec_cfg,
+                dec_flags_ | VPX_CODEC_USE_FRAME_THREADING);
         }
 
     } else {
         LOGGER_WARNING(log, "Using VP9 codec for decoder (0)");
-        rc = vpx_codec_dec_init(vc->decoder, VIDEO_CODEC_DECODER_INTERFACE_VP9, &dec_cfg, VPX_CODEC_USE_FRAME_THREADING);
+        rc = vpx_codec_dec_init(vc->decoder, VIDEO_CODEC_DECODER_INTERFACE_VP9, &dec_cfg,
+            VPX_CODEC_USE_FRAME_THREADING);
     }
 
     if (rc != VPX_CODEC_OK) {
@@ -536,22 +548,34 @@ void video_switch_decoder(VCSession *vc)
 
     if (vc->is_using_vp9 == 0) {
 
+        vpx_codec_caps_t decoder_caps = vpx_codec_get_caps(VIDEO_CODEC_DECODER_INTERFACE_VP8);
+        vpx_codec_flags_t dec_flags_ = 0;
+        if (decoder_caps & VPX_CODEC_CAP_ERROR_CONCEALMENT)
+        {
+            dec_flags_ = VPX_CODEC_USE_ERROR_CONCEALMENT;
+            LOGGER_WARNING(vc->log, "Using VP8 VPX_CODEC_USE_ERROR_CONCEALMENT (1)");
+        }
+
 #ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
         rc = vpx_codec_dec_init(&new_d, VIDEO_CODEC_DECODER_INTERFACE_VP8, &dec_cfg,
-                                VPX_CODEC_USE_FRAME_THREADING | VPX_CODEC_USE_POSTPROC | VPX_CODEC_USE_INPUT_FRAGMENTS);
+                                dec_flags_ | VPX_CODEC_USE_FRAME_THREADING
+                                | VPX_CODEC_USE_POSTPROC | VPX_CODEC_USE_INPUT_FRAGMENTS);
         LOGGER_WARNING(vc->log, "Using VP8 using input fragments (1) rc=%d", (int)rc);
 #else
         rc = vpx_codec_dec_init(&new_d, VIDEO_CODEC_DECODER_INTERFACE_VP8, &dec_cfg,
-                                VPX_CODEC_USE_FRAME_THREADING | VPX_CODEC_USE_POSTPROC);
+                                dec_flags_ | VPX_CODEC_USE_FRAME_THREADING
+                                | VPX_CODEC_USE_POSTPROC);
 #endif
 
         if (rc == VPX_CODEC_INCAPABLE) {
             LOGGER_WARNING(vc->log, "Postproc not supported by this decoder");
-            rc = vpx_codec_dec_init(&new_d, VIDEO_CODEC_DECODER_INTERFACE_VP8, &dec_cfg, VPX_CODEC_USE_FRAME_THREADING);
+            rc = vpx_codec_dec_init(&new_d, VIDEO_CODEC_DECODER_INTERFACE_VP8, &dec_cfg,
+                dec_flags_ | VPX_CODEC_USE_FRAME_THREADING);
         }
 
     } else {
-        rc = vpx_codec_dec_init(&new_d, VIDEO_CODEC_DECODER_INTERFACE_VP9, &dec_cfg, VPX_CODEC_USE_FRAME_THREADING);
+        rc = vpx_codec_dec_init(&new_d, VIDEO_CODEC_DECODER_INTERFACE_VP9, &dec_cfg,
+            VPX_CODEC_USE_FRAME_THREADING);
     }
 
     if (rc != VPX_CODEC_OK) {
