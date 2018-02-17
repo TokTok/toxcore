@@ -27,21 +27,31 @@
 
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * RTPHeader serialised size in bytes.
+ */
+#define RTP_HEADER_SIZE 80
+
+/**
+ * Number of 32 bit padding fields between \ref RTPHeader::offset_lower and
+ * everything before it.
+ */
+#define RTP_PADDING_FIELDS 11
+
 /**
  * Payload type identifier. Also used as rtp callback prefix.
  */
 enum {
     rtp_TypeAudio = 192,
-    rtp_TypeVideo, // = 193
+    rtp_TypeVideo = 193,
 };
 
 
-enum {
-    video_frame_type_NORMALFRAME = 0,
-    video_frame_type_KEYFRAME, // = 1
-};
 
-#define VIDEO_KEEP_KEYFRAME_IN_BUFFER_FOR_MS (5)
 #define USED_RTP_WORKBUFFER_COUNT (5) // correct size for fragments!!
 #define VIDEO_FRAGMENT_NUM_NO_FRAG (-1)
 
@@ -56,110 +66,106 @@ Note
     Valid range for VP8: -16..16
     Valid range for VP9: -8..8
  */
+/**
+ * A bit mask (up to 64 bits) specifying features of the current frame affecting
+ * the behaviour of the decoder.
+ */
+enum RTPFlags {
+    /**
+     * Support frames larger than 64KiB. The full 32 bit length and offset are
+     * set in \ref RTPHeader::data_length_full and \ref RTPHeader::offset_full.
+     */
+    RTP_LARGE_FRAME = 1 << 0,
+    /**
+     * Whether the packet is part of a key frame.
+     */
+    RTP_KEY_FRAME = 1 << 1,
+};
 
 
 struct RTPHeader {
     /* Standard RTP header */
-#ifndef WORDS_BIGENDIAN
-    uint16_t cc: 4; /* Contributing sources count */
-    uint16_t xe: 1; /* Extra header */
-    uint16_t pe: 1; /* Padding */
-    uint16_t ve: 2; /* Version */
+    unsigned ve: 2; /* Version has only 2 bits! */
+    unsigned pe: 1; /* Padding */
+    unsigned xe: 1; /* Extra header */
+    unsigned cc: 4; /* Contributing sources count */
 
-    uint16_t pt: 7; /* Payload type */
-    uint16_t ma: 1; /* Marker */
-#else
-    uint16_t ve: 2; /* Version */
-    uint16_t pe: 1; /* Padding */
-    uint16_t xe: 1; /* Extra header */
-    uint16_t cc: 4; /* Contributing sources count */
-
-    uint16_t ma: 1; /* Marker */
-    uint16_t pt: 7; /* Payload type */
-#endif
+    unsigned ma: 1; /* Marker */
+    unsigned pt: 7; /* Payload type */
 
     uint16_t sequnum;
     uint32_t timestamp;
     uint32_t ssrc;
-    uint32_t csrc[16];
 
-    /* Non-standard TOX-specific fields */
-    uint16_t cpart;/* Data offset of the current part */
-    uint16_t tlen; /* Total message length */
-} __attribute__((packed));
+    /* Non-standard Tox-specific fields */
 
-/* Check alignment */
-typedef char __fail_if_misaligned_1 [ sizeof(struct RTPHeader) == 80 ? 1 : -1 ];
+    /**
+     * Bit mask of \ref RTPFlags setting features of the current frame.
+     */
+    uint64_t flags;
 
+    /**
+     * The full 32 bit data offset of the current data chunk. The \ref
+     * offset_lower data member contains the lower 16 bits of this value. For
+     * frames smaller than 64KiB, \ref offset_full and \ref offset_lower are
+     * equal.
+     */
+    uint32_t offset_full;
+    /**
+     * The full 32 bit payload length without header and packet id.
+     */
+    uint32_t data_length_full;
+    /**
+     * Only the receiver uses this field (why do we have this?).
+     */
+    uint32_t received_length_full;
 
-// #define LOWER_31_BITS(x) (x & ((int)(1L << 31) - 1))
-#define LOWER_31_BITS(x) (uint32_t)(x & 0x7fffffff)
-
-
-struct RTPHeaderV3 {
-#ifndef WORDS_BIGENDIAN
-    uint16_t cc: 4; /* Contributing sources count */
-    uint16_t is_keyframe: 1;
-    uint16_t pe: 1; /* Padding */
-    uint16_t protocol_version: 2; /* Version has only 2 bits! */
-
-    uint16_t pt: 7; /* Payload type */
-    uint16_t ma: 1; /* Marker */
-#else
-    uint16_t protocol_version: 2; /* Version has only 2 bits! */
-    uint16_t pe: 1; /* Padding */
-    uint16_t is_keyframe: 1;
-    uint16_t cc: 4; /* Contributing sources count */
-
-    uint16_t ma: 1; /* Marker */
-    uint16_t pt: 7; /* Payload type */
-#endif
-
-    uint16_t sequnum;
-    uint32_t timestamp;
-    uint32_t ssrc;
-    uint32_t offset_full; /* Data offset of the current part */
-    uint32_t data_length_full; /* data length without header, and without packet id */
-    uint32_t received_length_full; /* only the receiver uses this field */
-    uint64_t frame_record_timestamp; /* when was this frame actually recorded (this is a relative value!) */
-    int32_t  fragment_num; /* if using fragments, this is the fragment/partition number */
-    uint32_t real_frame_num; /* unused for now */
-    uint32_t csrc[9];
-
-    uint16_t offset_lower;      /* Data offset of the current part */
-    uint16_t data_length_lower; /* data length without header, and without packet id */
-} __attribute__((packed));
-
-/* Check struct size */
-typedef char __fail_if_size_wrong_1 [ sizeof(struct RTPHeaderV3) == 80 ? 1 : -1 ];
-
-
-/* Check that V3 header is the same size as previous header */
-typedef char __fail_if_size_wrong_2 [ sizeof(struct RTPHeader) == sizeof(struct RTPHeaderV3) ? 1 : -1 ];
-
+    /**
+     * Data offset of the current part (lower bits).
+     */
+    uint16_t offset_lower;
+    /**
+     * Total message length (lower bits).
+     */
+    uint16_t data_length_lower;
+};
 
 
 struct RTPMessage {
-    uint16_t len; // Zoff: this is actually only the length of the current part of this message!
+    /**
+     * This is used in the old code that doesn't deal with large frames, i.e.
+     * the audio code or receiving code for old 16 bit messages. We use it to
+     * record the number of bytes received so far in a multi-part message. The
+     * multi-part message in the old code is stored in \ref RTPSession::mp.
+     */
+    uint16_t len;
 
     struct RTPHeader header;
     uint8_t data[];
-} __attribute__((packed));
+};
 
-/* Check alignment */
-typedef char __fail_if_misaligned_2 [ sizeof(struct RTPMessage) == 82 ? 1 : -1 ];
+#define USED_RTP_WORKBUFFER_COUNT 3
 
-
-
+/**
+ * One slot in the work buffer list. Represents one frame that is currently
+ * being assembled.
+ */
 struct RTPWorkBuffer {
-    uint8_t frame_type;
+    /**
+     * Whether this slot contains a key frame. This is true iff
+     * buf->header.flags & RTP_KEY_FRAME.
+     */
+    bool is_keyframe;
+    /**
+     * The number of bytes received so far, regardless of which pieces. I.e. we
+     * could have received the first 1000 bytes and the last 1000 bytes with
+     * 4000 bytes in the middle still to come, and this number would be 2000.
+     */
     uint32_t received_len;
-    uint32_t data_len;
-    uint32_t timestamp;
-    // uint64_t timestamp_v3;
-    uint16_t sequnum;
-    int32_t  fragment_num;
-    uint8_t *buf;
+    /**
+     * The message currently being assembled.
+     */
+    struct RTPMessage *buf;
 };
 
 struct RTPWorkBufferList {
@@ -167,24 +173,22 @@ struct RTPWorkBufferList {
     struct RTPWorkBuffer work_buffer[USED_RTP_WORKBUFFER_COUNT];
 };
 
-#define DISMISS_FIRST_LOST_VIDEO_PACKET_COUNT (10)
+#define DISMISS_FIRST_LOST_VIDEO_PACKET_COUNT 10
 
 /**
  * RTP control session.
  */
-typedef struct {
+typedef struct RTPSession {
     uint8_t  payload_type;
     uint16_t sequnum;      /* Sending sequence number */
     uint16_t rsequnum;     /* Receiving sequence number */
     uint32_t rtimestamp;
     uint32_t ssrc; //  this seems to be unused!?
-
     struct RTPMessage *mp; /* Expected parted message */
+    struct RTPWorkBufferList *work_buffer_list;
     uint8_t  first_packets_counter; /* dismiss first few lost video packets */
-
     Messenger *m;
     uint32_t friend_number;
-
     BWController *bwc;
     void *cs;
     int (*mcb)(void *, struct RTPMessage *msg);
@@ -192,33 +196,22 @@ typedef struct {
 
 
 /**
- * RTP control session V3
+ * Serialise an RTPHeader to bytes to be sent over the network.
+ *
+ * @param rdata A byte array of length RTP_HEADER_SIZE. Does not need to be
+ *   initialised. All RTP_HEADER_SIZE bytes will be initialised after a call
+ *   to this function.
+ * @param header The RTPHeader to serialise.
  */
-typedef struct {
-    uint8_t  payload_type;
-    uint16_t sequnum;      /* Sending sequence number */
-    uint16_t rsequnum;     /* Receiving sequence number */
-    uint32_t rtimestamp;
-    uint32_t ssrc;  // this seems to be unused!?
+size_t rtp_header_pack(uint8_t *rdata, const struct RTPHeader *header);
 
-    struct RTPWorkBufferList *work_buffer_list;
-    uint8_t  first_packets_counter;
-
-    Messenger *m;
-    uint32_t friend_number;
-
-    BWController *bwc;
-    void *cs;
-    int (*mcb)(void *, struct RTPMessage *msg);
-} RTPSessionV3;
-
-
-
-/* Check that RTPSessionV3 is the same size as RTPSession */
-typedef char __fail_if_size_wrong_3 [ sizeof(RTPSession) == sizeof(RTPSessionV3) ? 1 : -1 ];
-
-
-
+/**
+ * Deserialise an RTPHeader from bytes received over the network.
+ *
+ * @param data A byte array of length RTP_HEADER_SIZE.
+ * @param header The RTPHeader to write the unpacked values to.
+ */
+size_t rtp_header_unpack(const uint8_t *data, struct RTPHeader *header);
 
 RTPSession *rtp_new(int payload_type, Messenger *m, uint32_t friendnumber,
                     BWController *bwc, void *cs,
@@ -226,11 +219,20 @@ RTPSession *rtp_new(int payload_type, Messenger *m, uint32_t friendnumber,
 void rtp_kill(RTPSession *session);
 int rtp_allow_receiving(RTPSession *session);
 int rtp_stop_receiving(RTPSession *session);
-int rtp_send_data(RTPSession *session,
-    const uint8_t *data, uint32_t length_v3,
-    uint64_t frame_record_timestamp, int32_t fragment_num,
-    Logger *log);
+/**
+ * Send a frame of audio or video data, chunked in \ref RTPMessage instances.
+ *
+ * @param session The A/V session to send the data for.
+ * @param data A byte array of length \p length.
+ * @param length The number of bytes to send from @p data.
+ * @param is_keyframe Whether this video frame is a key frame. If it is an
+ *   audio frame, this parameter is ignored.
+ */
+int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length,
+                  bool is_keyframe, Logger *log);
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
 
 #endif /* RTP_H */
-
-
