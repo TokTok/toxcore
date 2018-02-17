@@ -1531,7 +1531,7 @@ static bool do_all_filetransfers(Messenger *m, int32_t friendnumber, void *userd
     bool any_active_fts = false;
 
     // HINT: iterate over all possible FTs
-    for (uint8_t i = 0; i < MAX_CONCURRENT_FILE_PIPES; ++i) {
+    for (uint32_t i = 0; i < MAX_CONCURRENT_FILE_PIPES; ++i) {
         struct File_Transfers *const ft = &m->friendlist[friendnumber].file_sending[i];
 
         // HINT: is this an active FT?
