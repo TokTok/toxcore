@@ -1673,7 +1673,7 @@ bool tox_messagev2_wrap(uint32_t text_length, uint32_t type,
         return false;
     }
 
-    if ((text_length == NULL) && (type == TOX_FILE_KIND_MESSAGEV2_ALTER) &&
+    if ((text_length == 0) && (type == TOX_FILE_KIND_MESSAGEV2_ALTER) &&
             (alter_type == TOX_MESSAGEV2_ALTER_TYPE_CORRECT)) {
         return false;
     }
