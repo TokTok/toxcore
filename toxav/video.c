@@ -64,7 +64,10 @@
  */
 #define VP8E_SET_CPUUSED_VALUE 16
 
-#define VIDEO_BITRATE_INITIAL_VALUE 5000 // initialize encoder with this value. Target bandwidth to use for this stream, in kilobits per second.
+/**
+ * Initialize encoder with this value. Target bandwidth to use for this stream, in kilobits per second.
+ */
+#define VIDEO_BITRATE_INITIAL_VALUE 5000
 #define VIDEO_DECODE_BUFFER_SIZE 5 // this buffer has normally max. 1 entry
 
 // -- VP8 codec ----------------
@@ -74,11 +77,11 @@
 #define VIDEO_CODEC_DECODER_INTERFACE_VP9 (vpx_codec_vp9_dx())
 #define VIDEO_CODEC_ENCODER_INTERFACE_VP9 (vpx_codec_vp9_cx())
 
-#define VIDEO_CODEC_DECODER_MAX_WIDTH  800 // its a dummy values, because the struct needs a value there
-#define VIDEO_CODEC_DECODER_MAX_HEIGHT 600 // its a dummy values, because the struct needs a value there
+// dummy values, because the struct needs a value there
+#define VIDEO_CODEC_DECODER_DUMMY_INIT_WIDTH  800
+#define VIDEO_CODEC_DECODER_DUMMY_INIT_HEIGHT 600
 
-
-#define VIDEO_SEND_X_KEYFRAMES_FIRST 7 // force the first n frames to be keyframes!
+#define VIDEO_SEND_X_KEYFRAMES_FIRST 3 // force the first n frames to be keyframes!
 #define VPX_MAX_DIST_NORMAL 40
 #define VPX_MAX_DIST_START 40
 
@@ -105,10 +108,10 @@ void vc_init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_d
         LOGGER_ERROR(log, "vc_init_encoder_cfg:Failed to get config: %s", vpx_codec_err_to_string(rc));
     }
 
-    cfg->rc_target_bitrate =
-        VIDEO_BITRATE_INITIAL_VALUE; /* Target bandwidth to use for this stream, in kilobits per second */
-    cfg->g_w = VIDEO_CODEC_DECODER_MAX_WIDTH;
-    cfg->g_h = VIDEO_CODEC_DECODER_MAX_HEIGHT;
+    /* Target bandwidth to use for this stream, in kilobits per second */
+    cfg->rc_target_bitrate = VIDEO_BITRATE_INITIAL_VALUE;
+    cfg->g_w = VIDEO_CODEC_DECODER_DUMMY_INIT_WIDTH;
+    cfg->g_h = VIDEO_CODEC_DECODER_DUMMY_INIT_HEIGHT;
     cfg->g_pass = VPX_RC_ONE_PASS;
     cfg->g_error_resilient = VPX_ERROR_RESILIENT_DEFAULT | VPX_ERROR_RESILIENT_PARTITIONS;
     cfg->g_lag_in_frames = 0;
@@ -129,22 +132,22 @@ void vc_init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_d
     cfg->rc_end_usage = VPX_VBR; // what quality mode?
 
     /*
-     VPX_VBR    Variable Bit Rate (VBR) mode
-     VPX_CBR    Constant Bit Rate (CBR) mode
-     VPX_CQ     Constrained Quality (CQ) mode -> give codec a hint that we may be on low bandwidth connection
-     VPX_Q    Constant Quality (Q) mode
+     * VPX_VBR    Variable Bit Rate (VBR) mode
+     * VPX_CBR    Constant Bit Rate (CBR) mode
+     * VPX_CQ     Constrained Quality (CQ) mode -> give codec a hint that we may be on low bandwidth connection
+     * VPX_Q    Constant Quality (Q) mode
      */
     if (kf_max_dist > 1) {
         cfg->kf_max_dist = kf_max_dist; // a full frame every x frames minimum (can be more often, codec decides automatically)
-        LOGGER_WARNING(log, "kf_max_dist=%d (1)", cfg->kf_max_dist);
+        LOGGER_DEBUG(log, "kf_max_dist=%d (1)", cfg->kf_max_dist);
     } else {
         cfg->kf_max_dist = VPX_MAX_DIST_START;
-        LOGGER_WARNING(log, "kf_max_dist=%d (2)", cfg->kf_max_dist);
+        LOGGER_DEBUG(log, "kf_max_dist=%d (2)", cfg->kf_max_dist);
     }
 
     if (VPX_ENCODER_USED == VPX_VP9_CODEC) {
         cfg->kf_max_dist = VIDEO__VP9_KF_MAX_DIST;
-        LOGGER_WARNING(log, "kf_max_dist=%d (3)", cfg->kf_max_dist);
+        LOGGER_DEBUG(log, "kf_max_dist=%d (3)", cfg->kf_max_dist);
     }
 
     cfg->g_threads = VPX_MAX_ENCODER_THREADS; // Maximum number of threads to use
@@ -154,6 +157,7 @@ void vc_init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_d
     cfg->rc_resize_allowed = 1; // allow encoder to resize to smaller resolution
     cfg->rc_resize_up_thresh = 40;
     cfg->rc_resize_down_thresh = 5;
+
     /* TODO: make quality setting an API call, but start with normal quality */
 #if 0
     /* Highest-resolution encoder settings */
@@ -186,14 +190,15 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     }
 
     /*
-    Codec control function to set encoder internal speed settings.
-    Changes in this value influences, among others, the encoder's selection of motion estimation methods.
-    Values greater than 0 will increase encoder speed at the expense of quality.
-
-    Note:
-      Valid range for VP8: -16..16
-      Valid range for VP9: -8..8
-    */
+     * Codec control function to set encoder internal speed settings.
+     * Changes in this value influences, among others, the encoder's selection
+     * of motion estimation methods. Values greater than 0 will increase encoder
+     * speed at the expense of quality.
+     *
+     * Note:
+     *   Valid range for VP8: -16..16
+     *   Valid range for VP9: -8..8
+     */
     int cpu_used_value = VP8E_SET_CPUUSED_VALUE;
 
     if (VPX_ENCODER_USED == VPX_VP9_CODEC) {
@@ -207,16 +212,16 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     }
 
     /*
-    VPX_CODEC_USE_FRAME_THREADING
-       Enable frame-based multi-threading
-
-    VPX_CODEC_USE_ERROR_CONCEALMENT
-       Conceal errors in decoded frames
-    */
+     * VPX_CODEC_USE_FRAME_THREADING
+     *    Enable frame-based multi-threading
+     *
+     * VPX_CODEC_USE_ERROR_CONCEALMENT
+     *    Conceal errors in decoded frames
+     */
     vpx_codec_dec_cfg_t  dec_cfg;
     dec_cfg.threads = VPX_MAX_DECODER_THREADS; // Maximum number of threads to use
-    dec_cfg.w = VIDEO_CODEC_DECODER_MAX_WIDTH;
-    dec_cfg.h = VIDEO_CODEC_DECODER_MAX_HEIGHT;
+    dec_cfg.w = VIDEO_CODEC_DECODER_DUMMY_INIT_WIDTH;
+    dec_cfg.h = VIDEO_CODEC_DECODER_DUMMY_INIT_HEIGHT;
 
     if (VPX_DECODER_USED == VPX_VP8_CODEC) {
         LOGGER_DEBUG(log, "Using VP8 codec for decoder (0)");
@@ -400,8 +405,8 @@ void video_switch_decoder(VCSession *vc)
     LOGGER_WARNING(vc->log, "Switch:Re-initializing DEcoder to: %d", (int)vc->is_using_vp9);
     vpx_codec_dec_cfg_t dec_cfg;
     dec_cfg.threads = VPX_MAX_DECODER_THREADS; // Maximum number of threads to use
-    dec_cfg.w = VIDEO_CODEC_DECODER_MAX_WIDTH;
-    dec_cfg.h = VIDEO_CODEC_DECODER_MAX_HEIGHT;
+    dec_cfg.w = VIDEO_CODEC_DECODER_DUMMY_INIT_WIDTH;
+    dec_cfg.h = VIDEO_CODEC_DECODER_DUMMY_INIT_HEIGHT;
 
     if (vc->is_using_vp9 == true) {
         rc = vpx_codec_dec_init(&new_d, VIDEO_CODEC_DECODER_INTERFACE_VP8, &dec_cfg,
