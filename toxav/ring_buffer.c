@@ -27,8 +27,8 @@ struct RingBuffer {
     uint16_t  size; /* Max size */
     uint16_t  start;
     uint16_t  end;
-    void    **data;
     uint8_t  *type;
+    void    **data;
 };
 
 bool rb_full(const RingBuffer *b)
@@ -43,7 +43,7 @@ bool rb_empty(const RingBuffer *b)
 
 /*
  * returns: NULL on success
-            start address of ?? on FAILURE
+ *          input value "p" on FAILURE -> caller can free on failed rb_write
  */
 void *rb_write(RingBuffer *b, void *p, uint8_t data_type_)
 {
@@ -131,6 +131,3 @@ uint16_t rb_data(const RingBuffer *b, void **dest)
 
     return i;
 }
-
-
-
