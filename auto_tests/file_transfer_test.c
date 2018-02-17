@@ -1,13 +1,4 @@
-/* Auto Tests
- *
- * Tox Tests
- *
- * The following tests were written with a small Tox network in mind. Therefore,
- * each test timeout was set to one for a small Tox Network. If connected to the
- * 'Global' Tox Network, traversing the DHT would take MUCH longer than the
- * timeouts allow. Because of this running these tests require NO other Tox
- * clients running or accessible on/to localhost.
- *
+/* File transfer test.
  */
 
 #ifndef _XOPEN_SOURCE

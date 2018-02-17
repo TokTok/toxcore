@@ -1501,16 +1501,6 @@ uint64_t file_dataremaining(const Messenger *m, int32_t friendnumber, uint8_t fi
     return receiving->size - receiving->transferred;
 }
 
-int32_t max_s32(int32_t a, int32_t b)
-{
-    return a > b ? a : b;
-}
-
-uint16_t min_u16(uint16_t a, uint16_t b)
-{
-    return a < b ? a : b;
-}
-
 /**
  * Iterate over all file transfers and request chunks (from the client) for each
  * of them.
@@ -1533,28 +1523,28 @@ static bool do_all_filetransfers(Messenger *m, int32_t friendnumber, void *userd
 
     bool any_active_fts = false;
 
-    // HINT: iterate over all possible FTs
+    // Iterate over all file transfers, including inactive ones. I.e. we always
+    // iterate exactly MAX_CONCURRENT_FILE_PIPES times.
     for (uint32_t i = 0; i < MAX_CONCURRENT_FILE_PIPES; ++i) {
         struct File_Transfers *const ft = &friendcon->file_sending[i];
 
-        // HINT: is this an active FT?
+        // Any status other than NONE means the file transfer is active.
         if (ft->status != FILESTATUS_NONE) {
             any_active_fts = true;
             --num;
 
-            // HINT: is FT complete?
-            if (ft->status == FILESTATUS_FINISHED) {
-                if (friend_received_packet(m, friendnumber, ft->last_packet_number) == 0) {
-                    if (m->file_reqchunk) {
-                        m->file_reqchunk(m, friendnumber, i, ft->transferred, 0, userdata);
-                    }
-
-                    ft->status = FILESTATUS_NONE;
-                    --friendcon->num_sending_files;
+            // If the file transfer is complete, we request a chunk of size 0.
+            if (ft->status == FILESTATUS_FINISHED && friend_received_packet(m, friendnumber, ft->last_packet_number) == 0) {
+                if (m->file_reqchunk) {
+                    m->file_reqchunk(m, friendnumber, i, ft->transferred, 0, userdata);
                 }
+
+                // Now it's inactive, we're no longer sending this.
+                ft->status = FILESTATUS_NONE;
+                --friendcon->num_sending_files;
             }
 
-            // HINT: decrease free slots by the number of slots this FT uses
+            // Decrease free slots by the number of slots this FT uses.
             *free_slots = max_s32(0, (int32_t) * free_slots - ft->slots_allocated);
         }
 
@@ -1582,11 +1572,7 @@ static bool do_all_filetransfers(Messenger *m, int32_t friendnumber, void *userd
             // Allocate 1 slot to this file transfer.
             ft->slots_allocated++;
 
-            //const uint16_t length = min_u16(ft->size - ft->requested, MAX_FILE_DATA_SIZE);
-            uint16_t length = MAX_FILE_DATA_SIZE;
-            if (ft->size - ft->requested < length) {
-                length = ft->size - ft->requested;
-            }
+            const uint16_t length = min_u64(ft->size - ft->requested, MAX_FILE_DATA_SIZE);
             const uint64_t position = ft->requested;
             ft->requested += length;
 
