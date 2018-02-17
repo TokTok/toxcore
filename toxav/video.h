@@ -110,7 +110,7 @@ typedef struct VCSession_s {
 
     uint64_t linfts; /* Last received frame time stamp */
     uint32_t lcfd; /* Last calculated frame duration for incoming video payload */
-    
+
     uint64_t last_decoded_frame_ts;
     uint64_t last_encoded_frame_ts;
     uint8_t  flag_end_video_fragment;
@@ -121,12 +121,12 @@ typedef struct VCSession_s {
     uint32_t encoder_soft_deadline[VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES];
     uint8_t  encoder_soft_deadline_index;
 
-	// options ---
-	int32_t video_encoder_cpu_used;
-	int32_t video_encoder_cpu_used_prev;
-	int32_t video_encoder_vp8_quality;
-	int32_t video_encoder_vp8_quality_prev;
-	// options ---
+    // options ---
+    int32_t video_encoder_cpu_used;
+    int32_t video_encoder_cpu_used_prev;
+    int32_t video_encoder_vp8_quality;
+    int32_t video_encoder_vp8_quality_prev;
+    // options ---
 
     void *vpx_frames_buf_list[VIDEO_MAX_FRAGMENT_BUFFER_COUNT];
     uint16_t fragment_buf_counter;
@@ -142,7 +142,8 @@ typedef struct VCSession_s {
 
 VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_receive_frame_cb *cb, void *cb_data);
 void vc_kill(VCSession *vc);
-uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timestamp, uint64_t *a_l_timestamp, uint64_t *v_r_timestamp, uint64_t *v_l_timestamp);
+uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timestamp, uint64_t *a_l_timestamp,
+                   uint64_t *v_r_timestamp, uint64_t *v_l_timestamp);
 int vc_queue_message(void *vcp, struct RTPMessage *msg);
 int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height, int16_t kf_max_dist);
 int vc_reconfigure_encoder_bitrate_only(VCSession *vc, uint32_t bit_rate);

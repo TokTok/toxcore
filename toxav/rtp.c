@@ -598,6 +598,16 @@ size_t rtp_header_pack(uint8_t *const rdata, const struct RTPHeader *header)
     p += net_pack_u32(p, header->data_length_full);
     p += net_pack_u32(p, header->received_length_full);
 
+    // ---------------------------- //
+    //      custom fields here      //
+    // ---------------------------- //
+    p += net_pack_u64(p, header->frame_record_timestamp);
+    p += net_pack_u32(p, header->fragment_num);
+    p += net_pack_u32(p, header->real_frame_num);
+    // ---------------------------- //
+    //      custom fields here      //
+    // ---------------------------- //
+
     for (size_t i = 0; i < RTP_PADDING_FIELDS; i++) {
         p += net_pack_u32(p, 0);
     }
@@ -628,6 +638,16 @@ size_t rtp_header_unpack(const uint8_t *data, struct RTPHeader *header)
     p += net_unpack_u32(p, &header->offset_full);
     p += net_unpack_u32(p, &header->data_length_full);
     p += net_unpack_u32(p, &header->received_length_full);
+
+    // ---------------------------- //
+    //      custom fields here      //
+    // ---------------------------- //
+    p += net_unpack_u64(p, &header->frame_record_timestamp);
+    p += net_unpack_u32(p, &header->fragment_num);
+    p += net_unpack_u32(p, &header->real_frame_num);
+    // ---------------------------- //
+    //      custom fields here      //
+    // ---------------------------- //
 
     p += sizeof(uint32_t) * RTP_PADDING_FIELDS;
 
@@ -776,6 +796,12 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length, boo
     header.data_length_lower = length;
 
     header.flags = RTP_LARGE_FRAME;
+
+    header.frame_record_timestamp = frame_record_timestamp;
+
+    header.fragment_num = fragment_num;
+
+    header.real_frame_num = 0; // not yet used
 
     uint16_t length_safe = (uint16_t)length;
 

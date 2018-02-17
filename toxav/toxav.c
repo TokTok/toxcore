@@ -244,20 +244,20 @@ uint32_t toxav_iteration_interval(const ToxAV *av)
 
 static void *video_play_bg(void *data)
 {
-    if (data)
-    {
+    if (data) {
         ToxAVCall *call = (ToxAVCall *)data;
-        if (call)
-        {
+
+        if (call) {
             VCSession *vc = (VCSession *)call->video.second;
             uint8_t got_video_frame = vc_iterate(vc, call->skip_video_flag,
-                    &(call->last_incoming_audio_frame_rtimestamp),
-                    &(call->last_incoming_audio_frame_ltimestamp),
-                    &(call->last_incoming_video_frame_rtimestamp),
-                    &(call->last_incoming_video_frame_ltimestamp)
-            );
+                                                 &(call->last_incoming_audio_frame_rtimestamp),
+                                                 &(call->last_incoming_audio_frame_ltimestamp),
+                                                 &(call->last_incoming_video_frame_rtimestamp),
+                                                 &(call->last_incoming_video_frame_ltimestamp)
+                                                );
         }
     }
+
     return (void *)NULL;
 }
 
@@ -278,9 +278,9 @@ void toxav_iterate(ToxAV *av)
     ToxAVCall *i = av->calls[av->calls_head];
 
     for (; i; i = i->next) {
- 
+
         audio_iterations = 0;
- 
+
         if (i->active) {
             pthread_mutex_lock(i->mutex);
             pthread_mutex_unlock(av->mutex);
@@ -291,69 +291,60 @@ void toxav_iterate(ToxAV *av)
             video_play_bg((void *)(i));
 #else
             // ------- multithreaded av_iterate for video -------
-	        pthread_t video_play_thread;
+            pthread_t video_play_thread;
             LOGGER_TRACE(av->m->log, "video_play -----");
 
-            if (pthread_create(&video_play_thread, NULL, video_play_bg, (void *)(i)))
-            {
+            if (pthread_create(&video_play_thread, NULL, video_play_bg, (void *)(i))) {
                 LOGGER_WARNING(av->m->log, "error creating video play thread");
-            }
-            else
-            {
+            } else {
                 // TODO: set lower prio for video play thread ?
             }
+
             // ------- multithreaded av_iterate for video -------
 #endif
- 
- 
- 
+
+
+
             // ------- av_iterate for audio -------
             uint8_t res_ac = ac_iterate(i->audio.second,
-            &(i->last_incoming_audio_frame_rtimestamp),
-            &(i->last_incoming_audio_frame_ltimestamp),
-            &(i->last_incoming_video_frame_rtimestamp),
-            &(i->last_incoming_video_frame_ltimestamp)
-            );
-            if (res_ac == 2)
-            {
+                                        &(i->last_incoming_audio_frame_rtimestamp),
+                                        &(i->last_incoming_audio_frame_ltimestamp),
+                                        &(i->last_incoming_video_frame_rtimestamp),
+                                        &(i->last_incoming_video_frame_ltimestamp)
+                                       );
+
+            if (res_ac == 2) {
                 i->skip_video_flag = 1;
-            }
-            else
-            {
+            } else {
                 i->skip_video_flag = 0;
             }
+
             // ------- av_iterate for audio -------
 
 
 
-/*
- * compile toxcore with "-D_GNU_SOURCE" to activate "pthread_tryjoin_np" solution!
- */
+            /*
+             * compile toxcore with "-D_GNU_SOURCE" to activate "pthread_tryjoin_np" solution!
+             */
 #if !defined(_GNU_SOURCE)
-	        // pthread_join(video_play_thread, NULL);
+            // pthread_join(video_play_thread, NULL);
 #else
-            while (pthread_tryjoin_np(video_play_thread, NULL) != 0)
-            {
-                if (audio_iterations < AUDIO_ITERATATIONS_WHILE_VIDEO)
-                {
+
+            while (pthread_tryjoin_np(video_play_thread, NULL) != 0) {
+                if (audio_iterations < AUDIO_ITERATATIONS_WHILE_VIDEO) {
                     /* video thread still running, let's do some more audio */
                     if (ac_iterate(i->audio.second,
-                    &(i->last_incoming_audio_frame_rtimestamp),
-                    &(i->last_incoming_audio_frame_ltimestamp),
-                    &(i->last_incoming_video_frame_rtimestamp),
-                    &(i->last_incoming_video_frame_ltimestamp)
-                    ) == 0)
-                    {
+                                   &(i->last_incoming_audio_frame_rtimestamp),
+                                   &(i->last_incoming_audio_frame_ltimestamp),
+                                   &(i->last_incoming_video_frame_rtimestamp),
+                                   &(i->last_incoming_video_frame_ltimestamp)
+                                  ) == 0) {
                         // TODO: Zoff: not sure if this sleep is good, or bad??
                         usleep(100);
-                    }
-                    else
-                    {
+                    } else {
                         LOGGER_TRACE(av->m->log, "did some more audio iterate");
                     }
-                }
-                else
-                {
+                } else {
                     break;
                 }
 
@@ -388,29 +379,29 @@ void toxav_iterate(ToxAV *av)
             }
 
             if ((i->last_incoming_audio_frame_ltimestamp != 0)
-            &&
-            (i->last_incoming_video_frame_ltimestamp != 0))
-            {
-                if (i->reference_diff_timestamp_set == 0)
-                {
+                    &&
+                    (i->last_incoming_video_frame_ltimestamp != 0)) {
+                if (i->reference_diff_timestamp_set == 0) {
                     i->reference_rtimestamp = i->last_incoming_audio_frame_rtimestamp;
                     i->reference_ltimestamp = i->last_incoming_audio_frame_ltimestamp;
                     // this is the difference between local and remote clocks in "ms"
                     i->reference_diff_timestamp = (int64_t)(i->reference_ltimestamp - i->reference_rtimestamp);
                     i->reference_diff_timestamp_set = 1;
-                }
-                else
-                {                
+                } else {
                     int64_t latency_ms = (int64_t)(
-                    (i->last_incoming_video_frame_rtimestamp - i->last_incoming_audio_frame_rtimestamp) -
-                    (i->last_incoming_video_frame_ltimestamp - i->last_incoming_audio_frame_ltimestamp)
-                    );
-                    
+                                             (i->last_incoming_video_frame_rtimestamp - i->last_incoming_audio_frame_rtimestamp) -
+                                             (i->last_incoming_video_frame_ltimestamp - i->last_incoming_audio_frame_ltimestamp)
+                                         );
+
 
                     LOGGER_DEBUG(av->m->log, "VIDEO:delay-to-audio-in-ms=%lld", (long long)latency_ms);
                     // LOGGER_INFO(av->m->log, "CLOCK:delay-to-rmote-in-ms=%lld", (long long)(i->reference_diff_timestamp));
-                    LOGGER_DEBUG(av->m->log, "VIDEO:delay-to-refnc-in-ms=%lld", (long long)-((i->last_incoming_video_frame_ltimestamp - i->reference_diff_timestamp) - i->last_incoming_video_frame_rtimestamp));
-                    LOGGER_DEBUG(av->m->log, "AUDIO:delay-to-refnc-in-ms=%lld", (long long)-((i->last_incoming_audio_frame_ltimestamp - i->reference_diff_timestamp) - i->last_incoming_audio_frame_rtimestamp));
+                    LOGGER_DEBUG(av->m->log, "VIDEO:delay-to-refnc-in-ms=%lld",
+                                 (long long) - ((i->last_incoming_video_frame_ltimestamp - i->reference_diff_timestamp) -
+                                                i->last_incoming_video_frame_rtimestamp));
+                    LOGGER_DEBUG(av->m->log, "AUDIO:delay-to-refnc-in-ms=%lld",
+                                 (long long) - ((i->last_incoming_audio_frame_ltimestamp - i->reference_diff_timestamp) -
+                                                i->last_incoming_audio_frame_rtimestamp));
 
                     // LOGGER_INFO(av->m->log, "VIDEO latency in ms=%lld", (long long)(i->last_incoming_video_frame_ltimestamp - i->last_incoming_video_frame_rtimestamp));
                     // LOGGER_INFO(av->m->log, "AUDIO latency in ms=%lld", (long long)(i->last_incoming_audio_frame_ltimestamp - i->last_incoming_audio_frame_rtimestamp));
@@ -424,7 +415,7 @@ void toxav_iterate(ToxAV *av)
                     //(long long)i->last_incoming_audio_frame_ltimestamp
                     //);
                 }
-            }            
+            }
         }
     }
 
@@ -704,7 +695,7 @@ END:
 }
 
 bool toxav_option_set(ToxAV *av, uint32_t friend_number, TOXAV_OPTIONS_OPTION option, int32_t value,
-                        TOXAV_ERR_OPTION_SET *error)
+                      TOXAV_ERR_OPTION_SET *error)
 {
     TOXAV_ERR_OPTION_SET rc = TOXAV_ERR_OPTION_SET_OK;
 
@@ -726,29 +717,22 @@ bool toxav_option_set(ToxAV *av, uint32_t friend_number, TOXAV_OPTIONS_OPTION op
 
     pthread_mutex_lock(call->mutex);
 
-    if (option == TOXAV_ENCODER_CPU_USED)
-    {
+    if (option == TOXAV_ENCODER_CPU_USED) {
         VCSession *vc = (VCSession *)call->video.second;
-        
+
         if (vc->video_encoder_cpu_used == (int32_t)value) {
             LOGGER_WARNING(av->m->log, "video encoder cpu_used already set to: %d", (int)value);
-        }
-        else
-        {
+        } else {
             vc->video_encoder_cpu_used_prev = vc->video_encoder_cpu_used;
             vc->video_encoder_cpu_used = (int32_t)value;
             LOGGER_WARNING(av->m->log, "video encoder setting cpu_used to: %d", (int)value);
         }
-    }
-    else if (option == TOXAV_ENCODER_VP8_QUALITY)
-    {
+    } else if (option == TOXAV_ENCODER_VP8_QUALITY) {
         VCSession *vc = (VCSession *)call->video.second;
-        
+
         if (vc->video_encoder_vp8_quality == (int32_t)value) {
             LOGGER_WARNING(av->m->log, "video encoder vp8_quality already set to: %d", (int)value);
-        }
-        else
-        {
+        } else {
             vc->video_encoder_vp8_quality_prev = vc->video_encoder_vp8_quality;
             vc->video_encoder_vp8_quality = (int32_t)value;
             LOGGER_WARNING(av->m->log, "video encoder setting vp8_quality to: %d", (int)value);
@@ -975,27 +959,25 @@ bool toxav_audio_send_frame(ToxAV *av, uint32_t friend_number, const int16_t *pc
 #if defined(AUDIO_DEBUGGING_SKIP_FRAMES)
         // skip sending some audio frames
         _debug_count_sent_audio_frames++;
-        if (_debug_count_sent_audio_frames > _debug_skip_every_x_audio_frame)
-        {
+
+        if (_debug_count_sent_audio_frames > _debug_skip_every_x_audio_frame) {
             call->audio.first->sequnum++;
             LOGGER_WARNING(av->m->log, "* audio packet sending SKIPPED * %d", (int)call->audio.first->sequnum);
             _debug_count_sent_audio_frames = 0;
-        }
-        else
-        {
+        } else {
 #endif
             // LOGGER_DEBUG(av->m->log, "audio packet record time: %llu", audio_frame_record_timestamp);
 
             if (rtp_send_data(call->audio.first, dest,
-                vrc + sizeof(sampling_rate),
-                false,
-                audio_frame_record_timestamp,
-                VIDEO_FRAGMENT_NUM_NO_FRAG,
-                av->m->log) != 0)
-            {
+                              vrc + sizeof(sampling_rate),
+                              false,
+                              audio_frame_record_timestamp,
+                              VIDEO_FRAGMENT_NUM_NO_FRAG,
+                              av->m->log) != 0) {
                 LOGGER_WARNING(av->m->log, "Failed to send audio packet");
                 rc = TOXAV_ERR_SEND_FRAME_RTP_FAILED;
             }
+
             //else
             //{
             //    LOGGER_WARNING(av->m->log, "audio packet sent OK");
@@ -1003,6 +985,7 @@ bool toxav_audio_send_frame(ToxAV *av, uint32_t friend_number, const int16_t *pc
 
 #if defined(AUDIO_DEBUGGING_SKIP_FRAMES)
         }
+
 #endif
 
     }
@@ -1064,7 +1047,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
     }
 
     if (vc_reconfigure_encoder(call->video.second, call->video_bit_rate * 1000,
-           width, height, -1) != 0) {
+                               width, height, -1) != 0) {
         pthread_mutex_unlock(call->mutex_video);
         rc = TOXAV_ERR_SEND_FRAME_INVALID;
         goto END;
@@ -1102,65 +1085,61 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         }
 
         call->video.first->ssrc++;
-    }
-    else
-    {
+    } else {
 #ifdef VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE
         long encode_time_auto_tune = MAX_ENCODE_TIME_US;
 
-        if (call->video.second->last_encoded_frame_ts > 0)
-        {
+        if (call->video.second->last_encoded_frame_ts > 0) {
             encode_time_auto_tune = (current_time_monotonic() - call->video.second->last_encoded_frame_ts) * 1000;
 #ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
             encode_time_auto_tune = encode_time_auto_tune * VIDEO_CODEC_FRAGMENT_NUMS;
 #endif
 
-            if (encode_time_auto_tune == 0)
-            {
+            if (encode_time_auto_tune == 0) {
                 // if the real delay was 0ms then still use 1ms
                 encode_time_auto_tune = 1;
             }
 
-            if (call->video.second->encoder_soft_deadline[call->video.second->encoder_soft_deadline_index] == 0)
-            {
+            if (call->video.second->encoder_soft_deadline[call->video.second->encoder_soft_deadline_index] == 0) {
                 call->video.second->encoder_soft_deadline[call->video.second->encoder_soft_deadline_index] = 1;
                 LOGGER_ERROR(av->m->log, "AUTOTUNE: delay=[1]");
-            }
-            else
-            {
+            } else {
                 call->video.second->encoder_soft_deadline[call->video.second->encoder_soft_deadline_index] = encode_time_auto_tune;
                 LOGGER_ERROR(av->m->log, "AUTOTUNE: delay=%d", (int)encode_time_auto_tune);
             }
-            call->video.second->encoder_soft_deadline_index = (call->video.second->encoder_soft_deadline_index + 1) % VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES;
+
+            call->video.second->encoder_soft_deadline_index = (call->video.second->encoder_soft_deadline_index + 1) %
+                    VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES;
 
             // calc mean value
             encode_time_auto_tune = 0;
-            for (int k=0;k<VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES;k++)
-            {
+
+            for (int k = 0; k < VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES; k++) {
                 encode_time_auto_tune = encode_time_auto_tune + call->video.second->encoder_soft_deadline[k];
             }
+
             encode_time_auto_tune = encode_time_auto_tune / VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES;
 
-            if (encode_time_auto_tune > (1000000 / VIDEO_ENCODER_MINFPS_AUTOTUNE))
-            {
+            if (encode_time_auto_tune > (1000000 / VIDEO_ENCODER_MINFPS_AUTOTUNE)) {
                 encode_time_auto_tune = (1000000 / VIDEO_ENCODER_MINFPS_AUTOTUNE);
             }
 
-            if (encode_time_auto_tune > (VIDEO_ENCODER_LEEWAY_IN_MS_AUTOTUNE * 1000))
-            {
+            if (encode_time_auto_tune > (VIDEO_ENCODER_LEEWAY_IN_MS_AUTOTUNE * 1000)) {
                 encode_time_auto_tune = encode_time_auto_tune - (VIDEO_ENCODER_LEEWAY_IN_MS_AUTOTUNE * 1000); // give x ms more room
             }
         }
 
         max_encode_time_in_us = encode_time_auto_tune;
-        LOGGER_ERROR(av->m->log, "AUTOTUNE:MAX_ENCODE_TIME_US=%ld us = %.1f fps", (long)encode_time_auto_tune, (float)(1000000.0f / encode_time_auto_tune));
+        LOGGER_ERROR(av->m->log, "AUTOTUNE:MAX_ENCODE_TIME_US=%ld us = %.1f fps", (long)encode_time_auto_tune,
+                     (float)(1000000.0f / encode_time_auto_tune));
 #endif
     }
+
     // we start with I-frames (full frames) and then switch to normal mode later
 
 
 #ifdef VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE
-		call->video.second->last_encoded_frame_ts = current_time_monotonic();
+    call->video.second->last_encoded_frame_ts = current_time_monotonic();
 #endif
 
     { /* Encode */
@@ -1176,7 +1155,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         memcpy(img.planes[VPX_PLANE_V], v, (width / 2) * (height / 2));
 
         vpx_codec_err_t vrc = vpx_codec_encode(call->video.second->encoder, &img,
-            (int64_t)video_frame_record_timestamp, 1, vpx_encode_flags, max_encode_time_in_us);
+                                               (int64_t)video_frame_record_timestamp, 1, vpx_encode_flags, max_encode_time_in_us);
 
         vpx_img_free(&img);
 
@@ -1201,19 +1180,17 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         while ((pkt = vpx_codec_get_cx_data(call->video.second->encoder, &iter)) != NULL) {
             if (pkt->kind == VPX_CODEC_CX_FRAME_PKT) {
                 const int keyframe = (pkt->data.frame.flags & VPX_FRAME_IS_KEY) != 0;
-                if ((pkt->data.frame.flags & VPX_FRAME_IS_FRAGMENT) != 0)
-                {
+
+                if ((pkt->data.frame.flags & VPX_FRAME_IS_FRAGMENT) != 0) {
                     LOGGER_DEBUG(av->m->log, "VPXENC:VPX_FRAME_IS_FRAGMENT:*yes* size=%lld pid=%d\n",
-                     (long long)pkt->data.frame.sz, (int)pkt->data.frame.partition_id);
-                }
-                else
-                {
+                                 (long long)pkt->data.frame.sz, (int)pkt->data.frame.partition_id);
+                } else {
                     LOGGER_DEBUG(av->m->log, "VPXENC:VPX_FRAME_IS_FRAGMENT:-no- size=%lld pid=%d\n",
-                     (long long)pkt->data.frame.sz, (int)pkt->data.frame.partition_id);
+                                 (long long)pkt->data.frame.sz, (int)pkt->data.frame.partition_id);
                 }
 
                 // use the record timestamp that was actually used for this frame
-                video_frame_record_timestamp = pkt->data.frame.pts;
+                video_frame_record_timestamp = (uint64_t)pkt->data.frame.pts;
                 // LOGGER_DEBUG(av->m->log, "video packet record time: %llu", video_frame_record_timestamp);
 
                 // https://www.webmproject.org/docs/webm-sdk/structvpx__codec__cx__pkt.html
@@ -1487,7 +1464,7 @@ ToxAVCall *call_new(ToxAV *av, uint32_t friend_number, TOXAV_ERR_CALL *error)
 
     call->last_incoming_audio_frame_rtimestamp = 0;
     call->last_incoming_audio_frame_ltimestamp = 0;
-    
+
     call->reference_rtimestamp = 0;
     call->reference_ltimestamp = 0;
     call->reference_diff_timestamp = 0;
