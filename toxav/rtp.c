@@ -26,6 +26,7 @@
 #include "bwcontroller.h"
 
 #include "../toxcore/Messenger.h"
+#include "../toxcore/network.h"
 #include "../toxcore/logger.h"
 #include "../toxcore/util.h"
 
