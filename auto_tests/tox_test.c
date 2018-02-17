@@ -128,8 +128,6 @@ static bool file_sending_done;
 static void tox_file_chunk_request(Tox *tox, uint32_t friend_number, uint32_t file_number, uint64_t position,
                                    size_t length, void *user_data)
 {
-    printf("got tox_file_chunk_request, friend=%d, file=%d, pos=%ld, len=%zu\n",
-          friend_number, file_number, position, length);
     if (!sendf_ok) {
         ck_abort_msg("Didn't get resume control");
     }
