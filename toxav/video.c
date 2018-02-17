@@ -65,19 +65,13 @@
 #define VP8E_SET_CPUUSED_VALUE 16
 
 /**
- * Initialize encoder with this value. Target bandwidth to use for this stream, in kilobits per second.
+ * Initialize encoder with this value. Target bandwidth to use for this stream,
+ * in kilobits per second.
  */
 #define VIDEO_BITRATE_INITIAL_VALUE 5000
 #define VIDEO_DECODE_BUFFER_SIZE 5 // this buffer has normally max. 1 entry
 
-// -- VP8 codec ----------------
-#define VIDEO_CODEC_DECODER_INTERFACE_VP8 (vpx_codec_vp8_dx())
-#define VIDEO_CODEC_ENCODER_INTERFACE_VP8 (vpx_codec_vp8_cx())
-// -- VP9 codec ----------------
-#define VIDEO_CODEC_DECODER_INTERFACE_VP9 (vpx_codec_vp9_dx())
-#define VIDEO_CODEC_ENCODER_INTERFACE_VP9 (vpx_codec_vp9_cx())
-
-// dummy values, because the struct needs a value there
+// Dummy values, because the struct needs a value there.
 #define VIDEO_CODEC_DECODER_DUMMY_INIT_WIDTH  800
 #define VIDEO_CODEC_DECODER_DUMMY_INIT_HEIGHT 600
 
@@ -95,10 +89,10 @@ static vpx_codec_err_t vc_codec_enc_config_default(Logger *log, vpx_codec_enc_cf
 {
     if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
         LOGGER_DEBUG(log, "Using VP8 codec for encoder (1)");
-        return vpx_codec_enc_config_default(VIDEO_CODEC_ENCODER_INTERFACE_VP8, cfg, 0);
+        return vpx_codec_enc_config_default(vpx_codec_vp8_cx(), cfg, 0);
     } else {
         LOGGER_DEBUG(log, "Using VP9 codec for encoder (1)");
-        return vpx_codec_enc_config_default(VIDEO_CODEC_ENCODER_INTERFACE_VP9, cfg, 0);
+        return vpx_codec_enc_config_default(vpx_codec_vp9_cx(), cfg, 0);
     }
 }
 
@@ -227,16 +221,16 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
 
     if (VPX_DECODER_USED == VPX_VP8_CODEC) {
         LOGGER_DEBUG(log, "Using VP8 codec for decoder (0)");
-        rc = vpx_codec_dec_init(vc->decoder, VIDEO_CODEC_DECODER_INTERFACE_VP8, &dec_cfg,
+        rc = vpx_codec_dec_init(vc->decoder, vpx_codec_vp8_dx(), &dec_cfg,
                                 VPX_CODEC_USE_FRAME_THREADING | VPX_CODEC_USE_POSTPROC);
 
         if (rc == VPX_CODEC_INCAPABLE) {
             LOGGER_WARNING(log, "Postproc not supported by this decoder (0)");
-            rc = vpx_codec_dec_init(vc->decoder, VIDEO_CODEC_DECODER_INTERFACE_VP8, &dec_cfg, VPX_CODEC_USE_FRAME_THREADING);
+            rc = vpx_codec_dec_init(vc->decoder, vpx_codec_vp8_dx(), &dec_cfg, VPX_CODEC_USE_FRAME_THREADING);
         }
     } else {
         LOGGER_DEBUG(log, "Using VP9 codec for decoder (0)");
-        rc = vpx_codec_dec_init(vc->decoder, VIDEO_CODEC_DECODER_INTERFACE_VP9, &dec_cfg, VPX_CODEC_USE_FRAME_THREADING);
+        rc = vpx_codec_dec_init(vc->decoder, vpx_codec_vp9_dx(), &dec_cfg, VPX_CODEC_USE_FRAME_THREADING);
     }
 
     if (rc != VPX_CODEC_OK) {
@@ -271,10 +265,10 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
 
     if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
         LOGGER_DEBUG(log, "Using VP8 codec for encoder (0.1)");
-        rc = vpx_codec_enc_init(vc->encoder, VIDEO_CODEC_ENCODER_INTERFACE_VP8, &cfg, VPX_CODEC_USE_FRAME_THREADING);
+        rc = vpx_codec_enc_init(vc->encoder, vpx_codec_vp8_cx(), &cfg, VPX_CODEC_USE_FRAME_THREADING);
     } else {
         LOGGER_DEBUG(log, "Using VP9 codec for encoder (0.1)");
-        rc = vpx_codec_enc_init(vc->encoder, VIDEO_CODEC_ENCODER_INTERFACE_VP9, &cfg, VPX_CODEC_USE_FRAME_THREADING);
+        rc = vpx_codec_enc_init(vc->encoder, vpx_codec_vp9_cx(), &cfg, VPX_CODEC_USE_FRAME_THREADING);
     }
 
     if (rc != VPX_CODEC_OK) {
@@ -361,7 +355,7 @@ BASE_CLEANUP_1:
     vpx_codec_destroy(vc->decoder);
 BASE_CLEANUP:
     pthread_mutex_destroy(vc->queue_mutex);
-    rb_kill((RingBuffer *)vc->vbuf_raw);
+    rb_kill(vc->vbuf_raw);
     free(vc);
     return nullptr;
 }
@@ -376,11 +370,11 @@ void vc_kill(VCSession *vc)
     vpx_codec_destroy(vc->decoder);
     void *p;
 
-    while (rb_read((RingBuffer *)vc->vbuf_raw, &p)) {
+    while (rb_read(vc->vbuf_raw, &p)) {
         free(p);
     }
 
-    rb_kill((RingBuffer *)vc->vbuf_raw);
+    rb_kill(vc->vbuf_raw);
     pthread_mutex_destroy(vc->queue_mutex);
     LOGGER_DEBUG(vc->log, "Terminated video handler: %p", vc);
     free(vc);
@@ -404,15 +398,15 @@ void video_switch_decoder(VCSession *vc)
     dec_cfg.h = VIDEO_CODEC_DECODER_DUMMY_INIT_HEIGHT;
 
     if (vc->is_using_vp9 == true) {
-        rc = vpx_codec_dec_init(&new_d, VIDEO_CODEC_DECODER_INTERFACE_VP8, &dec_cfg,
+        rc = vpx_codec_dec_init(&new_d, vpx_codec_vp8_dx(), &dec_cfg,
                                 VPX_CODEC_USE_FRAME_THREADING | VPX_CODEC_USE_POSTPROC);
 
         if (rc == VPX_CODEC_INCAPABLE) {
             LOGGER_WARNING(vc->log, "Postproc not supported by this decoder");
-            rc = vpx_codec_dec_init(&new_d, VIDEO_CODEC_DECODER_INTERFACE_VP8, &dec_cfg, VPX_CODEC_USE_FRAME_THREADING);
+            rc = vpx_codec_dec_init(&new_d, vpx_codec_vp8_dx(), &dec_cfg, VPX_CODEC_USE_FRAME_THREADING);
         }
     } else {
-        rc = vpx_codec_dec_init(&new_d, VIDEO_CODEC_DECODER_INTERFACE_VP9, &dec_cfg, VPX_CODEC_USE_FRAME_THREADING);
+        rc = vpx_codec_dec_init(&new_d, vpx_codec_vp9_dx(), &dec_cfg, VPX_CODEC_USE_FRAME_THREADING);
     }
 
     if (rc != VPX_CODEC_OK) {
@@ -462,7 +456,7 @@ void vc_iterate(VCSession *vc)
 
     uint32_t full_data_len;
 
-    if (rb_read((RingBuffer *)vc->vbuf_raw, (void **)&p)) {
+    if (rb_read(vc->vbuf_raw, (void **)&p)) {
         pthread_mutex_unlock(vc->queue_mutex);
         const struct RTPHeader *const header = &p->header;
 
@@ -475,7 +469,7 @@ void vc_iterate(VCSession *vc)
         }
 
         LOGGER_DEBUG(vc->log, "vc_iterate: rb_read p->len=%d p->header.xe=%d", (int)full_data_len, p->header.xe);
-        LOGGER_DEBUG(vc->log, "vc_iterate: rb_read rb size=%d", (int)rb_size((RingBuffer *)vc->vbuf_raw));
+        LOGGER_DEBUG(vc->log, "vc_iterate: rb_read rb size=%d", (int)rb_size(vc->vbuf_raw));
         rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, nullptr, MAX_DECODE_TIME_US);
 
         if (rc != VPX_CODEC_OK) {
@@ -554,7 +548,7 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
         LOGGER_DEBUG(vc->log, "rb_write msg->len=%d b0=%d b1=%d", (int)msg->len, (int)msg->data[0], (int)msg->data[1]);
     }
 
-    free(rb_write((RingBuffer *)vc->vbuf_raw, msg));
+    free(rb_write(vc->vbuf_raw, msg));
 
     /* Calculate time it took for peer to send us this frame */
     uint32_t t_lcfd = current_time_monotonic() - vc->linfts;
@@ -601,10 +595,10 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
 
         if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
             LOGGER_DEBUG(vc->log, "Using VP8 codec for encoder");
-            rc = vpx_codec_enc_init(&new_c, VIDEO_CODEC_ENCODER_INTERFACE_VP8, &cfg, VPX_CODEC_USE_FRAME_THREADING);
+            rc = vpx_codec_enc_init(&new_c, vpx_codec_vp8_cx(), &cfg, VPX_CODEC_USE_FRAME_THREADING);
         } else {
             LOGGER_DEBUG(vc->log, "Using VP9 codec for encoder");
-            rc = vpx_codec_enc_init(&new_c, VIDEO_CODEC_ENCODER_INTERFACE_VP9, &cfg, VPX_CODEC_USE_FRAME_THREADING);
+            rc = vpx_codec_enc_init(&new_c, vpx_codec_vp9_cx(), &cfg, VPX_CODEC_USE_FRAME_THREADING);
         }
 
         if (rc != VPX_CODEC_OK) {
