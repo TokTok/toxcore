@@ -81,7 +81,6 @@
 #define VIDEO_CODEC_DECODER_DUMMY_INIT_WIDTH  800
 #define VIDEO_CODEC_DECODER_DUMMY_INIT_HEIGHT 600
 
-#define VIDEO_SEND_X_KEYFRAMES_FIRST 3 // force the first n frames to be keyframes!
 #define VPX_MAX_DIST_NORMAL 40
 #define VPX_MAX_DIST_START 40
 

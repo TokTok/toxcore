@@ -40,6 +40,8 @@
 #define VPX_ENCODER_USED VPX_VP8_CODEC
 #define VPX_DECODER_USED VPX_VP8_CODEC // this will switch automatically
 
+#define VIDEO_SEND_X_KEYFRAMES_FIRST 3 // force the first n frames to be keyframes!
+
 struct RTPMessage;
 struct RingBuffer;
 
