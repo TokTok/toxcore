@@ -97,10 +97,10 @@ void vc_init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_d
     vpx_codec_err_t rc;
 
     if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
-        LOGGER_WARNING(log, "Using VP8 codec for encoder (1)");
+        LOGGER_DEBUG(log, "Using VP8 codec for encoder (1)");
         rc = vpx_codec_enc_config_default(VIDEO_CODEC_ENCODER_INTERFACE_VP8, cfg, 0);
     } else {
-        LOGGER_WARNING(log, "Using VP9 codec for encoder (1)");
+        LOGGER_DEBUG(log, "Using VP9 codec for encoder (1)");
         rc = vpx_codec_enc_config_default(VIDEO_CODEC_ENCODER_INTERFACE_VP9, cfg, 0);
     }
 
@@ -250,7 +250,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
         if (cc_res != VPX_CODEC_OK) {
             LOGGER_WARNING(log, "Failed to turn on postproc");
         } else {
-            LOGGER_WARNING(log, "turn on postproc: OK");
+            LOGGER_DEBUG(log, "turn on postproc: OK");
         }
     } else {
         vp8_postproc_cfg_t pp = {0, 0, 0};
@@ -259,7 +259,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
         if (cc_res != VPX_CODEC_OK) {
             LOGGER_WARNING(log, "Failed to turn OFF postproc");
         } else {
-            LOGGER_WARNING(log, "Disable postproc: OK");
+            LOGGER_DEBUG(log, "Disable postproc: OK");
         }
     }
 
@@ -269,10 +269,10 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc_init_encoder_cfg(log, &cfg, 1);
 
     if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
-        LOGGER_WARNING(log, "Using VP8 codec for encoder (0.1)");
+        LOGGER_DEBUG(log, "Using VP8 codec for encoder (0.1)");
         rc = vpx_codec_enc_init(vc->encoder, VIDEO_CODEC_ENCODER_INTERFACE_VP8, &cfg, VPX_CODEC_USE_FRAME_THREADING);
     } else {
-        LOGGER_WARNING(log, "Using VP9 codec for encoder (0.1)");
+        LOGGER_DEBUG(log, "Using VP9 codec for encoder (0.1)");
         rc = vpx_codec_enc_init(vc->encoder, VIDEO_CODEC_ENCODER_INTERFACE_VP9, &cfg, VPX_CODEC_USE_FRAME_THREADING);
     }
 
@@ -321,7 +321,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     if (VPX_ENCODER_USED == VPX_VP9_CODEC) {
         if (VIDEO__VP9_LOSSLESS_ENCODING == 1) {
             rc = vpx_codec_control(vc->encoder, VP9E_SET_LOSSLESS, 1);
-            LOGGER_WARNING(vc->log, "setting VP9 lossless video quality(2): ON");
+            LOGGER_DEBUG(vc->log, "setting VP9 lossless video quality(2): ON");
 
             if (rc != VPX_CODEC_OK) {
                 LOGGER_ERROR(log, "Failed to set encoder control setting: %s", vpx_codec_err_to_string(rc));
@@ -330,7 +330,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
             }
         } else {
             rc = vpx_codec_control(vc->encoder, VP9E_SET_LOSSLESS, 0);
-            LOGGER_WARNING(vc->log, "setting VP9 lossless video quality(2): OFF");
+            LOGGER_DEBUG(vc->log, "setting VP9 lossless video quality(2): OFF");
 
             if (rc != VPX_CODEC_OK) {
                 LOGGER_ERROR(log, "Failed to set encoder control setting: %s", vpx_codec_err_to_string(rc));
@@ -402,7 +402,7 @@ void video_switch_decoder(VCSession *vc)
     }
 
     vpx_codec_ctx_t new_d;
-    LOGGER_WARNING(vc->log, "Switch:Re-initializing DEcoder to: %d", (int)vc->is_using_vp9);
+    LOGGER_DEBUG(vc->log, "Switch:Re-initializing Decoder to: %d", (int)vc->is_using_vp9);
     vpx_codec_dec_cfg_t dec_cfg;
     dec_cfg.threads = VPX_MAX_DECODER_THREADS; // Maximum number of threads to use
     dec_cfg.w = VIDEO_CODEC_DECODER_DUMMY_INIT_WIDTH;
@@ -434,7 +434,7 @@ void video_switch_decoder(VCSession *vc)
         if (cc_res != VPX_CODEC_OK) {
             LOGGER_WARNING(vc->log, "Failed to turn on postproc");
         } else {
-            LOGGER_WARNING(vc->log, "turn on postproc: OK");
+            LOGGER_DEBUG(vc->log, "turn on postproc: OK");
         }
     } else {
         vp8_postproc_cfg_t pp = {0, 0, 0};
@@ -443,7 +443,7 @@ void video_switch_decoder(VCSession *vc)
         if (cc_res != VPX_CODEC_OK) {
             LOGGER_WARNING(vc->log, "Failed to turn OFF postproc");
         } else {
-            LOGGER_WARNING(vc->log, "Disable postproc: OK");
+            LOGGER_DEBUG(vc->log, "Disable postproc: OK");
         }
     }
 
@@ -485,7 +485,7 @@ void vc_iterate(VCSession *vc)
 
         if (rc != VPX_CODEC_OK) {
             if (rc == 5) { // Bitstream not supported by this decoder
-                LOGGER_WARNING(vc->log, "Switching VPX Decoder");
+                LOGGER_DEBUG(vc->log, "Switching VPX Decoder");
                 video_switch_decoder(vc);
             } else if (rc == 7) {
                 LOGGER_WARNING(vc->log, "Corrupt frame detected: data size=%d start byte=%d end byte=%d",
@@ -605,10 +605,10 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
         cfg.g_h = height;
 
         if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
-            LOGGER_WARNING(vc->log, "Using VP8 codec for encoder");
+            LOGGER_DEBUG(vc->log, "Using VP8 codec for encoder");
             rc = vpx_codec_enc_init(&new_c, VIDEO_CODEC_ENCODER_INTERFACE_VP8, &cfg, VPX_CODEC_USE_FRAME_THREADING);
         } else {
-            LOGGER_WARNING(vc->log, "Using VP9 codec for encoder");
+            LOGGER_DEBUG(vc->log, "Using VP9 codec for encoder");
             rc = vpx_codec_enc_init(&new_c, VIDEO_CODEC_ENCODER_INTERFACE_VP9, &cfg, VPX_CODEC_USE_FRAME_THREADING);
         }
 
@@ -645,7 +645,7 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
 
         if (VPX_ENCODER_USED == VPX_VP9_CODEC) {
             if (VIDEO__VP9_LOSSLESS_ENCODING == 1) {
-                LOGGER_WARNING(vc->log, "setting VP9 lossless video quality: ON");
+                LOGGER_DEBUG(vc->log, "setting VP9 lossless video quality: ON");
                 rc = vpx_codec_control(&new_c, VP9E_SET_LOSSLESS, 1);
 
                 if (rc != VPX_CODEC_OK) {
@@ -654,7 +654,7 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
                     return -1;
                 }
             } else {
-                LOGGER_WARNING(vc->log, "setting VP9 lossless video quality: OFF");
+                LOGGER_DEBUG(vc->log, "setting VP9 lossless video quality: OFF");
                 rc = vpx_codec_control(&new_c, VP9E_SET_LOSSLESS, 0);
 
                 if (rc != VPX_CODEC_OK) {
