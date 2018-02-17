@@ -1445,10 +1445,12 @@ int file_data(const Messenger *m, int32_t friendnumber, uint32_t filenumber, uin
      * TODO(irungentoo): remove */
     if (crypto_num_free_sendqueue_slots(m->net_crypto, friend_connection_crypt_connection_id(m->fr_c,
                                         m->friendlist[friendnumber].friendcon_id)) < MIN_SLOTS_FREE) {
+	    LOGGER_DEBUG(m->log, "file_data: -6");
         return -6;
     }
 
     int64_t ret = send_file_data_packet(m, friendnumber, filenumber, data, length);
+    LOGGER_DEBUG(m->log, "file_data: res=%");
 
     if (ret != -1) {
         // TODO(irungentoo): record packet ids to check if other received complete file.
@@ -1582,7 +1584,11 @@ static bool do_all_filetransfers(Messenger *m, int32_t friendnumber, void *userd
             // Allocate 1 slot to this file transfer.
             ft->slots_allocated++;
 
-            const uint16_t length = min_u16(ft->size - ft->requested, MAX_FILE_DATA_SIZE);
+            //const uint16_t length = min_u16(ft->size - ft->requested, MAX_FILE_DATA_SIZE);
+            uint16_t length = MAX_FILE_DATA_SIZE;
+            if (ft->size - ft->requested < length) {
+                length = ft->size - ft->requested;
+            }
             const uint64_t position = ft->requested;
             ft->requested += length;
 
@@ -1602,7 +1608,6 @@ static bool do_all_filetransfers(Messenger *m, int32_t friendnumber, void *userd
     return any_active_fts;
 }
 
-
 static void do_reqchunk_filecb(Messenger *m, int32_t friendnumber, void *userdata)
 {
     // HINT: no files to send
@@ -1621,14 +1626,17 @@ static void do_reqchunk_filecb(Messenger *m, int32_t friendnumber, void *userdat
     // HINT: need to keep "MIN_SLOTS_FREE" slots always free
     free_slots = max_s32(0, (int32_t)free_slots - MIN_SLOTS_FREE);
 
+    LOGGER_DEBUG(m->log, "allocating %d free slots to file transfers", (int)free_slots);
+
     bool any_active_fts = true;
     uint32_t loop_counter = 0;
     // HINT: maximum number of Filetransfer loops
     const uint32_t MAX_FT_LOOPS = 4;
 
     while (((free_slots > 0) || loop_counter == 0) && any_active_fts && (loop_counter < MAX_FT_LOOPS)) {
-        loop_counter++;
+	    LOGGER_DEBUG(m->log, "loop_counter=%d any_active_fts=%s", (int)loop_counter, any_active_fts ? "true" : "false");
         any_active_fts = do_all_filetransfers(m, friendnumber, userdata, &free_slots);
+        loop_counter++;
     }
 }
 
@@ -1638,10 +1646,8 @@ static void do_reqchunk_filecb(Messenger *m, int32_t friendnumber, void *userdat
  */
 static void break_files(const Messenger *m, int32_t friendnumber)
 {
-    uint32_t i;
-
     // TODO(irungentoo): Inform the client which file transfers get killed with a callback?
-    for (i = 0; i < MAX_CONCURRENT_FILE_PIPES; ++i) {
+    for (uint32_t i = 0; i < MAX_CONCURRENT_FILE_PIPES; ++i) {
         if (m->friendlist[friendnumber].file_sending[i].status != FILESTATUS_NONE) {
             m->friendlist[friendnumber].file_sending[i].status = FILESTATUS_NONE;
         }
