@@ -382,20 +382,20 @@ void vc_kill(VCSession *vc)
 
 void video_switch_decoder(VCSession *vc)
 {
-    vpx_codec_err_t rc;
-
     if (vc->is_using_vp9 == true) {
         vc->is_using_vp9 = false;
     } else {
         vc->is_using_vp9 = true;
     }
 
-    vpx_codec_ctx_t new_d;
     LOGGER_DEBUG(vc->log, "Switch:Re-initializing Decoder to: %d", (int)vc->is_using_vp9);
     vpx_codec_dec_cfg_t dec_cfg;
     dec_cfg.threads = VPX_MAX_DECODER_THREADS; // Maximum number of threads to use
     dec_cfg.w = VIDEO_CODEC_DECODER_DUMMY_INIT_WIDTH;
     dec_cfg.h = VIDEO_CODEC_DECODER_DUMMY_INIT_HEIGHT;
+
+    vpx_codec_ctx_t new_d;
+    vpx_codec_err_t rc;
 
     if (vc->is_using_vp9 == true) {
         rc = vpx_codec_dec_init(&new_d, vpx_codec_vp8_dx(), &dec_cfg,
@@ -416,7 +416,6 @@ void video_switch_decoder(VCSession *vc)
     }
 
     if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 1) {
-        // vp8_postproc_cfg_t pp = {VP8_DEBLOCK | VP8_DEMACROBLOCK | VP8_MFQE, 4, 0};
         vp8_postproc_cfg_t pp = {VP8_DEBLOCK, 1, 0};
         vpx_codec_err_t cc_res = vpx_codec_control(&new_d, VP8_SET_POSTPROC, &pp);
 
