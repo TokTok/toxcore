@@ -91,17 +91,20 @@
 #define VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED 0
 #define VIDEO__VP9_LOSSLESS_ENCODING 0
 
-void vc_init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_dist)
+static vpx_codec_err_t vc_codec_enc_config_default(Logger *log, vpx_codec_enc_cfg_t *cfg)
 {
-    vpx_codec_err_t rc;
-
     if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
         LOGGER_DEBUG(log, "Using VP8 codec for encoder (1)");
-        rc = vpx_codec_enc_config_default(VIDEO_CODEC_ENCODER_INTERFACE_VP8, cfg, 0);
+        return vpx_codec_enc_config_default(VIDEO_CODEC_ENCODER_INTERFACE_VP8, cfg, 0);
     } else {
         LOGGER_DEBUG(log, "Using VP9 codec for encoder (1)");
-        rc = vpx_codec_enc_config_default(VIDEO_CODEC_ENCODER_INTERFACE_VP9, cfg, 0);
+        return vpx_codec_enc_config_default(VIDEO_CODEC_ENCODER_INTERFACE_VP9, cfg, 0);
     }
+}
+
+void vc_init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_dist)
+{
+    const vpx_codec_err_t rc = vc_codec_enc_config_default(log, cfg);
 
     if (rc != VPX_CODEC_OK) {
         LOGGER_ERROR(log, "vc_init_encoder_cfg:Failed to get config: %s", vpx_codec_err_to_string(rc));
@@ -242,7 +245,6 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     }
 
     if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 1) {
-        // vp8_postproc_cfg_t pp = {VP8_DEBLOCK | VP8_DEMACROBLOCK | VP8_MFQE, 4, 0};
         vp8_postproc_cfg_t pp = {VP8_DEBLOCK, 1, 0};
         vpx_codec_err_t cc_res = vpx_codec_control(vc->decoder, VP8_SET_POSTPROC, &pp);
 
