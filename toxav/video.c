@@ -454,7 +454,7 @@ void vc_iterate(VCSession *vc)
     pthread_mutex_unlock(vc->queue_mutex);
 
     if (!ok) {
-        LOGGER_TRACE(vc->log, "no Video frame data available");
+        LOGGER_TRACE(vc->log, "no video frame data available");
         return;
     }
 
