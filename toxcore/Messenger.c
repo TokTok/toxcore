@@ -1626,7 +1626,6 @@ static void do_reqchunk_filecb(Messenger *m, int32_t friendnumber, void *userdat
     // HINT: maximum number of Filetransfer loops
     const uint32_t MAX_FT_LOOPS = 4;
 
-    // What does this outer loop do?
     while (((free_slots > 0) || loop_counter == 0) && any_active_fts && (loop_counter < MAX_FT_LOOPS)) {
         loop_counter++;
         any_active_fts = do_all_filetransfers(m, friendnumber, userdata, &free_slots);
