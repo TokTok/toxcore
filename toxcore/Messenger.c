@@ -1526,7 +1526,7 @@ uint16_t min_u16(uint16_t a, uint16_t b)
  */
 static bool do_all_filetransfers(Messenger *m, int32_t friendnumber, void *userdata, uint32_t *free_slots)
 {
-    unsigned int num = m->friendlist[friendnumber].num_sending_files;
+    uint32_t num = m->friendlist[friendnumber].num_sending_files;
 
     bool any_active_fts = false;
 
