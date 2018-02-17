@@ -448,73 +448,66 @@ void vc_iterate(VCSession *vc)
         return;
     }
 
-    struct RTPMessage *p;
-
-    vpx_codec_err_t rc;
-
     pthread_mutex_lock(vc->queue_mutex);
+    struct RTPMessage *p;
+    const bool ok = rb_read(vc->vbuf_raw, (void **)&p);
+    pthread_mutex_unlock(vc->queue_mutex);
 
-    uint32_t full_data_len;
-
-    if (rb_read(vc->vbuf_raw, (void **)&p)) {
-        pthread_mutex_unlock(vc->queue_mutex);
-        const struct RTPHeader *const header = &p->header;
-
-        if (header->flags & RTP_LARGE_FRAME) {
-            full_data_len = header->data_length_full;
-            LOGGER_DEBUG(vc->log, "vc_iterate:001:full_data_len=%d", (int)full_data_len);
-        } else {
-            full_data_len = p->len;
-            LOGGER_DEBUG(vc->log, "vc_iterate:002");
-        }
-
-        LOGGER_DEBUG(vc->log, "vc_iterate: rb_read p->len=%d p->header.xe=%d", (int)full_data_len, p->header.xe);
-        LOGGER_DEBUG(vc->log, "vc_iterate: rb_read rb size=%d", (int)rb_size(vc->vbuf_raw));
-        rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, nullptr, MAX_DECODE_TIME_US);
-
-        if (rc != VPX_CODEC_OK) {
-            if (rc == 5) { // Bitstream not supported by this decoder
-                LOGGER_DEBUG(vc->log, "Switching VPX Decoder");
-                video_switch_decoder(vc);
-            } else if (rc == 7) {
-                LOGGER_WARNING(vc->log, "Corrupt frame detected: data size=%d start byte=%d end byte=%d",
-                               (int)full_data_len, (int)p->data[0], (int)p->data[full_data_len - 1]);
-            } else {
-                LOGGER_ERROR(vc->log, "Error decoding video: %d %s", (int)rc, vpx_codec_err_to_string(rc));
-            }
-
-            rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, nullptr, MAX_DECODE_TIME_US);
-
-            if (rc != 5) {
-                LOGGER_ERROR(vc->log, "There is still an error decoding video: %d %s", (int)rc, vpx_codec_err_to_string(rc));
-            }
-        }
-
-        if (rc == VPX_CODEC_OK) {
-            free(p);
-            /* Play decoded images */
-            vpx_codec_iter_t iter = nullptr;
-            vpx_image_t *dest = nullptr;
-
-            while ((dest = vpx_codec_get_frame(vc->decoder, &iter)) != nullptr) {
-                if (vc->vcb.first) {
-                    vc->vcb.first(vc->av, vc->friend_number, dest->d_w, dest->d_h,
-                                  (const uint8_t *)dest->planes[0], (const uint8_t *)dest->planes[1], (const uint8_t *)dest->planes[2],
-                                  dest->stride[0], dest->stride[1], dest->stride[2], vc->vcb.second);
-                }
-
-                vpx_img_free(dest); // is this needed? none of the VPx examples show that
-            }
-        } else {
-            free(p);
-        }
-
-        return;
-    } else {
+    if (!ok) {
         LOGGER_TRACE(vc->log, "no Video frame data available");
+        return;
     }
 
-    pthread_mutex_unlock(vc->queue_mutex);
+    const struct RTPHeader *const header = &p->header;
+    uint32_t full_data_len;
+
+    if (header->flags & RTP_LARGE_FRAME) {
+        full_data_len = header->data_length_full;
+        LOGGER_DEBUG(vc->log, "vc_iterate:001:full_data_len=%d", (int)full_data_len);
+    } else {
+        full_data_len = p->len;
+        LOGGER_DEBUG(vc->log, "vc_iterate:002");
+    }
+
+    LOGGER_DEBUG(vc->log, "vc_iterate: rb_read p->len=%d p->header.xe=%d", (int)full_data_len, p->header.xe);
+    LOGGER_DEBUG(vc->log, "vc_iterate: rb_read rb size=%d", (int)rb_size(vc->vbuf_raw));
+    vpx_codec_err_t rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, nullptr, MAX_DECODE_TIME_US);
+
+    if (rc != VPX_CODEC_OK) {
+        if (rc == 5) { // Bitstream not supported by this decoder
+            LOGGER_DEBUG(vc->log, "Switching VPX Decoder");
+            video_switch_decoder(vc);
+        } else if (rc == 7) {
+            LOGGER_WARNING(vc->log, "Corrupt frame detected: data size=%d start byte=%d end byte=%d",
+                           (int)full_data_len, (int)p->data[0], (int)p->data[full_data_len - 1]);
+        } else {
+            LOGGER_ERROR(vc->log, "Error decoding video: %d %s", (int)rc, vpx_codec_err_to_string(rc));
+        }
+
+        rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, nullptr, MAX_DECODE_TIME_US);
+
+        if (rc != 5) {
+            LOGGER_ERROR(vc->log, "There is still an error decoding video: %d %s", (int)rc, vpx_codec_err_to_string(rc));
+        }
+    }
+
+    free(p);
+
+    if (rc == VPX_CODEC_OK) {
+        /* Play decoded images */
+        vpx_codec_iter_t iter = nullptr;
+        vpx_image_t *dest = nullptr;
+
+        while ((dest = vpx_codec_get_frame(vc->decoder, &iter)) != nullptr) {
+            if (vc->vcb.first) {
+                vc->vcb.first(vc->av, vc->friend_number, dest->d_w, dest->d_h,
+                              (const uint8_t *)dest->planes[0], (const uint8_t *)dest->planes[1], (const uint8_t *)dest->planes[2],
+                              dest->stride[0], dest->stride[1], dest->stride[2], vc->vcb.second);
+            }
+
+            vpx_img_free(dest); // is this needed? none of the VPx examples show that
+        }
+    }
 }
 
 int vc_queue_message(void *vcp, struct RTPMessage *msg)
