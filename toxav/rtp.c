@@ -736,8 +736,8 @@ int rtp_stop_receiving(RTPSession *session)
  * @param input is raw vpx data.
  * @param length is the length of the raw data.
  */
-int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length,
-                  bool is_keyframe, Logger *log)
+int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length, bool is_keyframe,
+                  uint64_t frame_record_timestamp, int32_t fragment_num, Logger *log)
 {
     if (!session) {
         LOGGER_ERROR(log, "No session!");

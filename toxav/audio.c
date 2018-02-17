@@ -260,7 +260,7 @@ uint8_t ac_iterate(ACSession *ac, uint64_t *a_r_timestamp, uint64_t *a_l_timesta
             if (rc >= 0)
             {
                 // what is the audio to video latency?
-                const struct RTPHeaderV3 *header_v3 = (void *) & (msg->header);
+                const struct RTPHeader *header_v3 = (void *) & (msg->header);
                 // LOGGER_ERROR(ac->log, "AUDIO:TTx: %llu %lld now=%llu", header_v3->frame_record_timestamp, (long long)*a_r_timestamp, current_time_monotonic());
                 if (header_v3->frame_record_timestamp > 0)
                 {
@@ -321,7 +321,7 @@ int ac_queue_message(void *acp, struct RTPMessage *msg)
 
     pthread_mutex_lock(ac->queue_mutex);
 
-    const struct RTPHeaderV3 *header_v3 = (void *) & (msg->header);
+    const struct RTPHeader *header_v3 = (void *) & (msg->header);
     // LOGGER_WARNING(ac->log, "TT:queue:A:%llu", header_v3->frame_record_timestamp);
 
     int rc = jbuf_write(ac->log, ac, (struct RingBuffer *)ac->j_buf, msg);
@@ -385,8 +385,8 @@ static struct RTPMessage *new_empty_message(size_t allocate_len, const uint8_t *
     msg->header.timestamp = net_ntohl(msg->header.timestamp);
     msg->header.ssrc = net_ntohl(msg->header.ssrc);
 
-    msg->header.cpart = net_ntohs(msg->header.cpart);
-    msg->header.tlen = net_ntohs(msg->header.tlen); // result without header
+    msg->header.offset_lower = net_ntohs(msg->header.offset_lower);
+    msg->header.data_length_lower = net_ntohs(msg->header.data_length_lower); // result without header
 
     return msg;
 }

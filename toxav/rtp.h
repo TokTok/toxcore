@@ -40,7 +40,7 @@ extern "C" {
  * Number of 32 bit padding fields between \ref RTPHeader::offset_lower and
  * everything before it.
  */
-#define RTP_PADDING_FIELDS 11
+#define RTP_PADDING_FIELDS 7
 
 /**
  * Payload type identifier. Also used as rtp callback prefix.
@@ -50,6 +50,11 @@ enum {
     rtp_TypeVideo = 193,
 };
 
+
+enum {
+    video_frame_type_NORMALFRAME = 0,
+    video_frame_type_KEYFRAME = 1,
+};
 
 
 #define USED_RTP_WORKBUFFER_COUNT 5 // correct size for fragments!!
@@ -85,7 +90,7 @@ enum RTPFlags {
 
 struct RTPHeader {
     /* Standard RTP header */
-    unsigned ve: 2; /* Version has only 2 bits! */
+    unsigned ve: 2; /* Version has only 2 bits! */ // was called "protocol_version" in V3
     unsigned pe: 1; /* Padding */
     unsigned xe: 1; /* Extra header */
     unsigned cc: 4; /* Contributing sources count */
@@ -120,14 +125,23 @@ struct RTPHeader {
      */
     uint32_t received_length_full;
 
+
+    uint64_t frame_record_timestamp; /* when was this frame actually recorded (this is a relative value!) */
+    int32_t  fragment_num; /* if using fragments, this is the fragment/partition number */
+    uint32_t real_frame_num; /* unused for now */
+
+    // ---------------------------- //
+    //    dont change below here    //
+    // ---------------------------- //
+
     /**
      * Data offset of the current part (lower bits).
      */
-    uint16_t offset_lower;
+    uint16_t offset_lower; // used to be called "cpart"
     /**
      * Total message length (lower bits).
      */
-    uint16_t data_length_lower;
+    uint16_t data_length_lower; // used to be called "tlen"
 };
 
 
@@ -226,8 +240,8 @@ int rtp_stop_receiving(RTPSession *session);
  * @param is_keyframe Whether this video frame is a key frame. If it is an
  *   audio frame, this parameter is ignored.
  */
-int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length,
-                  bool is_keyframe, Logger *log);
+int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length, bool is_keyframe,
+                  uint64_t frame_record_timestamp, int32_t fragment_num, Logger *log);
 
 #ifdef __cplusplus
 }  // extern "C"

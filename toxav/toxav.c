@@ -986,9 +986,9 @@ bool toxav_audio_send_frame(ToxAV *av, uint32_t friend_number, const int16_t *pc
 #endif
             // LOGGER_DEBUG(av->m->log, "audio packet record time: %llu", audio_frame_record_timestamp);
 
-
             if (rtp_send_data(call->audio.first, dest,
                 vrc + sizeof(sampling_rate),
+                false,
                 audio_frame_record_timestamp,
                 VIDEO_FRAGMENT_NUM_NO_FRAG,
                 av->m->log) != 0)
@@ -1214,33 +1214,19 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 
                 // use the record timestamp that was actually used for this frame
                 video_frame_record_timestamp = pkt->data.frame.pts;
-
-                // TOX RTP V3 --- hack to give frame type to function ---
-                //
-                // use the highest bit (bit 31) to spec. keyframe = 1 / no keyframe = 0
-                // if length(31 bits) > 1FFFFFFF then use all bits for length
-                // and assume its a keyframe (most likely is anyway)
+                // LOGGER_DEBUG(av->m->log, "video packet record time: %llu", video_frame_record_timestamp);
 
                 // https://www.webmproject.org/docs/webm-sdk/structvpx__codec__cx__pkt.html
                 // pkt->data.frame.sz -> size_t
-                uint32_t frame_length_in_bytes = (uint64_t)pkt->data.frame.sz;
+                const uint32_t frame_length_in_bytes = pkt->data.frame.sz;
 
-                if (LOWER_31_BITS(frame_length_in_bytes) > 0x1FFFFFFF) {
-                } else {
-                    if (keyframe == 1) {
-                        frame_length_in_bytes = (uint32_t)(1L << 31) | LOWER_31_BITS(frame_length_in_bytes);
-                    }
-                }
-
-                // TOX RTP V3 --- hack to give frame type to function ---
-
-                // LOGGER_DEBUG(av->m->log, "video packet record time: %llu", video_frame_record_timestamp);
 
                 int res = rtp_send_data
                           (
                               call->video.first,
                               (const uint8_t *)pkt->data.frame.buf,
                               frame_length_in_bytes,
+                              keyframe,
                               video_frame_record_timestamp,
                               (int32_t)pkt->data.frame.partition_id,
                               av->m->log
