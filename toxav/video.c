@@ -290,22 +290,30 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     }
 
     /*
-    VP9E_SET_TILE_COLUMNS
-
-    Codec control function to set number of tile columns.
-
-    In encoding and decoding, VP9 allows an input image frame be partitioned
-    into separated vertical tile columns, which can be encoded or decoded independently.
-    This enables easy implementation of parallel encoding and decoding. This control requests
-    the encoder to use column tiles in encoding an input frame, with number of tile columns
-    (in Log2 unit) as the parameter: 0 = 1 tile column 1 = 2 tile columns
-    2 = 4 tile columns ..... n = 2**n tile columns The requested tile columns will
-    be capped by encoder based on image size limitation (The minimum width of a
-    tile column is 256 pixel, the maximum is 4096).
-
-    By default, the value is 0, i.e. one single column tile for entire image.
-
-    Supported in codecs: VP9
+     * VP9E_SET_TILE_COLUMNS
+     *
+     * Codec control function to set number of tile columns.
+     *
+     * In encoding and decoding, VP9 allows an input image frame be partitioned
+     * into separated vertical tile columns, which can be encoded or decoded
+     * independently. This enables easy implementation of parallel encoding and
+     * decoding. This control requests the encoder to use column tiles in
+     * encoding an input frame, with number of tile columns (in Log2 unit) as
+     * the parameter:
+     *
+     *   0 = 1 tile column
+     *   1 = 2 tile columns
+     *   2 = 4 tile columns
+     *   .....
+     *   n = 2**n tile columns
+     *
+     * The requested tile columns will be capped by encoder based on image size
+     * limitation (The minimum width of a tile column is 256 pixel, the maximum
+     * is 4096).
+     *
+     * By default, the value is 0, i.e. one single column tile for entire image.
+     *
+     * Supported in codecs: VP9
      */
 
     if (VPX_ENCODER_USED == VPX_VP9_CODEC) {
@@ -340,20 +348,6 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
         }
     }
 
-    /*
-    VPX_CTRL_USE_TYPE(VP8E_SET_NOISE_SENSITIVITY,  unsigned int)
-    control function to set noise sensitivity
-      0: off, 1: OnYOnly, 2: OnYUV, 3: OnYUVAggressive, 4: Adaptive
-    */
-    /*
-      rc = vpx_codec_control(vc->encoder, VP8E_SET_NOISE_SENSITIVITY, 2);
-
-      if (rc != VPX_CODEC_OK) {
-          LOGGER_ERROR(log, "Failed to set encoder control setting: %s", vpx_codec_err_to_string(rc));
-          vpx_codec_destroy(vc->encoder);
-          goto BASE_CLEANUP_1;
-      }
-     */
     vc->linfts = current_time_monotonic();
     vc->lcfd = 60;
     vc->vcb.first = cb;
