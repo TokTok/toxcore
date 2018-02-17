@@ -1482,21 +1482,23 @@ uint64_t file_dataremaining(const Messenger *m, int32_t friendnumber, uint8_t fi
         return 0;
     }
 
+    const struct File_Transfers *const sending = &m->friendlist[friendnumber].file_sending[filenumber];
+
     if (send_receive == 0) {
-        if (m->friendlist[friendnumber].file_sending[filenumber].status == FILESTATUS_NONE) {
+        if (sending->status == FILESTATUS_NONE) {
             return 0;
         }
 
-        return m->friendlist[friendnumber].file_sending[filenumber].size -
-               m->friendlist[friendnumber].file_sending[filenumber].transferred;
+        return sending->size - sending->transferred;
     }
 
-    if (m->friendlist[friendnumber].file_receiving[filenumber].status == FILESTATUS_NONE) {
+    const struct File_Transfers *const receiving = &m->friendlist[friendnumber].file_receiving[filenumber];
+
+    if (receiving->status == FILESTATUS_NONE) {
         return 0;
     }
 
-    return m->friendlist[friendnumber].file_receiving[filenumber].size -
-           m->friendlist[friendnumber].file_receiving[filenumber].transferred;
+    return receiving->size - receiving->transferred;
 }
 
 int32_t max_s32(int32_t a, int32_t b)
