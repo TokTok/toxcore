@@ -14,8 +14,8 @@
 #
 ################################################################################
 
-cmake_minimum_required(VERSION 2.8.6)
-cmake_policy(VERSION 2.8.6)
+cmake_minimum_required(VERSION 2.8.12)
+cmake_policy(VERSION 2.8.12)
 project(toxcore)
 
 set(CMAKE_MODULE_PATH ${toxcore_SOURCE_DIR}/cmake)
@@ -66,11 +66,21 @@ enable_testing()
 
 set(CMAKE_MACOSX_RPATH ON)
 
-if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-  # Set standard version for compiler.
+if(${CMAKE_VERSION} VERSION_LESS "3.1.0")
   add_cflag("-std=c99")
   add_cxxflag("-std=c++11")
+else()
+  # Set standard version for compiler.
+  set(CMAKE_C_STANDARD 99)
+  set(CMAKE_CXX_STANDARD 11)
+  set(CMAKE_C_EXTENSIONS OFF)
+  set(CMAKE_CXX_EXTENSIONS OFF)
 
+  message(STATUS "Supported C compiler features = ${CMAKE_C_COMPILE_FEATURES}")
+  message(STATUS "Supported C++ compiler features = ${CMAKE_CXX_COMPILE_FEATURES}")
+endif()
+
+if(NOT MSVC)
   # Warn on non-ISO C.
   add_cflag("-pedantic")
 
@@ -183,10 +193,12 @@ include(Dependencies)
 
 if(BUILD_TOXAV)
   if(NOT OPUS_FOUND)
-    message(SEND_ERROR "Option BUILD_TOXAV is enabled but required library OPUS was not found.")
+    message(WARNING "Option BUILD_TOXAV is enabled but required library OPUS was not found.")
+    set(BUILD_TOXAV OFF)
   endif()
   if(NOT VPX_FOUND)
-    message(SEND_ERROR "Option BUILD_TOXAV is enabled but required library VPX was not found.")
+    message(WARNING "Option BUILD_TOXAV is enabled but required library VPX was not found.")
+    set(BUILD_TOXAV OFF)
   endif()
 endif()
 
@@ -221,6 +233,7 @@ add_submodule(toxcore toxnetwork
   toxcore/util.h)
 target_link_modules(toxnetwork toxcrypto)
 
+message("CMAKE_THREAD_LIBS_INIT: ${CMAKE_THREAD_LIBS_INIT}")
 if(CMAKE_THREAD_LIBS_INIT)
   target_link_modules(toxnetwork ${CMAKE_THREAD_LIBS_INIT})
   set(toxnetwork_PKGCONFIG_LIBS ${toxnetwork_PKGCONFIG_LIBS} ${CMAKE_THREAD_LIBS_INIT})
@@ -429,7 +442,30 @@ install_module(toxcore DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/tox)
 
 ################################################################################
 #
-# :: Automated regression tests
+# :: Unit tests: no networking, just pure function calls.
+#
+################################################################################
+
+include(CompileGTest)
+
+function(unit_test subdir target)
+  if(HAVE_GTEST)
+    add_executable(unit_${target}_test ${subdir}/${target}_test.cpp)
+    target_link_modules(unit_${target}_test ${toxcore_SUBLIBS} gtest)
+    set_target_properties(unit_${target}_test PROPERTIES COMPILE_FLAGS "${TEST_CXX_FLAGS}")
+    add_test(NAME ${target} COMMAND ${CROSSCOMPILING_EMULATOR} unit_${target}_test)
+  endif()
+endfunction()
+
+# The actual unit tests follow.
+#
+unit_test(toxav rtp)
+unit_test(toxcore crypto_core)
+unit_test(toxcore util)
+
+################################################################################
+#
+# :: Automated regression tests: create a tox network and run integration tests
 #
 ################################################################################
 
@@ -450,14 +486,13 @@ elseif(FORMAT_TEST)
 endif()
 
 function(auto_test target)
-  if(CHECK_FOUND AND NOT ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" AND ARGV1 STREQUAL "MSVC_DONT_BUILD"))
+  if(NOT (MSVC AND ARGV1 STREQUAL "MSVC_DONT_BUILD"))
     add_executable(auto_${target}_test auto_tests/${target}_test.c)
     target_link_modules(auto_${target}_test
       toxcore
       toxcrypto
       toxmessenger
-      toxnetcrypto
-      ${CHECK_LIBRARIES})
+      toxnetcrypto)
     if(NOT ARGV1 STREQUAL "DONT_RUN")
       add_test(NAME ${target} COMMAND ${CROSSCOMPILING_EMULATOR} auto_${target}_test)
       set_tests_properties(${target} PROPERTIES TIMEOUT "${TEST_TIMEOUT_SECONDS}")
@@ -465,17 +500,17 @@ function(auto_test target)
   endif()
 endfunction()
 
-if(BUILD_TOXAV AND CHECK_FOUND)
+if(BUILD_TOXAV)
   add_definitions(-D__STDC_LIMIT_MACROS=1)
   add_executable(auto_monolith_test
     auto_tests/monolith_test.cpp
     ${ANDROID_CPU_FEATURES})
   target_link_modules(auto_monolith_test
-    ${CHECK_LIBRARIES}
     ${LIBSODIUM_LIBRARIES}
     ${OPUS_LIBRARIES}
     ${VPX_LIBRARIES}
-    ${toxcore_PKGCONFIG_LIBS})
+    ${toxcore_PKGCONFIG_LIBS}
+  )
   add_test(NAME monolith COMMAND ${CROSSCOMPILING_EMULATOR} auto_monolith_test)
 
   if(ANDROID_CPU_FEATURES)
@@ -484,10 +519,13 @@ if(BUILD_TOXAV AND CHECK_FOUND)
 endif()
 
 auto_test(TCP)
+auto_test(bootstrap)
 auto_test(conference)
 auto_test(crypto                        MSVC_DONT_BUILD)
 auto_test(dht                           MSVC_DONT_BUILD)
 auto_test(encryptsave)
+auto_test(file_transfer)
+auto_test(lan_discovery)
 auto_test(messenger                     MSVC_DONT_BUILD)
 auto_test(network)
 auto_test(onion)
@@ -526,10 +564,11 @@ if(DHT_BOOTSTRAP)
 endif()
 
 option(BOOTSTRAP_DAEMON "Enable building of tox-bootstrapd" ON)
+if(BOOTSTRAP_DAEMON AND WIN32)
+  message(WARNING "Building tox-bootstrapd for Windows is not supported")
+  set(BOOTSTRAP_DAEMON OFF)
+endif()
 if(BOOTSTRAP_DAEMON)
-  if(WIN32)
-    message(FATAL_ERROR "Building tox-bootstrapd for Windows is not supported")
-  endif()
   if(LIBCONFIG_FOUND)
     add_executable(tox-bootstrapd
       other/bootstrap_daemon/src/command_line_arguments.c
@@ -580,18 +619,3 @@ target_link_modules(DHT_test toxdht)
 
 add_executable(Messenger_test testing/Messenger_test.c)
 target_link_modules(Messenger_test toxmessenger)
-
-if(NOT WIN32)
-  add_executable(tox_sync testing/tox_sync.c)
-  target_link_modules(tox_sync toxcore)
-endif()
-
-if(UTIL_LIBRARIES)
-  add_executable(tox_shell testing/tox_shell.c)
-  target_link_modules(tox_shell toxcore ${UTIL_LIBRARIES})
-endif()
-
-if(NOT WIN32)
-  add_executable(irc_syncbot testing/irc_syncbot.c)
-  target_link_modules(irc_syncbot toxcore toxnetwork)
-endif()

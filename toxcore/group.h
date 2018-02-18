@@ -156,8 +156,7 @@ void g_callback_group_title(Group_Chats *g_c, void (*function)(Messenger *m, uin
  *  Function(Group_Chats *g_c, int groupnumber, int peernumber, TOX_CHAT_CHANGE change, void *userdata)
  */
 enum {
-    CHAT_CHANGE_PEER_ADD,
-    CHAT_CHANGE_PEER_DEL,
+    CHAT_CHANGE_OCCURRED,
     CHAT_CHANGE_PEER_NAME,
 };
 void g_callback_group_namelistchange(Group_Chats *g_c, void (*function)(Messenger *m, int, int, uint8_t, void *));
@@ -237,12 +236,6 @@ int group_message_send(const Group_Chats *g_c, int groupnumber, const uint8_t *m
  * see: send_message_group() for error codes.
  */
 int group_action_send(const Group_Chats *g_c, int groupnumber, const uint8_t *action, uint16_t length);
-
-/* send a group correction message
- * return 0 on success
- * see: send_message_group() for error codes.
- */
-int group_correction_send(const Group_Chats *g_c, int groupnumber, const uint8_t *action, uint16_t length);
 
 /* set the group's title, limited to MAX_NAME_LENGTH
  * return 0 on success

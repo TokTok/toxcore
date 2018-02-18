@@ -46,9 +46,7 @@
 
 enum {
     MESSAGE_NORMAL,
-    MESSAGE_ACTION,
-    MESSAGE_CORRECTION,
-    MESSAGE_LAST
+    MESSAGE_ACTION
 };
 
 /* NOTE: Packet ids below 24 must never be used. */
@@ -60,7 +58,6 @@ enum {
 #define PACKET_ID_TYPING 51
 #define PACKET_ID_MESSAGE 64
 #define PACKET_ID_ACTION (PACKET_ID_MESSAGE + MESSAGE_ACTION) /* 65 */
-#define PACKET_ID_CORRECTION (PACKET_ID_MESSAGE + MESSAGE_CORRECTION) /* 66 */
 #define PACKET_ID_MSI 69
 #define PACKET_ID_FILE_SENDREQUEST 80
 #define PACKET_ID_FILE_CONTROL 81
@@ -209,7 +206,7 @@ typedef struct {
     uint64_t last_seen_time;
     uint8_t last_connection_udp_tcp;
     struct File_Transfers file_sending[MAX_CONCURRENT_FILE_PIPES];
-    unsigned int num_sending_files;
+    uint32_t num_sending_files;
     struct File_Transfers file_receiving[MAX_CONCURRENT_FILE_PIPES];
 
     struct {

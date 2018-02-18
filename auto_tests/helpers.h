@@ -17,15 +17,6 @@
 #define c_sleep(x) usleep(1000 * (x))
 #endif
 
-#define DEFTESTCASE(NAME)                   \
-    TCase *tc_##NAME = tcase_create(#NAME); \
-    tcase_add_test(tc_##NAME, test_##NAME); \
-    suite_add_tcase(s, tc_##NAME)
-
-#define DEFTESTCASE_SLOW(NAME, TIMEOUT)     \
-    DEFTESTCASE(NAME);                      \
-    tcase_set_timeout(tc_##NAME, TIMEOUT)
-
 static const char *tox_log_level_name(TOX_LOG_LEVEL level)
 {
     switch (level) {
@@ -51,18 +42,10 @@ static const char *tox_log_level_name(TOX_LOG_LEVEL level)
 static void print_debug_log(Tox *m, TOX_LOG_LEVEL level, const char *path, uint32_t line, const char *func,
                             const char *message, void *user_data)
 {
-    if (level == TOX_LOG_LEVEL_TRACE) {
-        return;
-    }
-
-    if (strncmp(message, "Bound successfully to ", strlen("Bound successfully to "))) {
-        return;
-    }
-
     uint32_t index = user_data ? *(uint32_t *)user_data : 0;
     const char *file = strrchr(path, '/');
     file = file ? file + 1 : path;
-    printf("[#%d] %s %s:%d\t%s:\t%s\n", index, tox_log_level_name(level), file, line, func, message);
+    fprintf(stderr, "[#%d] %s %s:%d\t%s:\t%s\n", index, tox_log_level_name(level), file, line, func, message);
 }
 
 Tox *tox_new_log(struct Tox_Options *options, TOX_ERR_NEW *err, void *log_user_data)

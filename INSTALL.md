@@ -43,15 +43,7 @@ This repository, although called `toxcore`, in fact contains several libraries b
 
 #### Secondary
 
-There are some testing programs that you might find interesting. Note that they are not intended for the real-world use and are not coded to the high security standards, so use them on your own risk.
-
-| Name        | Type       | Dependencies           | Platform  | Description                                                                                                                             |
-|-------------|------------|------------------------|-----------|-----------------------------------------------------------------------------------------------------------------------------------------|
-| irc_syncbot | Executable | libtoxcore             | Unix-like | Bot that synchronizes an IRC channel and a Tox group chat (conference).                                                                      |
-| tox_shell   | Executable | libtoxcore, libutil    | Unix-like | Proof of concept SSH-like server software using Tox. Testing program, not intended for actual use.                                      |
-| tox_sync    | Executable | libtoxcore             | Unix-like | Bittorrent-sync-like software using Tox. Syncs two directories together.                                                                |
-
-There are also some programs that are not plugged into the CMake build system which you might find interesting. You would need to build those programs yourself. These programs reside in [`other/fun`](other/fun) directory.
+There are some programs that are not plugged into the CMake build system which you might find interesting. You would need to build those programs yourself. These programs reside in [`other/fun`](other/fun) directory.
 
 | Name                | Type       | Dependencies         | Platform       | Description                                                                                                                                                            |
 |---------------------|------------|----------------------|----------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -148,7 +140,20 @@ make install
 
 ###### Microsoft Visual Studio's Developer Command Prompt
 
-There are currently no instructions on how to build toxcore on Windows host in Microsoft Visual Studio's Developer Command Prompt. Contribution of the instructions is welcome!
+In addition to meeting the [requirements](#requirements), you need a version of Visual Studio (the [community edition](https://www.visualstudio.com/vs/visual-studio-express/) is enough) and a CMake version that's compatible with the Visual Studio version you're using.
+
+You must also ensure that the msvc versions of dependencies you're using are placed in the correct folders.
+
+For libsodium that is `c-toxcore/third_party/libsodium`, and for pthreads-w32, it's `c-toxcore/third_party/pthreads-win32`
+
+Once all of this is done, from the **Developer Command Prompt for VS**, simply run
+
+```
+mkdir _build
+cd _build
+cmake ..
+msbuild ALL_BUILD.vcxproj
+```
 
 ###### MSYS/Cygwin
 
@@ -176,7 +181,6 @@ Build the container image based on the Dockerfile. The following options are ava
 | SUPPORT_ARCH_i686   | Support building 32-bit toxcore.                               | "true" or "false" (case sensitive). | true          |
 | SUPPORT_ARCH_x86_64 | Support building 64-bit toxcore.                               | "true" or "false" (case sensitive). | true          |
 | SUPPORT_TEST        | Support running toxcore automated tests.                       | "true" or "false" (case sensitive). | false         |
-| VERSION_CHECK       | Version of libcheck. Needed only when SUPPORT_TEST is enabled. | Git branch name.                    | 0.12.0        |
 | VERSION_OPUS        | Version of libopus to build toxcore with.                      | Git branch name.                    | v1.2.1        |
 | VERSION_SODIUM      | Version of libsodium to build toxcore with.                    | Git branch name.                    | 1.0.16        |
 | VERSION_VPX         | Version of libvpx to build toxcore with.                       | Git branch name.                    | v1.6.1        |
@@ -187,7 +191,6 @@ Example of building a container image with options
 cd other/docker/windows
 docker build \
   --build-arg SUPPORT_TEST=true \
-  --build-arg VERSION_CHECK=0.11.0 \
   -t toxcore \
   .
 ```
