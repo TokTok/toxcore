@@ -24,6 +24,7 @@
 #ifndef C_TOXCORE_TOXCORE_TCP_CONNECTION_H
 #define C_TOXCORE_TOXCORE_TCP_CONNECTION_H
 
+#include <stdbool.h>
 #include "TCP_client.h"
 
 #define TCP_CONN_NONE 0
@@ -151,7 +152,7 @@ typedef int tcp_oob_cb(void *object, const uint8_t *public_key, unsigned int tcp
  */
 void set_oob_packet_tcp_connection_callback(TCP_Connections *tcp_c, tcp_oob_cb *tcp_oob_callback, void *object);
 
-bool get_tcp_connection_relay_ip_port_by_pk(TCP_Connections *tcp_c, const uint8_t *relay_pk, IP_Port *ip_port);
+bool copy_tcp_connection_relay_ip_port_by_pk(TCP_Connections *tcp_c, const uint8_t *relay_pk, IP_Port *dest);
 /* Create a new TCP connection to public_key.
  *
  * public_key must be the counterpart to the secret key that the other peer used with new_tcp_connections().
@@ -228,6 +229,8 @@ uint32_t tcp_copy_connected_relays(TCP_Connections *tcp_c, Node_format *tcp_rela
  * Returns NULL on failure.
  */
 TCP_Connections *new_tcp_connections(Mono_Time *mono_time, const uint8_t *secret_key, TCP_Proxy_Info *proxy_info);
+
+int kill_tcp_relay_connection(TCP_Connections *tcp_c, int tcp_connections_number);
 
 void do_tcp_connections(TCP_Connections *tcp_c, void *userdata);
 void kill_tcp_connections(TCP_Connections *tcp_c);

@@ -28,6 +28,7 @@
 #include "TCP_connection.h"
 
 #include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -535,8 +536,12 @@ static int find_tcp_connection_relay(TCP_Connections *tcp_c, const uint8_t *rela
     return -1;
 }
 
-bool get_tcp_connection_relay_ip_port_by_pk(TCP_Connections *tcp_c, const uint8_t *relay_pk, IP_Port *ip_port)
+bool copy_tcp_connection_relay_ip_port_by_pk(TCP_Connections *tcp_c, const uint8_t *relay_pk, IP_Port *dest)
 {
+    if (!dest || !tcp_c || !relay_pk) {
+        return false;
+    }
+
     int connection_number = find_tcp_connection_relay(tcp_c, relay_pk);
     if (connection_number < 0) {
         return false;
@@ -547,7 +552,8 @@ bool get_tcp_connection_relay_ip_port_by_pk(TCP_Connections *tcp_c, const uint8_
         return false;
     }
 
-    *ip_port = tcp_con_ip_port(tcp_con->connection);
+    *dest = tcp_con_ip_port(tcp_con->connection);
+
     return true;
 }
 
@@ -793,7 +799,7 @@ static int set_tcp_connection_status(TCP_Connection_to *con_to, unsigned int tcp
  * return 0 on success.
  * return -1 on failure.
  */
-static int kill_tcp_relay_connection(TCP_Connections *tcp_c, int tcp_connections_number)
+int kill_tcp_relay_connection(TCP_Connections *tcp_c, int tcp_connections_number)
 {
     TCP_con *tcp_con = get_tcp_connection(tcp_c, tcp_connections_number);
 
@@ -993,6 +999,8 @@ static int tcp_response_callback(void *object, uint8_t connection_id, const uint
     if (set_tcp_connection_status(con_to, tcp_connections_number, TCP_CONNECTIONS_STATUS_REGISTERED, connection_id) == -1) {
         return -1;
     }
+
+    fprintf(stderr, "registered\n");
 
     set_tcp_connection_number(tcp_con->connection, connection_id, connections_number);
 
