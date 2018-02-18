@@ -17,6 +17,8 @@
 #define c_sleep(x) usleep(1000 * (x))
 #endif
 
+#define ITERATION_INTERVAL 200
+
 static const char *tox_log_level_name(TOX_LOG_LEVEL level)
 {
     switch (level) {
@@ -42,6 +44,10 @@ static const char *tox_log_level_name(TOX_LOG_LEVEL level)
 static void print_debug_log(Tox *m, TOX_LOG_LEVEL level, const char *path, uint32_t line, const char *func,
                             const char *message, void *user_data)
 {
+    if (level == TOX_LOG_LEVEL_TRACE) {
+        return;
+    }
+
     uint32_t index = user_data ? *(uint32_t *)user_data : 0;
     const char *file = strrchr(path, '/');
     file = file ? file + 1 : path;
@@ -54,6 +60,7 @@ Tox *tox_new_log(struct Tox_Options *options, TOX_ERR_NEW *err, void *log_user_d
 
     if (log_options == nullptr) {
         log_options = tox_options_new(nullptr);
+        // tox_options_set_local_discovery_enabled(log_options, false);
     }
 
     assert(log_options != nullptr);
