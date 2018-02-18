@@ -628,7 +628,7 @@ void video_switch_decoder(VCSession *vc)
     }
 
 
-    if (VPX_DECODER_USED == VPX_VP8_CODEC) {
+    if (vc->is_using_vp9 == 0) {
         if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 1) {
             LOGGER_WARNING(vc->log, "turn on postproc: OK");
         } else if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 2) {
@@ -692,16 +692,19 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
     if (rb_read((RingBuffer *)vc->vbuf_raw, (void **)&p, &data_type)) {
         const struct RTPHeader *header_v3_0 = (void *) & (p->header);
 
-        if ((int32_t)header_v3_0->sequnum < (int32_t)vc->last_seen_fragment_seqnum) {
-            // drop frame with too old sequence number
-            LOGGER_WARNING(vc->log, "skipping incoming video frame (0) with sn=%d lastseen=%d",
-                (int)header_v3_0->sequnum,
-                (int)vc->last_seen_fragment_seqnum);
-            vc->last_seen_fragment_seqnum = (int32_t)header_v3_0->sequnum;
-            free(p);
-            pthread_mutex_unlock(vc->queue_mutex);
-            return 0;
-        }
+        // if (vc->is_using_vp9 == 0)
+        //{
+            if ((int32_t)header_v3_0->sequnum < (int32_t)vc->last_seen_fragment_seqnum) {
+                // drop frame with too old sequence number
+                LOGGER_WARNING(vc->log, "skipping incoming video frame (0) with sn=%d lastseen=%d",
+                    (int)header_v3_0->sequnum,
+                    (int)vc->last_seen_fragment_seqnum);
+                vc->last_seen_fragment_seqnum = (int32_t)header_v3_0->sequnum;
+                free(p);
+                pthread_mutex_unlock(vc->queue_mutex);
+                return 0;
+            }
+        //}
 
         // TODO: check for seqnum rollover!!
         vc->last_seen_fragment_seqnum = header_v3_0->sequnum;
