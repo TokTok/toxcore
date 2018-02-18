@@ -15,22 +15,22 @@ int main(void)
 {
     setvbuf(stdout, nullptr, _IONBF, 0);
 
-    Tox *tox_udp = tox_new_log(nullptr, nullptr, nullptr);
+    Tox *tox_tcp = tox_new_log(nullptr, nullptr, nullptr);
 
-    tox_bootstrap(tox_udp, "node.tox.biribiri.org", 33445, key, nullptr);
+    tox_add_tcp_relay(tox_tcp, "node.tox.biribiri.org", 33445, key, nullptr);
 
     printf("Waiting for connection");
 
-    while (tox_self_get_connection_status(tox_udp) == TOX_CONNECTION_NONE) {
+    while (tox_self_get_connection_status(tox_tcp) == TOX_CONNECTION_NONE) {
         printf(".");
         fflush(stdout);
 
-        tox_iterate(tox_udp, nullptr);
+        tox_iterate(tox_tcp, nullptr);
         c_sleep(ITERATION_INTERVAL);
     }
 
-    printf("Connection (UDP): %d\n", tox_self_get_connection_status(tox_udp));
+    printf("Connection (TCP): %d\n", tox_self_get_connection_status(tox_tcp));
 
-    tox_kill(tox_udp);
+    tox_kill(tox_tcp);
     return 0;
 }

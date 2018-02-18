@@ -1,3 +1,6 @@
+#if 1
+int main(){return 0;}
+#else
 /* Nop-test, just to make sure our code compiles as C++.
  */
 
@@ -257,3 +260,4 @@ int main(int argc, char *argv[])
 #endif
     return 0;
 }
+#endif
