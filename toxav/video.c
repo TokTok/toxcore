@@ -329,6 +329,21 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
         LOGGER_WARNING(log, "set encoder VP8E_SET_ENABLEAUTOALTREF setting: %s value=%d", vpx_codec_err_to_string(rc),
                        (int)1);
     }
+    
+
+    rc = vpx_codec_control(vc->encoder, VP8E_SET_MAX_INTRA_BITRATE_PCT, 450);
+
+    if (rc != VPX_CODEC_OK) {
+        LOGGER_ERROR(log, "Failed to set encoder VP8E_SET_MAX_INTRA_BITRATE_PCT setting: %s value=%d", vpx_codec_err_to_string(rc),
+                     (int)450);
+        vpx_codec_destroy(vc->encoder);
+        goto BASE_CLEANUP_1;
+    } else {
+        LOGGER_WARNING(log, "set encoder VP8E_SET_MAX_INTRA_BITRATE_PCT setting: %s value=%d", vpx_codec_err_to_string(rc),
+                       (int)450);
+    }
+
+
 
 
     /*
@@ -1124,6 +1139,41 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
             LOGGER_WARNING(vc->log, "(b)set encoder VP8E_SET_ENABLEAUTOALTREF setting: %s value=%d", vpx_codec_err_to_string(rc),
                            (int)1);
         }
+
+
+        /*
+        encoder->Control(VP8E_SET_ARNR_MAXFRAMES, 7);
+        encoder->Control(VP8E_SET_ARNR_STRENGTH, 5);
+        encoder->Control(VP8E_SET_ARNR_TYPE, 3);
+        */
+
+/*
+Codec control function to set Max data rate for Intra frames.
+This value controls additional clamping on the maximum size of a keyframe. It is expressed as a percentage of the average per-frame bitrate, with the special (and default) value 0 meaning unlimited, or no additional clamping beyond the codec's built-in algorithm.
+For example, to allocate no more than 4.5 frames worth of bitrate to a keyframe, set this to 450.
+Supported in codecs: VP8, VP9 
+*/
+        rc = vpx_codec_control(&new_c, VP8E_SET_MAX_INTRA_BITRATE_PCT, 450);
+
+        if (rc != VPX_CODEC_OK) {
+            LOGGER_ERROR(vc->log, "(b)Failed to set encoder VP8E_SET_MAX_INTRA_BITRATE_PCT setting: %s value=%d", vpx_codec_err_to_string(rc),
+                         (int)450);
+            vpx_codec_destroy(&new_c);
+            return -1;
+        } else {
+            LOGGER_WARNING(vc->log, "(b)set encoder VP8E_SET_MAX_INTRA_BITRATE_PCT setting: %s value=%d", vpx_codec_err_to_string(rc),
+                           (int)450);
+        }
+
+/*
+Codec control function to set max data rate for Inter frames.
+This value controls additional clamping on the maximum size of an inter frame. It is expressed as a percentage of the average per-frame bitrate, with the special (and default) value 0 meaning unlimited, or no additional clamping beyond the codec's built-in algorithm.
+For example, to allow no more than 4.5 frames worth of bitrate to an inter frame, set this to 450.
+Supported in codecs: VP9 
+
+VP9E_SET_MAX_INTER_BITRATE_PCT
+*/
+
 
         int cpu_used_value = vc->video_encoder_cpu_used;
 
