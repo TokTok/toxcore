@@ -128,25 +128,32 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
     cfg->g_timebase.num = 1; // timebase units = 1ms = (1/1000)s
     cfg->g_timebase.den = 1000; // timebase units = 1ms = (1/1000)s
 
-
-    if (quality == TOXAV_ENCODER_VP8_QUALITY_HIGH) {
-        /* Highest-resolution encoder settings */
-        cfg->rc_dropframe_thresh = 0;
-        cfg->rc_resize_allowed = 0;
-        cfg->rc_min_quantizer = 2;
-        cfg->rc_max_quantizer = 56;
-        cfg->rc_undershoot_pct = 100;
-        cfg->rc_overshoot_pct = 15;
-        cfg->rc_buf_initial_sz = 500;
-        cfg->rc_buf_optimal_sz = 600;
-        cfg->rc_buf_sz = 1000;
-    } else { // TOXAV_ENCODER_VP8_QUALITY_NORMAL
-        cfg->rc_resize_allowed = 1; // allow encoder to resize to smaller resolution
-        cfg->rc_dropframe_thresh = 0;
-        cfg->rc_resize_up_thresh = 50;
-        cfg->rc_resize_down_thresh = 6;
+    if (VPX_ENCODER_USED == VPX_VP9_CODEC)
+    {
+        cfg->rc_dropframe_thresh = 5;
+        cfg->rc_resize_allowed = 1;
     }
+    else
+    {
+        if (quality == TOXAV_ENCODER_VP8_QUALITY_HIGH) {
+            /* Highest-resolution encoder settings */
+            cfg->rc_dropframe_thresh = 0;
+            cfg->rc_resize_allowed = 0;
+            cfg->rc_min_quantizer = 2;
+            cfg->rc_max_quantizer = 56;
+            cfg->rc_undershoot_pct = 100;
+            cfg->rc_overshoot_pct = 15;
+            cfg->rc_buf_initial_sz = 500;
+            cfg->rc_buf_optimal_sz = 600;
+            cfg->rc_buf_sz = 1000;
+        } else { // TOXAV_ENCODER_VP8_QUALITY_NORMAL
+            cfg->rc_resize_allowed = 1; // allow encoder to resize to smaller resolution
+            cfg->rc_dropframe_thresh = 0;
+            cfg->rc_resize_up_thresh = 50;
+            cfg->rc_resize_down_thresh = 6;
+        }
 
+    }
 }
 
 
