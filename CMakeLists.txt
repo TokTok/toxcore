@@ -14,8 +14,8 @@
 #
 ################################################################################
 
-cmake_minimum_required(VERSION 3.1.0)
-cmake_policy(VERSION 3.1.0)
+cmake_minimum_required(VERSION 2.8.12)
+cmake_policy(VERSION 2.8.12)
 project(toxcore)
 include(CTest)
 
@@ -87,13 +87,18 @@ if(CMAKE_BUILD_TYPE)
 endif()
 
 # Set standard version for compiler.
-set(CMAKE_C_STANDARD 99)
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_C_EXTENSIONS OFF)
-set(CMAKE_CXX_EXTENSIONS OFF)
+if(${CMAKE_VERSION} VERSION_LESS "3.1.0")
+  add_cflag("-std=c99")
+  add_cxxflag("-std=c++11")
+else()
+  set(CMAKE_C_STANDARD 99)
+  set(CMAKE_CXX_STANDARD 11)
+  set(CMAKE_C_EXTENSIONS OFF)
+  set(CMAKE_CXX_EXTENSIONS OFF)
 
-message(STATUS "Supported C compiler features = ${CMAKE_C_COMPILE_FEATURES}")
-message(STATUS "Supported C++ compiler features = ${CMAKE_CXX_COMPILE_FEATURES}")
+  message(STATUS "Supported C compiler features = ${CMAKE_C_COMPILE_FEATURES}")
+  message(STATUS "Supported C++ compiler features = ${CMAKE_CXX_COMPILE_FEATURES}")
+endif()
 
 if(NOT MSVC)
   # Warn on non-ISO C.
@@ -229,7 +234,7 @@ endif()
 # LAYER 1: Crypto core
 # --------------------
 apidsl(toxcore/crypto_core.api.h)
-add_submodule(toxcore toxcrypto
+set(toxcore_SOURCES ${toxcore_SOURCES}
   toxcore/ccompat.h
   toxcore/crypto_core.c
   toxcore/crypto_core.h
@@ -237,34 +242,33 @@ add_submodule(toxcore toxcrypto
 include(CheckFunctionExists)
 check_function_exists(explicit_bzero HAVE_EXPLICIT_BZERO)
 check_function_exists(memset_s HAVE_MEMSET_S)
-target_link_modules(toxcrypto ${LIBSODIUM_LIBRARIES})
-set(toxcrypto_PKGCONFIG_REQUIRES ${toxcrypto_PKGCONFIG_REQUIRES} libsodium)
+set(toxcore_LINK_MODULES ${toxcore_LINK_MODULES} ${LIBSODIUM_LIBRARIES})
+set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} libsodium)
 
 # LAYER 2: Basic networking
 # -------------------------
-add_submodule(toxcore toxnetwork
+set(toxcore_SOURCES ${toxcore_SOURCES}
   toxcore/logger.c
   toxcore/logger.h
   toxcore/network.c
   toxcore/network.h
   toxcore/util.c
   toxcore/util.h)
-target_link_modules(toxnetwork toxcrypto)
 
 message("CMAKE_THREAD_LIBS_INIT: ${CMAKE_THREAD_LIBS_INIT}")
 if(CMAKE_THREAD_LIBS_INIT)
-  target_link_modules(toxnetwork ${CMAKE_THREAD_LIBS_INIT})
-  set(toxnetwork_PKGCONFIG_LIBS ${toxnetwork_PKGCONFIG_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+  set(toxcore_LINK_MODULES ${toxcore_LINK_MODULES} ${CMAKE_THREAD_LIBS_INIT})
+  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 endif()
 
 if(RT_LIBRARIES)
-  target_link_modules(toxnetwork ${RT_LIBRARIES})
-  set(toxnetwork_PKGCONFIG_LIBS ${toxnetwork_PKGCONFIG_LIBS} "-lrt")
+  set(toxcore_LINK_MODULES ${toxcore_LINK_MODULES} ${RT_LIBRARIES})
+  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-lrt")
 endif()
 
 if(WIN32)
-  target_link_modules(toxnetwork ws2_32 iphlpapi)
-  set(toxnetwork_PKGCONFIG_LIBS ${toxnetwork_PKGCONFIG_LIBS} "-lws2_32 -liphlpapi")
+  set(toxcore_LINK_MODULES ${toxcore_LINK_MODULES} ws2_32 iphlpapi)
+  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-lws2_32 -liphlpapi")
 endif()
 
 # LAYER 3: Distributed Hash Table
@@ -272,7 +276,7 @@ endif()
 apidsl(toxcore/LAN_discovery.api.h)
 apidsl(toxcore/ping.api.h)
 apidsl(toxcore/ping_array.api.h)
-add_submodule(toxcore toxdht
+set(toxcore_SOURCES ${toxcore_SOURCES}
   toxcore/DHT.c
   toxcore/DHT.h
   toxcore/LAN_discovery.c
@@ -281,11 +285,10 @@ add_submodule(toxcore toxdht
   toxcore/ping.h
   toxcore/ping_array.c
   toxcore/ping_array.h)
-target_link_modules(toxdht toxnetwork)
 
 # LAYER 4: Onion routing, TCP connections, crypto connections
 # -----------------------------------------------------------
-add_submodule(toxcore toxnetcrypto
+set(toxcore_SOURCES ${toxcore_SOURCES}
   toxcore/TCP_client.c
   toxcore/TCP_client.h
   toxcore/TCP_connection.c
@@ -302,40 +305,35 @@ add_submodule(toxcore toxnetcrypto
   toxcore/onion_announce.h
   toxcore/onion_client.c
   toxcore/onion_client.h)
-target_link_modules(toxnetcrypto toxdht)
 
 # LAYER 5: Friend requests and connections
 # ----------------------------------------
-add_submodule(toxcore toxfriends
+set(toxcore_SOURCES ${toxcore_SOURCES}
   toxcore/friend_connection.c
   toxcore/friend_connection.h
   toxcore/friend_requests.c
   toxcore/friend_requests.h)
-target_link_modules(toxfriends toxnetcrypto)
 
 # LAYER 6: Tox messenger
 # ----------------------
-add_submodule(toxcore toxmessenger
+set(toxcore_SOURCES ${toxcore_SOURCES}
   toxcore/Messenger.c
   toxcore/Messenger.h)
-target_link_modules(toxmessenger toxfriends)
 
 # LAYER 7: Group chats
 # --------------------
-add_submodule(toxcore toxgroup
+set(toxcore_SOURCES ${toxcore_SOURCES}
   toxcore/group.c
   toxcore/group.h)
-target_link_modules(toxgroup toxmessenger)
 
 # LAYER 8: Public API
 # -------------------
 apidsl(toxcore/tox.api.h)
-add_submodule(toxcore toxapi
+set(toxcore_SOURCES ${toxcore_SOURCES}
   toxcore/tox_api.c
   toxcore/tox.c
   toxcore/tox.h)
-target_link_modules(toxapi toxgroup)
-set(toxapi_API_HEADERS ${toxcore_SOURCE_DIR}/toxcore/tox.h^tox)
+set(toxcore_API_HEADERS ${toxcore_API_HEADERS} ${toxcore_SOURCE_DIR}/toxcore/tox.h^tox)
 
 ################################################################################
 #
@@ -345,7 +343,7 @@ set(toxapi_API_HEADERS ${toxcore_SOURCE_DIR}/toxcore/tox.h^tox)
 
 if(BUILD_TOXAV)
   apidsl(toxav/toxav.api.h)
-  add_submodule(toxcore toxav
+  set(toxcore_SOURCES ${toxcore_SOURCES}
     toxav/audio.c
     toxav/audio.h
     toxav/bwcontroller.c
@@ -363,11 +361,10 @@ if(BUILD_TOXAV)
     toxav/toxav_old.c
     toxav/video.c
     toxav/video.h)
-  target_link_modules(toxav toxgroup ${OPUS_LIBRARIES} ${VPX_LIBRARIES})
-  set(toxav_PKGCONFIG_REQUIRES ${toxav_PKGCONFIG_REQUIRES} opus vpx)
+  set(toxcore_LINK_MODULES ${toxcore_LINK_MODULES} ${OPUS_LIBRARIES} ${VPX_LIBRARIES})
+  set(toxcore_PKGCONFIG_REQUIRES ${toxcore_PKGCONFIG_REQUIRES} opus vpx)
 
-  set(toxav_API_HEADERS ${toxcore_SOURCE_DIR}/toxav/toxav.h^toxav)
-  make_version_script(toxav ${toxav_API_HEADERS})
+  set(toxcore_API_HEADERS ${toxcore_API_HEADERS} ${toxcore_SOURCE_DIR}/toxav/toxav.h^toxav)
 endif()
 
 ################################################################################
@@ -377,11 +374,10 @@ endif()
 ################################################################################
 
 apidsl(toxencryptsave/toxencryptsave.api.h)
-add_submodule(toxcore toxencryptsave
+set(toxcore_SOURCES ${toxcore_SOURCES}
   toxencryptsave/toxencryptsave.c
   toxencryptsave/toxencryptsave.h)
-target_link_modules(toxencryptsave toxcrypto)
-set(toxencryptsave_API_HEADERS ${toxcore_SOURCE_DIR}/toxencryptsave/toxencryptsave.h^tox)
+set(toxcore_API_HEADERS ${toxcore_API_HEADERS} ${toxcore_SOURCE_DIR}/toxencryptsave/toxencryptsave.h^tox)
 
 ################################################################################
 #
@@ -393,25 +389,7 @@ set(toxencryptsave_API_HEADERS ${toxcore_SOURCE_DIR}/toxencryptsave/toxencryptsa
 add_module(toxcore ${toxcore_SOURCES})
 
 # Link it to all dependencies.
-foreach(sublib ${toxcore_SUBLIBS})
-  set(toxcore_LINK_MODULES ${toxcore_LINK_MODULES} ${${sublib}_LINK_MODULES})
-endforeach()
 target_link_modules(toxcore ${toxcore_LINK_MODULES})
-
-# Concatenate all the pkg-config Libs: lines.
-foreach(sublib ${toxcore_SUBLIBS})
-  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} ${${sublib}_PKGCONFIG_LIBS})
-endforeach()
-
-# Concatenate all the pkg-config Requires: lines.
-foreach(sublib ${toxcore_SUBLIBS})
-  set(toxcore_PKGCONFIG_REQUIRES ${toxcore_PKGCONFIG_REQUIRES} ${${sublib}_PKGCONFIG_REQUIRES})
-endforeach()
-
-# Collect all API headers.
-foreach(sublib ${toxcore_SUBLIBS})
-  set(toxcore_API_HEADERS ${toxcore_API_HEADERS} ${${sublib}_API_HEADERS})
-endforeach()
 
 # Make version script (on systems that support it) to limit symbol visibility.
 make_version_script(toxcore ${toxcore_API_HEADERS})
@@ -422,58 +400,11 @@ install_module(toxcore DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/tox)
 
 ################################################################################
 #
-# :: Tox specification tests
-#
-################################################################################
-
-# find_program(SPECTEST NAMES
-#   tox-spectest
-#   ../.stack-work/install/x86_64-linux/lts-2.22/7.8.4/bin/tox-spectest)
-# 
-# if(NOT SPECTEST)
-#   find_program(STACK NAMES stack)
-#   if(STACK)
-#     set(SPECTEST
-#       ${STACK} --stack-yaml ${toxcore_SOURCE_DIR}/../stack.yaml exec --
-#       tox-spectest)
-#   endif()
-# endif()
-# 
-# if(MSGPACK_FOUND)
-#   add_executable(toxcore-sut
-#     testing/hstox/binary_decode.c
-#     testing/hstox/binary_encode.c
-#     testing/hstox/driver.c
-#     testing/hstox/methods.c
-#     testing/hstox/packet_kinds.c
-#     testing/hstox/test_main.c
-#     testing/hstox/util.c)
-#   target_link_modules(toxcore-sut
-#     toxcore
-#     toxdht
-#     toxnetcrypto
-#     ${MSGPACK_LIBRARIES})
-#   if(SPECTEST)
-#     add_test(NAME spectest COMMAND ${SPECTEST} $<TARGET_FILE:toxcore-sut>)
-#   endif()
-# endif()
-
-################################################################################
-#
 # :: Unit tests: no networking, just pure function calls.
 #
 ################################################################################
 
 include(CompileGTest)
-
-function(unit_test subdir target)
-  if(HAVE_GTEST)
-    add_executable(unit_${target}_test ${subdir}/${target}_test.cpp)
-    target_link_modules(unit_${target}_test ${toxcore_SUBLIBS} gtest)
-    set_target_properties(unit_${target}_test PROPERTIES COMPILE_FLAGS "${TEST_CXX_FLAGS}")
-    add_test(NAME ${target} COMMAND ${CROSSCOMPILING_EMULATOR} unit_${target}_test)
-  endif()
-endfunction()
 
 # The actual unit tests follow.
 #
@@ -506,11 +437,7 @@ endif()
 function(auto_test target)
   if(NOT (MSVC AND ARGV1 STREQUAL "MSVC_DONT_BUILD"))
     add_executable(auto_${target}_test auto_tests/${target}_test.c)
-    target_link_modules(auto_${target}_test
-      toxcore
-      toxcrypto
-      toxmessenger
-      toxnetcrypto)
+    target_link_modules(auto_${target}_test toxcore)
     if(NOT ARGV1 STREQUAL "DONT_RUN")
       add_test(NAME ${target} COMMAND ${CROSSCOMPILING_EMULATOR} auto_${target}_test)
       set_tests_properties(${target} PROPERTIES TIMEOUT "${TEST_TIMEOUT_SECONDS}")
@@ -523,12 +450,7 @@ if(BUILD_TOXAV)
   add_executable(auto_monolith_test
     auto_tests/monolith_test.cpp
     ${ANDROID_CPU_FEATURES})
-  target_link_modules(auto_monolith_test
-    ${LIBSODIUM_LIBRARIES}
-    ${OPUS_LIBRARIES}
-    ${VPX_LIBRARIES}
-    ${toxcore_PKGCONFIG_LIBS}
-  )
+  target_link_libraries(auto_monolith_test ${toxcore_LINK_MODULES})
   add_test(NAME monolith COMMAND ${CROSSCOMPILING_EMULATOR} auto_monolith_test)
 
   if(ANDROID_CPU_FEATURES)
@@ -542,19 +464,27 @@ auto_test(conference)
 auto_test(crypto                        MSVC_DONT_BUILD)
 auto_test(dht                           MSVC_DONT_BUILD)
 auto_test(encryptsave)
+auto_test(file_transfer)
+auto_test(friend_request)
 auto_test(lan_discovery)
+auto_test(lossless_packet)
+auto_test(lossy_packet)
 auto_test(messenger                     MSVC_DONT_BUILD)
 auto_test(network)
 auto_test(onion)
 auto_test(resource_leak)
 auto_test(save_friend)
+auto_test(save_load)
+auto_test(send_message)
+auto_test(set_name)
+auto_test(set_status_message)
 auto_test(simple_conference)
 auto_test(skeleton)
-auto_test(tox)
 auto_test(tox_many)
 auto_test(tox_many_tcp)
 auto_test(tox_one)
 auto_test(tox_strncasecmp)
+auto_test(typing)
 auto_test(version)
 # TODO(iphydf): These tests are broken. The code needs to be fixed, as the
 # tests themselves are correct.
@@ -577,7 +507,7 @@ if(DHT_BOOTSTRAP)
   add_executable(DHT_bootstrap
     other/DHT_bootstrap.c
     other/bootstrap_node_packets.c)
-  target_link_modules(DHT_bootstrap toxnetcrypto)
+  target_link_modules(DHT_bootstrap toxcore)
 endif()
 
 option(BOOTSTRAP_DAEMON "Enable building of tox-bootstrapd" ON)
@@ -603,7 +533,7 @@ if(BOOTSTRAP_DAEMON)
       other/bootstrap_daemon/src/tox-bootstrapd.c
       other/bootstrap_node_packets.c
       other/bootstrap_node_packets.h)
-    target_link_modules(tox-bootstrapd toxfriends ${LIBCONFIG_LIBRARIES})
+    target_link_modules(tox-bootstrapd toxcore ${LIBCONFIG_LIBRARIES})
     install(TARGETS tox-bootstrapd RUNTIME DESTINATION bin)
   endif()
 endif()
@@ -632,7 +562,7 @@ if(NOT WIN32
 endif()
 
 add_executable(DHT_test testing/DHT_test.c)
-target_link_modules(DHT_test toxdht)
+target_link_modules(DHT_test toxcore)
 
 add_executable(Messenger_test testing/Messenger_test.c)
-target_link_modules(Messenger_test toxmessenger)
+target_link_modules(Messenger_test toxcore)
