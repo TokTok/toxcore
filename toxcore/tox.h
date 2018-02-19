@@ -2333,6 +2333,10 @@ typedef enum TOX_CONFERENCE_TYPE {
  * The invitation will remain valid until the inviting friend goes offline
  * or exits the conference.
  *
+ * The friend_number can be -1, which means this is a synthesised invite
+ * event coming from an already joined conference that is being re-joined
+ * after restart or reconnect.
+ *
  * @param friend_number The friend who invited us.
  * @param type The conference type (text only or audio/video).
  * @param cookie A piece of data of variable length required to join the
@@ -2402,6 +2406,22 @@ typedef enum TOX_CONFERENCE_STATE_CHANGE {
      * A peer has changed their name.
      */
     TOX_CONFERENCE_STATE_CHANGE_PEER_NAME_CHANGE,
+
+    /**
+     * A peer has joined the conference.
+     *
+     * @deprecated Join/exit events are unreliable due to unstable peer numbers.
+     *   Prefer to listen for TOX_CONFERENCE_STATE_CHANGE_LIST_CHANGED and rebuild the peer list from
+     *   scratch. This enumerator will be removed in v0.3.0.
+     */
+    TOX_CONFERENCE_STATE_CHANGE_PEER_JOIN,
+
+    /**
+     * A peer has left the conference.
+     *
+     * @deprecated See TOX_CONFERENCE_STATE_CHANGE_PEER_JOIN.
+     */
+    TOX_CONFERENCE_STATE_CHANGE_PEER_EXIT,
 
 } TOX_CONFERENCE_STATE_CHANGE;
 

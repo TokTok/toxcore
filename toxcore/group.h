@@ -158,6 +158,8 @@ void g_callback_group_title(Group_Chats *g_c, void (*function)(Messenger *m, uin
 enum {
     CHAT_CHANGE_OCCURRED,
     CHAT_CHANGE_PEER_NAME,
+    CHAT_CHANGE_PEER_JOIN,
+    CHAT_CHANGE_PEER_EXIT,
 };
 void g_callback_group_namelistchange(Group_Chats *g_c, void (*function)(Messenger *m, int, int, uint8_t, void *));
 
