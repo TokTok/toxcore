@@ -266,6 +266,8 @@ uint32_t tox_address_size(void);
 
 /**
  * Maximum length of a nickname in bytes.
+ *
+ * @deprecated The macro will be removed in 0.3.0. Use the function instead.
  */
 #define TOX_MAX_NAME_LENGTH            128
 
@@ -273,6 +275,8 @@ uint32_t tox_max_name_length(void);
 
 /**
  * Maximum length of a status message in bytes.
+ *
+ * @deprecated The macro will be removed in 0.3.0. Use the function instead.
  */
 #define TOX_MAX_STATUS_MESSAGE_LENGTH  1007
 
@@ -280,6 +284,8 @@ uint32_t tox_max_status_message_length(void);
 
 /**
  * Maximum length of a friend request message in bytes.
+ *
+ * @deprecated The macro will be removed in 0.3.0. Use the function instead.
  */
 #define TOX_MAX_FRIEND_REQUEST_LENGTH  1016
 
@@ -287,6 +293,8 @@ uint32_t tox_max_friend_request_length(void);
 
 /**
  * Maximum length of a single message after which it should be split.
+ *
+ * @deprecated The macro will be removed in 0.3.0. Use the function instead.
  */
 #define TOX_MAX_MESSAGE_LENGTH         1372
 
@@ -294,6 +302,8 @@ uint32_t tox_max_message_length(void);
 
 /**
  * Maximum size of custom packets. TODO(iphydf): should be LENGTH?
+ *
+ * @deprecated The macro will be removed in 0.3.0. Use the function instead.
  */
 #define TOX_MAX_CUSTOM_PACKET_SIZE     1373
 
@@ -315,6 +325,8 @@ uint32_t tox_file_id_length(void);
 
 /**
  * Maximum file name length for file transfers.
+ *
+ * @deprecated The macro will be removed in 0.3.0. Use the function instead.
  */
 #define TOX_MAX_FILENAME_LENGTH        255
 
@@ -494,7 +506,7 @@ typedef void tox_log_cb(Tox *tox, TOX_LOG_LEVEL level, const char *file, uint32_
  * @deprecated The memory layout of this struct (size, alignment, and field
  * order) is not part of the ABI. To remain compatible, prefer to use tox_options_new to
  * allocate the object and accessor functions to set the members. The struct
- * will become opaque (i.e. the definition will become private) in v0.2.0.
+ * will become opaque (i.e. the definition will become private) in v0.3.0.
  */
 struct Tox_Options {
 
@@ -956,6 +968,9 @@ typedef enum TOX_CONNECTION {
 /**
  * Return whether we are connected to the DHT. The return value is equal to the
  * last value received through the `self_connection_status` callback.
+ *
+ * @deprecated This getter is deprecated. Use the event and store the status
+ * in the client state.
  */
 TOX_CONNECTION tox_self_get_connection_status(const Tox *tox);
 
@@ -1459,6 +1474,9 @@ size_t tox_friend_get_name_size(const Tox *tox, uint32_t friend_number, TOX_ERR_
  * @param name A valid memory region large enough to store the friend's name.
  *
  * @return true on success.
+ *
+ * @deprecated This getter is deprecated. Use the event and store the name
+ *   in the client state.
  */
 bool tox_friend_get_name(const Tox *tox, uint32_t friend_number, uint8_t *name, TOX_ERR_FRIEND_QUERY *error);
 
@@ -1496,6 +1514,9 @@ size_t tox_friend_get_status_message_size(const Tox *tox, uint32_t friend_number
  * `friend_status_message` callback.
  *
  * @param status_message A valid memory region large enough to store the friend's status message.
+ *
+ * @deprecated This getter is deprecated. Use the event and store the message
+ *   in the client state.
  */
 bool tox_friend_get_status_message(const Tox *tox, uint32_t friend_number, uint8_t *status_message,
                                    TOX_ERR_FRIEND_QUERY *error);
@@ -1525,6 +1546,9 @@ void tox_callback_friend_status_message(Tox *tox, tox_friend_status_message_cb *
  *
  * The status returned is equal to the last status received through the
  * `friend_status` callback.
+ *
+ * @deprecated This getter is deprecated. Use the event and store the status
+ *   in the client state.
  */
 TOX_USER_STATUS tox_friend_get_status(const Tox *tox, uint32_t friend_number, TOX_ERR_FRIEND_QUERY *error);
 
@@ -1554,6 +1578,9 @@ void tox_callback_friend_status(Tox *tox, tox_friend_status_cb *callback);
  *
  * @return the friend's connection status as it was received through the
  *   `friend_connection_status` event.
+ *
+ * @deprecated This getter is deprecated. Use the event and store the status
+ *   in the client state.
  */
 TOX_CONNECTION tox_friend_get_connection_status(const Tox *tox, uint32_t friend_number, TOX_ERR_FRIEND_QUERY *error);
 
@@ -1586,6 +1613,9 @@ void tox_callback_friend_connection_status(Tox *tox, tox_friend_connection_statu
  * @return true if the friend is typing.
  * @return false if the friend is not typing, or the friend number was
  *   invalid. Inspect the error code to determine which case it is.
+ *
+ * @deprecated This getter is deprecated. Use the event and store the status
+ *   in the client state.
  */
 bool tox_friend_get_typing(const Tox *tox, uint32_t friend_number, TOX_ERR_FRIEND_QUERY *error);
 
@@ -2750,6 +2780,9 @@ size_t tox_conference_get_title_size(const Tox *tox, uint32_t conference_number,
  *   If this parameter is NULL, this function has no effect.
  *
  * @return true on success.
+ *
+ * @deprecated This getter is deprecated. Use the event and store the title
+ *   in the client state.
  */
 bool tox_conference_get_title(const Tox *tox, uint32_t conference_number, uint8_t *title,
                               TOX_ERR_CONFERENCE_TITLE *error);
