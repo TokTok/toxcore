@@ -4197,9 +4197,6 @@ int make_gc_handshake_packet(GC_Chat *chat, GC_Connection *gconn, uint8_t handsh
         return -1;
     }
     length += nodes_size;
-    fprintf(stderr, "id: %s\n", id_toa(node->public_key));
-    fprintf(stderr, "ip: %s\n", ip_ntoa(&node->ip_port.ip));
-    fprintf(stderr, "port: %d\n", node->ip_port.port);
 
     int enc_len = wrap_group_handshake_packet(chat->self_public_key, chat->self_secret_key,
                                               gconn->addr.public_key, packet, packet_size,
@@ -4475,9 +4472,6 @@ static int handle_gc_handshake_request(Messenger *m, int groupnumber, IP_Port *i
     Node_format node[1];
     int processed = ENC_PUBLIC_KEY + SIG_PUBLIC_KEY + 6;
     int nodes_count = unpack_nodes(node, 1, NULL, data + processed, length - processed, 1);
-    fprintf(stderr, "id: %s\n", id_toa(node->public_key));
-    fprintf(stderr, "ip: %s\n", ip_ntoa(&node->ip_port.ip));
-    fprintf(stderr, "port: %d\n", node->ip_port.port);
     if (nodes_count != 1) {
         if (is_new_peer) {
             gc_peer_delete(m, chat->groupnumber, peer_number, NULL, 0);
@@ -5170,8 +5164,6 @@ static int peer_add(Messenger *m, int groupnumber, IP_Port *ipp, const uint8_t *
     if (get_peernum_of_enc_pk(chat, public_key) != -1) {
         return -2;
     }
-
-    fprintf(stderr, "added peer: %s\n", id_toa(public_key));
 
     int tcp_connection_num = -1;
 
@@ -6365,7 +6357,7 @@ int add_peers_from_announces(const GC_Session *gc_session, const GC_Chat *chat, 
         gconn->is_oob_handshake = true;
         gconn->is_pending_handshake_response = false;
         gconn->pending_handshake_type = HS_INVITE_REQUEST;
-        gconn->pending_handshake = unix_time() + HANDSHAKE_SENDING_TIMEOUT;
+        gconn->pending_handshake = gconn->last_rcvd_ping = unix_time() + HANDSHAKE_SENDING_TIMEOUT;
 
         added_peers++;
         fprintf(stderr, "Added peers %s\n", id_toa(curr_announce->peer_public_key));
