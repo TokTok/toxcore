@@ -456,6 +456,7 @@ static int addpeer(Group_Chats *g_c, int groupnumber, const uint8_t *real_pk, co
 
     if (do_gc_callback && g_c->group_namelistchange) {
         g_c->group_namelistchange(g_c->m, groupnumber, 0, CHAT_CHANGE_OCCURRED, userdata);
+        g_c->group_namelistchange(g_c->m, groupnumber, g->numpeers - 1, CHAT_CHANGE_PEER_JOIN, userdata);
     }
 
     if (g->peer_on_join) {
@@ -544,6 +545,7 @@ static int delpeer(Group_Chats *g_c, int groupnumber, int peer_index, void *user
 
     if (g_c->group_namelistchange) {
         g_c->group_namelistchange(g_c->m, groupnumber, 0, CHAT_CHANGE_OCCURRED, userdata);
+        g_c->group_namelistchange(g_c->m, groupnumber, peer_index, CHAT_CHANGE_PEER_EXIT, userdata);
     }
 
     if (g->peer_on_leave) {

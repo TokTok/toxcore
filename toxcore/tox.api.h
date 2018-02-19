@@ -2064,6 +2064,10 @@ namespace conference {
      * The invitation will remain valid until the inviting friend goes offline
      * or exits the conference.
      *
+     * The friend_number can be -1, which means this is a synthesised invite
+     * event coming from an already joined conference that is being re-joined
+     * after restart or reconnect.
+     *
      * @param friend_number The friend who invited us.
      * @param type The conference type (text only or audio/video).
      * @param cookie A piece of data of variable length required to join the
@@ -2118,6 +2122,20 @@ namespace conference {
      * A peer has changed their name.
      */
     PEER_NAME_CHANGE,
+    /**
+     * A peer has joined the conference.
+     *
+     * @deprecated Join/exit events are unreliable due to unstable peer numbers.
+     *   Prefer to listen for $LIST_CHANGED and rebuild the peer list from
+     *   scratch. This enumerator will be removed in v0.3.0.
+     */
+    PEER_JOIN,
+    /**
+     * A peer has left the conference.
+     *
+     * @deprecated See $PEER_JOIN.
+     */
+    PEER_EXIT,
   }
 
   /**

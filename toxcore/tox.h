@@ -2403,6 +2403,22 @@ typedef enum TOX_CONFERENCE_STATE_CHANGE {
      */
     TOX_CONFERENCE_STATE_CHANGE_PEER_NAME_CHANGE,
 
+    /**
+     * A peer has joined the conference.
+     *
+     * @deprecated Join/exit events are unreliable due to unstable peer numbers.
+     *   Prefer to listen for TOX_CONFERENCE_STATE_CHANGE_LIST_CHANGED and rebuild the peer list from
+     *   scratch. This enumerator will be removed in v0.3.0.
+     */
+    TOX_CONFERENCE_STATE_CHANGE_PEER_JOIN,
+
+    /**
+     * A peer has left the conference.
+     *
+     * @deprecated See TOX_CONFERENCE_STATE_CHANGE_PEER_JOIN.
+     */
+    TOX_CONFERENCE_STATE_CHANGE_PEER_EXIT,
+
 } TOX_CONFERENCE_STATE_CHANGE;
 
 
