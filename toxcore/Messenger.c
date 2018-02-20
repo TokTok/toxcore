@@ -2111,7 +2111,6 @@ Messenger *new_messenger(Mono_Time *mono_time, Messenger_Options *options, unsig
         kill_onion_client(m->onion_c);
 #ifndef VANILLA_NACL
         kill_dht_groupchats(m->group_handler);
-//        kill_gca(m->group_announce);
 #endif /* VANILLA_NACL */
         kill_net_crypto(m->net_crypto);
         kill_dht(m->dht);
