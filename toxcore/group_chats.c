@@ -2017,17 +2017,11 @@ static int broadcast_gc_shared_state(GC_Chat *chat)
  */
 static void do_gc_shared_state_changes(GC_Session *c, GC_Chat *chat, const GC_SharedState *old_shared_state)
 {
-    if (old_shared_state->version == 0) {
-        return;
-    }
-
     /* Max peers changed */
     if (chat->shared_state.maxpeers != old_shared_state->maxpeers) {
         if (c->peer_limit) {
             (*c->peer_limit)(c->messenger, chat->groupnumber, chat->shared_state.maxpeers, c->peer_limit_userdata);
         }
-
-        return;
     }
 
     /* privacy state changed */
@@ -2043,8 +2037,6 @@ static void do_gc_shared_state_changes(GC_Session *c, GC_Chat *chat, const GC_Sh
             m_remove_friend_gc(c->messenger, chat);
             cleanup_gca(c->announces_list, get_chat_id(chat->chat_public_key));
         }
-
-        return;
     }
 
     /* password changed */
@@ -2055,8 +2047,6 @@ static void do_gc_shared_state_changes(GC_Session *c, GC_Chat *chat, const GC_Sh
             (*c->password)(c->messenger, chat->groupnumber, chat->shared_state.passwd,
                            chat->shared_state.passwd_len, c->password_userdata);
         }
-
-        return;
     }
 }
 
@@ -6124,6 +6114,7 @@ int gc_accept_invite(GC_Session *c, int32_t friend_number, const uint8_t *data, 
     expand_chat_id(chat->chat_public_key, chat_id);
     chat->chat_id_hash = get_chat_id_hash(get_chat_id(chat->chat_public_key));
     chat->join_type = HJ_PRIVATE;
+    chat->shared_state.privacy_state = GI_PRIVATE;
     chat->last_join_attempt = mono_time_get(c->messenger->mono_time);
 
     if (passwd != nullptr && passwd_len > 0) {
