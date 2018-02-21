@@ -328,6 +328,8 @@ uint32_t tox_hash_length(void);
  */
 #define TOX_FILE_ID_LENGTH             32
 
+#define TOX_MAX_GC_PEER_LENGTH         128
+
 uint32_t tox_file_id_length(void);
 
 /**
@@ -3253,6 +3255,28 @@ typedef enum TOX_ERR_GROUP_NEW {
 } TOX_ERR_GROUP_NEW;
 
 
+struct Group_Chat_Self_Peer_Info {
+    uint8_t nick[TOX_MAX_GC_PEER_LENGTH];
+    uint16_t nick_length;
+    TOX_USER_STATUS user_status;
+};
+
+typedef enum TOX_ERR_GC_SELF_PEER_INFO_NEW {
+
+    /**
+     * The function returned successfully.
+     */
+            TOX_ERR_GC_SELF_PEER_INFO_OK,
+
+    /**
+     * The function failed to allocate enough memory for the options struct.
+     */
+            TOX_ERR_GC_SELF_PEER_INFO_MALLOC,
+
+} TOX_ERR_GC_SELF_PEER_INFO;
+
+struct Group_Chat_Self_Peer_Info *group_chat_self_peer_info_new(Tox *tox, TOX_ERR_GC_SELF_PEER_INFO *error);
+
 /**
  * Creates a new group chat.
  *
@@ -3270,7 +3294,8 @@ typedef enum TOX_ERR_GROUP_NEW {
  *
  * @return groupnumber on success, UINT32_MAX on failure.
  */
-uint32_t tox_group_new(Tox *tox, TOX_GROUP_PRIVACY_STATE privacy_state, const uint8_t *group_name, size_t length,
+uint32_t tox_group_new(Tox *tox, TOX_GROUP_PRIVACY_STATE privacy_state, const uint8_t *group_name, size_t group_name_length,
+                       struct Group_Chat_Self_Peer_Info *peer_info,
                        TOX_ERR_GROUP_NEW *error);
 
 typedef enum TOX_ERR_GROUP_JOIN {
@@ -3314,6 +3339,7 @@ typedef enum TOX_ERR_GROUP_JOIN {
  * @return groupnumber on success, UINT32_MAX on failure.
  */
 uint32_t tox_group_join(Tox *tox, const uint8_t *chat_id, const uint8_t *password, size_t length,
+                        struct Group_Chat_Self_Peer_Info *peer_info,
                         TOX_ERR_GROUP_JOIN *error);
 
 typedef enum TOX_ERR_GROUP_RECONNECT {
@@ -4273,7 +4299,7 @@ typedef enum TOX_ERR_GROUP_INVITE_ACCEPT {
  * @return the groupnumber on success, UINT32_MAX on failure.
  */
 uint32_t tox_group_invite_accept(Tox *tox, uint32_t friend_number, const uint8_t *invite_data, size_t length, const uint8_t *password,
-                                 size_t password_length, TOX_ERR_GROUP_INVITE_ACCEPT *error);
+                                 size_t password_length, struct Group_Chat_Self_Peer_Info *peer_info, TOX_ERR_GROUP_INVITE_ACCEPT *error);
 
 /**
  * @param friend_number The friend number of the contact who sent the invite.
