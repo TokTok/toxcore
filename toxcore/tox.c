@@ -1740,7 +1740,7 @@ struct Group_Chat_Self_Peer_Info *group_chat_self_peer_info_new(Tox *tox, TOX_ER
 
 static GC_SelfPeerInfo* create_self_peer_info(const struct Group_Chat_Self_Peer_Info *peer_info)
 {
-    if (!peer_info || !peer_info->nick || !peer_info->nick_length) {
+    if (!peer_info || !peer_info->nick || !peer_info->nick_length || peer_info->nick_length > TOX_MAX_GC_PEER_LENGTH) {
         return NULL;
     }
 
@@ -1854,10 +1854,6 @@ bool tox_group_leave(Tox *tox, uint32_t groupnumber, const uint8_t *partmessage,
     if (chat == nullptr) {
         SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_LEAVE_GROUP_NOT_FOUND);
         return 0;
-    }
-
-    if (is_public_chat(chat)) {
-        m_remove_friend_gc(m, chat);
     }
 
     int ret = gc_group_exit(m->group_handler, chat, partmessage, length);

@@ -5674,6 +5674,8 @@ int gc_group_load(GC_Session *c, struct SAVED_GROUP *save)
             continue;
         }
 
+        add_tcp_relay_global(chat->tcp_conn, save->addrs[i].tcp_relay.ip_port, save->addrs[i].tcp_relay.public_key);
+
         memcpy(gconn->oob_relay_pk, save->addrs[i].tcp_relay.public_key, ENC_PUBLIC_KEY);
         gconn->is_oob_handshake = true;
         gconn->is_pending_handshake_response = false;
@@ -6218,6 +6220,10 @@ static int group_delete(GC_Session *c, GC_Chat *chat)
  */
 int gc_group_exit(GC_Session *c, GC_Chat *chat, const uint8_t *message, uint16_t length)
 {
+    if (is_public_chat(chat)) {
+        m_remove_friend_gc(c->messenger, chat);
+    }
+
     int ret = send_gc_self_exit(chat, message, length);
 
     if (group_delete(c, chat) == -1) {
