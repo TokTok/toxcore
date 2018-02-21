@@ -186,6 +186,12 @@ typedef struct GC_SavedPeerInfo {
     Node_format tcp_relay;
 } GC_SavedPeerInfo;
 
+typedef struct GC_SelfPeerInfo {
+    uint8_t nick[MAX_GC_NICK_SIZE];
+    uint16_t nick_length;
+    GROUP_STATUS user_status;
+} GC_SelfPeerInfo;
+
 typedef struct {
     uint8_t     role;
     uint8_t     nick[MAX_GC_NICK_SIZE];
@@ -636,7 +642,8 @@ int gc_group_load(GC_Session *c, struct SAVED_GROUP *save);
  * Return -5 if the group state fails to initialize.
  * Return -6 if the group fails to announce to the DHT.
  */
-int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name, uint16_t length);
+int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name, uint16_t group_name_length,
+                 const GC_SelfPeerInfo *peer_info);
 
 /* Sends an invite request to a public group using the chat_id.
  *
@@ -647,7 +654,8 @@ int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name
  * Return -2 if chat_id is NULL or a group with chat_id already exists in the chats arr
  * Return -3 if there is an error setting the group password.
  */
-int gc_group_join(GC_Session *c, const uint8_t *chat_id, const uint8_t *passwd, uint16_t passwd_len);
+int gc_group_join(GC_Session *c, const uint8_t *chat_id, const uint8_t *passwd, uint16_t passwd_len,
+                  const GC_SelfPeerInfo *peer_info);
 
 /* Resets chat saving all self state and attempts to reconnect to group */
 void gc_rejoin_group(GC_Session *c, GC_Chat *chat);
@@ -659,7 +667,9 @@ void gc_rejoin_group(GC_Session *c, GC_Chat *chat);
  * Return -2 if the group object fails to initialize.
  * Return -3 if there is an error setting the password.
  */
-int gc_accept_invite(GC_Session *c, int32_t friend_number, const uint8_t *data, uint16_t length, const uint8_t *passwd, uint16_t passwd_len);
+int gc_accept_invite(GC_Session *c, int32_t friend_number, const uint8_t *data, uint16_t length,
+                     const uint8_t *passwd, uint16_t passwd_len,
+                     const GC_SelfPeerInfo *peer_info);
 
 /* Invites friendnumber to chat. Packet includes: Type, chat_id, node
  *
