@@ -538,7 +538,9 @@ bool copy_tcp_connection_relay_ip_port_by_pk(TCP_Connections *tcp_c, const uint8
         return false;
     }
 
-    memcpy(dest, &tcp_con->connection->ip_port, sizeof(IP_Port));
+    const IP_Port ip_port = tcp_con_ip_port(tcp_con->connection);
+
+    memcpy(dest, &ip_port, sizeof(IP_Port));
 
     return true;
 }
