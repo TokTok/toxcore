@@ -211,16 +211,23 @@ if(NOT USE_IPV6)
 endif()
 
 option(BUILD_TOXAV "Whether to build the tox AV library" ON)
+option(MUST_BUILD_TOXAV "Fail the build if toxav cannot be built" OFF)
 
 include(Dependencies)
 
+if(MUST_BUILD_TOXAV)
+  set(NO_TOXAV_ERROR_TYPE SEND_ERROR)
+else()
+  set(NO_TOXAV_ERROR_TYPE WARNING)
+endif()
+
 if(BUILD_TOXAV)
   if(NOT OPUS_FOUND)
-    message(WARNING "Option BUILD_TOXAV is enabled but required library OPUS was not found.")
+    message(${NO_TOXAV_ERROR_TYPE} "Option BUILD_TOXAV is enabled but required library OPUS was not found.")
     set(BUILD_TOXAV OFF)
   endif()
   if(NOT VPX_FOUND)
-    message(WARNING "Option BUILD_TOXAV is enabled but required library VPX was not found.")
+    message(${NO_TOXAV_ERROR_TYPE} "Option BUILD_TOXAV is enabled but required library VPX was not found.")
     set(BUILD_TOXAV OFF)
   endif()
 endif()
@@ -230,6 +237,18 @@ endif()
 # :: Tox Core Library
 #
 ################################################################################
+
+# toxcore_PKGCONFIG_LIBS is what's added to the Libs: line in toxcore.pc. It
+# needs to contain all the libraries a program using toxcore should link against
+# if it's statically linked. If it's dynamically linked, there is no need to
+# explicitly link against all the dependencies, but it doesn't harm much(*)
+# either.
+#
+# (*) It allows client code to use symbols from our dependencies without
+#    explicitly linking against them.
+set(toxcore_PKGCONFIG_LIBS)
+# Requires: in pkg-config file.
+set(toxcore_PKGCONFIG_REQUIRES)
 
 # LAYER 1: Crypto core
 # --------------------
@@ -243,7 +262,7 @@ include(CheckFunctionExists)
 check_function_exists(explicit_bzero HAVE_EXPLICIT_BZERO)
 check_function_exists(memset_s HAVE_MEMSET_S)
 set(toxcore_LINK_MODULES ${toxcore_LINK_MODULES} ${LIBSODIUM_LIBRARIES})
-set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} libsodium)
+set(toxcore_PKGCONFIG_REQUIRES ${toxcore_PKGCONFIG_REQUIRES} libsodium)
 
 # LAYER 2: Basic networking
 # -------------------------
@@ -254,22 +273,6 @@ set(toxcore_SOURCES ${toxcore_SOURCES}
   toxcore/network.h
   toxcore/util.c
   toxcore/util.h)
-
-message("CMAKE_THREAD_LIBS_INIT: ${CMAKE_THREAD_LIBS_INIT}")
-if(CMAKE_THREAD_LIBS_INIT)
-  set(toxcore_LINK_MODULES ${toxcore_LINK_MODULES} ${CMAKE_THREAD_LIBS_INIT})
-  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} ${CMAKE_THREAD_LIBS_INIT})
-endif()
-
-if(RT_LIBRARIES)
-  set(toxcore_LINK_MODULES ${toxcore_LINK_MODULES} ${RT_LIBRARIES})
-  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-lrt")
-endif()
-
-if(WIN32)
-  set(toxcore_LINK_MODULES ${toxcore_LINK_MODULES} ws2_32 iphlpapi)
-  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-lws2_32 -liphlpapi")
-endif()
 
 # LAYER 3: Distributed Hash Table
 # -------------------------------
@@ -381,6 +384,31 @@ set(toxcore_API_HEADERS ${toxcore_API_HEADERS} ${toxcore_SOURCE_DIR}/toxencrypts
 
 ################################################################################
 #
+# :: System dependencies
+#
+################################################################################
+
+# These need to come after other dependencies, since e.g. libvpx may depend on
+# pthread, but doesn't list it in VPX_LIBRARIES. We're adding it here, after
+# any potential libvpx linking.
+message("CMAKE_THREAD_LIBS_INIT: ${CMAKE_THREAD_LIBS_INIT}")
+if(CMAKE_THREAD_LIBS_INIT)
+  set(toxcore_LINK_MODULES ${toxcore_LINK_MODULES} ${CMAKE_THREAD_LIBS_INIT})
+  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+endif()
+
+if(RT_LIBRARIES)
+  set(toxcore_LINK_MODULES ${toxcore_LINK_MODULES} ${RT_LIBRARIES})
+  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} -lrt)
+endif()
+
+if(WIN32)
+  set(toxcore_LINK_MODULES ${toxcore_LINK_MODULES} ws2_32 iphlpapi)
+  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} -lws2_32 -liphlpapi)
+endif()
+
+################################################################################
+#
 # :: All layers together in one library for ease of use
 #
 ################################################################################
@@ -422,16 +450,15 @@ set(TEST_TIMEOUT_SECONDS "" CACHE STRING "Limit runtime of each test to the numb
 
 option(FORMAT_TEST "Require the format_test to be executed; fail cmake if it can't" OFF)
 
-if(APIDSL AND ASTYLE)
+if(ASTYLE)
   add_test(
     NAME format_test
     COMMAND ${toxcore_SOURCE_DIR}/other/astyle/format-source
       "${toxcore_SOURCE_DIR}"
-      "${APIDSL}"
       "${ASTYLE}")
   set_tests_properties(format_test PROPERTIES TIMEOUT "${TEST_TIMEOUT_SECONDS}")
 elseif(FORMAT_TEST)
-  message(FATAL_ERROR "format_test can not be run, because either APIDSL (${APIDSL}) or ASTYLE (${ASTYLE}) could not be found")
+  message(FATAL_ERROR "format_test can not be run, because ASTYLE (${ASTYLE}) could not be found")
 endif()
 
 function(auto_test target)
@@ -480,6 +507,7 @@ auto_test(set_name)
 auto_test(set_status_message)
 auto_test(simple_conference)
 auto_test(skeleton)
+auto_test(tcp_relay)
 auto_test(tox_many)
 auto_test(tox_many_tcp)
 auto_test(tox_one)

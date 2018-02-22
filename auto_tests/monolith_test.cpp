@@ -194,7 +194,7 @@ int main(int argc, char *argv[])
     CHECK_SIZE(Friend_Requests, 1080);
     // toxcore/group
     CHECK_SIZE(Group_c, 728);
-    CHECK_SIZE(Group_Chats, 2112);
+    CHECK_SIZE(Group_Chats, 2128);
     CHECK_SIZE(Group_Peer, 480);
     // toxcore/list
     CHECK_SIZE(BS_LIST, 32);
@@ -207,8 +207,10 @@ int main(int argc, char *argv[])
     CHECK_SIZE(Messenger_Options, 72);
     CHECK_SIZE(Receipts, 16);
     // toxcore/net_crypto
+#ifdef __linux__
     CHECK_SIZE(Crypto_Connection, 525392);
     CHECK_SIZE(Net_Crypto, 272);
+#endif
     CHECK_SIZE(New_Connection, 168);
     CHECK_SIZE(Packet_Data, 1384);
     CHECK_SIZE(Packets_Array, 262152);
