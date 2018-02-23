@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
         size_t i;
 
         for (i = 0; i < len; pos += 2) {
-            sscanf(pos, "%2hhx", &desired_bin[i]);
+            sscanf(pos, "%02x", &desired_bin[i]);
             ++i;
         }
     } else {
