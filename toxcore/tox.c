@@ -457,7 +457,8 @@ void tox_self_set_status(Tox *tox, TOX_USER_STATUS status)
 TOX_USER_STATUS tox_self_get_status(const Tox *tox)
 {
     const Messenger *m = tox;
-    return (TOX_USER_STATUS)m_get_self_userstatus(m);
+    const uint8_t status = m_get_self_userstatus(m);
+    return (TOX_USER_STATUS)status;
 }
 
 static void set_friend_error(int32_t ret, TOX_ERR_FRIEND_ADD *error)
