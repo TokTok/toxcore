@@ -60,7 +60,8 @@ struct vpx_frame_user_data {
 };
 
 
-void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_dist, int32_t quality)
+void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_dist, int32_t quality,
+                          int32_t rc_max_quantizer)
 {
 
     vpx_codec_err_t rc;
@@ -142,7 +143,7 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
             cfg->rc_dropframe_thresh = 4; // 0
             cfg->rc_resize_allowed = 0; // 0
             cfg->rc_min_quantizer = 2; // 2
-            cfg->rc_max_quantizer = 40; // 56
+            cfg->rc_max_quantizer = rc_max_quantizer; // 56
             cfg->rc_undershoot_pct = 100; // 100
             cfg->rc_overshoot_pct = 100; // 15
             cfg->rc_buf_initial_sz = 4000; // 500
@@ -198,6 +199,8 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc->video_encoder_cpu_used_prev = vc->video_encoder_cpu_used;
     vc->video_encoder_vp8_quality = TOXAV_ENCODER_VP8_QUALITY_HIGH;
     vc->video_encoder_vp8_quality_prev = vc->video_encoder_vp8_quality;
+    vc->video_rc_max_quantizer = TOXAV_ENCODER_VP8_RC_MAX_QUANTIZER;
+    vc->video_rc_max_quantizer_prev = vc->video_rc_max_quantizer;
     // options ---
 
 
@@ -301,7 +304,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     /* Set encoder to some initial values
      */
     vpx_codec_enc_cfg_t  cfg;
-    vc__init_encoder_cfg(log, &cfg, 1, vc->video_encoder_vp8_quality);
+    vc__init_encoder_cfg(log, &cfg, 1, vc->video_encoder_vp8_quality, vc->video_rc_max_quantizer);
 
     if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
         LOGGER_WARNING(log, "Using VP8 codec for encoder (0.1)");
@@ -1085,6 +1088,7 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
     if (cfg2.rc_target_bitrate == bit_rate && cfg2.g_w == width && cfg2.g_h == height && kf_max_dist == -1
             && vc->video_encoder_cpu_used == vc->video_encoder_cpu_used_prev
             && vc->video_encoder_vp8_quality == vc->video_encoder_vp8_quality_prev
+            && vc->video_rc_max_quantizer == vc->video_rc_max_quantizer_prev
        ) {
         return 0; /* Nothing changed */
     }
@@ -1092,6 +1096,7 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
     if (cfg2.g_w == width && cfg2.g_h == height && kf_max_dist == -1
             && vc->video_encoder_cpu_used == vc->video_encoder_cpu_used_prev
             && vc->video_encoder_vp8_quality == vc->video_encoder_vp8_quality_prev
+            && vc->video_rc_max_quantizer == vc->video_rc_max_quantizer_prev
        ) {
         /* Only bit rate changed */
 
@@ -1110,15 +1115,19 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
         /* Resolution is changed, must reinitialize encoder since libvpx v1.4 doesn't support
          * reconfiguring encoder to use resolutions greater than initially set.
          */
+        /*
+         * TODO: Zoff in 2018: i wonder if this is still the case with libvpx 1.7.x ?
+         */
 
         LOGGER_DEBUG(vc->log, "Have to reinitialize vpx encoder on session %p", vc);
 
 
         vpx_codec_ctx_t new_c;
         vpx_codec_enc_cfg_t  cfg;
-        vc__init_encoder_cfg(vc->log, &cfg, kf_max_dist, vc->video_encoder_vp8_quality);
+        vc__init_encoder_cfg(vc->log, &cfg, kf_max_dist, vc->video_encoder_vp8_quality, vc->video_rc_max_quantizer);
 
         vc->video_encoder_vp8_quality_prev = vc->video_encoder_vp8_quality;
+        vc->video_rc_max_quantizer = vc->video_rc_max_quantizer_prev;
 
         cfg.rc_target_bitrate = bit_rate;
         cfg.g_w = width;

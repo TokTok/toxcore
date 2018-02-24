@@ -737,6 +737,16 @@ bool toxav_option_set(ToxAV *av, uint32_t friend_number, TOXAV_OPTIONS_OPTION op
             vc->video_encoder_vp8_quality = (int32_t)value;
             LOGGER_WARNING(av->m->log, "video encoder setting vp8_quality to: %d", (int)value);
         }
+    } else if (option == TOXAV_ENCODER_RC_MAX_QUANTIZER) {
+        VCSession *vc = (VCSession *)call->video.second;
+
+        if (vc->video_rc_max_quantizer == (int32_t)value) {
+            LOGGER_WARNING(av->m->log, "video encoder rc_max_quantizer already set to: %d", (int)value);
+        } else {
+            vc->video_rc_max_quantizer_prev = vc->video_rc_max_quantizer;
+            vc->video_rc_max_quantizer = (int32_t)value;
+            LOGGER_WARNING(av->m->log, "video encoder setting rc_max_quantizer to: %d", (int)value);
+        }
     }
 
     pthread_mutex_unlock(call->mutex);

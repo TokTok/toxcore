@@ -58,7 +58,7 @@
 #define VIDEO_CODEC_FRAGMENT_VPX_NUMS VP8_FOUR_TOKENPARTITION
 // #define VIDEO_CODEC_FRAGMENT_VPX_NUMS VP8_EIGHT_TOKENPARTITION
 #define VIDEO_MAX_FRAGMENT_BUFFER_COUNT (100)
-
+#define TOXAV_ENCODER_VP8_RC_MAX_QUANTIZER 60
 
 #define VIDEO_SEND_X_KEYFRAMES_FIRST (3) // force the first n frames to be keyframes!
 #define VPX_MAX_DIST_NORMAL (40)
@@ -127,6 +127,8 @@ typedef struct VCSession_s {
     int32_t video_encoder_cpu_used_prev;
     int32_t video_encoder_vp8_quality;
     int32_t video_encoder_vp8_quality_prev;
+    int32_t video_rc_max_quantizer;
+    int32_t video_rc_max_quantizer_prev;
     // options ---
 
     void *vpx_frames_buf_list[VIDEO_MAX_FRAGMENT_BUFFER_COUNT];
