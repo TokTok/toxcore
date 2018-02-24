@@ -211,12 +211,16 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     if (VPX_DECODER_USED == VPX_VP8_CODEC) {
         LOGGER_WARNING(log, "Using VP8 codec for decoder (0)");
 
-        vpx_codec_caps_t decoder_caps = vpx_codec_get_caps(VIDEO_CODEC_DECODER_INTERFACE_VP8);
         vpx_codec_flags_t dec_flags_ = 0;
-        if (decoder_caps & VPX_CODEC_CAP_ERROR_CONCEALMENT)
+
+        if (VIDEO__VP8_DECODER_ERROR_CONCEALMENT == 1)
         {
-            dec_flags_ = VPX_CODEC_USE_ERROR_CONCEALMENT;
-            LOGGER_WARNING(log, "Using VP8 VPX_CODEC_USE_ERROR_CONCEALMENT (0)");
+            vpx_codec_caps_t decoder_caps = vpx_codec_get_caps(VIDEO_CODEC_DECODER_INTERFACE_VP8);
+            if (decoder_caps & VPX_CODEC_CAP_ERROR_CONCEALMENT)
+            {
+                dec_flags_ = VPX_CODEC_USE_ERROR_CONCEALMENT;
+                LOGGER_WARNING(log, "Using VP8 VPX_CODEC_USE_ERROR_CONCEALMENT (0)");
+            }
         }
 
 #ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
@@ -591,12 +595,16 @@ void video_switch_decoder(VCSession *vc)
 
     if (vc->is_using_vp9 == 0) {
 
-        vpx_codec_caps_t decoder_caps = vpx_codec_get_caps(VIDEO_CODEC_DECODER_INTERFACE_VP8);
         vpx_codec_flags_t dec_flags_ = 0;
-        if (decoder_caps & VPX_CODEC_CAP_ERROR_CONCEALMENT)
+
+        if (VIDEO__VP8_DECODER_ERROR_CONCEALMENT == 1)
         {
-            dec_flags_ = VPX_CODEC_USE_ERROR_CONCEALMENT;
-            LOGGER_WARNING(vc->log, "Using VP8 VPX_CODEC_USE_ERROR_CONCEALMENT (1)");
+            vpx_codec_caps_t decoder_caps = vpx_codec_get_caps(VIDEO_CODEC_DECODER_INTERFACE_VP8);
+            if (decoder_caps & VPX_CODEC_CAP_ERROR_CONCEALMENT)
+            {
+                dec_flags_ = VPX_CODEC_USE_ERROR_CONCEALMENT;
+                LOGGER_WARNING(vc->log, "Using VP8 VPX_CODEC_USE_ERROR_CONCEALMENT (1)");
+            }
         }
 
 #ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
