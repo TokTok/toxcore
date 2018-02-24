@@ -77,12 +77,9 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
         LOGGER_ERROR(log, "vc__init_encoder_cfg:Failed to get config: %s", vpx_codec_err_to_string(rc));
     }
 
-    if (VPX_ENCODER_USED == VPX_VP9_CODEC)
-    {
+    if (VPX_ENCODER_USED == VPX_VP9_CODEC) {
         cfg->rc_target_bitrate = VIDEO_BITRATE_INITIAL_VALUE_VP9;
-    }
-    else
-    {
+    } else {
         cfg->rc_target_bitrate =
             VIDEO_BITRATE_INITIAL_VALUE; /* Target bandwidth to use for this stream, in kilobits per second */
     }
@@ -136,27 +133,35 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
     cfg->g_timebase.num = 1; // timebase units = 1ms = (1/1000)s
     cfg->g_timebase.den = 1000; // timebase units = 1ms = (1/1000)s
 
-    if (VPX_ENCODER_USED == VPX_VP9_CODEC)
-    {
+    if (VPX_ENCODER_USED == VPX_VP9_CODEC) {
         cfg->rc_dropframe_thresh = 5;
         cfg->rc_resize_allowed = 1;
-    }
-    else
-    {
+    } else {
         if (quality == TOXAV_ENCODER_VP8_QUALITY_HIGH) {
             /* Highest-resolution encoder settings */
-            cfg->rc_dropframe_thresh = 0;
-            cfg->rc_resize_allowed = 0;
-            cfg->rc_min_quantizer = 2;
-            cfg->rc_max_quantizer = 56;
-            cfg->rc_undershoot_pct = 100;
-            cfg->rc_overshoot_pct = 15;
-            cfg->rc_buf_initial_sz = 500;
-            cfg->rc_buf_optimal_sz = 600;
-            cfg->rc_buf_sz = 1000;
+            cfg->rc_dropframe_thresh = 4; // 0
+            cfg->rc_resize_allowed = 0; // 0
+            cfg->rc_min_quantizer = 2; // 2
+            cfg->rc_max_quantizer = 20; // 56
+            cfg->rc_undershoot_pct = 100; // 100
+            cfg->rc_overshoot_pct = 100; // 15
+            cfg->rc_buf_initial_sz = 4000; // 500
+            cfg->rc_buf_optimal_sz = 5000; // 600
+            cfg->rc_buf_sz = 6000; // 1000
+
+            /*
+            stream.config.cfg.rc_resize_allowed = 1;
+            stream.config.cfg.rc_min_quantizer = 4;
+            stream.config.cfg.rc_max_quantizer = 50;
+            stream.config.cfg.rc_buf_initial_sz = 4000;
+            stream.config.cfg.rc_buf_optimal_sz = 5000;
+            stream.config.cfg.rc_buf_sz = 6000;
+            stream.config.cfg.rc_dropframe_thresh = 25;
+            */
+
         } else { // TOXAV_ENCODER_VP8_QUALITY_NORMAL
             cfg->rc_resize_allowed = 1; // allow encoder to resize to smaller resolution
-            cfg->rc_dropframe_thresh = 0;
+            cfg->rc_dropframe_thresh = 25;
             cfg->rc_resize_up_thresh = 50;
             cfg->rc_resize_down_thresh = 6;
         }
@@ -213,11 +218,10 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
 
         vpx_codec_flags_t dec_flags_ = 0;
 
-        if (VIDEO__VP8_DECODER_ERROR_CONCEALMENT == 1)
-        {
+        if (VIDEO__VP8_DECODER_ERROR_CONCEALMENT == 1) {
             vpx_codec_caps_t decoder_caps = vpx_codec_get_caps(VIDEO_CODEC_DECODER_INTERFACE_VP8);
-            if (decoder_caps & VPX_CODEC_CAP_ERROR_CONCEALMENT)
-            {
+
+            if (decoder_caps & VPX_CODEC_CAP_ERROR_CONCEALMENT) {
                 dec_flags_ = VPX_CODEC_USE_ERROR_CONCEALMENT;
                 LOGGER_WARNING(log, "Using VP8 VPX_CODEC_USE_ERROR_CONCEALMENT (0)");
             }
@@ -237,13 +241,13 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
         if (rc == VPX_CODEC_INCAPABLE) {
             LOGGER_WARNING(log, "Postproc not supported by this decoder (0)");
             rc = vpx_codec_dec_init(vc->decoder, VIDEO_CODEC_DECODER_INTERFACE_VP8, &dec_cfg,
-                dec_flags_ | VPX_CODEC_USE_FRAME_THREADING);
+                                    dec_flags_ | VPX_CODEC_USE_FRAME_THREADING);
         }
 
     } else {
         LOGGER_WARNING(log, "Using VP9 codec for decoder (0)");
         rc = vpx_codec_dec_init(vc->decoder, VIDEO_CODEC_DECODER_INTERFACE_VP9, &dec_cfg,
-            VPX_CODEC_USE_FRAME_THREADING);
+                                VPX_CODEC_USE_FRAME_THREADING);
     }
 
     if (rc != VPX_CODEC_OK) {
@@ -333,12 +337,13 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
         LOGGER_WARNING(log, "set encoder VP8E_SET_ENABLEAUTOALTREF setting: %s value=%d", vpx_codec_err_to_string(rc),
                        (int)1);
     }
-    
+
 
     rc = vpx_codec_control(vc->encoder, VP8E_SET_MAX_INTRA_BITRATE_PCT, 450);
 
     if (rc != VPX_CODEC_OK) {
-        LOGGER_ERROR(log, "Failed to set encoder VP8E_SET_MAX_INTRA_BITRATE_PCT setting: %s value=%d", vpx_codec_err_to_string(rc),
+        LOGGER_ERROR(log, "Failed to set encoder VP8E_SET_MAX_INTRA_BITRATE_PCT setting: %s value=%d",
+                     vpx_codec_err_to_string(rc),
                      (int)450);
         vpx_codec_destroy(vc->encoder);
         goto BASE_CLEANUP_1;
@@ -597,11 +602,10 @@ void video_switch_decoder(VCSession *vc)
 
         vpx_codec_flags_t dec_flags_ = 0;
 
-        if (VIDEO__VP8_DECODER_ERROR_CONCEALMENT == 1)
-        {
+        if (VIDEO__VP8_DECODER_ERROR_CONCEALMENT == 1) {
             vpx_codec_caps_t decoder_caps = vpx_codec_get_caps(VIDEO_CODEC_DECODER_INTERFACE_VP8);
-            if (decoder_caps & VPX_CODEC_CAP_ERROR_CONCEALMENT)
-            {
+
+            if (decoder_caps & VPX_CODEC_CAP_ERROR_CONCEALMENT) {
                 dec_flags_ = VPX_CODEC_USE_ERROR_CONCEALMENT;
                 LOGGER_WARNING(vc->log, "Using VP8 VPX_CODEC_USE_ERROR_CONCEALMENT (1)");
             }
@@ -621,12 +625,12 @@ void video_switch_decoder(VCSession *vc)
         if (rc == VPX_CODEC_INCAPABLE) {
             LOGGER_WARNING(vc->log, "Postproc not supported by this decoder");
             rc = vpx_codec_dec_init(&new_d, VIDEO_CODEC_DECODER_INTERFACE_VP8, &dec_cfg,
-                dec_flags_ | VPX_CODEC_USE_FRAME_THREADING);
+                                    dec_flags_ | VPX_CODEC_USE_FRAME_THREADING);
         }
 
     } else {
         rc = vpx_codec_dec_init(&new_d, VIDEO_CODEC_DECODER_INTERFACE_VP9, &dec_cfg,
-            VPX_CODEC_USE_FRAME_THREADING);
+                                VPX_CODEC_USE_FRAME_THREADING);
     }
 
     if (rc != VPX_CODEC_OK) {
@@ -702,16 +706,17 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 
         // if (vc->is_using_vp9 == 0)
         //{
-            if ((int32_t)header_v3_0->sequnum < (int32_t)vc->last_seen_fragment_seqnum) {
-                // drop frame with too old sequence number
-                LOGGER_WARNING(vc->log, "skipping incoming video frame (0) with sn=%d lastseen=%d",
-                    (int)header_v3_0->sequnum,
-                    (int)vc->last_seen_fragment_seqnum);
-                vc->last_seen_fragment_seqnum = (int32_t)header_v3_0->sequnum;
-                free(p);
-                pthread_mutex_unlock(vc->queue_mutex);
-                return 0;
-            }
+        if ((int32_t)header_v3_0->sequnum < (int32_t)vc->last_seen_fragment_seqnum) {
+            // drop frame with too old sequence number
+            LOGGER_WARNING(vc->log, "skipping incoming video frame (0) with sn=%d lastseen=%d",
+                           (int)header_v3_0->sequnum,
+                           (int)vc->last_seen_fragment_seqnum);
+            vc->last_seen_fragment_seqnum = (int32_t)header_v3_0->sequnum;
+            free(p);
+            pthread_mutex_unlock(vc->queue_mutex);
+            return 0;
+        }
+
         //}
 
         // TODO: check for seqnum rollover!!
@@ -1144,7 +1149,8 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
         rc = vpx_codec_control(&new_c, VP8E_SET_ENABLEAUTOALTREF, 1);
 
         if (rc != VPX_CODEC_OK) {
-            LOGGER_ERROR(vc->log, "(b)Failed to set encoder VP8E_SET_ENABLEAUTOALTREF setting: %s value=%d", vpx_codec_err_to_string(rc),
+            LOGGER_ERROR(vc->log, "(b)Failed to set encoder VP8E_SET_ENABLEAUTOALTREF setting: %s value=%d",
+                         vpx_codec_err_to_string(rc),
                          (int)1);
             vpx_codec_destroy(&new_c);
             return -1;
@@ -1160,32 +1166,34 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
         encoder->Control(VP8E_SET_ARNR_TYPE, 3);
         */
 
-/*
-Codec control function to set Max data rate for Intra frames.
-This value controls additional clamping on the maximum size of a keyframe. It is expressed as a percentage of the average per-frame bitrate, with the special (and default) value 0 meaning unlimited, or no additional clamping beyond the codec's built-in algorithm.
-For example, to allocate no more than 4.5 frames worth of bitrate to a keyframe, set this to 450.
-Supported in codecs: VP8, VP9 
-*/
+        /*
+        Codec control function to set Max data rate for Intra frames.
+        This value controls additional clamping on the maximum size of a keyframe. It is expressed as a percentage of the average per-frame bitrate, with the special (and default) value 0 meaning unlimited, or no additional clamping beyond the codec's built-in algorithm.
+        For example, to allocate no more than 4.5 frames worth of bitrate to a keyframe, set this to 450.
+        Supported in codecs: VP8, VP9
+        */
         rc = vpx_codec_control(&new_c, VP8E_SET_MAX_INTRA_BITRATE_PCT, 450);
 
         if (rc != VPX_CODEC_OK) {
-            LOGGER_ERROR(vc->log, "(b)Failed to set encoder VP8E_SET_MAX_INTRA_BITRATE_PCT setting: %s value=%d", vpx_codec_err_to_string(rc),
+            LOGGER_ERROR(vc->log, "(b)Failed to set encoder VP8E_SET_MAX_INTRA_BITRATE_PCT setting: %s value=%d",
+                         vpx_codec_err_to_string(rc),
                          (int)450);
             vpx_codec_destroy(&new_c);
             return -1;
         } else {
-            LOGGER_WARNING(vc->log, "(b)set encoder VP8E_SET_MAX_INTRA_BITRATE_PCT setting: %s value=%d", vpx_codec_err_to_string(rc),
+            LOGGER_WARNING(vc->log, "(b)set encoder VP8E_SET_MAX_INTRA_BITRATE_PCT setting: %s value=%d",
+                           vpx_codec_err_to_string(rc),
                            (int)450);
         }
 
-/*
-Codec control function to set max data rate for Inter frames.
-This value controls additional clamping on the maximum size of an inter frame. It is expressed as a percentage of the average per-frame bitrate, with the special (and default) value 0 meaning unlimited, or no additional clamping beyond the codec's built-in algorithm.
-For example, to allow no more than 4.5 frames worth of bitrate to an inter frame, set this to 450.
-Supported in codecs: VP9 
+        /*
+        Codec control function to set max data rate for Inter frames.
+        This value controls additional clamping on the maximum size of an inter frame. It is expressed as a percentage of the average per-frame bitrate, with the special (and default) value 0 meaning unlimited, or no additional clamping beyond the codec's built-in algorithm.
+        For example, to allow no more than 4.5 frames worth of bitrate to an inter frame, set this to 450.
+        Supported in codecs: VP9
 
-VP9E_SET_MAX_INTER_BITRATE_PCT
-*/
+        VP9E_SET_MAX_INTER_BITRATE_PCT
+        */
 
 
         int cpu_used_value = vc->video_encoder_cpu_used;
