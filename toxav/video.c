@@ -154,6 +154,8 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
             cfg->rc_dropframe_thresh = 25;
             cfg->rc_resize_up_thresh = 50;
             cfg->rc_resize_down_thresh = 6;
+            cfg->rc_min_quantizer = 20;
+            cfg->rc_max_quantizer = 56;
         }
 
     }
