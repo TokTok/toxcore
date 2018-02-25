@@ -727,6 +727,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
         }
 
         // TODO: check for seqnum rollover!!
+        vc->count_old_video_frames_seen = 0;
         vc->last_seen_fragment_seqnum = header_v3_0->sequnum;
 
         if (skip_video_flag == 1) {
