@@ -3135,7 +3135,7 @@ static uint32_t groups_save(const Messenger *m, uint8_t *data)
     GC_Session *c = m->group_handler;
 
     for (i = 0; i < c->num_chats; i++) {
-        if (c->chats[i].connection_state > CS_NONE && c->chats[i].connection_state < CS_INVALID) {
+        if (c->chats[i].connection_state > CS_NONE && c->chats[i].connection_state < CS_CLOSING) {
             struct SAVED_GROUP temp;
             memset(&temp, 0, sizeof(struct SAVED_GROUP));
 
