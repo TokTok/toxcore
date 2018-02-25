@@ -149,17 +149,6 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
             cfg->rc_buf_initial_sz = 500; // 500
             cfg->rc_buf_optimal_sz = 600; // 600
             cfg->rc_buf_sz = 1200; // 1000
-
-            /*
-            stream.config.cfg.rc_resize_allowed = 1;
-            stream.config.cfg.rc_min_quantizer = 4;
-            stream.config.cfg.rc_max_quantizer = 50;
-            stream.config.cfg.rc_buf_initial_sz = 4000;
-            stream.config.cfg.rc_buf_optimal_sz = 5000;
-            stream.config.cfg.rc_buf_sz = 6000;
-            stream.config.cfg.rc_dropframe_thresh = 25;
-            */
-
         } else { // TOXAV_ENCODER_VP8_QUALITY_NORMAL
             cfg->rc_resize_allowed = 1; // allow encoder to resize to smaller resolution
             cfg->rc_dropframe_thresh = 25;
