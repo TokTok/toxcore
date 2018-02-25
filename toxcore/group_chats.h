@@ -100,6 +100,7 @@ typedef enum Group_Connection_State {
     CS_DISCONNECTED,
     CS_CONNECTING,
     CS_CONNECTED,
+    CS_CLOSING,
     CS_INVALID,
 } Group_Connection_State;
 
