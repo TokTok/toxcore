@@ -159,7 +159,7 @@ typedef struct {
 
 /* Set the callback for group invites.
  *
- *  Function(Group_Chats *g_c, int32_t friendnumber, uint8_t type, uint8_t *data, uint16_t length, void *userdata)
+ *  Function(Group_Chats *g_c, uint32_t friendnumber, uint8_t type, uint8_t *data, uint16_t length, void *userdata)
  *
  *  data of length is what needs to be passed to join_groupchat().
  */
@@ -168,7 +168,7 @@ void g_callback_group_invite(Group_Chats *g_c, void (*function)(Messenger *m, ui
 
 /* Set the callback for group messages.
  *
- *  Function(Group_Chats *g_c, int groupnumber, int friendgroupnumber, uint8_t * message, uint16_t length, void *userdata)
+ *  Function(Group_Chats *g_c, uint32_t groupnumber, uint32_t friendgroupnumber, uint8_t *message, uint16_t length, void *userdata)
  */
 void g_callback_group_message(Group_Chats *g_c, void (*function)(Messenger *m, uint32_t, uint32_t, int, const uint8_t *,
                               size_t, void *));
@@ -176,7 +176,7 @@ void g_callback_group_message(Group_Chats *g_c, void (*function)(Messenger *m, u
 
 /* Set callback function for title changes.
  *
- * Function(Group_Chats *g_c, int groupnumber, int friendgroupnumber, uint8_t * title, uint8_t length, void *userdata)
+ * Function(Group_Chats *g_c, uint32_t groupnumber, uint32_t friendgroupnumber, uint8_t *title, uint8_t length, void *userdata)
  * if friendgroupnumber == -1, then author is unknown (e.g. initial joining the group)
  */
 void g_callback_group_title(Group_Chats *g_c, void (*function)(Messenger *m, uint32_t, uint32_t, const uint8_t *,

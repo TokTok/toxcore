@@ -849,6 +849,9 @@ static int64_t addpeer(Group_c *g, int32_t groupnumber, const uint8_t *real_pk, 
     /* Group_Peer constructor */
 
     memset(new_peers, 0, sizeof(Group_Peer));
+    new_peers->lossy = nullptr;
+    new_peers->object = nullptr;
+    new_peers->nick = nullptr;
 
     /* set undefined */
     new_peers->friendcon_id = -1;
@@ -2180,7 +2183,7 @@ static void handle_friend_invite_packet(Messenger *m, uint32_t friendnumber, con
             friend_connection_callbacks(g_c->m->fr_c, friendcon_id, GROUPCHAT_CALLBACK_INDEX, &g_handle_status,
                                         &g_handle_packet, &handle_lossy, g_c, friendcon_id);
 
-            g->peers[peer_index].group_number = net_ntohs(*(const uint16_t *)(data + 1));
+            net_unpack_u16(data + 1, &g->peers[peer_index].group_number);
 
             g->need_send_name = true;
             group_new_peer_send(g_c, groupnumber, peer_gid, real_pk, temp_pk);
