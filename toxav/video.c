@@ -142,7 +142,7 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
             /* Highest-resolution encoder settings */
             cfg->rc_dropframe_thresh = 0; // 0
             cfg->rc_resize_allowed = 0; // 0
-            cfg->rc_min_quantizer = 2; // 2
+            cfg->rc_min_quantizer = 4; // 2
             cfg->rc_max_quantizer = rc_max_quantizer; // 56
             cfg->rc_undershoot_pct = 100; // 100
             cfg->rc_overshoot_pct = 15; // 15
@@ -324,7 +324,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
 
 
 
-    rc = vpx_codec_control(vc->encoder, VP8E_SET_ENABLEAUTOALTREF, 1);
+    rc = vpx_codec_control(vc->encoder, VP8E_SET_ENABLEAUTOALTREF, 0);
 
     if (rc != VPX_CODEC_OK) {
         LOGGER_ERROR(log, "Failed to set encoder VP8E_SET_ENABLEAUTOALTREF setting: %s value=%d", vpx_codec_err_to_string(rc),
@@ -705,9 +705,10 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 
         if ((int32_t)header_v3_0->sequnum < (int32_t)vc->last_seen_fragment_seqnum) {
             // drop frame with too old sequence number
-            LOGGER_WARNING(vc->log, "skipping incoming video frame (0) with sn=%d lastseen=%d",
+            LOGGER_WARNING(vc->log, "skipping incoming video frame (0) with sn=%d lastseen=%d old_frames_count=%d",
                            (int)header_v3_0->sequnum,
-                           (int)vc->last_seen_fragment_seqnum);
+                           (int)vc->last_seen_fragment_seqnum,
+                           (int)vc->count_old_video_frames_seen);
 
             vc->count_old_video_frames_seen++;
 
@@ -717,6 +718,8 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
                 vc->last_seen_fragment_seqnum = (int32_t)header_v3_0->sequnum;
                 vc->count_old_video_frames_seen = 0;
             }
+
+            // rc = vpx_codec_decode(vc->decoder, NULL, 0, NULL, VPX_DL_REALTIME);
 
             free(p);
             pthread_mutex_unlock(vc->queue_mutex);
@@ -1158,7 +1161,7 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
         }
 
 
-        rc = vpx_codec_control(&new_c, VP8E_SET_ENABLEAUTOALTREF, 1);
+        rc = vpx_codec_control(&new_c, VP8E_SET_ENABLEAUTOALTREF, 0);
 
         if (rc != VPX_CODEC_OK) {
             LOGGER_ERROR(vc->log, "(b)Failed to set encoder VP8E_SET_ENABLEAUTOALTREF setting: %s value=%d",
