@@ -687,7 +687,6 @@ static int handle_TCP_routing_req(TCP_Server *tcp_server, uint32_t con_id, const
     uint32_t index = ~0;
     TCP_Secure_Connection *con = &tcp_server->accepted_connection_array[con_id];
 
-    fprintf(stderr, "tcp server routing from %s to: %s\n", id_toa(con->public_key), id_toa(public_key));
     /* If person tries to cennect to himself we deny the request*/
     if (public_key_cmp(con->public_key, public_key) == 0) {
         if (send_routing_response(con, 0, public_key) == -1) {
