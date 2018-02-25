@@ -3215,7 +3215,7 @@ static uint8_t *groups_save(const Messenger *m, uint8_t *data)
                                       STATE_TYPE_GROUPS);
 
     for (i = 0; i < c->num_chats; ++i) {
-        if (c->chats[i].connection_state > CS_NONE && c->chats[i].connection_state < CS_INVALID) {
+        if (c->chats[i].connection_state > CS_NONE && c->chats[i].connection_state < CS_CLOSING) {
             struct Saved_Group temp;
             memset(&temp, 0, sizeof(struct Saved_Group));
 
