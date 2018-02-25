@@ -50,7 +50,7 @@
 #define VIDEO__VP9E_SET_TILE_COLUMNS (1)
 #define VIDEO__VP9E_SET_TILE_ROWS (2)
 #define VIDEO__VP9_KF_MAX_DIST (60)
-#define VIDEO__VP8_DECODER_ERROR_CONCEALMENT 0
+#define VIDEO__VP8_DECODER_ERROR_CONCEALMENT 1
 #define VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED 0 // 0, 1, 2, 3 # 0->none, 3->maximum
 // #define VIDEO_CODEC_ENCODER_USE_FRAGMENTS 1
 #define VIDEO_CODEC_FRAGMENT_NUMS (5)
@@ -117,6 +117,7 @@ typedef struct VCSession_s {
     uint8_t  flag_end_video_fragment;
     int32_t  last_seen_fragment_num;
     int32_t  last_seen_fragment_seqnum;
+    uint16_t count_old_video_frames_seen;
     uint32_t decoder_soft_deadline[VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES];
     uint8_t  decoder_soft_deadline_index;
     uint32_t encoder_soft_deadline[VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES];
@@ -129,6 +130,8 @@ typedef struct VCSession_s {
     int32_t video_encoder_vp8_quality_prev;
     int32_t video_rc_max_quantizer;
     int32_t video_rc_max_quantizer_prev;
+    int32_t video_decoder_error_concealment;
+    int32_t video_decoder_error_concealment_prev;
     // options ---
 
     void *vpx_frames_buf_list[VIDEO_MAX_FRAGMENT_BUFFER_COUNT];

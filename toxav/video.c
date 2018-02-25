@@ -192,6 +192,8 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc->video_encoder_vp8_quality_prev = vc->video_encoder_vp8_quality;
     vc->video_rc_max_quantizer = TOXAV_ENCODER_VP8_RC_MAX_QUANTIZER;
     vc->video_rc_max_quantizer_prev = vc->video_rc_max_quantizer;
+    vc->video_decoder_error_concealment = VIDEO__VP8_DECODER_ERROR_CONCEALMENT;
+    vc->video_decoder_error_concealment_prev = vc->video_decoder_error_concealment;
     // options ---
 
 
@@ -212,7 +214,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
 
         vpx_codec_flags_t dec_flags_ = 0;
 
-        if (VIDEO__VP8_DECODER_ERROR_CONCEALMENT == 1) {
+        if (vc->video_decoder_error_concealment == 1) {
             vpx_codec_caps_t decoder_caps = vpx_codec_get_caps(VIDEO_CODEC_DECODER_INTERFACE_VP8);
 
             if (decoder_caps & VPX_CODEC_CAP_ERROR_CONCEALMENT) {
@@ -295,7 +297,9 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     /* Set encoder to some initial values
      */
     vpx_codec_enc_cfg_t  cfg;
-    vc__init_encoder_cfg(log, &cfg, 1, vc->video_encoder_vp8_quality, vc->video_rc_max_quantizer);
+    vc__init_encoder_cfg(log, &cfg, 1,
+        vc->video_encoder_vp8_quality,
+        vc->video_rc_max_quantizer);
 
     if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
         LOGGER_WARNING(log, "Using VP8 codec for encoder (0.1)");
@@ -486,6 +490,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc->last_encoded_frame_ts = 0;
     vc->flag_end_video_fragment = 0;
     vc->last_seen_fragment_num = 0;
+    vc->count_old_video_frames_seen = 0;
     vc->last_seen_fragment_seqnum = -1;
     vc->fragment_buf_counter = 0;
 
@@ -596,7 +601,7 @@ void video_switch_decoder(VCSession *vc)
 
         vpx_codec_flags_t dec_flags_ = 0;
 
-        if (VIDEO__VP8_DECODER_ERROR_CONCEALMENT == 1) {
+        if (vc->video_decoder_error_concealment == 1) {
             vpx_codec_caps_t decoder_caps = vpx_codec_get_caps(VIDEO_CODEC_DECODER_INTERFACE_VP8);
 
             if (decoder_caps & VPX_CODEC_CAP_ERROR_CONCEALMENT) {
@@ -698,20 +703,26 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
     if (rb_read((RingBuffer *)vc->vbuf_raw, (void **)&p, &data_type)) {
         const struct RTPHeader *header_v3_0 = (void *) & (p->header);
 
-        // if (vc->is_using_vp9 == 0)
-        //{
         if ((int32_t)header_v3_0->sequnum < (int32_t)vc->last_seen_fragment_seqnum) {
             // drop frame with too old sequence number
             LOGGER_WARNING(vc->log, "skipping incoming video frame (0) with sn=%d lastseen=%d",
                            (int)header_v3_0->sequnum,
                            (int)vc->last_seen_fragment_seqnum);
-            vc->last_seen_fragment_seqnum = (int32_t)header_v3_0->sequnum;
+                           
+            vc->count_old_video_frames_seen++;
+            
+            if (vc->count_old_video_frames_seen > 5)
+            {
+                // if we see more than 5 old video frames in a row, then either there was
+                // a seqnum rollover or something else. just play those frames then
+                vc->last_seen_fragment_seqnum = (int32_t)header_v3_0->sequnum;
+                vc->count_old_video_frames_seen = 0;
+            }
+
             free(p);
             pthread_mutex_unlock(vc->queue_mutex);
             return 0;
         }
-
-        //}
 
         // TODO: check for seqnum rollover!!
         vc->last_seen_fragment_seqnum = header_v3_0->sequnum;
@@ -1115,10 +1126,12 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
 
         vpx_codec_ctx_t new_c;
         vpx_codec_enc_cfg_t  cfg;
-        vc__init_encoder_cfg(vc->log, &cfg, kf_max_dist, vc->video_encoder_vp8_quality, vc->video_rc_max_quantizer);
+        vc__init_encoder_cfg(vc->log, &cfg, kf_max_dist,
+            vc->video_encoder_vp8_quality,
+            vc->video_rc_max_quantizer);
 
         vc->video_encoder_vp8_quality_prev = vc->video_encoder_vp8_quality;
-        vc->video_rc_max_quantizer = vc->video_rc_max_quantizer_prev;
+        vc->video_rc_max_quantizer_prev = vc->video_rc_max_quantizer;
 
         cfg.rc_target_bitrate = bit_rate;
         cfg.g_w = width;
