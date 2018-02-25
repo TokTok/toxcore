@@ -60,6 +60,8 @@
 #define VIDEO_MAX_FRAGMENT_BUFFER_COUNT (100)
 #define TOXAV_ENCODER_VP8_RC_MAX_QUANTIZER 56
 
+// #define VIDEO_PTS_TIMESTAMPS 1
+
 #define VIDEO_SEND_X_KEYFRAMES_FIRST (3) // force the first n frames to be keyframes!
 #define VPX_MAX_DIST_NORMAL (40)
 #define VPX_MAX_DIST_START (40)

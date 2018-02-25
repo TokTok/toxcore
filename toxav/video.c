@@ -807,9 +807,13 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 #ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
             // --- //
 #else
+
+#ifdef VIDEO_PTS_TIMESTAMPS
             struct vpx_frame_user_data *vpx_u_data = calloc(1, sizeof(struct vpx_frame_user_data));
             vpx_u_data->record_timestamp = header_v3->frame_record_timestamp;
             user_priv = vpx_u_data;
+#endif
+
 #endif
         }
 
