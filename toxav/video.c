@@ -298,8 +298,8 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
      */
     vpx_codec_enc_cfg_t  cfg;
     vc__init_encoder_cfg(log, &cfg, 1,
-        vc->video_encoder_vp8_quality,
-        vc->video_rc_max_quantizer);
+                         vc->video_encoder_vp8_quality,
+                         vc->video_rc_max_quantizer);
 
     if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
         LOGGER_WARNING(log, "Using VP8 codec for encoder (0.1)");
@@ -708,11 +708,10 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
             LOGGER_WARNING(vc->log, "skipping incoming video frame (0) with sn=%d lastseen=%d",
                            (int)header_v3_0->sequnum,
                            (int)vc->last_seen_fragment_seqnum);
-                           
+
             vc->count_old_video_frames_seen++;
-            
-            if (vc->count_old_video_frames_seen > 5)
-            {
+
+            if (vc->count_old_video_frames_seen > 5) {
                 // if we see more than 5 old video frames in a row, then either there was
                 // a seqnum rollover or something else. just play those frames then
                 vc->last_seen_fragment_seqnum = (int32_t)header_v3_0->sequnum;
@@ -1127,8 +1126,8 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
         vpx_codec_ctx_t new_c;
         vpx_codec_enc_cfg_t  cfg;
         vc__init_encoder_cfg(vc->log, &cfg, kf_max_dist,
-            vc->video_encoder_vp8_quality,
-            vc->video_rc_max_quantizer);
+                             vc->video_encoder_vp8_quality,
+                             vc->video_rc_max_quantizer);
 
         vc->video_encoder_vp8_quality_prev = vc->video_encoder_vp8_quality;
         vc->video_rc_max_quantizer_prev = vc->video_rc_max_quantizer;
