@@ -36,7 +36,7 @@
 /* The time between attempts to share our TCP relays with a peer */
 #define GCC_TCP_SHARED_RELAYS_TIMEOUT 300
 
-#define GCC_IP_PORT_TIMEOUT GC_PING_INTERVAL * 4
+#define GCC_IP_PORT_TIMEOUT (GC_PING_INTERVAL * 4)
 
 /* The time before the direct UDP connection is considered dead */
 #define GCC_UDP_DIRECT_TIMEOUT (GC_PING_INTERVAL * 2 + 2)
