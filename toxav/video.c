@@ -707,7 +707,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 
         if ((int32_t)header_v3_0->sequnum < (int32_t)vc->last_seen_fragment_seqnum) {
             // drop frame with too old sequence number
-            LOGGER_WARNING(vc->log, "skipping incoming video frame (0) with sn=%d lastseen=%d old_frames_count=%d",
+            LOGGER_DEBUG(vc->log, "skipping incoming video frame (0) with sn=%d lastseen=%d old_frames_count=%d",
                            (int)header_v3_0->sequnum,
                            (int)vc->last_seen_fragment_seqnum,
                            (int)vc->count_old_video_frames_seen);
@@ -735,7 +735,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
         if (skip_video_flag == 1) {
             if ((int)data_type != (int)video_frame_type_KEYFRAME) {
                 free(p);
-                LOGGER_WARNING(vc->log, "skipping incoming video frame (1)");
+                LOGGER_DEBUG(vc->log, "skipping incoming video frame (1)");
 
                 if (rb_read((RingBuffer *)vc->vbuf_raw, (void **)&p, &data_type)) {
                 } else {
@@ -821,7 +821,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 
         if ((int)rb_size((RingBuffer *)vc->vbuf_raw) > (int)VIDEO_RINGBUFFER_FILL_THRESHOLD) {
             rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, VPX_DL_REALTIME);
-            LOGGER_WARNING(vc->log, "skipping:REALTIME");
+            LOGGER_DEBUG(vc->log, "skipping:REALTIME");
         }
 
 #ifdef VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE
