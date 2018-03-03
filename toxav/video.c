@@ -155,7 +155,7 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
             cfg->rc_resize_up_thresh = 50;
             cfg->rc_resize_down_thresh = 6;
             cfg->rc_min_quantizer = 20;
-            cfg->rc_max_quantizer = 56;
+            cfg->rc_max_quantizer = rc_max_quantizer;
         }
 
     }
@@ -324,7 +324,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
 
 
 
-    rc = vpx_codec_control(vc->encoder, VP8E_SET_ENABLEAUTOALTREF, 0);
+    rc = vpx_codec_control(vc->encoder, VP8E_SET_ENABLEAUTOALTREF, 1);
 
     if (rc != VPX_CODEC_OK) {
         LOGGER_ERROR(log, "Failed to set encoder VP8E_SET_ENABLEAUTOALTREF setting: %s value=%d", vpx_codec_err_to_string(rc),
@@ -337,6 +337,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     }
 
 
+#if 0
     rc = vpx_codec_control(vc->encoder, VP8E_SET_MAX_INTRA_BITRATE_PCT, 450);
 
     if (rc != VPX_CODEC_OK) {
@@ -350,6 +351,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
                        (int)450);
     }
 
+#endif
 
 
 
@@ -1166,7 +1168,7 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
         }
 
 
-        rc = vpx_codec_control(&new_c, VP8E_SET_ENABLEAUTOALTREF, 0);
+        rc = vpx_codec_control(&new_c, VP8E_SET_ENABLEAUTOALTREF, 1);
 
         if (rc != VPX_CODEC_OK) {
             LOGGER_ERROR(vc->log, "(b)Failed to set encoder VP8E_SET_ENABLEAUTOALTREF setting: %s value=%d",
@@ -1186,6 +1188,7 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
         encoder->Control(VP8E_SET_ARNR_TYPE, 3);
         */
 
+#if 0
         /*
         Codec control function to set Max data rate for Intra frames.
         This value controls additional clamping on the maximum size of a keyframe. It is expressed as a percentage of the average per-frame bitrate, with the special (and default) value 0 meaning unlimited, or no additional clamping beyond the codec's built-in algorithm.
@@ -1205,6 +1208,8 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
                            vpx_codec_err_to_string(rc),
                            (int)450);
         }
+
+#endif
 
         /*
         Codec control function to set max data rate for Inter frames.
