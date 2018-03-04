@@ -142,16 +142,16 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
             /* Highest-resolution encoder settings */
             cfg->rc_dropframe_thresh = 0; // 0
             cfg->rc_resize_allowed = 0; // 0
-            cfg->rc_min_quantizer = 4; // 2
+            cfg->rc_min_quantizer = 2; // 2
             cfg->rc_max_quantizer = rc_max_quantizer; // 56
             cfg->rc_undershoot_pct = 100; // 100
             cfg->rc_overshoot_pct = 15; // 15
-            cfg->rc_buf_initial_sz = 500; // 500
-            cfg->rc_buf_optimal_sz = 600; // 600
-            cfg->rc_buf_sz = 1200; // 1000
+            cfg->rc_buf_initial_sz = 500; // 500 in ms
+            cfg->rc_buf_optimal_sz = 600; // 600 in ms
+            cfg->rc_buf_sz = 800; // 1000 in ms
         } else { // TOXAV_ENCODER_VP8_QUALITY_NORMAL
             cfg->rc_resize_allowed = 1; // allow encoder to resize to smaller resolution
-            cfg->rc_dropframe_thresh = 25;
+            // cfg->rc_dropframe_thresh = 25;
             cfg->rc_resize_up_thresh = 50;
             cfg->rc_resize_down_thresh = 6;
             cfg->rc_min_quantizer = 20;
