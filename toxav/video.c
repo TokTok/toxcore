@@ -107,20 +107,20 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
      * feature.
      */
 #ifdef VPX_ENCODER_KF_NEW_METHOD
-    cfg->kf_min_dist = 1000;
-    cfg->kf_mode = VPX_KF_FIXED;
+    cfg->kf_min_dist = 0;
+    cfg->kf_mode = VPX_KF_DISABLED;
 #else
     cfg->kf_min_dist = 0;
     cfg->kf_mode = VPX_KF_AUTO; // Encoder determines optimal placement automatically
 #endif
     cfg->rc_end_usage = VPX_VBR; // what quality mode?
-
     /*
      VPX_VBR    Variable Bit Rate (VBR) mode
      VPX_CBR    Constant Bit Rate (CBR) mode
      VPX_CQ     Constrained Quality (CQ) mode -> give codec a hint that we may be on low bandwidth connection
-     VPX_Q    Constant Quality (Q) mode
+     VPX_Q      Constant Quality (Q) mode
      */
+
     if (kf_max_dist > 1) {
         cfg->kf_max_dist = kf_max_dist; // a full frame every x frames minimum (can be more often, codec decides automatically)
         LOGGER_WARNING(log, "kf_max_dist=%d (1)", cfg->kf_max_dist);
@@ -133,11 +133,6 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
         cfg->kf_max_dist = VIDEO__VP9_KF_MAX_DIST;
         LOGGER_WARNING(log, "kf_max_dist=%d (3)", cfg->kf_max_dist);
     }
-
-#ifdef VPX_ENCODER_KF_NEW_METHOD
-    cfg->kf_max_dist = 1000;
-#endif
-
 
     cfg->g_threads = VPX_MAX_ENCODER_THREADS; // Maximum number of threads to use
 
@@ -153,12 +148,12 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
             cfg->rc_dropframe_thresh = 0; // 0
             cfg->rc_resize_allowed = 0; // 0
             cfg->rc_min_quantizer = 2; // 2
-            cfg->rc_max_quantizer = rc_max_quantizer; // 56
+            cfg->rc_max_quantizer = rc_max_quantizer; // 63
             cfg->rc_undershoot_pct = 100; // 100
             cfg->rc_overshoot_pct = 15; // 15
             cfg->rc_buf_initial_sz = 500; // 500 in ms
             cfg->rc_buf_optimal_sz = 600; // 600 in ms
-            cfg->rc_buf_sz = 800; // 1000 in ms
+            cfg->rc_buf_sz = 1000; // 1000 in ms
         } else { // TOXAV_ENCODER_VP8_QUALITY_NORMAL
             cfg->rc_resize_allowed = 1; // allow encoder to resize to smaller resolution
             // cfg->rc_dropframe_thresh = 25;
