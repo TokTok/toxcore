@@ -106,8 +106,13 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
      * sooner than the given limit. Set this value to 0 to disable this
      * feature.
      */
+#ifdef VPX_ENCODER_KF_NEW_METHOD
+    cfg->kf_min_dist = 1000;
+    cfg->kf_mode = VPX_KF_FIXED;
+#else
     cfg->kf_min_dist = 0;
     cfg->kf_mode = VPX_KF_AUTO; // Encoder determines optimal placement automatically
+#endif
     cfg->rc_end_usage = VPX_VBR; // what quality mode?
 
     /*
@@ -128,6 +133,11 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
         cfg->kf_max_dist = VIDEO__VP9_KF_MAX_DIST;
         LOGGER_WARNING(log, "kf_max_dist=%d (3)", cfg->kf_max_dist);
     }
+
+#ifdef VPX_ENCODER_KF_NEW_METHOD
+    cfg->kf_max_dist = 1000;
+#endif
+
 
     cfg->g_threads = VPX_MAX_ENCODER_THREADS; // Maximum number of threads to use
 
@@ -324,7 +334,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
 
 
 
-    rc = vpx_codec_control(vc->encoder, VP8E_SET_ENABLEAUTOALTREF, 1);
+    rc = vpx_codec_control(vc->encoder, VP8E_SET_ENABLEAUTOALTREF, 0);
 
     if (rc != VPX_CODEC_OK) {
         LOGGER_ERROR(log, "Failed to set encoder VP8E_SET_ENABLEAUTOALTREF setting: %s value=%d", vpx_codec_err_to_string(rc),
@@ -1168,7 +1178,7 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
         }
 
 
-        rc = vpx_codec_control(&new_c, VP8E_SET_ENABLEAUTOALTREF, 1);
+        rc = vpx_codec_control(&new_c, VP8E_SET_ENABLEAUTOALTREF, 0);
 
         if (rc != VPX_CODEC_OK) {
             LOGGER_ERROR(vc->log, "(b)Failed to set encoder VP8E_SET_ENABLEAUTOALTREF setting: %s value=%d",

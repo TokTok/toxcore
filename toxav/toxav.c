@@ -1077,6 +1077,62 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
     unsigned long max_encode_time_in_us = MAX_ENCODE_TIME_US;
 
 
+#ifdef VPX_ENCODER_KF_NEW_METHOD
+
+
+    switch(call->video.first->ssrc % 16) {
+        case 0:
+            vpx_encode_flags |= VPX_EFLAG_FORCE_KF;
+            vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
+            vpx_encode_flags |= VP8_EFLAG_FORCE_ARF;
+            break;
+        case 1:
+        case 3:
+        case 5:
+        case 7:
+        case 9:
+        case 11:
+        case 13:
+        case 15:
+            vpx_encode_flags |= VP8_EFLAG_NO_UPD_LAST;
+            vpx_encode_flags |= VP8_EFLAG_NO_UPD_GF;
+            vpx_encode_flags |= VP8_EFLAG_NO_UPD_ARF;
+            break;
+        case 2:
+        case 6:
+        case 10:
+        case 14:
+            break;
+        case 4:
+            vpx_encode_flags |= VP8_EFLAG_NO_REF_LAST;
+            vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
+            break;
+        case 8:
+            vpx_encode_flags |= VP8_EFLAG_NO_REF_LAST;
+            vpx_encode_flags |= VP8_EFLAG_NO_REF_GF;
+            vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
+            vpx_encode_flags |= VP8_EFLAG_FORCE_ARF;
+            break;
+        case 12:
+            vpx_encode_flags |= VP8_EFLAG_NO_REF_LAST;
+            vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
+            break;
+    }
+
+
+    call->video.first->ssrc++;
+    if (call->video.first->ssrc == 16)
+    {
+        call->video.first->ssrc = 0;
+    }
+
+
+#endif
+
+
+
+#ifndef VPX_ENCODER_KF_NEW_METHOD
+
     if (call->video.first->ssrc < VIDEO_SEND_X_KEYFRAMES_FIRST) {
         //if (call->video.first->ssrc == 0)
         //{
@@ -1105,7 +1161,10 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         }
 
         call->video.first->ssrc++;
-    } else {
+    } else
+#endif
+
+    {
 #ifdef VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE
         long encode_time_auto_tune = MAX_ENCODE_TIME_US;
 
@@ -1175,7 +1234,8 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         memcpy(img.planes[VPX_PLANE_V], v, (width / 2) * (height / 2));
 
         vpx_codec_err_t vrc = vpx_codec_encode(call->video.second->encoder, &img,
-                                               (int64_t)video_frame_record_timestamp, 1, vpx_encode_flags, max_encode_time_in_us);
+                                               (int64_t)video_frame_record_timestamp, 1,
+                                               vpx_encode_flags, max_encode_time_in_us);
 
         vpx_img_free(&img);
 
