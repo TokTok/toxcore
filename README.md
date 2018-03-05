@@ -1,4 +1,4 @@
-# ![Project Tox](https://raw.github.com/TokTok/toxcore/master/other/tox.png "Project Tox")
+# ![Project Tox](other/tox-banner.png "Project Tox")
 
 **Current build status:** [![Build Status](https://travis-ci.org/TokTok/c-toxcore.svg?branch=master)](https://travis-ci.org/TokTok/c-toxcore)
 **Current Coverage:** [![Coverage Status](https://coveralls.io/repos/github/TokTok/toxcore/badge.svg?branch=master)](https://coveralls.io/github/TokTok/toxcore?branch=master)
@@ -33,8 +33,8 @@ describes what can happen if your secret key is stolen).
 The roadmap and changelog are generated from GitHub issues. You may view them
 on the website, where they are updated at least once every 24 hours:
 
--   Changelog: https://toktok.ltd/changelog/c-toxcore
--   Roadmap: https://toktok.ltd/roadmap/c-toxcore
+* Changelog: https://toktok.ltd/changelog/c-toxcore
+* Roadmap: https://toktok.ltd/roadmap/c-toxcore
 
 ## Installing toxcore
 
@@ -170,4 +170,4 @@ the API documentation in [toxcore/tox.h](toxcore/tox.h) for more information.
 
 ### Other resources
 
-- [Another echo bot](https://wiki.tox.chat/developers/client_examples/echo_bot)
+* [Another echo bot](https://wiki.tox.chat/developers/client_examples/echo_bot)
