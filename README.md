@@ -1,11 +1,11 @@
 # ![Project Tox](https://raw.github.com/TokTok/toxcore/master/other/tox.png "Project Tox")
 
-**Current build status:** [![Build Status](https://travis-ci.org/TokTok/c-toxcore.svg?branch=master)](https://travis-ci.org/TokTok/c-toxcore)
-**Current Coverage:** [![Coverage Status](https://coveralls.io/repos/github/TokTok/toxcore/badge.svg?branch=master)](https://coveralls.io/github/TokTok/toxcore?branch=master)
+[![Build Status](https://travis-ci.org/TokTok/c-toxcore.svg?branch=master)](https://travis-ci.org/TokTok/c-toxcore) [![Coverage Status](https://coveralls.io/repos/github/TokTok/toxcore/badge.svg?branch=master)](https://coveralls.io/github/TokTok/toxcore?branch=master) [![Join the community on Spectrum](https://withspectrum.github.io/badge/badge.svg)](https://spectrum.chat/tox)
 
 [**Website**](https://tox.chat) **|** [**Wiki**](https://wiki.tox.chat/) **|** [**Blog**](https://blog.tox.chat/) **|** [**FAQ**](https://wiki.tox.chat/doku.php?id=users:faq) **|** [**Binaries/Downloads**](https://wiki.tox.chat/Binaries) **|** [**Clients**](https://wiki.tox.chat/doku.php?id=clients) **|** [**Compiling**](/INSTALL.md) **|** [**Toxcore's Projects**](https://github.com/TokTok/c-toxcore/projects)
 
-**IRC Channels:** Users: [#tox@freenode](https://webchat.freenode.net/?channels=tox), Developers: [#toktok@freenode](https://webchat.freenode.net/?channels=toktok)
+**IRC Channels:** Users: [#tox@freenode](https://webchat.freenode.net/?channels=tox), Developers: [#toktok@freenode](https://webchat.freenode.net/?channels=toktok)  
+**Spectrum community:** https://spectrum.chat/tox
 
 ## What is Tox
 
