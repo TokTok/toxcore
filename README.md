@@ -1,6 +1,6 @@
 # ![Project Tox](https://raw.github.com/TokTok/toxcore/master/other/tox.png "Project Tox")
 
-[![Build Status](https://travis-ci.org/TokTok/c-toxcore.svg?branch=master)](https://travis-ci.org/TokTok/c-toxcore) [![Coverage Status](https://coveralls.io/repos/github/TokTok/toxcore/badge.svg?branch=master)](https://coveralls.io/github/TokTok/toxcore?branch=master) [![Join the community on Spectrum](https://withspectrum.github.io/badge/badge.svg)](https://spectrum.chat/tox)
+[![Build Status](https://travis-ci.org/TokTok/c-toxcore.svg?branch=master)](https://travis-ci.org/TokTok/c-toxcore) [![Coverage Status](https://coveralls.io/repos/github/TokTok/toxcore/badge.svg?branch=master)](https://coveralls.io/github/TokTok/toxcore?branch=master) [![Join the community on Spectrum](https://withspectrum.github.io/badge/badge.svg)](https://spectrum.chat/tox) [![IRC Network](https://img.shields.io/badge/irc-freenode-blue.svg "IRC Freenode")](https://webchat.freenode.net/?channels=tox,toktok)
 
 [**Website**](https://tox.chat) **|** [**Wiki**](https://wiki.tox.chat/) **|** [**Blog**](https://blog.tox.chat/) **|** [**FAQ**](https://wiki.tox.chat/doku.php?id=users:faq) **|** [**Binaries/Downloads**](https://wiki.tox.chat/Binaries) **|** [**Clients**](https://wiki.tox.chat/doku.php?id=clients) **|** [**Compiling**](/INSTALL.md) **|** [**Toxcore's Projects**](https://github.com/TokTok/c-toxcore/projects)
 
@@ -33,8 +33,8 @@ describes what can happen if your secret key is stolen).
 The roadmap and changelog are generated from GitHub issues. You may view them
 on the website, where they are updated at least once every 24 hours:
 
--   Changelog: https://toktok.ltd/changelog/c-toxcore
--   Roadmap: https://toktok.ltd/roadmap/c-toxcore
+* Changelog: https://toktok.ltd/changelog/c-toxcore
+* Roadmap: https://toktok.ltd/roadmap/c-toxcore
 
 ## Installing toxcore
 
@@ -170,5 +170,5 @@ the API documentation in [toxcore/tox.h](toxcore/tox.h) for more information.
 
 ### Other resources
 
-- [Another echo bot](https://wiki.tox.chat/developers/client_examples/echo_bot)
-- [minitox](https://github.com/hqwrong/minitox) (A minimal tox client)
+* [Another echo bot](https://wiki.tox.chat/developers/client_examples/echo_bot)
+* [minitox](https://github.com/hqwrong/minitox) (A minimal tox client)
