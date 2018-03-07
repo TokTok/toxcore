@@ -727,6 +727,16 @@ bool toxav_option_set(ToxAV *av, uint32_t friend_number, TOXAV_OPTIONS_OPTION op
             vc->video_encoder_cpu_used = (int32_t)value;
             LOGGER_WARNING(av->m->log, "video encoder setting cpu_used to: %d", (int)value);
         }
+    } else if (option == TOXAV_ENCODER_CODEC_USED) {
+        VCSession *vc = (VCSession *)call->video.second;
+
+        if (vc->video_encoder_coded_used == (int32_t)value) {
+            LOGGER_WARNING(av->m->log, "video video_encoder_coded_used already set to: %d", (int)value);
+        } else {
+            vc->video_encoder_coded_used_prev = vc->video_encoder_coded_used;
+            vc->video_encoder_coded_used = (int32_t)value;
+            LOGGER_WARNING(av->m->log, "video video_encoder_coded_used to: %d", (int)value);
+        }
     } else if (option == TOXAV_ENCODER_VP8_QUALITY) {
         VCSession *vc = (VCSession *)call->video.second;
 
@@ -1146,7 +1156,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
     if (call->video.first->ssrc < VIDEO_SEND_X_KEYFRAMES_FIRST) {
         //if (call->video.first->ssrc == 0)
         //{
-        if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
+        if (call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP8) {
             // Key frame flag for first frames
             vpx_encode_flags = VPX_EFLAG_FORCE_KF;
             max_encode_time_in_us = VPX_DL_REALTIME;
@@ -1160,7 +1170,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         //}
         call->video.first->ssrc++;
     } else if (call->video.first->ssrc == VIDEO_SEND_X_KEYFRAMES_FIRST) {
-        if (VPX_ENCODER_USED == VPX_VP8_CODEC) {
+        if (call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP8) {
             // normal keyframe placement
             vpx_encode_flags = 0;
             max_encode_time_in_us = MAX_ENCODE_TIME_US;

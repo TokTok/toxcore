@@ -48,7 +48,7 @@
 #define VPX_MAX_ENCODER_THREADS (4)
 #define VPX_MAX_DECODER_THREADS (4)
 #define VIDEO__VP9E_SET_TILE_COLUMNS (1)
-#define VIDEO__VP9E_SET_TILE_ROWS (2)
+#define VIDEO__VP9E_SET_TILE_ROWS (1)
 #define VIDEO__VP9_KF_MAX_DIST (60)
 #define VIDEO__VP8_DECODER_ERROR_CONCEALMENT 0
 #define VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED 0 // 0, 1, 2, 3 # 0->none, 3->maximum
@@ -59,7 +59,7 @@
 // #define VIDEO_CODEC_FRAGMENT_VPX_NUMS VP8_EIGHT_TOKENPARTITION
 #define VIDEO_MAX_FRAGMENT_BUFFER_COUNT (100)
 #define TOXAV_ENCODER_VP8_RC_MAX_QUANTIZER 63
-#define TOXAV_ENCODER_VP8_RC_MIN_QUANTIZER_NORMAL 20
+#define TOXAV_ENCODER_VP8_RC_MIN_QUANTIZER_NORMAL 35
 #define TOXAV_ENCODER_VP8_RC_MIN_QUANTIZER_HIGH 2
 
 // #define VIDEO_PTS_TIMESTAMPS 1
@@ -89,12 +89,7 @@
 #define VIDEO_ENCODER_LEEWAY_IN_MS_AUTOTUNE (10)
 #define VPX_ENCODER_KF_NEW_METHOD 1
 
-
-#define VPX_VP8_CODEC (0)
-#define VPX_VP9_CODEC (1)
-
-#define VPX_ENCODER_USED VPX_VP8_CODEC
-#define VPX_DECODER_USED VPX_VP8_CODEC // this will switch automatically
+#define VPX_DECODER_USED TOXAV_ENCODER_CODEC_USED_VP8 // this will switch automatically
 
 #define VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES 20
 #define VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES 20
@@ -111,7 +106,6 @@ typedef struct VCSession_s {
 
     /* decoding */
     vpx_codec_ctx_t decoder[1];
-    int8_t is_using_vp9;
     struct RingBuffer *vbuf_raw; /* Un-decoded data */
 
     uint64_t linfts; /* Last received frame time stamp */
@@ -137,8 +131,11 @@ typedef struct VCSession_s {
     int32_t video_rc_max_quantizer_prev;
     int32_t video_rc_min_quantizer;
     int32_t video_rc_min_quantizer_prev;
+    int32_t video_encoder_coded_used;
+    int32_t video_encoder_coded_used_prev;
     int32_t video_decoder_error_concealment;
     int32_t video_decoder_error_concealment_prev;
+    int32_t video_decoder_codec_used;
     // options ---
 
     void *vpx_frames_buf_list[VIDEO_MAX_FRAGMENT_BUFFER_COUNT];
