@@ -52,8 +52,9 @@ deadline parameter analogous to VPx BEST QUALITY mode.
 */
 
 
-#define VIDEO_BITRATE_INITIAL_VALUE 5000 // initialize encoder with this value. Target bandwidth to use for this stream, in kilobits per second.
-#define VIDEO_BITRATE_INITIAL_VALUE_VP9 800
+// initialize encoder with this value. Target bandwidth to use for this stream, in kilobits per second.
+#define VIDEO_BITRATE_INITIAL_VALUE 500
+#define VIDEO_BITRATE_INITIAL_VALUE_VP9 300
 
 struct vpx_frame_user_data {
     uint64_t record_timestamp;
@@ -1157,6 +1158,7 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
 
         vc->video_encoder_vp8_quality_prev = vc->video_encoder_vp8_quality;
         vc->video_rc_max_quantizer_prev = vc->video_rc_max_quantizer;
+        vc->video_rc_min_quantizer_prev = vc->video_rc_min_quantizer;
 
         cfg.rc_target_bitrate = bit_rate;
         cfg.g_w = width;
