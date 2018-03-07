@@ -48,7 +48,7 @@ VPX_DL_BEST_QUALITY   (0)       deadline parameter analogous to VPx BEST QUALITY
 */
 
 #define VIDEO_ACCEPTABLE_LOSS (0.08f) /* if loss is less than this (8%), then don't do anything */
-#define AUDIO_ITERATATIONS_WHILE_VIDEO (2)
+#define AUDIO_ITERATATIONS_WHILE_VIDEO (8)
 
 #if defined(AUDIO_DEBUGGING_SKIP_FRAMES)
 uint32_t _debug_count_sent_audio_frames = 0;
@@ -340,7 +340,7 @@ void toxav_iterate(ToxAV *av)
                                    &(i->last_incoming_video_frame_ltimestamp)
                                   ) == 0) {
                         // TODO: Zoff: not sure if this sleep is good, or bad??
-                        usleep(100);
+                        usleep(2);
                     } else {
                         LOGGER_TRACE(av->m->log, "did some more audio iterate");
                     }
@@ -357,15 +357,22 @@ void toxav_iterate(ToxAV *av)
 
 
 
+            // LOGGER_WARNING(av->m->log, "XXXXXXXXXXXXXXXXXX=================");
             if (i->msi_call->self_capabilities & msi_CapRAudio &&
                     i->msi_call->peer_capabilities & msi_CapSAudio) {
-                rc = MIN(i->audio.second->lp_frame_duration, rc);
+                // use 4ms less than the actual audio frame duration, to have still some time left
+                // LOGGER_WARNING(av->m->log, "lp_frame_duration=%d", (int)i->audio.second->lp_frame_duration);
+                rc = MIN((i->audio.second->lp_frame_duration - 4), rc);
             }
 
             if (i->msi_call->self_capabilities & msi_CapRVideo &&
                     i->msi_call->peer_capabilities & msi_CapSVideo) {
+                // LOGGER_WARNING(av->m->log, "lcfd=%d", (int)i->video.second->lcfd);
                 rc = MIN(i->video.second->lcfd, (uint32_t) rc);
             }
+
+            // LOGGER_WARNING(av->m->log, "rc=%d", (int)rc);
+            // LOGGER_WARNING(av->m->log, "XXXXXXXXXXXXXXXXXX=================");
 
 
             uint32_t fid = i->friend_number;
@@ -430,6 +437,7 @@ void toxav_iterate(ToxAV *av)
         av->dmsst = 0;
     }
 }
+
 bool toxav_call(ToxAV *av, uint32_t friend_number, uint32_t audio_bit_rate, uint32_t video_bit_rate,
                 TOXAV_ERR_CALL *error)
 {

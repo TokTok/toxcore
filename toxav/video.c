@@ -1098,8 +1098,9 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
     }
 
 
-    /* Calculate time it took for peer to send us this frame */
-    uint32_t t_lcfd = current_time_monotonic() - vc->linfts;
+    /* Calculate time since we received the last video frame */
+    // use 5ms less than the actual time, to give some free room
+    uint32_t t_lcfd = (current_time_monotonic() - vc->linfts) - 5;
     vc->lcfd = t_lcfd > 100 ? vc->lcfd : t_lcfd;
     vc->linfts = current_time_monotonic();
 

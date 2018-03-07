@@ -321,7 +321,8 @@ int ac_queue_message(void *acp, struct RTPMessage *msg)
     pthread_mutex_unlock(ac->queue_mutex);
 
     if (rc == -1) {
-        LOGGER_WARNING(ac->log, "Could not queue the incoming audio message!");
+        // TODO: investigate how this can still occur? we take them out faster than they come in
+        LOGGER_DEBUG(ac->log, "Could not queue the incoming audio message!");
         free(msg);
         return -1;
     }
