@@ -59,6 +59,8 @@
 // #define VIDEO_CODEC_FRAGMENT_VPX_NUMS VP8_EIGHT_TOKENPARTITION
 #define VIDEO_MAX_FRAGMENT_BUFFER_COUNT (100)
 #define TOXAV_ENCODER_VP8_RC_MAX_QUANTIZER 63
+#define TOXAV_ENCODER_VP8_RC_MIN_QUANTIZER_NORMAL 20
+#define TOXAV_ENCODER_VP8_RC_MIN_QUANTIZER_HIGH 2
 
 // #define VIDEO_PTS_TIMESTAMPS 1
 
@@ -133,6 +135,8 @@ typedef struct VCSession_s {
     int32_t video_encoder_vp8_quality_prev;
     int32_t video_rc_max_quantizer;
     int32_t video_rc_max_quantizer_prev;
+    int32_t video_rc_min_quantizer;
+    int32_t video_rc_min_quantizer_prev;
     int32_t video_decoder_error_concealment;
     int32_t video_decoder_error_concealment_prev;
     // options ---

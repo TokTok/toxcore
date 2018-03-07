@@ -747,6 +747,16 @@ bool toxav_option_set(ToxAV *av, uint32_t friend_number, TOXAV_OPTIONS_OPTION op
             vc->video_rc_max_quantizer = (int32_t)value;
             LOGGER_WARNING(av->m->log, "video encoder setting rc_max_quantizer to: %d", (int)value);
         }
+    } else if (option == TOXAV_ENCODER_RC_MIN_QUANTIZER) {
+        VCSession *vc = (VCSession *)call->video.second;
+
+        if (vc->video_rc_min_quantizer == (int32_t)value) {
+            LOGGER_WARNING(av->m->log, "video encoder video_rc_min_quantizer already set to: %d", (int)value);
+        } else {
+            vc->video_rc_min_quantizer_prev = vc->video_rc_min_quantizer;
+            vc->video_rc_min_quantizer = (int32_t)value;
+            LOGGER_WARNING(av->m->log, "video encoder setting video_rc_min_quantizer to: %d", (int)value);
+        }
     } else if (option == TOXAV_DECODER_ERROR_CONCEALMENT) {
         VCSession *vc = (VCSession *)call->video.second;
 
