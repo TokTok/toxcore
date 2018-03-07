@@ -376,9 +376,13 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     int cpu_used_value = vc->video_encoder_cpu_used;
 
     if (VPX_ENCODER_USED == VPX_VP9_CODEC) {
-        if ((cpu_used_value < -8) || (cpu_used_value > 8)) {
-            cpu_used_value = 8; // set to default (fastest) value
-        }
+            if (cpu_used_value < -8) {
+                cpu_used_value = -8;
+            }
+            else if (cpu_used_value > 8)
+            {
+                cpu_used_value = 8; // set to default (fastest) value
+            }
     }
 
     rc = vpx_codec_control(vc->encoder, VP8E_SET_CPUUSED, cpu_used_value);
@@ -1236,7 +1240,11 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
         int cpu_used_value = vc->video_encoder_cpu_used;
 
         if (VPX_ENCODER_USED == VPX_VP9_CODEC) {
-            if ((cpu_used_value < -8) || (cpu_used_value > 8)) {
+            if (cpu_used_value < -8) {
+                cpu_used_value = -8;
+            }
+            else if (cpu_used_value > 8)
+            {
                 cpu_used_value = 8; // set to default (fastest) value
             }
         }
