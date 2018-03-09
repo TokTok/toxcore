@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright © 2016-2017 The TokTok team.
+ * Copyright © 2016-2018 The TokTok team.
  * Copyright © 2013 Tox project.
  *
  * This file is part of Tox, the free peer to peer instant messenger.
@@ -29,11 +29,12 @@
 
 #include "net_crypto.h"
 
+#include "env.h"
+#include "util.h"
+
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "util.h"
 
 typedef struct {
     uint64_t sent_time;
@@ -733,7 +734,7 @@ static int add_data_to_buffer(Packets_Array *array, uint32_t number, const Packe
         return -1;
     }
 
-    Packet_Data *new_d = (Packet_Data *)malloc(sizeof(Packet_Data));
+    Packet_Data *new_d = (Packet_Data *)env_malloc(sizeof(Packet_Data));
 
     if (new_d == nullptr) {
         return -1;
@@ -784,7 +785,7 @@ static int64_t add_data_end_of_buffer(Packets_Array *array, const Packet_Data *d
         return -1;
     }
 
-    Packet_Data *new_d = (Packet_Data *)malloc(sizeof(Packet_Data));
+    Packet_Data *new_d = (Packet_Data *)env_malloc(sizeof(Packet_Data));
 
     if (new_d == nullptr) {
         return -1;
@@ -817,7 +818,7 @@ static int64_t read_data_beg_buffer(Packets_Array *array, Packet_Data *data)
     memcpy(data, array->buffer[num], sizeof(Packet_Data));
     uint32_t id = array->buffer_start;
     ++array->buffer_start;
-    free(array->buffer[num]);
+    env_free(array->buffer[num]);
     array->buffer[num] = nullptr;
     return id;
 }
@@ -841,7 +842,7 @@ static int clear_buffer_until(Packets_Array *array, uint32_t number)
         uint32_t num = i % CRYPTO_PACKET_BUFFER_SIZE;
 
         if (array->buffer[num]) {
-            free(array->buffer[num]);
+            env_free(array->buffer[num]);
             array->buffer[num] = nullptr;
         }
     }
@@ -858,7 +859,7 @@ static int clear_buffer(Packets_Array *array)
         uint32_t num = i % CRYPTO_PACKET_BUFFER_SIZE;
 
         if (array->buffer[num]) {
-            free(array->buffer[num]);
+            env_free(array->buffer[num]);
             array->buffer[num] = nullptr;
         }
     }
@@ -997,7 +998,7 @@ static int handle_request_packet(Packets_Array *send_array, const uint8_t *data,
                     l_sent_time = sent_time;
                 }
 
-                free(send_array->buffer[num]);
+                env_free(send_array->buffer[num]);
                 send_array->buffer[num] = nullptr;
             }
         }
@@ -1324,14 +1325,14 @@ static int new_temp_packet(const Net_Crypto *c, int crypt_connection_id, const u
         return -1;
     }
 
-    uint8_t *temp_packet = (uint8_t *)malloc(length);
+    uint8_t *temp_packet = (uint8_t *)env_malloc(length);
 
     if (temp_packet == nullptr) {
         return -1;
     }
 
     if (conn->temp_packet) {
-        free(conn->temp_packet);
+        env_free(conn->temp_packet);
     }
 
     memcpy(temp_packet, packet, length);
@@ -1356,7 +1357,7 @@ static int clear_temp_packet(const Net_Crypto *c, int crypt_connection_id)
     }
 
     if (conn->temp_packet) {
-        free(conn->temp_packet);
+        env_free(conn->temp_packet);
     }
 
     conn->temp_packet = nullptr;
@@ -1701,12 +1702,12 @@ static int handle_packet_connection(Net_Crypto *c, int crypt_connection_id, cons
 static int realloc_cryptoconnection(Net_Crypto *c, uint32_t num)
 {
     if (num == 0) {
-        free(c->crypto_connections);
+        env_free(c->crypto_connections);
         c->crypto_connections = nullptr;
         return 0;
     }
 
-    Crypto_Connection *newcrypto_connections = (Crypto_Connection *)realloc(c->crypto_connections,
+    Crypto_Connection *newcrypto_connections = (Crypto_Connection *)env_realloc(c->crypto_connections,
             num * sizeof(Crypto_Connection));
 
     if (newcrypto_connections == nullptr) {
@@ -1882,7 +1883,7 @@ static int handle_new_connection_handshake(Net_Crypto *c, IP_Port source, const 
         void *userdata)
 {
     New_Connection n_c;
-    n_c.cookie = (uint8_t *)malloc(COOKIE_LENGTH);
+    n_c.cookie = (uint8_t *)env_malloc(COOKIE_LENGTH);
 
     if (n_c.cookie == nullptr) {
         return -1;
@@ -1893,7 +1894,7 @@ static int handle_new_connection_handshake(Net_Crypto *c, IP_Port source, const 
 
     if (handle_crypto_handshake(c, n_c.recv_nonce, n_c.peersessionpublic_key, n_c.public_key, n_c.dht_public_key,
                                 n_c.cookie, data, length, nullptr) != 0) {
-        free(n_c.cookie);
+        env_free(n_c.cookie);
         return -1;
     }
 
@@ -1920,13 +1921,13 @@ static int handle_new_connection_handshake(Net_Crypto *c, IP_Port source, const 
                 }
             }
 
-            free(n_c.cookie);
+            env_free(n_c.cookie);
             return ret;
         }
     }
 
     int ret = c->new_connection_callback(c->new_connection_callback_object, &n_c);
-    free(n_c.cookie);
+    env_free(n_c.cookie);
     return ret;
 }
 
@@ -2939,7 +2940,7 @@ Net_Crypto *new_net_crypto(Logger *log, DHT *dht, TCP_Proxy_Info *proxy_info)
         return nullptr;
     }
 
-    Net_Crypto *temp = (Net_Crypto *)calloc(1, sizeof(Net_Crypto));
+    Net_Crypto *temp = (Net_Crypto *)env_calloc(1, sizeof(Net_Crypto));
 
     if (temp == nullptr) {
         return nullptr;
@@ -2950,7 +2951,7 @@ Net_Crypto *new_net_crypto(Logger *log, DHT *dht, TCP_Proxy_Info *proxy_info)
     temp->tcp_c = new_tcp_connections(dht_get_self_secret_key(dht), proxy_info);
 
     if (temp->tcp_c == nullptr) {
-        free(temp);
+        env_free(temp);
         return nullptr;
     }
 
@@ -2960,7 +2961,7 @@ Net_Crypto *new_net_crypto(Logger *log, DHT *dht, TCP_Proxy_Info *proxy_info)
     if (create_recursive_mutex(&temp->tcp_mutex) != 0 ||
             pthread_mutex_init(&temp->connections_mutex, nullptr) != 0) {
         kill_tcp_connections(temp->tcp_c);
-        free(temp);
+        env_free(temp);
         return nullptr;
     }
 
@@ -3050,5 +3051,5 @@ void kill_net_crypto(Net_Crypto *c)
     networking_registerhandler(dht_get_net(c->dht), NET_PACKET_CRYPTO_HS, nullptr, nullptr);
     networking_registerhandler(dht_get_net(c->dht), NET_PACKET_CRYPTO_DATA, nullptr, nullptr);
     crypto_memzero(c, sizeof(Net_Crypto));
-    free(c);
+    env_free(c);
 }

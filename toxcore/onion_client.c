@@ -4,7 +4,7 @@
  */
 
 /*
- * Copyright © 2016-2017 The TokTok team.
+ * Copyright © 2016-2018 The TokTok team.
  * Copyright © 2013 Tox project.
  *
  * This file is part of Tox, the free peer to peer instant messenger.
@@ -32,6 +32,7 @@
 #include <string.h>
 
 #include "LAN_discovery.h"
+#include "env.h"
 #include "util.h"
 
 /* defines for the array size and
@@ -1262,12 +1263,12 @@ int onion_friend_num(const Onion_Client *onion_c, const uint8_t *public_key)
 static int realloc_onion_friends(Onion_Client *onion_c, uint32_t num)
 {
     if (num == 0) {
-        free(onion_c->friends_list);
+        env_free(onion_c->friends_list);
         onion_c->friends_list = nullptr;
         return 0;
     }
 
-    Onion_Friend *newonion_friends = (Onion_Friend *)realloc(onion_c->friends_list, num * sizeof(Onion_Friend));
+    Onion_Friend *newonion_friends = (Onion_Friend *)env_realloc(onion_c->friends_list, num * sizeof(Onion_Friend));
 
     if (newonion_friends == nullptr) {
         return -1;
@@ -1852,7 +1853,7 @@ Onion_Client *new_onion_client(Net_Crypto *c)
         return nullptr;
     }
 
-    Onion_Client *onion_c = (Onion_Client *)calloc(1, sizeof(Onion_Client));
+    Onion_Client *onion_c = (Onion_Client *)env_calloc(1, sizeof(Onion_Client));
 
     if (onion_c == nullptr) {
         return nullptr;
@@ -1861,7 +1862,7 @@ Onion_Client *new_onion_client(Net_Crypto *c)
     onion_c->announce_ping_array = ping_array_new(ANNOUNCE_ARRAY_SIZE, ANNOUNCE_TIMEOUT);
 
     if (onion_c->announce_ping_array == nullptr) {
-        free(onion_c);
+        env_free(onion_c);
         return nullptr;
     }
 
@@ -1893,5 +1894,5 @@ void kill_onion_client(Onion_Client *onion_c)
     cryptopacket_registerhandler(onion_c->dht, CRYPTO_PACKET_DHTPK, nullptr, nullptr);
     set_onion_packet_tcp_connection_callback(nc_get_tcp_c(onion_c->c), nullptr, nullptr);
     crypto_memzero(onion_c, sizeof(Onion_Client));
-    free(onion_c);
+    env_free(onion_c);
 }

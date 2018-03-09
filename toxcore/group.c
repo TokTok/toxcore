@@ -3,7 +3,7 @@
  */
 
 /*
- * Copyright © 2016-2017 The TokTok team.
+ * Copyright © 2016-2018 The TokTok team.
  * Copyright © 2014 Tox project.
  *
  * This file is part of Tox, the free peer to peer instant messenger.
@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "env.h"
 #include "util.h"
 
 /* return 1 if the groupnumber is not valid.
@@ -61,12 +62,12 @@ static uint8_t groupnumber_not_valid(const Group_Chats *g_c, uint32_t groupnumbe
 static int realloc_groupchats(Group_Chats *g_c, uint32_t num)
 {
     if (num == 0) {
-        free(g_c->chats);
+        env_free(g_c->chats);
         g_c->chats = nullptr;
         return 0;
     }
 
-    Group_c *newgroup_chats = (Group_c *)realloc(g_c->chats, num * sizeof(Group_c));
+    Group_c *newgroup_chats = (Group_c *)env_realloc(g_c->chats, num * sizeof(Group_c));
 
     if (newgroup_chats == nullptr) {
         return -1;
@@ -440,7 +441,7 @@ static int addpeer(Group_Chats *g_c, uint32_t groupnumber, const uint8_t *real_p
         return -1;
     }
 
-    Group_Peer *temp = (Group_Peer *)realloc(g->group, sizeof(Group_Peer) * (g->numpeers + 1));
+    Group_Peer *temp = (Group_Peer *)env_realloc(g->group, sizeof(Group_Peer) * (g->numpeers + 1));
 
     if (temp == nullptr) {
         return -1;
@@ -530,14 +531,14 @@ static int delpeer(Group_Chats *g_c, uint32_t groupnumber, int peer_index, void 
     void *peer_object = g->group[peer_index].object;
 
     if (g->numpeers == 0) {
-        free(g->group);
+        env_free(g->group);
         g->group = nullptr;
     } else {
         if (g->numpeers != (uint32_t)peer_index) {
             memcpy(&g->group[peer_index], &g->group[g->numpeers], sizeof(Group_Peer));
         }
 
-        Group_Peer *temp = (Group_Peer *)realloc(g->group, sizeof(Group_Peer) * (g->numpeers));
+        Group_Peer *temp = (Group_Peer *)env_realloc(g->group, sizeof(Group_Peer) * (g->numpeers));
 
         if (temp == nullptr) {
             return -1;
@@ -793,7 +794,7 @@ int del_groupchat(Group_Chats *g_c, uint32_t groupnumber)
         }
     }
 
-    free(g->group);
+    env_free(g->group);
 
     if (g->group_on_delete) {
         g->group_on_delete(g->object, groupnumber);
@@ -2471,7 +2472,7 @@ Group_Chats *new_groupchats(Messenger *m)
         return nullptr;
     }
 
-    Group_Chats *temp = (Group_Chats *)calloc(1, sizeof(Group_Chats));
+    Group_Chats *temp = (Group_Chats *)env_calloc(1, sizeof(Group_Chats));
 
     if (temp == nullptr) {
         return nullptr;
@@ -2518,7 +2519,7 @@ void kill_groupchats(Group_Chats *g_c)
 
     m_callback_conference_invite(g_c->m, nullptr);
     g_c->m->conferences_object = nullptr;
-    free(g_c);
+    env_free(g_c);
 }
 
 /* Return the number of chats in the instance m.

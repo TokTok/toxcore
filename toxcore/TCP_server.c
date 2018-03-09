@@ -3,7 +3,7 @@
  */
 
 /*
- * Copyright © 2016-2017 The TokTok team.
+ * Copyright © 2016-2018 The TokTok team.
  * Copyright © 2014 Tox project.
  *
  * This file is part of Tox, the free peer to peer instant messenger.
@@ -30,6 +30,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "env.h"
+#include "util.h"
+
 #if !defined(_WIN32) && !defined(__WIN32__) && !defined (WIN32)
 #include <sys/ioctl.h>
 #endif
@@ -38,8 +42,6 @@
 #include <sys/epoll.h>
 #include <unistd.h>
 #endif
-
-#include "util.h"
 
 typedef struct TCP_Secure_Connection {
     Socket sock;
@@ -120,7 +122,7 @@ size_t tcp_server_listen_count(const TCP_Server *tcp_server)
 static int realloc_connection(TCP_Server *TCP_server, uint32_t num)
 {
     if (num == 0) {
-        free(TCP_server->accepted_connection_array);
+        env_free(TCP_server->accepted_connection_array);
         TCP_server->accepted_connection_array = nullptr;
         TCP_server->size_accepted_connections = 0;
         return 0;
@@ -130,7 +132,7 @@ static int realloc_connection(TCP_Server *TCP_server, uint32_t num)
         return 0;
     }
 
-    TCP_Secure_Connection *new_connections = (TCP_Secure_Connection *)realloc(
+    TCP_Secure_Connection *new_connections = (TCP_Secure_Connection *)env_realloc(
                 TCP_server->accepted_connection_array,
                 num * sizeof(TCP_Secure_Connection));
 
@@ -391,7 +393,7 @@ static int send_pending_data(TCP_Secure_Connection *con)
 
         TCP_Priority_List *pp = p;
         p = p->next;
-        free(pp);
+        env_free(pp);
     }
 
     con->priority_queue_start = p;
@@ -410,7 +412,7 @@ static int send_pending_data(TCP_Secure_Connection *con)
 static bool add_priority(TCP_Secure_Connection *con, const uint8_t *packet, uint16_t size, uint16_t sent)
 {
     TCP_Priority_List *p = con->priority_queue_end;
-    TCP_Priority_List *new_list = (TCP_Priority_List *)malloc(sizeof(TCP_Priority_List) + size);
+    TCP_Priority_List *new_list = (TCP_Priority_List *)env_malloc(sizeof(TCP_Priority_List) + size);
 
     if (!new_list) {
         return 0;
@@ -1036,16 +1038,16 @@ TCP_Server *new_TCP_server(uint8_t ipv6_enabled, uint16_t num_sockets, const uin
         return nullptr;
     }
 
-    TCP_Server *temp = (TCP_Server *)calloc(1, sizeof(TCP_Server));
+    TCP_Server *temp = (TCP_Server *)env_calloc(1, sizeof(TCP_Server));
 
     if (temp == nullptr) {
         return nullptr;
     }
 
-    temp->socks_listening = (Socket *)calloc(num_sockets, sizeof(Socket));
+    temp->socks_listening = (Socket *)env_calloc(num_sockets, sizeof(Socket));
 
     if (temp->socks_listening == nullptr) {
-        free(temp);
+        env_free(temp);
         return nullptr;
     }
 
@@ -1053,8 +1055,8 @@ TCP_Server *new_TCP_server(uint8_t ipv6_enabled, uint16_t num_sockets, const uin
     temp->efd = epoll_create(8);
 
     if (temp->efd == -1) {
-        free(temp->socks_listening);
-        free(temp);
+        env_free(temp->socks_listening);
+        env_free(temp);
         return nullptr;
     }
 
@@ -1087,8 +1089,8 @@ TCP_Server *new_TCP_server(uint8_t ipv6_enabled, uint16_t num_sockets, const uin
     }
 
     if (temp->num_listening_socks == 0) {
-        free(temp->socks_listening);
-        free(temp);
+        env_free(temp->socks_listening);
+        env_free(temp);
         return nullptr;
     }
 
@@ -1426,7 +1428,7 @@ void kill_TCP_server(TCP_Server *TCP_server)
     close(TCP_server->efd);
 #endif
 
-    free(TCP_server->socks_listening);
-    free(TCP_server->accepted_connection_array);
-    free(TCP_server);
+    env_free(TCP_server->socks_listening);
+    env_free(TCP_server->accepted_connection_array);
+    env_free(TCP_server);
 }

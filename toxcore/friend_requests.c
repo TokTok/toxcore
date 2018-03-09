@@ -3,7 +3,7 @@
  */
 
 /*
- * Copyright © 2016-2017 The TokTok team.
+ * Copyright © 2016-2018 The TokTok team.
  * Copyright © 2013 Tox project.
  *
  * This file is part of Tox, the free peer to peer instant messenger.
@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "env.h"
 #include "util.h"
 
 struct Friend_Requests {
@@ -171,10 +172,10 @@ void friendreq_init(Friend_Requests *fr, Friend_Connections *fr_c)
 
 Friend_Requests *friendreq_new(void)
 {
-    return (Friend_Requests *)calloc(1, sizeof(Friend_Requests));
+    return (Friend_Requests *)env_calloc(1, sizeof(Friend_Requests));
 }
 
 void friendreq_kill(Friend_Requests *fr)
 {
-    free(fr);
+    env_free(fr);
 }

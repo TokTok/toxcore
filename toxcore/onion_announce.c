@@ -3,7 +3,7 @@
  */
 
 /*
- * Copyright © 2016-2017 The TokTok team.
+ * Copyright © 2016-2018 The TokTok team.
  * Copyright © 2013 Tox project.
  *
  * This file is part of Tox, the free peer to peer instant messenger.
@@ -31,6 +31,7 @@
 #include <string.h>
 
 #include "LAN_discovery.h"
+#include "env.h"
 #include "util.h"
 
 #define PING_ID_TIMEOUT ONION_ANNOUNCE_TIMEOUT
@@ -498,7 +499,7 @@ Onion_Announce *new_onion_announce(DHT *dht)
         return nullptr;
     }
 
-    Onion_Announce *onion_a = (Onion_Announce *)calloc(1, sizeof(Onion_Announce));
+    Onion_Announce *onion_a = (Onion_Announce *)env_calloc(1, sizeof(Onion_Announce));
 
     if (onion_a == nullptr) {
         return nullptr;
@@ -522,5 +523,5 @@ void kill_onion_announce(Onion_Announce *onion_a)
 
     networking_registerhandler(onion_a->net, NET_PACKET_ANNOUNCE_REQUEST, nullptr, nullptr);
     networking_registerhandler(onion_a->net, NET_PACKET_ONION_DATA_REQUEST, nullptr, nullptr);
-    free(onion_a);
+    env_free(onion_a);
 }

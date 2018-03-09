@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright © 2016-2017 The TokTok team.
+ * Copyright © 2016-2018 The TokTok team.
  * Copyright © 2014 Tox project.
  *
  * This file is part of Tox, the free peer to peer instant messenger.
@@ -33,6 +33,7 @@
 #include <string.h>
 
 #include "ccompat.h"
+#include "env.h"
 
 /* Basically, the elements in the list are placed in order so that they can be searched for easily
  * -each element is seen as a big-endian integer when ordering them
@@ -127,7 +128,7 @@ static int resize(BS_LIST *list, uint32_t new_size)
         return 1;
     }
 
-    uint8_t *data = (uint8_t *)realloc(list->data, list->element_size * new_size);
+    uint8_t *data = (uint8_t *)env_realloc(list->data, list->element_size * new_size);
 
     if (!data) {
         return 0;
@@ -135,7 +136,7 @@ static int resize(BS_LIST *list, uint32_t new_size)
 
     list->data = data;
 
-    int *ids = (int *)realloc(list->ids, sizeof(int) * new_size);
+    int *ids = (int *)env_realloc(list->ids, sizeof(int) * new_size);
 
     if (!ids) {
         return 0;
@@ -170,10 +171,10 @@ int bs_list_init(BS_LIST *list, uint32_t element_size, uint32_t initial_capacity
 void bs_list_free(BS_LIST *list)
 {
     //free both arrays
-    free(list->data);
+    env_free(list->data);
     list->data = nullptr;
 
-    free(list->ids);
+    env_free(list->ids);
     list->ids = nullptr;
 }
 

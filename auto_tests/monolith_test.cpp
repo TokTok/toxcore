@@ -16,7 +16,11 @@
 #include "config.h"
 #endif
 
-#include "../other/monolith.h"
+#include "../toxcore/monolith.h"
+
+#include "../toxav/monolith.h"
+
+#include "../toxencryptsave/monolith.h"
 #define DHT_C_INCLUDED
 
 #include "check_compat.h"
@@ -94,11 +98,6 @@ namespace onion_test
 {
 int main(void);
 #include "onion_test.c"
-}
-namespace resource_leak_test
-{
-int main(void);
-#include "resource_leak_test.c"
 }
 namespace save_friend_test
 {

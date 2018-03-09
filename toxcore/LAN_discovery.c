@@ -3,7 +3,7 @@
  */
 
 /*
- * Copyright © 2016-2017 The TokTok team.
+ * Copyright © 2016-2018 The TokTok team.
  * Copyright © 2013 Tox project.
  *
  * This file is part of Tox, the free peer to peer instant messenger.
@@ -27,9 +27,10 @@
 
 #include "LAN_discovery.h"
 
-#include <string.h>
-
+#include "env.h"
 #include "util.h"
+
+#include <string.h>
 
 #define MAX_INTERFACES 16
 
@@ -53,7 +54,7 @@ static IP_Port broadcast_ip_ports[MAX_INTERFACES];
 
 static void fetch_broadcast_info(uint16_t port)
 {
-    IP_ADAPTER_INFO *pAdapterInfo = (IP_ADAPTER_INFO *)malloc(sizeof(IP_ADAPTER_INFO));
+    IP_ADAPTER_INFO *pAdapterInfo = (IP_ADAPTER_INFO *)env_malloc(sizeof(IP_ADAPTER_INFO));
     unsigned long ulOutBufLen = sizeof(IP_ADAPTER_INFO);
 
     if (pAdapterInfo == nullptr) {
@@ -61,8 +62,8 @@ static void fetch_broadcast_info(uint16_t port)
     }
 
     if (GetAdaptersInfo(pAdapterInfo, &ulOutBufLen) == ERROR_BUFFER_OVERFLOW) {
-        free(pAdapterInfo);
-        pAdapterInfo = (IP_ADAPTER_INFO *)malloc(ulOutBufLen);
+        env_free(pAdapterInfo);
+        pAdapterInfo = (IP_ADAPTER_INFO *)env_malloc(ulOutBufLen);
 
         if (pAdapterInfo == nullptr) {
             return;
@@ -106,7 +107,7 @@ static void fetch_broadcast_info(uint16_t port)
     }
 
     if (pAdapterInfo) {
-        free(pAdapterInfo);
+        env_free(pAdapterInfo);
     }
 
     broadcast_count = count;

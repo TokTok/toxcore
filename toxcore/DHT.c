@@ -28,6 +28,7 @@
 #include "DHT.h"
 
 #include "LAN_discovery.h"
+#include "env.h"
 #include "logger.h"
 #include "network.h"
 #include "ping.h"
@@ -1565,7 +1566,7 @@ int DHT_addfriend(DHT *dht, const uint8_t *public_key, void (*ip_callback)(void 
         return 0;
     }
 
-    DHT_Friend *const temp = (DHT_Friend *)realloc(dht->friends_list, sizeof(DHT_Friend) * (dht->num_friends + 1));
+    DHT_Friend *const temp = (DHT_Friend *)env_realloc(dht->friends_list, sizeof(DHT_Friend) * (dht->num_friends + 1));
 
     if (temp == nullptr) {
         return -1;
@@ -1623,12 +1624,12 @@ int DHT_delfriend(DHT *dht, const uint8_t *public_key, uint16_t lock_count)
     }
 
     if (dht->num_friends == 0) {
-        free(dht->friends_list);
+        env_free(dht->friends_list);
         dht->friends_list = nullptr;
         return 0;
     }
 
-    DHT_Friend *const temp = (DHT_Friend *)realloc(dht->friends_list, sizeof(DHT_Friend) * (dht->num_friends));
+    DHT_Friend *const temp = (DHT_Friend *)env_realloc(dht->friends_list, sizeof(DHT_Friend) * (dht->num_friends));
 
     if (temp == nullptr) {
         return -1;
@@ -2682,7 +2683,7 @@ DHT *new_DHT(Logger *log, Networking_Core *net, bool holepunching_enabled)
         return nullptr;
     }
 
-    DHT *const dht = (DHT *)calloc(1, sizeof(DHT));
+    DHT *const dht = (DHT *)env_calloc(1, sizeof(DHT));
 
     if (dht == nullptr) {
         return nullptr;
@@ -2756,9 +2757,9 @@ void kill_DHT(DHT *dht)
     ping_array_kill(dht->dht_ping_array);
     ping_array_kill(dht->dht_harden_ping_array);
     ping_kill(dht->ping);
-    free(dht->friends_list);
-    free(dht->loaded_nodes_list);
-    free(dht);
+    env_free(dht->friends_list);
+    env_free(dht->loaded_nodes_list);
+    env_free(dht);
 }
 
 /* new DHT format for load/save, more robust and forward compatible */
@@ -2872,7 +2873,7 @@ int DHT_connect_after_load(DHT *dht)
 
     /* DHT is connected, stop. */
     if (DHT_non_lan_connected(dht)) {
-        free(dht->loaded_nodes_list);
+        env_free(dht->loaded_nodes_list);
         dht->loaded_nodes_list = nullptr;
         dht->loaded_num_nodes = 0;
         return 0;
@@ -2897,9 +2898,9 @@ static int dht_load_state_callback(void *outer, const uint8_t *data, uint32_t le
                 break;
             }
 
-            free(dht->loaded_nodes_list);
+            env_free(dht->loaded_nodes_list);
             // Copy to loaded_clients_list
-            dht->loaded_nodes_list = (Node_format *)calloc(MAX_SAVED_DHT_NODES, sizeof(Node_format));
+            dht->loaded_nodes_list = (Node_format *)env_calloc(MAX_SAVED_DHT_NODES, sizeof(Node_format));
 
             const int num = unpack_nodes(dht->loaded_nodes_list, MAX_SAVED_DHT_NODES, nullptr, data, length, 0);
 
