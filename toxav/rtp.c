@@ -489,22 +489,21 @@ static int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t 
         return -1;
     }
 
-#if 0
-    if (header.flags & RTP_LARGE_FRAME)
-    {
-        if (header.offset_full >= header.data_length_full) {
-            LOGGER_ERROR(m->log, "Invalid video packet: frame offset (%u) >= full frame length (%u)",
-                         (unsigned)header.offset_full, (unsigned)header.data_length_full);
-            return -1;
-        }
-    }
-
-    if (header.offset_lower >= header.data_length_lower) {
-        LOGGER_ERROR(m->log, "Invalid old protocol video packet: frame offset (%u) >= full frame length (%u)",
-                     (unsigned)header.offset_lower, (unsigned)header.data_length_lower);
+    if (header.offset_full >= header.data_length_full
+            && (header.offset_full != 0 || header.data_length_full != 0)) {
+        LOGGER_ERROR(m->log, "Invalid video packet: frame offset (%u) >= full frame length (%u)",
+                     (unsigned)header.offset_full, (unsigned)header.data_length_full);
         return -1;
-    }
-#endif
+	}
+
+	if (!(header.flags & RTP_LARGE_FRAME))
+	{
+		if (header.offset_lower >= header.data_length_lower) {
+			LOGGER_ERROR(m->log, "Invalid old protocol video packet: frame offset (%u) >= full frame length (%u)",
+						 (unsigned)header.offset_lower, (unsigned)header.data_length_lower);
+			return -1;
+		}
+	}
 
     LOGGER_DEBUG(m->log, "header.pt %d, video %d", (uint8_t)header.pt, (rtp_TypeVideo % 128));
 
