@@ -262,7 +262,7 @@ static bool fill_data_into_slot(Logger *log, struct RTPWorkBufferList *wkbl, con
     struct RTPWorkBuffer *const slot = &wkbl->work_buffer[slot_id];
 
     assert(header != NULL);
-    assert(is_keyframe == (bool)(header->flags & RTP_KEY_FRAME));
+    // ** // assert(is_keyframe == (bool)(header->flags & RTP_KEY_FRAME));
 
     if (slot->received_len == 0) {
         assert(slot->buf == NULL);
@@ -293,11 +293,11 @@ static bool fill_data_into_slot(Logger *log, struct RTPWorkBufferList *wkbl, con
 
     // We already checked this when we received the packet, but we rely on it
     // here, so assert again.
-	if (header->offset_full < header->data_length_full)
+	if (header->offset_full >= header->data_length_full)
 	{
 		LOGGER_ERROR(log, "offset_full:%d < data_length_full:%d\n", (int)header->offset_full, (int)header->data_length_full);
 	}
-    assert(header->offset_full < header->data_length_full);
+    // ***** // assert(header->offset_full < header->data_length_full);
 
     // Copy the incoming chunk of data into the correct position in the full
     // frame data array.
