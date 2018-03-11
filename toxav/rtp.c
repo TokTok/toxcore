@@ -362,6 +362,23 @@ static int handle_video_packet(RTPSession *session, const struct RTPHeader *head
     // frame or it's not a multipart frame, then this value is 0.
     const uint32_t offset = header->offset_full; // without header
 
+	// sanity checks ---------------
+    if (full_frame_length == 0)
+	{
+		return -1;
+	}
+
+    if (offset == full_frame_length)
+	{
+		return -1;
+	}
+
+    if (offset > full_frame_length)
+	{
+		return -1;
+	}
+	// sanity checks ---------------
+
     // The sender tells us whether this is a key frame.
     const bool is_keyframe = (header->flags & RTP_KEY_FRAME) != 0;
 
