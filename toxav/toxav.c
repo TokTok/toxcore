@@ -751,6 +751,20 @@ bool toxav_option_set(ToxAV *av, uint32_t friend_number, TOXAV_OPTIONS_OPTION op
         if (vc->video_encoder_vp8_quality == (int32_t)value) {
             LOGGER_WARNING(av->m->log, "video encoder vp8_quality already set to: %d", (int)value);
         } else {
+            if (vc->video_encoder_vp8_quality == TOXAV_ENCODER_VP8_QUALITY_HIGH)
+            {
+                vc->video_rc_max_quantizer_prev = vc->video_rc_max_quantizer;
+                vc->video_rc_min_quantizer_prev = vc->video_rc_min_quantizer;
+                vc->video_rc_max_quantizer = TOXAV_ENCODER_VP8_RC_MAX_QUANTIZER;
+                vc->video_rc_min_quantizer = TOXAV_ENCODER_VP8_RC_MIN_QUANTIZER_HIGH;
+            }
+            else
+            {
+                vc->video_rc_max_quantizer_prev = vc->video_rc_max_quantizer;
+                vc->video_rc_min_quantizer_prev = vc->video_rc_min_quantizer;
+                vc->video_rc_max_quantizer = TOXAV_ENCODER_VP8_RC_MAX_QUANTIZER;
+                vc->video_rc_min_quantizer = TOXAV_ENCODER_VP8_RC_MIN_QUANTIZER_NORMAL;
+            }
             vc->video_encoder_vp8_quality_prev = vc->video_encoder_vp8_quality;
             vc->video_encoder_vp8_quality = (int32_t)value;
             LOGGER_WARNING(av->m->log, "video encoder setting vp8_quality to: %d", (int)value);
