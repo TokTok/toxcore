@@ -340,7 +340,7 @@ void toxav_iterate(ToxAV *av)
                                    &(i->last_incoming_video_frame_ltimestamp)
                                   ) == 0) {
                         // TODO: Zoff: not sure if this sleep is good, or bad??
-                        usleep(2);
+                        usleep(200);
                     } else {
                         LOGGER_TRACE(av->m->log, "did some more audio iterate");
                     }
