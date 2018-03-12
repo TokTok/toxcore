@@ -150,6 +150,8 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
             cfg->rc_resize_allowed = 0; // 0
             cfg->rc_min_quantizer = rc_min_quantizer; // 2
             cfg->rc_max_quantizer = rc_max_quantizer; // 63
+            cfg->rc_resize_up_thresh = 29;
+            cfg->rc_resize_down_thresh = 5;
             cfg->rc_undershoot_pct = 100; // 100
             cfg->rc_overshoot_pct = 15; // 15
             cfg->rc_buf_initial_sz = 500; // 500 in ms
