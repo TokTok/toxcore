@@ -196,11 +196,11 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     // options ---
     vc->video_encoder_cpu_used = VP8E_SET_CPUUSED_VALUE;
     vc->video_encoder_cpu_used_prev = vc->video_encoder_cpu_used;
-    vc->video_encoder_vp8_quality = TOXAV_ENCODER_VP8_QUALITY_NORMAL;
+    vc->video_encoder_vp8_quality = TOXAV_ENCODER_VP8_QUALITY_HIGH;
     vc->video_encoder_vp8_quality_prev = vc->video_encoder_vp8_quality;
     vc->video_rc_max_quantizer = TOXAV_ENCODER_VP8_RC_MAX_QUANTIZER;
     vc->video_rc_max_quantizer_prev = vc->video_rc_max_quantizer;
-    vc->video_rc_min_quantizer = TOXAV_ENCODER_VP8_RC_MIN_QUANTIZER_NORMAL;
+    vc->video_rc_min_quantizer = TOXAV_ENCODER_VP8_RC_MIN_QUANTIZER_HIGH;
     vc->video_rc_min_quantizer_prev = vc->video_rc_min_quantizer;
     vc->video_encoder_coded_used = TOXAV_ENCODER_CODEC_USED_VP8;
     vc->video_encoder_coded_used_prev = vc->video_encoder_coded_used;
