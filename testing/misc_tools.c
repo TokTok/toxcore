@@ -47,6 +47,10 @@
 
 #include "../toxcore/ccompat.h"
 
+uint8_t *hex_string_to_bin(const char *hex_string);
+int tox_strncasecmp(const char *s1, const char *s2, size_t n);
+int cmdline_parsefor_ipv46(int argc, char **argv, uint8_t *ipv6enabled);
+
 // You are responsible for freeing the return value!
 uint8_t *hex_string_to_bin(const char *hex_string)
 {
@@ -60,7 +64,9 @@ uint8_t *hex_string_to_bin(const char *hex_string)
     const char *pos = hex_string;
 
     for (i = 0; i < len; ++i, pos += 2) {
-        sscanf(pos, "%2hhx", &ret[i]);
+        unsigned int val;
+        sscanf(pos, "%02x", &val);
+        ret[i] = val;
     }
 
     return ret;

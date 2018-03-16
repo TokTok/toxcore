@@ -25,14 +25,13 @@
 #include <string.h>
 #include <sys/types.h>
 
-#if VANILLA_NACL
+#ifdef VANILLA_NACL
 #include <crypto_box.h> // crypto_box_PUBLICKEYBYTES and other defines.
 #else
 #include <sodium.h>
 #endif
 
 #define REALLY_BIG_NUMBER ((1) << (sizeof(uint16_t) * 7))
-#define STRINGS_EQUAL(X, Y) (strcmp(X, Y) == 0)
 
 static bool enable_broken_tests = false;
 
@@ -213,7 +212,7 @@ START_TEST(test_m_copy_userstatus)
     assert(m_copy_userstatus(REALLY_BIG_NUMBER, buf, MAX_USERSTATUS_LENGTH) == -1);
     m_copy_userstatus(friend_id_num, buf, MAX_USERSTATUS_LENGTH + 6);
 
-    assert(STRINGS_EQUAL(name_buf, friend_id_status));
+    assert(strcmp(name_buf, friend_id_status) == 0);
 }
 END_TEST
 #endif
@@ -241,32 +240,31 @@ START_TEST(test_dht_state_saveloadsave)
      * b) a save()d state can be load()ed back successfully
      * c) a second save() is of equal size
      * d) the second save() is of equal content */
-    size_t i, extra = 64;
-    size_t size = DHT_size(m->dht);
+    const size_t extra = 64;
+    const size_t size = DHT_size(m->dht);
     VLA(uint8_t, buffer, size + 2 * extra);
     memset(buffer, 0xCD, extra);
     memset(buffer + extra + size, 0xCD, extra);
     DHT_save(m->dht, buffer + extra);
 
-    for (i = 0; i < extra; i++) {
+    for (size_t i = 0; i < extra; i++) {
         ck_assert_msg(buffer[i] == 0xCD, "Buffer underwritten from DHT_save() @%u", (unsigned)i);
         ck_assert_msg(buffer[extra + size + i] == 0xCD, "Buffer overwritten from DHT_save() @%u", (unsigned)i);
     }
 
-    int res = DHT_load(m->dht, buffer + extra, size);
+    const int res = DHT_load(m->dht, buffer + extra, size);
 
     if (res == -1) {
         ck_assert_msg(res == 0, "Failed to load back stored buffer: res == -1");
     } else {
-        char msg[128];
-        size_t offset = res >> 4;
-        uint8_t *ptr = buffer + extra + offset;
-        sprintf(msg, "Failed to load back stored buffer: 0x%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx @%zu/%zu, code %d",
-                ptr[-2], ptr[-1], ptr[0], ptr[1], ptr[2], ptr[3], ptr[4], ptr[5], offset, size, res & 0x0F);
-        ck_assert_msg(res == 0, "%s", msg);
+        const size_t offset = res >> 4;
+        const uint8_t *ptr = buffer + extra + offset;
+        ck_assert_msg(res == 0, "Failed to load back stored buffer: 0x%02x%02x%02x%02x%02x%02x%02x%02x @%u/%u, code %d",
+                      ptr[-2], ptr[-1], ptr[0], ptr[1], ptr[2], ptr[3], ptr[4], ptr[5],
+                      (unsigned)offset, (unsigned)size, res & 0x0F);
     }
 
-    size_t size2 = DHT_size(m->dht);
+    const size_t size2 = DHT_size(m->dht);
     ck_assert_msg(size == size2, "Messenger \"grew\" in size from a store/load cycle: %u -> %u", (unsigned)size,
                   (unsigned)size2);
 
@@ -284,32 +282,31 @@ START_TEST(test_messenger_state_saveloadsave)
      * b) a save()d state can be load()ed back successfully
      * c) a second save() is of equal size
      * d) the second save() is of equal content */
-    size_t i, extra = 64;
-    size_t size = messenger_size(m);
+    const size_t extra = 64;
+    const size_t size = messenger_size(m);
     VLA(uint8_t, buffer, size + 2 * extra);
     memset(buffer, 0xCD, extra);
     memset(buffer + extra + size, 0xCD, extra);
     messenger_save(m, buffer + extra);
 
-    for (i = 0; i < extra; i++) {
+    for (size_t i = 0; i < extra; i++) {
         ck_assert_msg(buffer[i] == 0xCD, "Buffer underwritten from messenger_save() @%u", (unsigned)i);
         ck_assert_msg(buffer[extra + size + i] == 0xCD, "Buffer overwritten from messenger_save() @%u", (unsigned)i);
     }
 
-    int res = messenger_load(m, buffer + extra, size);
+    const int res = messenger_load(m, buffer + extra, size);
 
     if (res == -1) {
         ck_assert_msg(res == 0, "Failed to load back stored buffer: res == -1");
     } else {
-        char msg[128];
-        size_t offset = res >> 4;
-        uint8_t *ptr = buffer + extra + offset;
-        sprintf(msg, "Failed to load back stored buffer: 0x%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx @%zu/%zu, code %d",
-                ptr[-2], ptr[-1], ptr[0], ptr[1], ptr[2], ptr[3], ptr[4], ptr[5], offset, size, res & 0x0F);
-        ck_assert_msg(res == 0, "%s", msg);
+        const size_t offset = res >> 4;
+        const uint8_t *ptr = buffer + extra + offset;
+        ck_assert_msg(res == 0, "Failed to load back stored buffer: 0x%02x%02x%02x%02x%02x%02x%02x%02x @%u/%u, code %d",
+                      ptr[-2], ptr[-1], ptr[0], ptr[1], ptr[2], ptr[3], ptr[4], ptr[5],
+                      (unsigned)offset, (unsigned)size, res & 0x0F);
     }
 
-    size_t size2 = messenger_size(m);
+    const size_t size2 = messenger_size(m);
     ck_assert_msg(size == size2, "Messenger \"grew\" in size from a store/load cycle: %u -> %u",
                   (unsigned)size, (unsigned)size2);
 
@@ -346,7 +343,7 @@ static Suite *messenger_suite(void)
     return s;
 }
 
-int main(int argc, char *argv[])
+int main(void)
 {
     setvbuf(stdout, nullptr, _IONBF, 0);
 

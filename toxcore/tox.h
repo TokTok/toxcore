@@ -180,7 +180,7 @@ uint32_t tox_version_minor(void);
  * The patch or revision number. Incremented when bugfixes are applied without
  * changing any functionality or API or ABI.
  */
-#define TOX_VERSION_PATCH              0
+#define TOX_VERSION_PATCH              1
 
 uint32_t tox_version_patch(void);
 
@@ -191,19 +191,19 @@ uint32_t tox_version_patch(void);
  * features, but can't break the API.
  */
 #define TOX_VERSION_IS_API_COMPATIBLE(MAJOR, MINOR, PATCH)              \
-  (TOX_VERSION_MAJOR > 0 && TOX_VERSION_MAJOR == MAJOR) && (            \
+  ((TOX_VERSION_MAJOR > 0 && TOX_VERSION_MAJOR == MAJOR) && (           \
     /* 1.x.x, 2.x.x, etc. with matching major version. */               \
     TOX_VERSION_MINOR > MINOR ||                                        \
-    TOX_VERSION_MINOR == MINOR && TOX_VERSION_PATCH >= PATCH            \
-  ) || (TOX_VERSION_MAJOR == 0 && MAJOR == 0) && (                      \
+    (TOX_VERSION_MINOR == MINOR && TOX_VERSION_PATCH >= PATCH)          \
+  )) || ((TOX_VERSION_MAJOR == 0 && MAJOR == 0) && (                    \
     /* 0.x.x makes minor behave like major above. */                    \
-    (TOX_VERSION_MINOR > 0 && TOX_VERSION_MINOR == MINOR) && (          \
+    ((TOX_VERSION_MINOR > 0 && TOX_VERSION_MINOR == MINOR) && (         \
       TOX_VERSION_PATCH >= PATCH                                        \
-    ) || (TOX_VERSION_MINOR == 0 && MINOR == 0) && (                    \
+    )) || ((TOX_VERSION_MINOR == 0 && MINOR == 0) && (                  \
       /* 0.0.x and 0.0.y are only compatible if x == y. */              \
       TOX_VERSION_PATCH == PATCH                                        \
-    )                                                                   \
-  )
+    ))                                                                  \
+  ))
 
 /**
  * Return whether the compiled library version is compatible with the passed
@@ -266,6 +266,8 @@ uint32_t tox_address_size(void);
 
 /**
  * Maximum length of a nickname in bytes.
+ *
+ * @deprecated The macro will be removed in 0.3.0. Use the function instead.
  */
 #define TOX_MAX_NAME_LENGTH            128
 
@@ -273,6 +275,8 @@ uint32_t tox_max_name_length(void);
 
 /**
  * Maximum length of a status message in bytes.
+ *
+ * @deprecated The macro will be removed in 0.3.0. Use the function instead.
  */
 #define TOX_MAX_STATUS_MESSAGE_LENGTH  1007
 
@@ -280,6 +284,8 @@ uint32_t tox_max_status_message_length(void);
 
 /**
  * Maximum length of a friend request message in bytes.
+ *
+ * @deprecated The macro will be removed in 0.3.0. Use the function instead.
  */
 #define TOX_MAX_FRIEND_REQUEST_LENGTH  1016
 
@@ -287,6 +293,8 @@ uint32_t tox_max_friend_request_length(void);
 
 /**
  * Maximum length of a single message after which it should be split.
+ *
+ * @deprecated The macro will be removed in 0.3.0. Use the function instead.
  */
 #define TOX_MAX_MESSAGE_LENGTH         1372
 
@@ -294,6 +302,8 @@ uint32_t tox_max_message_length(void);
 
 /**
  * Maximum size of custom packets. TODO(iphydf): should be LENGTH?
+ *
+ * @deprecated The macro will be removed in 0.3.0. Use the function instead.
  */
 #define TOX_MAX_CUSTOM_PACKET_SIZE     1373
 
@@ -315,6 +325,8 @@ uint32_t tox_file_id_length(void);
 
 /**
  * Maximum file name length for file transfers.
+ *
+ * @deprecated The macro will be removed in 0.3.0. Use the function instead.
  */
 #define TOX_MAX_FILENAME_LENGTH        255
 
@@ -494,7 +506,7 @@ typedef void tox_log_cb(Tox *tox, TOX_LOG_LEVEL level, const char *file, uint32_
  * @deprecated The memory layout of this struct (size, alignment, and field
  * order) is not part of the ABI. To remain compatible, prefer to use tox_options_new to
  * allocate the object and accessor functions to set the members. The struct
- * will become opaque (i.e. the definition will become private) in v0.2.0.
+ * will become opaque (i.e. the definition will become private) in v0.3.0.
  */
 struct Tox_Options {
 
@@ -956,6 +968,9 @@ typedef enum TOX_CONNECTION {
 /**
  * Return whether we are connected to the DHT. The return value is equal to the
  * last value received through the `self_connection_status` callback.
+ *
+ * @deprecated This getter is deprecated. Use the event and store the status
+ * in the client state.
  */
 TOX_CONNECTION tox_self_get_connection_status(const Tox *tox);
 
@@ -1525,6 +1540,9 @@ void tox_callback_friend_status_message(Tox *tox, tox_friend_status_message_cb *
  *
  * The status returned is equal to the last status received through the
  * `friend_status` callback.
+ *
+ * @deprecated This getter is deprecated. Use the event and store the status
+ *   in the client state.
  */
 TOX_USER_STATUS tox_friend_get_status(const Tox *tox, uint32_t friend_number, TOX_ERR_FRIEND_QUERY *error);
 
@@ -1554,6 +1572,9 @@ void tox_callback_friend_status(Tox *tox, tox_friend_status_cb *callback);
  *
  * @return the friend's connection status as it was received through the
  *   `friend_connection_status` event.
+ *
+ * @deprecated This getter is deprecated. Use the event and store the status
+ *   in the client state.
  */
 TOX_CONNECTION tox_friend_get_connection_status(const Tox *tox, uint32_t friend_number, TOX_ERR_FRIEND_QUERY *error);
 
@@ -1586,6 +1607,9 @@ void tox_callback_friend_connection_status(Tox *tox, tox_friend_connection_statu
  * @return true if the friend is typing.
  * @return false if the friend is not typing, or the friend number was
  *   invalid. Inspect the error code to determine which case it is.
+ *
+ * @deprecated This getter is deprecated. Use the event and store the status
+ *   in the client state.
  */
 bool tox_friend_get_typing(const Tox *tox, uint32_t friend_number, TOX_ERR_FRIEND_QUERY *error);
 
@@ -2418,47 +2442,6 @@ typedef void tox_conference_peer_list_changed_cb(Tox *tox, uint32_t conference_n
  * This event is triggered when a peer joins or leaves the conference.
  */
 void tox_callback_conference_peer_list_changed(Tox *tox, tox_conference_peer_list_changed_cb *callback);
-
-/**
- * Peer list state change types.
- */
-typedef enum TOX_CONFERENCE_STATE_CHANGE {
-
-    /**
-     * A peer has joined the conference.
-     */
-    TOX_CONFERENCE_STATE_CHANGE_PEER_JOIN,
-
-    /**
-     * A peer has exited the conference.
-     */
-    TOX_CONFERENCE_STATE_CHANGE_PEER_EXIT,
-
-    /**
-     * A peer has changed their name.
-     */
-    TOX_CONFERENCE_STATE_CHANGE_PEER_NAME_CHANGE,
-
-} TOX_CONFERENCE_STATE_CHANGE;
-
-
-/**
- * @param conference_number The conference number of the conference the title change is intended for.
- * @param peer_number The ID of the peer who changed the title.
- * @param change The type of change (one of TOX_CONFERENCE_STATE_CHANGE).
- */
-typedef void tox_conference_namelist_change_cb(Tox *tox, uint32_t conference_number, uint32_t peer_number,
-        TOX_CONFERENCE_STATE_CHANGE change, void *user_data);
-
-
-/**
- * Set the callback for the `conference_namelist_change` event. Pass NULL to unset.
- *
- * This event is triggered when the peer list changes (name change, peer join, peer exit).
- *
- * @deprecated Use the `conference_peer_name` and `conference_peer_list_changed` events, instead.
- */
-void tox_callback_conference_namelist_change(Tox *tox, tox_conference_namelist_change_cb *callback);
 
 typedef enum TOX_ERR_CONFERENCE_NEW {
 

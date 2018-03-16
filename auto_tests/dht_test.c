@@ -22,13 +22,6 @@
 // These tests currently fail.
 static bool enable_broken_tests = false;
 
-#define swap(x,y) do \
-   { unsigned char swap_temp[sizeof(x) == sizeof(y) ? (signed)sizeof(x) : -1]; \
-     memcpy(swap_temp,&y,sizeof(x)); \
-     memcpy(&y,&x,       sizeof(x)); \
-     memcpy(&x,swap_temp,sizeof(x)); \
-    } while(0)
-
 #ifndef USE_IPV6
 #define USE_IPV6 1
 #endif
@@ -335,7 +328,9 @@ static void test_addto_lists(IP ip)
     DHT *dht = new_DHT(nullptr, net, true);
     ck_assert_msg(dht != nullptr, "Failed to create DHT");
 
-    IP_Port ip_port = { .ip = ip, .port = TOX_PORT_DEFAULT };
+    IP_Port ip_port;
+    ip_port.ip = ip;
+    ip_port.port = TOX_PORT_DEFAULT;
     uint8_t public_key[CRYPTO_PUBLIC_KEY_SIZE];
     int i, used;
 
@@ -413,14 +408,12 @@ END_TEST
 
 #define DHT_DEFAULT_PORT (TOX_PORT_DEFAULT + 20)
 
-#define DHT_LIST_LENGTH 128
-
 static void print_pk(uint8_t *public_key)
 {
     uint32_t j;
 
     for (j = 0; j < CRYPTO_PUBLIC_KEY_SIZE; j++) {
-        printf("%02hhX", public_key[j]);
+        printf("%02X", public_key[j]);
     }
 
     printf("\n");
@@ -799,7 +792,7 @@ static Suite *dht_suite(void)
     return s;
 }
 
-int main(int argc, char *argv[])
+int main(void)
 {
     setvbuf(stdout, nullptr, _IONBF, 0);
     srand((unsigned int) time(nullptr));
