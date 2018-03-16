@@ -5,11 +5,12 @@
 #include "helpers.h"
 
 // See man 2 sbrk.
-#if _BSD_SOURCE || _SVID_SOURCE || \
-  (_XOPEN_SOURCE >= 500 || \
-   _XOPEN_SOURCE && _XOPEN_SOURCE_EXTENDED) && \
-  !(_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600)
+#if defined(_BSD_SOURCE) || defined(_SVID_SOURCE) || \
+  defined(_XOPEN_SOURCE) && (_XOPEN_SOURCE >= 500 || defined(_XOPEN_SOURCE_EXTENDED)) && \
+  !(defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600)
 #define HAVE_SBRK 1
+#else
+#define HAVE_SBRK 0
 #endif
 
 #if HAVE_SBRK
@@ -21,12 +22,12 @@
 
 int main(void)
 {
-    int i;
+    setvbuf(stdout, nullptr, _IONBF, 0);
 
     puts("Warming up: creating/deleting 10 tox instances");
 
     // Warm-up.
-    for (i = 0; i < 10; i++) {
+    for (int i = 0; i < 10; i++) {
         Tox *tox = tox_new(nullptr, nullptr);
         tox_iterate(tox, nullptr);
         tox_kill(tox);
@@ -38,17 +39,26 @@ int main(void)
 #endif
     printf("Creating/deleting %d tox instances\n", ITERATIONS);
 
-    for (i = 0; i < ITERATIONS; i++) {
+    int allocated = 0;
+
+    for (int i = 0; i < ITERATIONS; i++) {
         Tox *tox = tox_new(nullptr, nullptr);
-        tox_iterate(tox, nullptr);
-        tox_kill(tox);
+
+        if (tox != nullptr) {
+            tox_iterate(tox, nullptr);
+            tox_kill(tox);
+            allocated++;
+        }
+
 #if HAVE_SBRK
         char *next_hwm = (char *)sbrk(0);
         assert(hwm == next_hwm);
 #endif
     }
 
-    puts("Success: no resource leaks detected");
+    assert(allocated >= ITERATIONS / 2);
+    printf("Success: no resource leaks detected in %d tox_new calls (tried %d)\n",
+           allocated, ITERATIONS);
 
     return 0;
 }

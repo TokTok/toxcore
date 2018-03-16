@@ -81,7 +81,7 @@ void print_client_id(uint8_t *client_id, uint32_t length)
     uint32_t j;
 
     for (j = 0; j < length; j++) {
-        printf("%02hhX", client_id[j]);
+        printf("%02X", client_id[j]);
     }
 
     printf("\n");
@@ -536,8 +536,9 @@ static Suite *onion_suite(void)
     return s;
 }
 
-int main(int argc, char *argv[])
+int main(void)
 {
+    setvbuf(stdout, nullptr, _IONBF, 0);
     srand((unsigned int) time(nullptr));
 
     Suite *onion = onion_suite();

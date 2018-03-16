@@ -33,7 +33,6 @@
 
 #include <assert.h>
 
-static void set_friend_status(Messenger *m, int32_t friendnumber, uint8_t status, void *userdata);
 static int write_cryptpacket_id(const Messenger *m, int32_t friendnumber, uint8_t packet_id, const uint8_t *data,
                                 uint32_t length, uint8_t congestion_control);
 
@@ -949,7 +948,7 @@ static void check_friend_connectionstatus(Messenger *m, int32_t friendnumber, ui
     }
 }
 
-void set_friend_status(Messenger *m, int32_t friendnumber, uint8_t status, void *userdata)
+static void set_friend_status(Messenger *m, int32_t friendnumber, uint8_t status, void *userdata)
 {
     check_friend_connectionstatus(m, friendnumber, status, userdata);
     m->friendlist[friendnumber].status = status;
@@ -1619,7 +1618,7 @@ static void do_reqchunk_filecb(Messenger *m, int32_t friendnumber, void *userdat
     //
     // TODO(zoff99): Fix this to exit the loop properly when we're done
     // requesting all chunks for all file transfers.
-    const uint32_t MAX_FT_LOOPS = 4;
+    const uint32_t MAX_FT_LOOPS = 16;
 
     while (((free_slots > 0) || loop_counter == 0) && any_active_fts && (loop_counter < MAX_FT_LOOPS)) {
         any_active_fts = do_all_filetransfers(m, friendnumber, userdata, &free_slots);
@@ -1825,13 +1824,13 @@ static int m_handle_custom_lossy_packet(void *object, int friend_num, const uint
     return 1;
 }
 
-void custom_lossy_packet_registerhandler(Messenger *m, void (*packet_handler_callback)(Messenger *m,
+void custom_lossy_packet_registerhandler(Messenger *m, void (*lossy_packethandler)(Messenger *m,
         uint32_t friendnumber, const uint8_t *data, size_t len, void *object))
 {
-    m->lossy_packethandler = packet_handler_callback;
+    m->lossy_packethandler = lossy_packethandler;
 }
 
-int m_callback_rtp_packet(Messenger *m, int32_t friendnumber, uint8_t byte, int (*packet_handler_callback)(Messenger *m,
+int m_callback_rtp_packet(Messenger *m, int32_t friendnumber, uint8_t byte, int (*function)(Messenger *m,
                           uint32_t friendnumber, const uint8_t *data, uint16_t len, void *object), void *object)
 {
     if (friend_not_valid(m, friendnumber)) {
@@ -1846,8 +1845,7 @@ int m_callback_rtp_packet(Messenger *m, int32_t friendnumber, uint8_t byte, int 
         return -1;
     }
 
-    m->friendlist[friendnumber].lossy_rtp_packethandlers[byte % PACKET_LOSSY_AV_RESERVED].function =
-        packet_handler_callback;
+    m->friendlist[friendnumber].lossy_rtp_packethandlers[byte % PACKET_LOSSY_AV_RESERVED].function = function;
     m->friendlist[friendnumber].lossy_rtp_packethandlers[byte % PACKET_LOSSY_AV_RESERVED].object = object;
     return 0;
 }
@@ -1907,10 +1905,10 @@ static int handle_custom_lossless_packet(void *object, int friend_num, const uin
     return 1;
 }
 
-void custom_lossless_packet_registerhandler(Messenger *m, void (*packet_handler_callback)(Messenger *m,
+void custom_lossless_packet_registerhandler(Messenger *m, void (*lossless_packethandler)(Messenger *m,
         uint32_t friendnumber, const uint8_t *data, size_t len, void *object))
 {
-    m->lossless_packethandler = packet_handler_callback;
+    m->lossless_packethandler = lossless_packethandler;
 }
 
 int send_custom_lossless_packet(const Messenger *m, int32_t friendnumber, const uint8_t *data, uint32_t length)
@@ -2003,6 +2001,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
 
     if (m->net == nullptr) {
         friendreq_kill(m->fr);
+        logger_kill(m->log);
         free(m);
 
         if (error && net_err == 1) {
@@ -2017,6 +2016,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
     if (m->dht == nullptr) {
         kill_networking(m->net);
         friendreq_kill(m->fr);
+        logger_kill(m->log);
         free(m);
         return nullptr;
     }
@@ -2027,6 +2027,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
         kill_networking(m->net);
         kill_DHT(m->dht);
         friendreq_kill(m->fr);
+        logger_kill(m->log);
         free(m);
         return nullptr;
     }
@@ -2045,6 +2046,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
         kill_DHT(m->dht);
         kill_networking(m->net);
         friendreq_kill(m->fr);
+        logger_kill(m->log);
         free(m);
         return nullptr;
     }
@@ -2062,6 +2064,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
             kill_DHT(m->dht);
             kill_networking(m->net);
             friendreq_kill(m->fr);
+            logger_kill(m->log);
             free(m);
 
             if (error) {
@@ -2699,15 +2702,16 @@ void do_messenger(Messenger *m, void *userdata)
             } else {
                 char id_str[IDSTRING_LEN];
                 LOGGER_TRACE(m->log, "F[--:%2u] %s", friend_idx,
-                             id_to_string(dhtfptr->public_key, id_str, sizeof(id_str)));
+                             id_to_string(dht_friend_public_key(dhtfptr), id_str, sizeof(id_str)));
             }
 
             for (client = 0; client < MAX_FRIEND_CLIENTS; client++) {
-                Client_data *cptr = &dhtfptr->client_list[client];
-                IPPTsPng *assoc = nullptr;
-                uint32_t a;
+                const Client_data *cptr = dht_friend_client(dhtfptr, client);
+                const IPPTsPng *const assocs[] = {&cptr->assoc4, &cptr->assoc6};
 
-                for (a = 0, assoc = &cptr->assoc4; a < 2; a++, assoc = &cptr->assoc6) {
+                for (size_t a = 0; a < sizeof(assocs) / sizeof(assocs[0]); a++) {
+                    const IPPTsPng *const assoc = assocs[a];
+
                     if (ip_isset(&assoc->ip_port.ip)) {
                         last_pinged = m->lastdump - assoc->last_pinged;
 
@@ -2760,13 +2764,13 @@ struct SAVED_FRIEND {
     uint64_t last_seen_time;
 };
 
-static uint32_t friend_size()
+static uint32_t friend_size(void)
 {
     uint32_t data = 0;
-    const struct SAVED_FRIEND temp = { 0 };
+    const struct SAVED_FRIEND *const temp = nullptr;
 
-#define VALUE_MEMBER(NAME) data += sizeof(temp.NAME)
-#define ARRAY_MEMBER(NAME) data += sizeof(temp.NAME)
+#define VALUE_MEMBER(NAME) data += sizeof(temp->NAME)
+#define ARRAY_MEMBER(NAME) data += sizeof(temp->NAME)
 
     // Exactly the same in friend_load, friend_save, and friend_size
     VALUE_MEMBER(status);

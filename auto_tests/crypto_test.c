@@ -354,8 +354,9 @@ static Suite *crypto_suite(void)
     return s;
 }
 
-int main(int argc, char *argv[])
+int main(void)
 {
+    setvbuf(stdout, nullptr, _IONBF, 0);
     srand((unsigned int) time(nullptr));
 
     Suite *crypto = crypto_suite();

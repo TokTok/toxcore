@@ -332,10 +332,8 @@ static int add_to_entries(Onion_Announce *onion_a, IP_Port ret_ip_port, const ui
 
     int pos = in_entries(onion_a, public_key);
 
-    unsigned int i;
-
     if (pos == -1) {
-        for (i = 0; i < ONION_ANNOUNCE_MAX_ENTRIES; ++i) {
+        for (unsigned i = 0; i < ONION_ANNOUNCE_MAX_ENTRIES; ++i) {
             if (is_timeout(onion_a->entries[i].time, ONION_ANNOUNCE_TIMEOUT)) {
                 pos = i;
             }
@@ -390,7 +388,7 @@ static int handle_announce_request(void *object, IP_Port source, const uint8_t *
     uint8_t ping_id2[ONION_PING_ID_SIZE];
     generate_ping_id(onion_a, unix_time() + PING_ID_TIMEOUT, packet_public_key, source, ping_id2);
 
-    int index = -1;
+    int index;
 
     uint8_t *data_public_key = plain + ONION_PING_ID_SIZE + CRYPTO_PUBLIC_KEY_SIZE;
 

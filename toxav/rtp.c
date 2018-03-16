@@ -467,7 +467,8 @@ static int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t 
         return -1;
     }
 
-    if (header.offset_full >= header.data_length_full) {
+    if (header.offset_full >= header.data_length_full
+            && (header.offset_full != 0 || header.data_length_full != 0)) {
         LOGGER_ERROR(m->log, "Invalid video packet: frame offset (%u) >= full frame length (%u)",
                      (unsigned)header.offset_full, (unsigned)header.data_length_full);
         return -1;
@@ -694,7 +695,7 @@ void rtp_kill(RTPSession *session)
         return;
     }
 
-    LOGGER_DEBUG(session->m->log, "Terminated RTP session: %p", session);
+    LOGGER_DEBUG(session->m->log, "Terminated RTP session: %p", (void *)session);
     rtp_stop_receiving(session);
 
     LOGGER_DEBUG(session->m->log, "Terminated RTP session V3 work_buffer_list->next_free_entry: %d",
@@ -716,7 +717,7 @@ int rtp_allow_receiving(RTPSession *session)
         return -1;
     }
 
-    LOGGER_DEBUG(session->m->log, "Started receiving on session: %p", session);
+    LOGGER_DEBUG(session->m->log, "Started receiving on session: %p", (void *)session);
     return 0;
 }
 
@@ -728,7 +729,7 @@ int rtp_stop_receiving(RTPSession *session)
 
     m_callback_rtp_packet(session->m, session->friend_number, session->payload_type, nullptr, nullptr);
 
-    LOGGER_DEBUG(session->m->log, "Stopped receiving on session: %p", session);
+    LOGGER_DEBUG(session->m->log, "Stopped receiving on session: %p", (void *)session);
     return 0;
 }
 
@@ -742,12 +743,6 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length,
     if (!session) {
         LOGGER_ERROR(log, "No session!");
         return -1;
-    }
-
-    uint8_t is_video_payload = 0;
-
-    if (session->payload_type == rtp_TypeVideo) {
-        is_video_payload = 1;
     }
 
     struct RTPHeader header = {0};
@@ -775,7 +770,9 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length,
     // here the highest bits gets stripped anyway, no need to do keyframe bit magic here!
     header.data_length_lower = length;
 
-    header.flags = RTP_LARGE_FRAME;
+    if (session->payload_type == rtp_TypeVideo) {
+        header.flags = RTP_LARGE_FRAME;
+    }
 
     uint16_t length_safe = (uint16_t)length;
 
@@ -805,7 +802,8 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length,
         memcpy(rdata + 1 + RTP_HEADER_SIZE, data, length);
 
         if (-1 == m_send_custom_lossy_packet(session->m, session->friend_number, rdata, SIZEOF_VLA(rdata))) {
-            LOGGER_WARNING(session->m->log, "RTP send failed (len: %d)! std error: %s", SIZEOF_VLA(rdata), strerror(errno));
+            LOGGER_WARNING(session->m->log, "RTP send failed (len: %u)! std error: %s",
+                           (unsigned)SIZEOF_VLA(rdata), strerror(errno));
         }
     } else {
         /**

@@ -30,7 +30,7 @@ set(CMAKE_MODULE_PATH ${toxcore_SOURCE_DIR}/cmake)
 # versions in a synchronised way.
 set(PROJECT_VERSION_MAJOR "0")
 set(PROJECT_VERSION_MINOR "2")
-set(PROJECT_VERSION_PATCH "0")
+set(PROJECT_VERSION_PATCH "1")
 set(PROJECT_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
 
 # set .so library version / following libtool scheme
@@ -107,54 +107,53 @@ if(NOT MSVC)
     add_flag("-Weverything")
 
     # Disable specific warning flags for both C and C++.
+
+    # TODO(iphydf): Clean these up. Probably all of these are actual bugs.
     add_flag("-Wno-cast-align")
+    # Very verbose, not very useful. This warns about things like int -> uint
+    # conversions that change sign without a cast and narrowing conversions.
     add_flag("-Wno-conversion")
+    # TODO(iphydf): Check enum values when received from the user, then assume
+    # correctness and remove this suppression.
     add_flag("-Wno-covered-switch-default")
-    # Due to clang's tolower() macro being recursive https://github.com/TokTok/c-toxcore/pull/481
+    # Due to clang's tolower() macro being recursive
+    # https://github.com/TokTok/c-toxcore/pull/481
     add_flag("-Wno-disabled-macro-expansion")
+    # We don't put __attribute__ on the public API.
     add_flag("-Wno-documentation-deprecated-sync")
+    # Bootstrap daemon does this.
     add_flag("-Wno-format-nonliteral")
+    # struct Foo foo = {0}; is a common idiom.
     add_flag("-Wno-missing-field-initializers")
-    add_flag("-Wno-missing-prototypes")
-    add_flag("-Wno-packed")
+    # Useful sometimes, but we accept padding in structs for clarity.
+    # Reordering fields to avoid padding will reduce readability.
     add_flag("-Wno-padded")
-    add_flag("-Wno-parentheses")
+    # This warns on things like _XOPEN_SOURCE, which we currently need (we
+    # probably won't need these in the future).
     add_flag("-Wno-reserved-id-macro")
-    add_flag("-Wno-return-type")
+    # TODO(iphydf): Clean these up. They are likely not bugs, but still
+    # potential issues and probably confusing.
     add_flag("-Wno-sign-compare")
-    add_flag("-Wno-sign-conversion")
-    # Our use of mutexes results in a false positive, see 1bbe446
+    # Our use of mutexes results in a false positive, see 1bbe446.
     add_flag("-Wno-thread-safety-analysis")
+    # File transfer code has this.
     add_flag("-Wno-type-limits")
-    add_flag("-Wno-undef")
-    add_flag("-Wno-unreachable-code")
-    add_flag("-Wno-unused-macros")
+    # Callbacks often don't use all their parameters.
     add_flag("-Wno-unused-parameter")
+    # libvpx uses __attribute__((unused)) for "potentially unused" static
+    # functions to avoid unused static function warnings.
+    add_flag("-Wno-used-but-marked-unused")
+    # We use variable length arrays a lot.
     add_flag("-Wno-vla")
 
-    # Disable specific warning flags for C.
-    add_cflag("-Wno-assign-enum")
-    add_cflag("-Wno-bad-function-cast")
-    add_cflag("-Wno-double-promotion")
-    add_cflag("-Wno-gnu-zero-variadic-macro-arguments")
-    add_cflag("-Wno-packed")
-    add_cflag("-Wno-shadow")
-    add_cflag("-Wno-shorten-64-to-32")
-    add_cflag("-Wno-unreachable-code-return")
-    add_cflag("-Wno-unused-but-set-variable")
-    add_cflag("-Wno-used-but-marked-unused")
-
     # Disable specific warning flags for C++.
-    add_cxxflag("-Wno-c++98-compat")
+
+    # Comma at end of enum is supported everywhere we run.
     add_cxxflag("-Wno-c++98-compat-pedantic")
+    # TODO(iphydf): Stop using flexible array members.
     add_cxxflag("-Wno-c99-extensions")
-    add_cxxflag("-Wno-double-promotion")
-    add_cxxflag("-Wno-narrowing")
+    # We're C-compatible, so use C style casts.
     add_cxxflag("-Wno-old-style-cast")
-    add_cxxflag("-Wno-shadow")
-    add_cxxflag("-Wno-used-but-marked-unused")
-    add_cxxflag("-Wno-variadic-macros")
-    add_cxxflag("-Wno-vla-extension")
 
     # Downgrade to warning so we still see it.
     add_flag("-Wno-error=unused-variable")
@@ -188,16 +187,23 @@ if(NOT USE_IPV6)
 endif()
 
 option(BUILD_TOXAV "Whether to build the tox AV library" ON)
+option(MUST_BUILD_TOXAV "Fail the build if toxav cannot be built" OFF)
 
 include(Dependencies)
 
+if(MUST_BUILD_TOXAV)
+  set(NO_TOXAV_ERROR_TYPE SEND_ERROR)
+else()
+  set(NO_TOXAV_ERROR_TYPE WARNING)
+endif()
+
 if(BUILD_TOXAV)
   if(NOT OPUS_FOUND)
-    message(WARNING "Option BUILD_TOXAV is enabled but required library OPUS was not found.")
+    message(${NO_TOXAV_ERROR_TYPE} "Option BUILD_TOXAV is enabled but required library OPUS was not found.")
     set(BUILD_TOXAV OFF)
   endif()
   if(NOT VPX_FOUND)
-    message(WARNING "Option BUILD_TOXAV is enabled but required library VPX was not found.")
+    message(${NO_TOXAV_ERROR_TYPE} "Option BUILD_TOXAV is enabled but required library VPX was not found.")
     set(BUILD_TOXAV OFF)
   endif()
 endif()
@@ -207,6 +213,18 @@ endif()
 # :: Tox Core Library
 #
 ################################################################################
+
+# toxcore_PKGCONFIG_LIBS is what's added to the Libs: line in toxcore.pc. It
+# needs to contain all the libraries a program using toxcore should link against
+# if it's statically linked. If it's dynamically linked, there is no need to
+# explicitly link against all the dependencies, but it doesn't harm much(*)
+# either.
+#
+# (*) It allows client code to use symbols from our dependencies without
+#    explicitly linking against them.
+set(toxcore_PKGCONFIG_LIBS)
+# Requires: in pkg-config file.
+set(toxcore_PKGCONFIG_REQUIRES)
 
 # LAYER 1: Crypto core
 # --------------------
@@ -220,7 +238,7 @@ include(CheckFunctionExists)
 check_function_exists(explicit_bzero HAVE_EXPLICIT_BZERO)
 check_function_exists(memset_s HAVE_MEMSET_S)
 set(toxcore_LINK_MODULES ${toxcore_LINK_MODULES} ${LIBSODIUM_LIBRARIES})
-set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} libsodium)
+set(toxcore_PKGCONFIG_REQUIRES ${toxcore_PKGCONFIG_REQUIRES} libsodium)
 
 # LAYER 2: Basic networking
 # -------------------------
@@ -231,22 +249,6 @@ set(toxcore_SOURCES ${toxcore_SOURCES}
   toxcore/network.h
   toxcore/util.c
   toxcore/util.h)
-
-message("CMAKE_THREAD_LIBS_INIT: ${CMAKE_THREAD_LIBS_INIT}")
-if(CMAKE_THREAD_LIBS_INIT)
-  set(toxcore_LINK_MODULES ${toxcore_LINK_MODULES} ${CMAKE_THREAD_LIBS_INIT})
-  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} ${CMAKE_THREAD_LIBS_INIT})
-endif()
-
-if(RT_LIBRARIES)
-  set(toxcore_LINK_MODULES ${toxcore_LINK_MODULES} ${RT_LIBRARIES})
-  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-lrt")
-endif()
-
-if(WIN32)
-  set(toxcore_LINK_MODULES ${toxcore_LINK_MODULES} ws2_32 iphlpapi)
-  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-lws2_32 -liphlpapi")
-endif()
 
 # LAYER 3: Distributed Hash Table
 # -------------------------------
@@ -358,6 +360,31 @@ set(toxcore_API_HEADERS ${toxcore_API_HEADERS} ${toxcore_SOURCE_DIR}/toxencrypts
 
 ################################################################################
 #
+# :: System dependencies
+#
+################################################################################
+
+# These need to come after other dependencies, since e.g. libvpx may depend on
+# pthread, but doesn't list it in VPX_LIBRARIES. We're adding it here, after
+# any potential libvpx linking.
+message("CMAKE_THREAD_LIBS_INIT: ${CMAKE_THREAD_LIBS_INIT}")
+if(CMAKE_THREAD_LIBS_INIT)
+  set(toxcore_LINK_MODULES ${toxcore_LINK_MODULES} ${CMAKE_THREAD_LIBS_INIT})
+  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+endif()
+
+if(RT_LIBRARIES)
+  set(toxcore_LINK_MODULES ${toxcore_LINK_MODULES} ${RT_LIBRARIES})
+  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} -lrt)
+endif()
+
+if(WIN32)
+  set(toxcore_LINK_MODULES ${toxcore_LINK_MODULES} ws2_32 iphlpapi)
+  set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} -lws2_32 -liphlpapi)
+endif()
+
+################################################################################
+#
 # :: All layers together in one library for ease of use
 #
 ################################################################################
@@ -399,21 +426,33 @@ set(TEST_TIMEOUT_SECONDS "" CACHE STRING "Limit runtime of each test to the numb
 
 option(FORMAT_TEST "Require the format_test to be executed; fail cmake if it can't" OFF)
 
-if(APIDSL AND ASTYLE)
+if(ASTYLE)
   add_test(
     NAME format_test
     COMMAND ${toxcore_SOURCE_DIR}/other/astyle/format-source
       "${toxcore_SOURCE_DIR}"
-      "${APIDSL}"
       "${ASTYLE}")
   set_tests_properties(format_test PROPERTIES TIMEOUT "${TEST_TIMEOUT_SECONDS}")
 elseif(FORMAT_TEST)
-  message(FATAL_ERROR "format_test can not be run, because either APIDSL (${APIDSL}) or ASTYLE (${ASTYLE}) could not be found")
+  message(FATAL_ERROR "format_test can not be run, because ASTYLE (${ASTYLE}) could not be found")
+endif()
+
+if(ANDROID_CPU_FEATURES)
+  # We need to compile cpufeatures.c as many times as there are executables,
+  # because libvpx doesn't include it although it depends on it. We can't get
+  # the link ordering right in cmake, so we need to compile the cpufeatures
+  # library into every binary explicitly.
+  #
+  # The alternative is to #include the library in every main file, but I
+  # (@iphydf) felt that this solution was cleaner.
+  add_definitions(-DANDROID_CPU_FEATURES="${ANDROID_CPU_FEATURES}")
+  set(CPUFEATURES other/cpufeatures.c)
 endif()
 
 function(auto_test target)
   if(NOT (MSVC AND ARGV1 STREQUAL "MSVC_DONT_BUILD"))
-    add_executable(auto_${target}_test auto_tests/${target}_test.c)
+    add_executable(auto_${target}_test ${CPUFEATURES}
+      auto_tests/${target}_test.c)
     target_link_modules(auto_${target}_test toxcore)
     if(NOT ARGV1 STREQUAL "DONT_RUN")
       add_test(NAME ${target} COMMAND ${CROSSCOMPILING_EMULATOR} auto_${target}_test)
@@ -424,15 +463,10 @@ endfunction()
 
 if(BUILD_TOXAV)
   add_definitions(-D__STDC_LIMIT_MACROS=1)
-  add_executable(auto_monolith_test
-    auto_tests/monolith_test.cpp
-    ${ANDROID_CPU_FEATURES})
+  add_executable(auto_monolith_test ${CPUFEATURES}
+    auto_tests/monolith_test.cpp)
   target_link_libraries(auto_monolith_test ${toxcore_LINK_MODULES})
   add_test(NAME monolith COMMAND ${CROSSCOMPILING_EMULATOR} auto_monolith_test)
-
-  if(ANDROID_CPU_FEATURES)
-    target_compile_definitions(auto_monolith_test PRIVATE -Dtypeof=__typeof__)
-  endif()
 endif()
 
 auto_test(TCP)
@@ -457,6 +491,7 @@ auto_test(set_name)
 auto_test(set_status_message)
 auto_test(simple_conference)
 auto_test(skeleton)
+auto_test(tcp_relay)
 auto_test(tox_many)
 auto_test(tox_many_tcp)
 auto_test(tox_one)
@@ -481,7 +516,7 @@ endif()
 
 option(DHT_BOOTSTRAP "Enable building of DHT_bootstrap" ON)
 if(DHT_BOOTSTRAP)
-  add_executable(DHT_bootstrap
+  add_executable(DHT_bootstrap ${CPUFEATURES}
     other/DHT_bootstrap.c
     other/bootstrap_node_packets.c)
   target_link_modules(DHT_bootstrap toxcore)
@@ -494,7 +529,7 @@ if(BOOTSTRAP_DAEMON AND WIN32)
 endif()
 if(BOOTSTRAP_DAEMON)
   if(LIBCONFIG_FOUND)
-    add_executable(tox-bootstrapd
+    add_executable(tox-bootstrapd ${CPUFEATURES}
       other/bootstrap_daemon/src/command_line_arguments.c
       other/bootstrap_daemon/src/command_line_arguments.h
       other/bootstrap_daemon/src/config.c
@@ -525,7 +560,8 @@ option(BUILD_AV_TEST "Build toxav test" ON)
 if(NOT WIN32
   AND BUILD_AV_TEST AND BUILD_TOXAV
   AND SNDFILE_FOUND AND PORTAUDIO_FOUND AND OPENCV_FOUND)
-  add_executable(av_test testing/av_test.c)
+  add_executable(av_test ${CPUFEATURES}
+    testing/av_test.c)
   target_link_modules(av_test
     toxcore
     ${OPENCV_LIBRARIES}
@@ -538,8 +574,10 @@ if(NOT WIN32
   endif()
 endif()
 
-add_executable(DHT_test testing/DHT_test.c)
+add_executable(DHT_test ${CPUFEATURES}
+  testing/DHT_test.c)
 target_link_modules(DHT_test toxcore)
 
-add_executable(Messenger_test testing/Messenger_test.c)
+add_executable(Messenger_test ${CPUFEATURES}
+  testing/Messenger_test.c)
 target_link_modules(Messenger_test toxcore)

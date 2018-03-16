@@ -179,7 +179,7 @@ const VERSION_MINOR                = 2;
  * The patch or revision number. Incremented when bugfixes are applied without
  * changing any functionality or API or ABI.
  */
-const VERSION_PATCH                = 0;
+const VERSION_PATCH                = 1;
 
 /**
  * A macro to check at preprocessing time whether the client code is compatible
@@ -188,19 +188,19 @@ const VERSION_PATCH                = 0;
  * features, but can't break the API.
  */
 #define TOX_VERSION_IS_API_COMPATIBLE(MAJOR, MINOR, PATCH)              \
-  (TOX_VERSION_MAJOR > 0 && TOX_VERSION_MAJOR == MAJOR) && (            \
+  ((TOX_VERSION_MAJOR > 0 && TOX_VERSION_MAJOR == MAJOR) && (           \
     /* 1.x.x, 2.x.x, etc. with matching major version. */               \
     TOX_VERSION_MINOR > MINOR ||                                        \
-    TOX_VERSION_MINOR == MINOR && TOX_VERSION_PATCH >= PATCH            \
-  ) || (TOX_VERSION_MAJOR == 0 && MAJOR == 0) && (                      \
+    (TOX_VERSION_MINOR == MINOR && TOX_VERSION_PATCH >= PATCH)          \
+  )) || ((TOX_VERSION_MAJOR == 0 && MAJOR == 0) && (                    \
     /* 0.x.x makes minor behave like major above. */                    \
-    (TOX_VERSION_MINOR > 0 && TOX_VERSION_MINOR == MINOR) && (          \
+    ((TOX_VERSION_MINOR > 0 && TOX_VERSION_MINOR == MINOR) && (         \
       TOX_VERSION_PATCH >= PATCH                                        \
-    ) || (TOX_VERSION_MINOR == 0 && MINOR == 0) && (                    \
+    )) || ((TOX_VERSION_MINOR == 0 && MINOR == 0) && (                  \
       /* 0.0.x and 0.0.y are only compatible if x == y. */              \
       TOX_VERSION_PATCH == PATCH                                        \
-    )                                                                   \
-  )
+    ))                                                                  \
+  ))
 
 static namespace version {
 
@@ -257,26 +257,36 @@ const ADDRESS_SIZE                = PUBLIC_KEY_SIZE + NOSPAM_SIZE + sizeof(uint1
 
 /**
  * Maximum length of a nickname in bytes.
+ *
+ * @deprecated The macro will be removed in 0.3.0. Use the function instead.
  */
 const MAX_NAME_LENGTH             = 128;
 
 /**
  * Maximum length of a status message in bytes.
+ *
+ * @deprecated The macro will be removed in 0.3.0. Use the function instead.
  */
 const MAX_STATUS_MESSAGE_LENGTH   = 1007;
 
 /**
  * Maximum length of a friend request message in bytes.
+ *
+ * @deprecated The macro will be removed in 0.3.0. Use the function instead.
  */
 const MAX_FRIEND_REQUEST_LENGTH   = 1016;
 
 /**
  * Maximum length of a single message after which it should be split.
+ *
+ * @deprecated The macro will be removed in 0.3.0. Use the function instead.
  */
 const MAX_MESSAGE_LENGTH          = 1372;
 
 /**
  * Maximum size of custom packets. TODO(iphydf): should be LENGTH?
+ *
+ * @deprecated The macro will be removed in 0.3.0. Use the function instead.
  */
 const MAX_CUSTOM_PACKET_SIZE      = 1373;
 
@@ -292,6 +302,8 @@ const FILE_ID_LENGTH              = 32;
 
 /**
  * Maximum file name length for file transfers.
+ *
+ * @deprecated The macro will be removed in 0.3.0. Use the function instead.
  */
 const MAX_FILENAME_LENGTH         = 255;
 
@@ -443,7 +455,7 @@ static class options {
    * @deprecated The memory layout of this struct (size, alignment, and field
    * order) is not part of the ABI. To remain compatible, prefer to use $new to
    * allocate the object and accessor functions to set the members. The struct
-   * will become opaque (i.e. the definition will become private) in v0.2.0.
+   * will become opaque (i.e. the definition will become private) in v0.3.0.
    */
   struct this [get, set] {
     /**
@@ -801,6 +813,9 @@ inline namespace self {
     /**
      * Return whether we are connected to the DHT. The return value is equal to the
      * last value received through the `${event connection_status}` callback.
+     *
+     * @deprecated This getter is deprecated. Use the event and store the status
+     * in the client state.
      */
     get();
   }
@@ -1217,11 +1232,11 @@ namespace friend {
 
   uint64_t last_online {
     /**
-    * Return a unix-time timestamp of the last time the friend associated with a given
-    * friend number was seen online. This function will return UINT64_MAX on error.
-    *
-    * @param friend_number The friend number you want to query.
-    */
+     * Return a unix-time timestamp of the last time the friend associated with a given
+     * friend number was seen online. This function will return UINT64_MAX on error.
+     *
+     * @param friend_number The friend number you want to query.
+     */
     get(uint32_t friend_number) {
       /**
        * No friend with the given number exists on the friend list.
@@ -1351,6 +1366,9 @@ namespace friend {
      *
      * The status returned is equal to the last status received through the
      * `${event status}` callback.
+     *
+     * @deprecated This getter is deprecated. Use the event and store the status
+     *   in the client state.
      */
     get(uint32_t friend_number)
         with error for query;
@@ -1382,6 +1400,9 @@ namespace friend {
      *
      * @return the friend's connection status as it was received through the
      *   `${event connection_status}` event.
+     *
+     * @deprecated This getter is deprecated. Use the event and store the status
+     *   in the client state.
      */
     get(uint32_t friend_number)
         with error for query;
@@ -1415,6 +1436,9 @@ namespace friend {
      * @return true if the friend is typing.
      * @return false if the friend is not typing, or the friend number was
      *   invalid. Inspect the error code to determine which case it is.
+     *
+     * @deprecated This getter is deprecated. Use the event and store the status
+     *   in the client state.
      */
     get(uint32_t friend_number)
         with error for query;
@@ -2105,31 +2129,33 @@ namespace conference {
     typedef void(uint32_t conference_number, uint32_t peer_number, const uint8_t[length] title);
   }
 
-  /**
-   * Peer list state change types.
-   */
-  enum class STATE_CHANGE {
-    /**
-     * Some changes to list have occurred. Rebuild of list required.
-     * peer_number is undefined (always 0 for api compatibility)
-     */
-    LIST_CHANGED,
-    /**
-     * A peer has changed their name.
-     */
-    PEER_NAME_CHANGE,
-  }
+  namespace peer {
 
-  /**
-   * This event is triggered when the peer list changes (name change, peer join, peer exit).
-   */
-  event namelist_change const {
     /**
-     * @param conference_number The conference number of the conference the title change is intended for.
-     * @param peer_number The ID of the peer who changed the title.
-     * @param change The type of change (one of $STATE_CHANGE).
+     * This event is triggered when a peer changes their name.
      */
-    typedef void(uint32_t conference_number, uint32_t peer_number, STATE_CHANGE change);
+    event name const {
+      /**
+       * @param conference_number The conference number of the conference the
+       *   peer is in.
+       * @param peer_number The ID of the peer who changed their nickname.
+       * @param name A byte array containing the new nickname.
+       * @param length The size of the name byte array.
+       */
+      typedef void(uint32_t conference_number, uint32_t peer_number, const uint8_t[length] name);
+    }
+
+    /**
+     * This event is triggered when a peer joins or leaves the conference.
+     */
+    event list_changed const {
+      /**
+       * @param conference_number The conference number of the conference the
+       *   peer is in.
+       */
+      typedef void(uint32_t conference_number);
+    }
+
   }
 
 
