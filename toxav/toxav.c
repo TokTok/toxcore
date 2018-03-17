@@ -1247,7 +1247,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         }
 
         max_encode_time_in_us = encode_time_auto_tune;
-        LOGGER_DEBUG(av->m->log, "AUTOTUNE:MAX_ENCODE_TIME_US=%ld us = %.1f fps", (long)encode_time_auto_tune,
+        LOGGER_WARNING(av->m->log, "AUTOTUNE:MAX_ENCODE_TIME_US=%ld us = %.1f fps", (long)encode_time_auto_tune,
                      (float)(1000000.0f / encode_time_auto_tune));
 #endif
     }

@@ -888,10 +888,6 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 #endif
 
 
-#ifdef VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE
-        // vc->last_decoded_frame_ts = current_time_monotonic();
-#endif
-
 
 #ifdef VIDEO_DECODER_AUTOSWITCH_CODEC
         if (rc != VPX_CODEC_OK) {
@@ -1103,8 +1099,18 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
     if (vc->last_decoded_frame_ts > 0)
     {
         long decode_time_auto_tune = (current_time_monotonic() - vc->last_decoded_frame_ts) * 1000;
+        
+        if (decode_time_auto_tune == 0)
+        {
+            decode_time_auto_tune = 1; // 0 means infinite long softdeadline!
+        }
+        
         vc->decoder_soft_deadline[vc->decoder_soft_deadline_index] = decode_time_auto_tune;
         vc->decoder_soft_deadline_index = (vc->decoder_soft_deadline_index + 1) % VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES;
+
+        LOGGER_WARNING(vc->log, "AUTOTUNE:INCOMING=%ld us = %.1f fps", (long)decode_time_auto_tune,
+                      (float)(1000000.0f / decode_time_auto_tune));
+
     }
     
     vc->last_decoded_frame_ts = current_time_monotonic();
