@@ -62,7 +62,8 @@ struct vpx_frame_user_data {
 
 
 void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_dist, int32_t quality,
-                          int32_t rc_max_quantizer, int32_t rc_min_quantizer, int32_t encoder_codec)
+                          int32_t rc_max_quantizer, int32_t rc_min_quantizer, int32_t encoder_codec,
+                          int32_t video_keyframe_method)
 {
 
     vpx_codec_err_t rc;
@@ -107,13 +108,17 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
      * sooner than the given limit. Set this value to 0 to disable this
      * feature.
      */
-#ifdef VPX_ENCODER_KF_NEW_METHOD
-    cfg->kf_min_dist = 0;
-    cfg->kf_mode = VPX_KF_DISABLED;
-#else
-    cfg->kf_min_dist = 0;
-    cfg->kf_mode = VPX_KF_AUTO; // Encoder determines optimal placement automatically
-#endif
+
+    if (video_keyframe_method == TOXAV_ENCODER_KF_METHOD_PATTERN)
+    {
+        cfg->kf_min_dist = 0;
+        cfg->kf_mode = VPX_KF_DISABLED;
+    }
+    else
+    {
+        cfg->kf_min_dist = 0;
+        cfg->kf_mode = VPX_KF_AUTO; // Encoder determines optimal placement automatically
+    }
     cfg->rc_end_usage = VPX_VBR; // what quality mode?
     /*
      VPX_VBR    Variable Bit Rate (VBR) mode
@@ -204,7 +209,8 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc->video_rc_min_quantizer_prev = vc->video_rc_min_quantizer;
     vc->video_encoder_coded_used = TOXAV_ENCODER_CODEC_USED_VP8;
     vc->video_encoder_coded_used_prev = vc->video_encoder_coded_used;
-
+    vc->video_keyframe_method = TOXAV_ENCODER_KF_METHOD_PATTERN;
+    vc->video_keyframe_method_prev = vc->video_keyframe_method;
     vc->video_decoder_error_concealment = VIDEO__VP8_DECODER_ERROR_CONCEALMENT;
     vc->video_decoder_error_concealment_prev = vc->video_decoder_error_concealment;
     vc->video_decoder_codec_used = TOXAV_ENCODER_CODEC_USED_VP8;
@@ -315,7 +321,8 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
                          vc->video_encoder_vp8_quality,
                          vc->video_rc_max_quantizer,
                          vc->video_rc_min_quantizer,
-                         vc->video_encoder_coded_used);
+                         vc->video_encoder_coded_used,
+                         vc->video_keyframe_method);
 
     if (vc->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP8) {
         LOGGER_WARNING(log, "Using VP8 codec for encoder (0.1)");
@@ -1141,6 +1148,7 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
             && vc->video_rc_max_quantizer == vc->video_rc_max_quantizer_prev
             && vc->video_rc_min_quantizer == vc->video_rc_min_quantizer_prev
             && vc->video_encoder_coded_used == vc->video_encoder_coded_used_prev
+            && vc->video_keyframe_method == vc->video_keyframe_method_prev
        ) {
         return 0; /* Nothing changed */
     }
@@ -1151,6 +1159,7 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
             && vc->video_rc_max_quantizer == vc->video_rc_max_quantizer_prev
             && vc->video_rc_min_quantizer == vc->video_rc_min_quantizer_prev
             && vc->video_encoder_coded_used == vc->video_encoder_coded_used_prev
+            && vc->video_keyframe_method == vc->video_keyframe_method_prev
        ) {
         /* Only bit rate changed */
 
@@ -1182,12 +1191,14 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
                              vc->video_encoder_vp8_quality,
                              vc->video_rc_max_quantizer,
                              vc->video_rc_min_quantizer,
-                             vc->video_encoder_coded_used);
+                             vc->video_encoder_coded_used,
+                             vc->video_keyframe_method);
 
         vc->video_encoder_coded_used_prev = vc->video_encoder_coded_used;
         vc->video_encoder_vp8_quality_prev = vc->video_encoder_vp8_quality;
         vc->video_rc_max_quantizer_prev = vc->video_rc_max_quantizer;
         vc->video_rc_min_quantizer_prev = vc->video_rc_min_quantizer;
+        vc->video_keyframe_method_prev = vc->video_keyframe_method;
 
         cfg.rc_target_bitrate = bit_rate;
         cfg.g_w = width;

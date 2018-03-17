@@ -769,6 +769,16 @@ bool toxav_option_set(ToxAV *av, uint32_t friend_number, TOXAV_OPTIONS_OPTION op
             vc->video_rc_max_quantizer = (int32_t)value;
             LOGGER_WARNING(av->m->log, "video encoder setting rc_max_quantizer to: %d", (int)value);
         }
+    } else if (option == TOXAV_ENCODER_KF_METHOD) {
+        VCSession *vc = (VCSession *)call->video.second;
+
+        if (vc->video_keyframe_method == (int32_t)value) {
+            LOGGER_WARNING(av->m->log, "video encoder keyframe_method already set to: %d", (int)value);
+        } else {
+            vc->video_keyframe_method = (int32_t)value;
+            vc->video_keyframe_method_prev = vc->video_keyframe_method;
+            LOGGER_WARNING(av->m->log, "video encoder setting keyframe_method to: %d", (int)value);
+        }
     } else if (option == TOXAV_ENCODER_RC_MIN_QUANTIZER) {
         VCSession *vc = (VCSession *)call->video.second;
 
@@ -1110,99 +1120,98 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
     unsigned long max_encode_time_in_us = MAX_ENCODE_TIME_US;
 
 
-#ifdef VPX_ENCODER_KF_NEW_METHOD
-
-
-    switch (call->video.first->ssrc % 16) {
-        case 0:
-            vpx_encode_flags |= VPX_EFLAG_FORCE_KF;
-            vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
-            vpx_encode_flags |= VP8_EFLAG_FORCE_ARF;
-            break;
-
-        case 1:
-        case 3:
-        case 5:
-        case 7:
-        case 9:
-        case 11:
-        case 13:
-        case 15:
-            vpx_encode_flags |= VP8_EFLAG_NO_UPD_LAST;
-            vpx_encode_flags |= VP8_EFLAG_NO_UPD_GF;
-            vpx_encode_flags |= VP8_EFLAG_NO_UPD_ARF;
-            break;
-
-        case 2:
-        case 6:
-        case 10:
-        case 14:
-            break;
-
-        case 4:
-            vpx_encode_flags |= VP8_EFLAG_NO_REF_LAST;
-            vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
-            break;
-
-        case 8:
-            vpx_encode_flags |= VP8_EFLAG_NO_REF_LAST;
-            vpx_encode_flags |= VP8_EFLAG_NO_REF_GF;
-            vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
-            vpx_encode_flags |= VP8_EFLAG_FORCE_ARF;
-            break;
-
-        case 12:
-            vpx_encode_flags |= VP8_EFLAG_NO_REF_LAST;
-            vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
-            break;
-    }
-
-
-    call->video.first->ssrc++;
-
-    if (call->video.first->ssrc == 16) {
-        call->video.first->ssrc = 0;
-    }
-
-
-#endif
-
-
-
-#ifndef VPX_ENCODER_KF_NEW_METHOD
-
-    if (call->video.first->ssrc < VIDEO_SEND_X_KEYFRAMES_FIRST) {
-        //if (call->video.first->ssrc == 0)
-        //{
-        if (call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP8) {
-            // Key frame flag for first frames
-            vpx_encode_flags = VPX_EFLAG_FORCE_KF;
-            max_encode_time_in_us = VPX_DL_REALTIME;
-            uint32_t lowered_bitrate = (800 * 1000);
-            vc_reconfigure_encoder_bitrate_only(call->video.second, lowered_bitrate);
-            // HINT: Zoff: this does not seem to work
-            // vpx_codec_control(call->video.second->encoder, VP8E_SET_FRAME_FLAGS, vpx_encode_flags);
-            LOGGER_INFO(av->m->log, "I_FRAME_FLAG:%d only-i-frame mode", call->video.first->ssrc);
-        }
-
-        //}
-        call->video.first->ssrc++;
-    } else if (call->video.first->ssrc == VIDEO_SEND_X_KEYFRAMES_FIRST) {
-        if (call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP8) {
-            // normal keyframe placement
-            vpx_encode_flags = 0;
-            max_encode_time_in_us = MAX_ENCODE_TIME_US;
-            vc_reconfigure_encoder_bitrate_only(call->video.second, call->video_bit_rate * 1000);
-            // HINT: Zoff: this does not seem to work
-            // vpx_codec_control(call->video.second->encoder, VP8E_SET_FRAME_FLAGS, vpx_encode_flags);
-            LOGGER_INFO(av->m->log, "I_FRAME_FLAG:%d normal mode", call->video.first->ssrc);
-        }
-
-        call->video.first->ssrc++;
-    } else
-#endif
-
+    if (call->video.second->video_keyframe_method == TOXAV_ENCODER_KF_METHOD_PATTERN)
     {
+
+        switch (call->video.first->ssrc % 16) {
+            case 0:
+                vpx_encode_flags |= VPX_EFLAG_FORCE_KF;
+                vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
+                vpx_encode_flags |= VP8_EFLAG_FORCE_ARF;
+                break;
+
+            case 1:
+            case 3:
+            case 5:
+            case 7:
+            case 9:
+            case 11:
+            case 13:
+            case 15:
+                vpx_encode_flags |= VP8_EFLAG_NO_UPD_LAST;
+                vpx_encode_flags |= VP8_EFLAG_NO_UPD_GF;
+                vpx_encode_flags |= VP8_EFLAG_NO_UPD_ARF;
+                break;
+
+            case 2:
+            case 6:
+            case 10:
+            case 14:
+                break;
+
+            case 4:
+                vpx_encode_flags |= VP8_EFLAG_NO_REF_LAST;
+                vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
+                break;
+
+            case 8:
+                vpx_encode_flags |= VP8_EFLAG_NO_REF_LAST;
+                vpx_encode_flags |= VP8_EFLAG_NO_REF_GF;
+                vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
+                vpx_encode_flags |= VP8_EFLAG_FORCE_ARF;
+                break;
+
+            case 12:
+                vpx_encode_flags |= VP8_EFLAG_NO_REF_LAST;
+                vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
+                break;
+        }
+
+
+        call->video.first->ssrc++;
+
+        if (call->video.first->ssrc == 16) {
+            call->video.first->ssrc = 0;
+        }
+
+
+    }
+
+
+    if (call->video.second->video_keyframe_method == TOXAV_ENCODER_KF_METHOD_NORMAL)
+    {
+        if (call->video.first->ssrc < VIDEO_SEND_X_KEYFRAMES_FIRST) {
+            //if (call->video.first->ssrc == 0)
+            //{
+            if (call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP8) {
+                // Key frame flag for first frames
+                vpx_encode_flags = VPX_EFLAG_FORCE_KF;
+                max_encode_time_in_us = VPX_DL_REALTIME;
+                uint32_t lowered_bitrate = (800 * 1000);
+                vc_reconfigure_encoder_bitrate_only(call->video.second, lowered_bitrate);
+                // HINT: Zoff: this does not seem to work
+                // vpx_codec_control(call->video.second->encoder, VP8E_SET_FRAME_FLAGS, vpx_encode_flags);
+                LOGGER_INFO(av->m->log, "I_FRAME_FLAG:%d only-i-frame mode", call->video.first->ssrc);
+            }
+
+            //}
+            call->video.first->ssrc++;
+        } else if (call->video.first->ssrc == VIDEO_SEND_X_KEYFRAMES_FIRST) {
+            if (call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP8) {
+                // normal keyframe placement
+                vpx_encode_flags = 0;
+                max_encode_time_in_us = MAX_ENCODE_TIME_US;
+                vc_reconfigure_encoder_bitrate_only(call->video.second, call->video_bit_rate * 1000);
+                // HINT: Zoff: this does not seem to work
+                // vpx_codec_control(call->video.second->encoder, VP8E_SET_FRAME_FLAGS, vpx_encode_flags);
+                LOGGER_INFO(av->m->log, "I_FRAME_FLAG:%d normal mode", call->video.first->ssrc);
+            }
+
+            call->video.first->ssrc++;
+        }
+    }
+
+
 #ifdef VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE
         long encode_time_auto_tune = MAX_ENCODE_TIME_US;
 
@@ -1255,10 +1264,9 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         LOGGER_DEBUG(av->m->log, "AUTOTUNE:MAX_ENCODE_TIME_US=%ld us = %.1f fps", (long)encode_time_auto_tune,
                      (float)(1000000.0f / encode_time_auto_tune));
 #endif
-    }
+
 
     // we start with I-frames (full frames) and then switch to normal mode later
-
 
 #ifdef VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE
     call->video.second->last_encoded_frame_ts = current_time_monotonic();
