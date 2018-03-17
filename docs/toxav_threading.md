@@ -12,7 +12,9 @@ incoming video packet:
 *enter*-->
     tox.c:tox_iterate
     Messenger.c:do_messenger
-    (*callback horror here*)
+    network.c:networking_poll
+    network.c:receivepacket <--- recvfrom()
+
     rtp.c:handle_rtp_packet
     rtp.c:handle_video_packet
     video.c:vc_queue_message ---> rb_write(*video ringbuffer*)
@@ -21,18 +23,21 @@ incoming video packet:
 
 incoming audio packet:
 ----------------------
+[Main Thread]
 *enter*-->
     tox.c:tox_iterate
     Messenger.c:do_messenger
-    (*callback horror here*)
+    network.c:networking_poll
+    network.c:receivepacket <--- recvfrom()
+
     rtp.c:handle_rtp_packet
     audio.c:ac_queue_message
     audio.c:jbuf_write ---> rb_write(*audio ringbuffer*)
 <--*return*
 
 
-audio+video packet:
--------------------
+handle incoming audio+video packet:
+-----------------------------------
 [ToxAV Thread]
 *enter*-->
     toxav.c:toxav_iterate
