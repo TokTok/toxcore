@@ -775,8 +775,8 @@ bool toxav_option_set(ToxAV *av, uint32_t friend_number, TOXAV_OPTIONS_OPTION op
         if (vc->video_keyframe_method == (int32_t)value) {
             LOGGER_WARNING(av->m->log, "video encoder keyframe_method already set to: %d", (int)value);
         } else {
-            vc->video_keyframe_method = (int32_t)value;
             vc->video_keyframe_method_prev = vc->video_keyframe_method;
+            vc->video_keyframe_method = (int32_t)value;
             LOGGER_WARNING(av->m->log, "video encoder setting keyframe_method to: %d", (int)value);
         }
     } else if (option == TOXAV_ENCODER_RC_MIN_QUANTIZER) {
