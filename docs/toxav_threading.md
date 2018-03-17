@@ -2,6 +2,9 @@
 ToxAV Threads explained
 =======================
 
+Incoming:
+==
+
 ```
 incoming video packet:
 ----------------------
@@ -36,14 +39,58 @@ audio+video packet:
     audio.c:ac_iterate
     audio.c:jbuf_read <--- rb_read(*audio ring_buffer*)
     audio.c:opus_decode
-        *client*:-->toxav_audio_receive_frame_cb
+        *client*:-->toxav_audio_receive_frame_cb ++block++
         *client*:<--return
     video.c:vc_iterate <--- rb_read(*video ring_buffer*)
-    video.c:vpx_codec_decode
+    video.c:vpx_codec_decode ++block++
     video.c:vpx_codec_get_frame
-        *client*:-->toxav_video_receive_frame_cb
+        *client*:-->toxav_video_receive_frame_cb ++block++
         *client*:<--return
 <--*return*
+
 ```
+
+
+Outgoing:
+==
+
+```
+
+outgoing video packet:
+----------------------
+[Some Client Thread]
+*enter*-->
+    toxav.c:toxav_video_send_frame
+    toxac.c:vpx_codec_encode ++block++
+    toxav.c:vpx_codec_get_cx_data
+    rtp.c:rtp_send_data
+    Messenger.c:m_send_custom_lossy_packet
+    net_crypto.c:send_lossy_cryptpacket
+    net_crypto.c:send_data_packet_helper
+    net_crypto.c:send_data_packet
+    net_crypto.c:send_packet_to ---> sendpacket()
+<--*return*
+
+
+outgoing audio packet:
+----------------------
+[Could be some other Client Thread]
+*enter*-->
+    toxav.c:toxav_audio_send_frame
+    toxac.c:opus_encode
+    rtp.c:rtp_send_data
+    Messenger.c:m_send_custom_lossy_packet
+    net_crypto.c:send_lossy_cryptpacket
+    net_crypto.c:send_data_packet_helper
+    net_crypto.c:send_data_packet
+    net_crypto.c:send_packet_to ---> sendpacket()
+<--*return*
+
+
+
+```
+
+
+
 
 

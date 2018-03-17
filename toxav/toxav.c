@@ -928,6 +928,7 @@ void toxav_callback_bit_rate_status(ToxAV *av, toxav_bit_rate_status_cb *callbac
     av->bcb.second = user_data;
     pthread_mutex_unlock(av->mutex);
 }
+
 bool toxav_audio_send_frame(ToxAV *av, uint32_t friend_number, const int16_t *pcm, size_t sample_count,
                             uint8_t channels, uint32_t sampling_rate, TOXAV_ERR_SEND_FRAME *error)
 {
