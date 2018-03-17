@@ -14,7 +14,7 @@ incoming video packet:
     Messenger.c:do_messenger
     network.c:networking_poll
     network.c:receivepacket <--- recvfrom()
-
+    ...
     rtp.c:handle_rtp_packet
     rtp.c:handle_video_packet
     video.c:vc_queue_message ---> rb_write(*video ringbuffer*)
@@ -29,7 +29,7 @@ incoming audio packet:
     Messenger.c:do_messenger
     network.c:networking_poll
     network.c:receivepacket <--- recvfrom()
-
+    ...
     rtp.c:handle_rtp_packet
     audio.c:ac_queue_message
     audio.c:jbuf_write ---> rb_write(*audio ringbuffer*)
