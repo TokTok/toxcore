@@ -1223,10 +1223,10 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 
             if (call->video.second->encoder_soft_deadline[call->video.second->encoder_soft_deadline_index] == 0) {
                 call->video.second->encoder_soft_deadline[call->video.second->encoder_soft_deadline_index] = 1;
-                LOGGER_ERROR(av->m->log, "AUTOTUNE: delay=[1]");
+                LOGGER_DEBUG(av->m->log, "AUTOTUNE: delay=[1]");
             } else {
                 call->video.second->encoder_soft_deadline[call->video.second->encoder_soft_deadline_index] = encode_time_auto_tune;
-                LOGGER_ERROR(av->m->log, "AUTOTUNE: delay=%d", (int)encode_time_auto_tune);
+                LOGGER_DEBUG(av->m->log, "AUTOTUNE: delay=%d", (int)encode_time_auto_tune);
             }
 
             call->video.second->encoder_soft_deadline_index = (call->video.second->encoder_soft_deadline_index + 1) %
@@ -1248,10 +1248,15 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
             if (encode_time_auto_tune > (VIDEO_ENCODER_LEEWAY_IN_MS_AUTOTUNE * 1000)) {
                 encode_time_auto_tune = encode_time_auto_tune - (VIDEO_ENCODER_LEEWAY_IN_MS_AUTOTUNE * 1000); // give x ms more room
             }
+
+            if (encode_time_auto_tune == 0) {
+                // if the real delay was 0ms then still use 1ms
+                encode_time_auto_tune = 1;
+            }
         }
 
         max_encode_time_in_us = encode_time_auto_tune;
-        LOGGER_ERROR(av->m->log, "AUTOTUNE:MAX_ENCODE_TIME_US=%ld us = %.1f fps", (long)encode_time_auto_tune,
+        LOGGER_DEBUG(av->m->log, "AUTOTUNE:MAX_ENCODE_TIME_US=%ld us = %.1f fps", (long)encode_time_auto_tune,
                      (float)(1000000.0f / encode_time_auto_tune));
 #endif
     }
