@@ -387,7 +387,7 @@ static struct RTPMessage *new_empty_message(size_t allocate_len, const uint8_t *
 static int jbuf_write(Logger *log, ACSession *ac, struct RingBuffer *q, struct RTPMessage *m)
 {
     if (rb_full(q)) {
-        LOGGER_WARNING(log, "AudioFramesIN: jitter buffer full: %p", q);
+        LOGGER_DEBUG(log, "AudioFramesIN: jitter buffer full: %p", q);
         return -1;
     }
 
