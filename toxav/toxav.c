@@ -742,20 +742,18 @@ bool toxav_option_set(ToxAV *av, uint32_t friend_number, TOXAV_OPTIONS_OPTION op
         if (vc->video_encoder_vp8_quality == (int32_t)value) {
             LOGGER_WARNING(av->m->log, "video encoder vp8_quality already set to: %d", (int)value);
         } else {
-            if (vc->video_encoder_vp8_quality == TOXAV_ENCODER_VP8_QUALITY_HIGH)
-            {
+            if (vc->video_encoder_vp8_quality == TOXAV_ENCODER_VP8_QUALITY_HIGH) {
                 vc->video_rc_max_quantizer_prev = vc->video_rc_max_quantizer;
                 vc->video_rc_min_quantizer_prev = vc->video_rc_min_quantizer;
                 vc->video_rc_max_quantizer = TOXAV_ENCODER_VP8_RC_MAX_QUANTIZER;
                 vc->video_rc_min_quantizer = TOXAV_ENCODER_VP8_RC_MIN_QUANTIZER_HIGH;
-            }
-            else
-            {
+            } else {
                 vc->video_rc_max_quantizer_prev = vc->video_rc_max_quantizer;
                 vc->video_rc_min_quantizer_prev = vc->video_rc_min_quantizer;
                 vc->video_rc_max_quantizer = TOXAV_ENCODER_VP8_RC_MAX_QUANTIZER;
                 vc->video_rc_min_quantizer = TOXAV_ENCODER_VP8_RC_MIN_QUANTIZER_NORMAL;
             }
+
             vc->video_encoder_vp8_quality_prev = vc->video_encoder_vp8_quality;
             vc->video_encoder_vp8_quality = (int32_t)value;
             LOGGER_WARNING(av->m->log, "video encoder setting vp8_quality to: %d", (int)value);
@@ -1113,12 +1111,13 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 #ifdef VPX_ENCODER_KF_NEW_METHOD
 
 
-    switch(call->video.first->ssrc % 16) {
+    switch (call->video.first->ssrc % 16) {
         case 0:
             vpx_encode_flags |= VPX_EFLAG_FORCE_KF;
             vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
             vpx_encode_flags |= VP8_EFLAG_FORCE_ARF;
             break;
+
         case 1:
         case 3:
         case 5:
@@ -1131,21 +1130,25 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
             vpx_encode_flags |= VP8_EFLAG_NO_UPD_GF;
             vpx_encode_flags |= VP8_EFLAG_NO_UPD_ARF;
             break;
+
         case 2:
         case 6:
         case 10:
         case 14:
             break;
+
         case 4:
             vpx_encode_flags |= VP8_EFLAG_NO_REF_LAST;
             vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
             break;
+
         case 8:
             vpx_encode_flags |= VP8_EFLAG_NO_REF_LAST;
             vpx_encode_flags |= VP8_EFLAG_NO_REF_GF;
             vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
             vpx_encode_flags |= VP8_EFLAG_FORCE_ARF;
             break;
+
         case 12:
             vpx_encode_flags |= VP8_EFLAG_NO_REF_LAST;
             vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
@@ -1154,8 +1157,8 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 
 
     call->video.first->ssrc++;
-    if (call->video.first->ssrc == 16)
-    {
+
+    if (call->video.first->ssrc == 16) {
         call->video.first->ssrc = 0;
     }
 
@@ -1247,7 +1250,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         }
 
         max_encode_time_in_us = encode_time_auto_tune;
-        LOGGER_WARNING(av->m->log, "AUTOTUNE:MAX_ENCODE_TIME_US=%ld us = %.1f fps", (long)encode_time_auto_tune,
+        LOGGER_DEBUG(av->m->log, "AUTOTUNE:MAX_ENCODE_TIME_US=%ld us = %.1f fps", (long)encode_time_auto_tune,
                      (float)(1000000.0f / encode_time_auto_tune));
 #endif
     }

@@ -351,6 +351,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
         LOGGER_WARNING(log, "set encoder VP8E_SET_ENABLEAUTOALTREF setting: %s value=%d", vpx_codec_err_to_string(rc),
                        (int)1);
     }
+
 #endif
 
 
@@ -385,13 +386,11 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     int cpu_used_value = vc->video_encoder_cpu_used;
 
     if (vc->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP9) {
-            if (cpu_used_value < -8) {
-                cpu_used_value = -8;
-            }
-            else if (cpu_used_value > 8)
-            {
-                cpu_used_value = 8; // set to default (fastest) value
-            }
+        if (cpu_used_value < -8) {
+            cpu_used_value = -8;
+        } else if (cpu_used_value > 8) {
+            cpu_used_value = 8; // set to default (fastest) value
+        }
     }
 
     rc = vpx_codec_control(vc->encoder, VP8E_SET_CPUUSED, cpu_used_value);
@@ -460,6 +459,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
 
 
 #if 0
+
     if (vc->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP9) {
         if (1 == 2) {
             rc = vpx_codec_control(vc->encoder, VP9E_SET_LOSSLESS, 1);
@@ -483,6 +483,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
             }
         }
     }
+
 #endif
 
 
@@ -501,7 +502,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
       }
      */
 
-    // VP8E_SET_STATIC_THRESHOLD 
+    // VP8E_SET_STATIC_THRESHOLD
 
 
     vc->linfts = current_time_monotonic();
@@ -603,12 +604,9 @@ void video_switch_decoder(VCSession *vc)
 
     // toggle decoder codec between VP8 and VP9
     // TODO: put codec into header flags at encoder side, then use this at decoder side!
-    if (vc->video_decoder_codec_used == TOXAV_ENCODER_CODEC_USED_VP8)
-    {
+    if (vc->video_decoder_codec_used == TOXAV_ENCODER_CODEC_USED_VP8) {
         vc->video_decoder_codec_used = TOXAV_ENCODER_CODEC_USED_VP9;
-    }
-    else
-    {
+    } else {
         vc->video_decoder_codec_used = TOXAV_ENCODER_CODEC_USED_VP8;
     }
 
@@ -731,9 +729,9 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
         if ((int32_t)header_v3_0->sequnum < (int32_t)vc->last_seen_fragment_seqnum) {
             // drop frame with too old sequence number
             LOGGER_DEBUG(vc->log, "skipping incoming video frame (0) with sn=%d lastseen=%d old_frames_count=%d",
-                           (int)header_v3_0->sequnum,
-                           (int)vc->last_seen_fragment_seqnum,
-                           (int)vc->count_old_video_frames_seen);
+                         (int)header_v3_0->sequnum,
+                         (int)vc->last_seen_fragment_seqnum,
+                         (int)vc->count_old_video_frames_seen);
 
             vc->count_old_video_frames_seen++;
 
@@ -874,7 +872,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
             decoder_soft_dealine_value_used = decode_time_auto_tune;
             rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, (long)decode_time_auto_tune);
 
-            LOGGER_WARNING(vc->log, "AUTOTUNE:MAX_DECODE_TIME_US=%ld us = %.1f fps", (long)decode_time_auto_tune,
+            LOGGER_DEBUG(vc->log, "AUTOTUNE:MAX_DECODE_TIME_US=%ld us = %.1f fps", (long)decode_time_auto_tune,
                          (float)(1000000.0f / decode_time_auto_tune));
         }
 
@@ -890,6 +888,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 
 
 #ifdef VIDEO_DECODER_AUTOSWITCH_CODEC
+
         if (rc != VPX_CODEC_OK) {
             if ((rc == VPX_CODEC_CORRUPT_FRAME) || (rc == VPX_CODEC_UNSUP_BITSTREAM)) {
                 LOGGER_WARNING(vc->log, "Switching VPX Decoder");
@@ -909,7 +908,9 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
                 // LOGGER_ERROR(vc->log, "Error decoding video: err-num=%d err-str=%s", (int)rc, vpx_codec_err_to_string(rc));
             }
         }
+
 #else
+
         if (rc != VPX_CODEC_OK) {
             if (rc == VPX_CODEC_CORRUPT_FRAME) {
                 LOGGER_WARNING(vc->log, "Corrupt frame detected: data size=%d start byte=%d end byte=%d",
@@ -918,6 +919,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
                 // LOGGER_ERROR(vc->log, "Error decoding video: err-num=%d err-str=%s", (int)rc, vpx_codec_err_to_string(rc));
             }
         }
+
 #endif
 
         if (rc == VPX_CODEC_OK) {
@@ -1095,24 +1097,23 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
     vc->lcfd = t_lcfd > 100 ? vc->lcfd : t_lcfd;
 
 #ifdef VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE
+
     // Autotune decoder softdeadline here ----------
-    if (vc->last_decoded_frame_ts > 0)
-    {
+    if (vc->last_decoded_frame_ts > 0) {
         long decode_time_auto_tune = (current_time_monotonic() - vc->last_decoded_frame_ts) * 1000;
-        
-        if (decode_time_auto_tune == 0)
-        {
+
+        if (decode_time_auto_tune == 0) {
             decode_time_auto_tune = 1; // 0 means infinite long softdeadline!
         }
-        
+
         vc->decoder_soft_deadline[vc->decoder_soft_deadline_index] = decode_time_auto_tune;
         vc->decoder_soft_deadline_index = (vc->decoder_soft_deadline_index + 1) % VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES;
 
-        LOGGER_WARNING(vc->log, "AUTOTUNE:INCOMING=%ld us = %.1f fps", (long)decode_time_auto_tune,
-                      (float)(1000000.0f / decode_time_auto_tune));
+        LOGGER_DEBUG(vc->log, "AUTOTUNE:INCOMING=%ld us = %.1f fps", (long)decode_time_auto_tune,
+                     (float)(1000000.0f / decode_time_auto_tune));
 
     }
-    
+
     vc->last_decoded_frame_ts = current_time_monotonic();
     // Autotune decoder softdeadline here ----------
 #endif
@@ -1227,6 +1228,7 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
             LOGGER_WARNING(vc->log, "(b)set encoder VP8E_SET_ENABLEAUTOALTREF setting: %s value=%d", vpx_codec_err_to_string(rc),
                            (int)1);
         }
+
 #endif
 
         /*
@@ -1273,9 +1275,7 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
         if (vc->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP9) {
             if (cpu_used_value < -8) {
                 cpu_used_value = -8;
-            }
-            else if (cpu_used_value > 8)
-            {
+            } else if (cpu_used_value > 8) {
                 cpu_used_value = 8; // set to default (fastest) value
             }
         }
@@ -1326,6 +1326,7 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
         }
 
 #if 0
+
         if (vc->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP9) {
             if (1 == 2) {
                 LOGGER_WARNING(vc->log, "setting VP9 lossless video quality: ON");
@@ -1349,6 +1350,7 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
                 }
             }
         }
+
 #endif
 
 
