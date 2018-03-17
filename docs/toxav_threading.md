@@ -2,7 +2,7 @@
 ToxAV Threads explained
 =======================
 
-
+```
 incoming video packet:
 ----------------------
 [Main Thread]
@@ -44,5 +44,6 @@ audio+video packet:
         *client*:-->toxav_video_receive_frame_cb
         *client*:<--return
 <--*return*
+```
 
 
