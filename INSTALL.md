@@ -131,7 +131,25 @@ mkdir _build
 cd _build
 cmake ..
 make
-make install
+sudo make install
+```
+
+For release build use:
+
+```bash
+cmake -DCMAKE_BUILD_TYPE=Release ..
+```
+
+For Debug build use:
+
+```bash
+cmake -DCMAKE_BUILD_TYPE=Debug ..
+```
+
+Small build configuration (not recommended):
+
+```bash
+cmake ..
 ```
 
 #### Windows

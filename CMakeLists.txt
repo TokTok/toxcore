@@ -17,6 +17,7 @@
 cmake_minimum_required(VERSION 2.8.12)
 cmake_policy(VERSION 2.8.12)
 project(toxcore)
+include(CTest)
 
 set(CMAKE_MODULE_PATH ${toxcore_SOURCE_DIR}/cmake)
 
@@ -66,11 +67,30 @@ enable_testing()
 
 set(CMAKE_MACOSX_RPATH ON)
 
+## Default compile options for target Release, Debug, none
+# Clears all default Flags
+set(CMAKE_C_FLAGS "")
+set(CMAKE_CXX_FLAGS "")
+
+if(CMAKE_BUILD_TYPE)
+  if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
+    set(MIN_LOGGER_LEVEL WARNING)
+    set(CMAKE_C_FLAGS_RELEASE "")
+    set(CMAKE_CXX_FLAGS_RELEASE "")
+  elseif(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+    set(MIN_LOGGER_LEVEL DEBUG)
+    set(CMAKE_C_FLAGS_DEBUG "")
+    set(CMAKE_CXX_FLAGS_DEBUG "")
+  else()
+    message(FATAL_ERROR "Undefined build type: ${CMAKE_BUILD_TYPE}")
+  endif()
+endif()
+
+# Set standard version for compiler.
 if(${CMAKE_VERSION} VERSION_LESS "3.1.0")
   add_cflag("-std=c99")
   add_cxxflag("-std=c++11")
 else()
-  # Set standard version for compiler.
   set(CMAKE_C_STANDARD 99)
   set(CMAKE_CXX_STANDARD 11)
   set(CMAKE_C_EXTENSIONS OFF)
@@ -82,81 +102,95 @@ endif()
 
 if(NOT MSVC)
   # Warn on non-ISO C.
-  add_cflag("-pedantic")
+  add_debug_cflag("-pedantic")
+  
+  # Optimization flag.
+  add_debug_flag("-O0")
+  add_release_flag("-Ofast" fast_exist)
+  if(NOT fast_exist)
+    add_release_flag("-O3")
+  endif()
+
+  # Debugging flags.
+  add_debug_flag("-g3")
+  if(MINGW)
+    # Allows wine to display source code file names and line numbers on crash
+    # in its backtrace.
+    add_debug_flag("-gdwarf-2")
+  endif()
+  
+  # Disable all warnings for release.
+  add_release_flag("-w")
+  # Add all warning flags we can.
+  add_debug_flag("-Weverything" EVERYTHING_EXISTS)
+  if(NOT EVERYTHING_EXISTS)
+    add_debug_flag("-Wall")
+    add_debug_flag("-Wextra")
+  endif()
+
+  # Add all warning flags we can.
+  add_debug_flag("-Wall")
+  add_debug_flag("-Wextra")
+  add_debug_flag("-Weverything")
+
+  # Disable specific warning flags for both C and C++.
+
+  # TODO(iphydf): Clean these up. Probably all of these are actual bugs.
+  add_debug_flag("-Wno-cast-align")
+  # Very verbose, not very useful. This warns about things like int -> uint
+  # conversions that change sign without a cast and narrowing conversions.
+  add_debug_flag("-Wno-conversion")
+  # TODO(iphydf): Check enum values when received from the user, then assume
+  # correctness and remove this suppression.
+  add_debug_flag("-Wno-covered-switch-default")
+  # Due to clang's tolower() macro being recursive
+  # https://github.com/TokTok/c-toxcore/pull/481
+  add_debug_flag("-Wno-disabled-macro-expansion")
+  # We don't put __attribute__ on the public API.
+  add_debug_flag("-Wno-documentation-deprecated-sync")
+  # Bootstrap daemon does this.
+  add_debug_flag("-Wno-format-nonliteral")
+  # struct Foo foo = {0}; is a common idiom.
+  add_debug_flag("-Wno-missing-field-initializers")
+  # Useful sometimes, but we accept padding in structs for clarity.
+  # Reordering fields to avoid padding will reduce readability.
+  add_debug_flag("-Wno-padded")
+  # This warns on things like _XOPEN_SOURCE, which we currently need (we
+  # probably won't need these in the future).
+  add_debug_flag("-Wno-reserved-id-macro")
+  # TODO(iphydf): Clean these up. They are likely not bugs, but still
+  # potential issues and probably confusing.
+  add_debug_flag("-Wno-sign-compare")
+  # Our use of mutexes results in a false positive, see 1bbe446.
+  add_debug_flag("-Wno-thread-safety-analysis")
+  # File transfer code has this.
+  add_debug_flag("-Wno-type-limits")
+  # Callbacks often don't use all their parameters.
+  add_debug_flag("-Wno-unused-parameter")
+  # libvpx uses __attribute__((unused)) for "potentially unused" static
+  # functions to avoid unused static function warnings.
+  add_debug_flag("-Wno-used-but-marked-unused")
+  # We use variable length arrays a lot.
+  add_debug_flag("-Wno-vla")
+
+  # Disable specific warning flags for C++.
+
+  # Comma at end of enum is supported everywhere we run.
+  add_debug_cxxflag("-Wno-c++98-compat-pedantic")
+  # TODO(iphydf): Stop using flexible array members.
+  add_debug_cxxflag("-Wno-c99-extensions")
+  # We're C-compatible, so use C style casts.
+  add_debug_cxxflag("-Wno-old-style-cast")
+
+  # Downgrade to warning so we still see it.
+  add_debug_flag("-Wno-error=unused-variable")
 
   option(ERROR_ON_WARNING "Make compilation error on a warning" OFF)
   if(ERROR_ON_WARNING)
-    add_flag("-Werror")
-  endif()
-
-  option(DEBUG "Enable assertions and other debugging facilities" OFF)
-  if(DEBUG)
-    set(MIN_LOGGER_LEVEL DEBUG)
-    add_cflag("-g3")
-    if(MINGW)
-      # Allows wine to display source code file names and line numbers on crash in its backtrace
-      add_flag("-gdwarf-2")
-    endif()
-  endif()
-
-  option(WARNINGS "Enable additional compiler warnings" ON)
-  if(WARNINGS)
-    # Add all warning flags we can.
-    add_flag("-Wall")
-    add_flag("-Wextra")
-    add_flag("-Weverything")
-
-    # Disable specific warning flags for both C and C++.
-
-    # TODO(iphydf): Clean these up. Probably all of these are actual bugs.
-    add_flag("-Wno-cast-align")
-    # Very verbose, not very useful. This warns about things like int -> uint
-    # conversions that change sign without a cast and narrowing conversions.
-    add_flag("-Wno-conversion")
-    # TODO(iphydf): Check enum values when received from the user, then assume
-    # correctness and remove this suppression.
-    add_flag("-Wno-covered-switch-default")
-    # Due to clang's tolower() macro being recursive
-    # https://github.com/TokTok/c-toxcore/pull/481
-    add_flag("-Wno-disabled-macro-expansion")
-    # We don't put __attribute__ on the public API.
-    add_flag("-Wno-documentation-deprecated-sync")
-    # Bootstrap daemon does this.
-    add_flag("-Wno-format-nonliteral")
-    # struct Foo foo = {0}; is a common idiom.
-    add_flag("-Wno-missing-field-initializers")
-    # Useful sometimes, but we accept padding in structs for clarity.
-    # Reordering fields to avoid padding will reduce readability.
-    add_flag("-Wno-padded")
-    # This warns on things like _XOPEN_SOURCE, which we currently need (we
-    # probably won't need these in the future).
-    add_flag("-Wno-reserved-id-macro")
-    # TODO(iphydf): Clean these up. They are likely not bugs, but still
-    # potential issues and probably confusing.
-    add_flag("-Wno-sign-compare")
-    # Our use of mutexes results in a false positive, see 1bbe446.
-    add_flag("-Wno-thread-safety-analysis")
-    # File transfer code has this.
-    add_flag("-Wno-type-limits")
-    # Callbacks often don't use all their parameters.
-    add_flag("-Wno-unused-parameter")
-    # libvpx uses __attribute__((unused)) for "potentially unused" static
-    # functions to avoid unused static function warnings.
-    add_flag("-Wno-used-but-marked-unused")
-    # We use variable length arrays a lot.
-    add_flag("-Wno-vla")
-
-    # Disable specific warning flags for C++.
-
-    # Comma at end of enum is supported everywhere we run.
-    add_cxxflag("-Wno-c++98-compat-pedantic")
-    # TODO(iphydf): Stop using flexible array members.
-    add_cxxflag("-Wno-c99-extensions")
-    # We're C-compatible, so use C style casts.
-    add_cxxflag("-Wno-old-style-cast")
-
-    # Downgrade to warning so we still see it.
-    add_flag("-Wno-error=unused-variable")
+    # Set error-on-warn for C compilation. C++ compilation can't use this because
+    # treating 'c' input as 'c++' when in C++ mode is deprecated in clang and
+    # there is no way to turn off that warning.
+    add_cflag("-Werror")
   endif()
 endif()
 
