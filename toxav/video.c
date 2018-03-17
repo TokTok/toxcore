@@ -520,13 +520,13 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc->fragment_buf_counter = 0;
 
     for (int k = 0; k < VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES; k++) {
-        vc->decoder_soft_deadline[k] = 0;
+        vc->decoder_soft_deadline[k] = MAX_DECODE_TIME_US;
     }
 
     vc->decoder_soft_deadline_index = 0;
 
     for (int k = 0; k < VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES; k++) {
-        vc->encoder_soft_deadline[k] = 0;
+        vc->encoder_soft_deadline[k] = MAX_ENCODE_TIME_US;
     }
 
     vc->encoder_soft_deadline_index = 0;
@@ -852,13 +852,6 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
             long decode_time_auto_tune = MAX_DECODE_TIME_US;
 
             if (vc->last_decoded_frame_ts > 0) {
-                decode_time_auto_tune = (current_time_monotonic() - vc->last_decoded_frame_ts) * 1000;
-#ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
-                decode_time_auto_tune = decode_time_auto_tune * VIDEO_CODEC_FRAGMENT_NUMS;
-#endif
-
-                vc->decoder_soft_deadline[vc->decoder_soft_deadline_index] = decode_time_auto_tune;
-                vc->decoder_soft_deadline_index = (vc->decoder_soft_deadline_index + 1) % VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES;
 
                 // calc mean value
                 decode_time_auto_tune = 0;
@@ -881,7 +874,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
             decoder_soft_dealine_value_used = decode_time_auto_tune;
             rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, (long)decode_time_auto_tune);
 
-            LOGGER_DEBUG(vc->log, "AUTOTUNE:MAX_DECODE_TIME_US=%ld us = %.1f fps", (long)decode_time_auto_tune,
+            LOGGER_WARNING(vc->log, "AUTOTUNE:MAX_DECODE_TIME_US=%ld us = %.1f fps", (long)decode_time_auto_tune,
                          (float)(1000000.0f / decode_time_auto_tune));
         }
 
@@ -896,7 +889,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 
 
 #ifdef VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE
-        vc->last_decoded_frame_ts = current_time_monotonic();
+        // vc->last_decoded_frame_ts = current_time_monotonic();
 #endif
 
 
@@ -1104,6 +1097,20 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
     // use 5ms less than the actual time, to give some free room
     uint32_t t_lcfd = (current_time_monotonic() - vc->linfts) - 5;
     vc->lcfd = t_lcfd > 100 ? vc->lcfd : t_lcfd;
+
+#ifdef VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE
+    // Autotune decoder softdeadline here ----------
+    if (vc->last_decoded_frame_ts > 0)
+    {
+        long decode_time_auto_tune = (current_time_monotonic() - vc->last_decoded_frame_ts) * 1000;
+        vc->decoder_soft_deadline[vc->decoder_soft_deadline_index] = decode_time_auto_tune;
+        vc->decoder_soft_deadline_index = (vc->decoder_soft_deadline_index + 1) % VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES;
+    }
+    
+    vc->last_decoded_frame_ts = current_time_monotonic();
+    // Autotune decoder softdeadline here ----------
+#endif
+
     vc->linfts = current_time_monotonic();
 
     pthread_mutex_unlock(vc->queue_mutex);

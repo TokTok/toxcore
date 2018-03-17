@@ -32,6 +32,16 @@
 #include <vpx/vp8cx.h>
 #include <vpx/vp8dx.h>
 
+// TODO: don't hardcode this, let the application choose it
+// VPX Info: Time to spend encoding, in microseconds (it's a *soft* deadline)
+#define WANTED_MAX_ENCODER_FPS (40)
+#define MAX_ENCODE_TIME_US (1000000 / WANTED_MAX_ENCODER_FPS) // to allow x fps
+/*
+VPX_DL_REALTIME       (1)       deadline parameter analogous to VPx REALTIME mode.
+VPX_DL_GOOD_QUALITY   (1000000) deadline parameter analogous to VPx GOOD QUALITY mode.
+VPX_DL_BEST_QUALITY   (0)       deadline parameter analogous to VPx BEST QUALITY mode.
+*/
+
 
 // Zoff --
 // -- VP8 codec ----------------
