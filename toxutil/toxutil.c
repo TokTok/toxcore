@@ -36,6 +36,8 @@ void (*tox_utils_friend_connectionstatuschange)(struct Tox *tox, uint32_t, unsig
 void tox_utils_callback_friend_connection_status(Tox *tox, tox_friend_connection_status_cb *callback)
 {
 	tox_utils_friend_connectionstatuschange = (void (*)(Tox *tox, uint32_t, unsigned int, void *))callback;
+    Messenger *m = (Messenger *)tox;
+    LOGGER_WARNING(m->log, "toxutil:set callback");
 }
 // --- set callbacks ---
 
@@ -51,8 +53,11 @@ void tox_utils_friend_connection_status_cb(Tox *tox, uint32_t friendnumber, TOX_
 	if (tox_utils_friend_connectionstatuschange)
 	{
 		tox_utils_friend_connectionstatuschange(tox, friendnumber, connection_status, user_data);
+        Messenger *m = (Messenger *)tox;
+        LOGGER_WARNING(m->log, "toxutil:friend_connectionstatuschange");
 	}
 	// ------- call the real CB function -------
 }
+
 
 
