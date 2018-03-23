@@ -315,7 +315,7 @@ int ac_queue_message(void *acp, struct RTPMessage *msg)
     pthread_mutex_lock(ac->queue_mutex);
 
     const struct RTPHeader *header_v3 = (void *) & (msg->header);
-    LOGGER_ERROR(ac->log, "TT:queue:A:seqnum=%d %llu", (int)header_v3->sequnum, header_v3->frame_record_timestamp);
+    // LOGGER_ERROR(ac->log, "TT:queue:A:seqnum=%d %llu", (int)header_v3->sequnum, header_v3->frame_record_timestamp);
 
     int rc = jbuf_write(ac->log, ac, (struct RingBuffer *)ac->j_buf, msg);
     pthread_mutex_unlock(ac->queue_mutex);
