@@ -55,6 +55,11 @@ void tox_utils_file_recv_cb(Tox *tox, uint32_t friend_number, uint32_t file_numb
     uint32_t kind, uint64_t file_size,
     const uint8_t *filename, size_t filename_length, void *user_data);
 
+void tox_utils_callback_file_recv_chunk(Tox *tox, tox_file_recv_chunk_cb *callback);
+void tox_utils_file_recv_chunk_cb(Tox *tox, uint32_t friend_number, uint32_t file_number,
+    uint64_t position, const uint8_t *data, size_t length,
+    void *user_data);
+
 
 Tox *tox_utils_new(const struct Tox_Options *options, TOX_ERR_NEW *error);
 void tox_utils_kill(Tox *tox);

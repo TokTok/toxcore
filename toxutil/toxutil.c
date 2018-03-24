@@ -380,7 +380,15 @@ void tox_utils_callback_file_recv(Tox *tox, tox_file_recv_cb *callback)
         uint32_t, uint64_t, const uint8_t *, size_t, void *))callback;
 }
 
+void (*tox_utils_filerecvchunk)(struct Tox *tox, uint32_t, uint32_t, uint64_t,
+        const uint8_t *, size_t, void *) = NULL;
 
+
+void tox_utils_callback_file_recv_chunk(Tox *tox, tox_file_recv_chunk_cb *callback)
+{
+    tox_utils_filerecvchunk = (void (*)(Tox *tox, uint32_t, uint32_t, uint64_t,
+        const uint8_t *, size_t, void *))callback;
+}
 
 
 
@@ -518,6 +526,25 @@ void tox_utils_file_recv_cb(Tox *tox, uint32_t friend_number, uint32_t file_numb
 	}
 	// ------- call the real CB function -------        
 
+}
+
+void tox_utils_file_recv_chunk_cb(Tox *tox, uint32_t friend_number, uint32_t file_number,
+            uint64_t position, const uint8_t *data, size_t length,
+            void *user_data)
+{
+	// ------- do messageV2 stuff -------
+
+	// ------- do messageV2 stuff -------
+
+	// ------- call the real CB function -------
+	if (tox_utils_filerecvchunk)
+	{
+		tox_utils_filerecvchunk(tox, friend_number, file_number,
+            position, data, length, user_data);
+        Messenger *m = (Messenger *)tox;
+        LOGGER_WARNING(m->log, "toxutil:file_recv_chunk_cb");
+	}
+	// ------- call the real CB function -------        
 }
 
 
