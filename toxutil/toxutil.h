@@ -29,9 +29,15 @@ extern "C" {
 #endif
 
 
-void tox_utils_callback_friend_connection_status(Tox *tox, tox_friend_connection_status_cb *callback);
-void tox_utils_friend_connection_status_cb(Tox *tox, uint32_t friendnumber, TOX_CONNECTION connection_status, void *user_data);
+void tox_utils_callback_friend_connection_status(Tox *tox,
+        tox_friend_connection_status_cb *callback);
+void tox_utils_friend_connection_status_cb(Tox *tox, uint32_t friendnumber,
+        TOX_CONNECTION connection_status, void *user_data);
 
+void tox_utils_callback_friend_lossless_packet(Tox *tox,
+        tox_friend_lossless_packet_cb *callback);
+void tox_utils_friend_lossless_packet_cb(Tox *tox, uint32_t friend_number,
+        const uint8_t *data, size_t length, void *user_data);
 
 
 #ifdef __cplusplus
