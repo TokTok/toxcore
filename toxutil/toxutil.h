@@ -28,6 +28,9 @@
 extern "C" {
 #endif
 
+void tox_utils_callback_self_connection_status(Tox *tox, tox_self_connection_status_cb *callback);
+void tox_utils_self_connection_status_cb(Tox *tox,
+        TOX_CONNECTION connection_status, void *user_data);
 
 void tox_utils_callback_friend_connection_status(Tox *tox,
         tox_friend_connection_status_cb *callback);
@@ -38,6 +41,24 @@ void tox_utils_callback_friend_lossless_packet(Tox *tox,
         tox_friend_lossless_packet_cb *callback);
 void tox_utils_friend_lossless_packet_cb(Tox *tox, uint32_t friend_number,
         const uint8_t *data, size_t length, void *user_data);
+
+void tox_utils_callback_file_recv_control(Tox *tox, tox_file_recv_control_cb *callback);
+void tox_utils_file_recv_control_cb(Tox *tox, uint32_t friend_number, uint32_t file_number,
+        TOX_FILE_CONTROL control, void *user_data);
+
+void tox_utils_callback_file_chunk_request(Tox *tox, tox_file_chunk_request_cb *callback);
+void tox_utils_file_chunk_request_cb(Tox *tox, uint32_t friend_number, uint32_t file_number,
+        uint64_t position, size_t length, void *user_data);
+
+void tox_utils_callback_file_recv(Tox *tox, tox_file_recv_cb *callback);
+void tox_utils_file_recv_cb(Tox *tox, uint32_t friend_number, uint32_t file_number,
+    uint32_t kind, uint64_t file_size,
+    const uint8_t *filename, size_t filename_length, void *user_data);
+
+
+Tox *tox_utils_new(const struct Tox_Options *options, TOX_ERR_NEW *error);
+void tox_utils_kill(Tox *tox);
+bool tox_utils_friend_delete(Tox *tox, uint32_t friend_number, TOX_ERR_FRIEND_DELETE *error);
 
 
 #ifdef __cplusplus

@@ -33,110 +33,23 @@
 #include <assert.h>
 
 
-// ----------- FUNCS -----------
-static void tox_utils_send_capabilities(Tox *tox, uint32_t friendnumber)
-{
-    uint8_t data[3];
-    data[0] = 170; // packet ID
-    data[1] = 33;
-    data[2] = 44;
-    TOX_ERR_FRIEND_CUSTOM_PACKET error;
-    tox_friend_send_lossless_packet(tox, friendnumber, data, 3, &error);
-}
+typedef struct tox_utils_Node {
+    uint8_t key[TOX_PUBLIC_KEY_SIZE];
+    void *data;
+    struct tox_utils_Node *next;
+} tox_utils_Node;
 
-static void tox_utils_receive_capabilities(Tox *tox, uint32_t friendnumber, const uint8_t *data,
-        size_t length)
-{
-    if (length == 3)
-    {
-        if ((data[0] == 170) && (data[1] == 33) && (data[2] == 44))
-        {
-            // friend has message V2 capability
-            // TODO: write it into a list now
-            Messenger *m = (Messenger *)tox;
-            LOGGER_WARNING(m->log, "toxutil:receive_capabilities fnum=%d data=%d% d %d",
-                    (int)friendnumber, (int)data[0], (int)data[1], (int)data[2]);
-        }
-    }
-}
-
-// ----------- FUNCS -----------
+typedef struct tox_utils_List {
+    uint32_t size;
+    tox_utils_Node *head; 
+} tox_utils_List;
 
 
+tox_utils_List global_friend_capability_list;
 
-
-// --- set callbacks ---
-void (*tox_utils_friend_connectionstatuschange)(struct Tox *tox, uint32_t,
-        unsigned int, void *) = NULL;
-
-void tox_utils_callback_friend_connection_status(Tox *tox, tox_friend_connection_status_cb *callback)
-{
-	tox_utils_friend_connectionstatuschange = (void (*)(Tox *tox, uint32_t,
-            unsigned int, void *))callback;
-    Messenger *m = (Messenger *)tox;
-    LOGGER_WARNING(m->log, "toxutil:set callback");
-}
-
-
-// /home/pi/inst//include/tox/tox.h:2957:6: note: expected
-// ‘void (*)(struct Tox *, uint32_t,  const uint8_t *, size_t,  void *)’ but argument is of
-// type
-// ‘void (*)(struct Tox *, void (*)(struct Tox *, uint32_t,  const uint8_t *, size_t,  void *))’
- void tox_callback_friend_lossless_packet(Tox *tox, tox_friend_lossless_packet_cb *callback);
-
-
-
-void (*tox_utils_friend_losslesspacket)(struct Tox *tox, uint32_t, const uint8_t *,
-        size_t, void *) = NULL;
-
-void tox_utils_callback_friend_lossless_packet(Tox *tox, tox_friend_lossless_packet_cb *callback)
-{
-	tox_utils_friend_losslesspacket = (void (*)(Tox *tox, uint32_t,
-            const uint8_t *, size_t, void *))callback;
-}
-
-// --- set callbacks ---
-
-
-
-void tox_utils_friend_lossless_packet_cb(Tox *tox, uint32_t friend_number, const uint8_t *data,
-        size_t length, void *user_data)
-{
-	// ------- do messageV2 stuff -------
-    tox_utils_receive_capabilities(tox, friend_number, data, length);
-	// ------- do messageV2 stuff -------
-
-	// ------- call the real CB function -------
-	if (tox_utils_friend_losslesspacket)
-	{
-		tox_utils_friend_losslesspacket(tox, friend_number, data, length, user_data);
-	}
-	// ------- call the real CB function -------
-}
-
-
-
-void tox_utils_friend_connection_status_cb(Tox *tox, uint32_t friendnumber,
-        TOX_CONNECTION connection_status, void *user_data)
-{
-	// ------- do messageV2 stuff -------
-    tox_utils_send_capabilities(tox, friendnumber);
-	// ------- do messageV2 stuff -------
-
-	// ------- call the real CB function -------
-	if (tox_utils_friend_connectionstatuschange)
-	{
-		tox_utils_friend_connectionstatuschange(tox, friendnumber, connection_status, user_data);
-        Messenger *m = (Messenger *)tox;
-        LOGGER_WARNING(m->log, "toxutil:friend_connectionstatuschange");
-	}
-	// ------- call the real CB function -------
-}
-
-
-
-
-
+typedef struct global_friend_capability_entry {
+    bool msgv2_cap;
+} global_friend_capability_entry;
 
 
 
@@ -168,30 +81,43 @@ static int check_file_signature(const uint8_t *pubkey1, const uint8_t *pubkey2, 
 }
 
 
-typedef struct tox_utils_Node {
-    uint32_t key;
-    void *data;
-    struct tox_utils_Node *next;
-} tox_utils_Node;
 
-typedef struct tox_utils_List {
-    uint32_t size;
-    tox_utils_Node *head; 
-} tox_utils_List;
-
-
-
-static void tox_utils_init_list(tox_utils_List *l)
+static void tox_utils_list_init(tox_utils_List *l)
 {
     l->size = 0;
     l->head = NULL;
 }
 
-static void tox_utils_add(tox_utils_List *l, uint32_t key, void *data)
+static void tox_utils_list_clear(tox_utils_List *l)
+{
+    tox_utils_Node *head = l->head;
+    tox_utils_Node *next_ = NULL;
+
+    while (head)
+    {
+        next_ = head->next;
+        
+        if (head->data)
+        {
+            free(head->data);
+        }
+        
+        l->size--;
+        l->head = next_;
+        free(head);        
+        head = next_;
+    }
+
+    l->size = 0;
+    l->head = NULL;
+}
+
+
+static void tox_utils_list_add(tox_utils_List *l, uint8_t *key, void *data)
 {
     tox_utils_Node *n = calloc(1, sizeof(tox_utils_Node));
 
-    n->key = key;
+    memcpy(n->key, key, TOX_PUBLIC_KEY_SIZE);
     n->data = data;
     if (l->head == NULL)
     {
@@ -206,7 +132,23 @@ static void tox_utils_add(tox_utils_List *l, uint32_t key, void *data)
     l->size++;
 }
 
-static void tox_utils_remove(tox_utils_List *l, uint32_t key)
+static tox_utils_Node* tox_utils_list_get(tox_utils_List *l, uint8_t *key)
+{
+    tox_utils_Node *head = l->head;
+    while (head)
+    {
+        if (check_file_signature(head->key, key, TOX_PUBLIC_KEY_SIZE) == 0)
+        {
+            return head;
+        }
+
+        head = head->next;
+    }
+    
+    return NULL;
+}
+
+static void tox_utils_list_remove(tox_utils_List *l, uint8_t *key)
 {
     tox_utils_Node *head = l->head;
     tox_utils_Node *prev_ = NULL;
@@ -215,8 +157,8 @@ static void tox_utils_remove(tox_utils_List *l, uint32_t key)
     {
         prev_ = head;
         next_ = head->next;
-        
-        if (head->key == key)
+
+        if (check_file_signature(head->key, key, TOX_PUBLIC_KEY_SIZE) == 0)
         {
             if (prev_)
             {
@@ -253,5 +195,333 @@ static void tox_utils_remove(tox_utils_List *l, uint32_t key)
 }
 
 // ------------ UTILS ------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ----------- FUNCS -----------
+static int64_t tox_utils_pubkey_to_friendnum(Tox *tox, const uint8_t *public_key)
+{
+    TOX_ERR_FRIEND_BY_PUBLIC_KEY error;
+    uint32_t fnum = tox_friend_by_public_key(tox, public_key, &error);
+    
+    if (error == 0)
+    {
+        return (int64_t)fnum;
+    }
+    else
+    {
+        return -1;
+    }
+}
+
+static bool tox_utils_friendnum_to_pubkey(Tox *tox, uint8_t *public_key, uint32_t friend_number)
+{
+    TOX_ERR_FRIEND_GET_PUBLIC_KEY error;
+    return tox_friend_get_public_key(tox, friend_number, public_key, &error);
+}
+
+static bool tox_utils_get_capabilities(Tox *tox, uint32_t friendnumber)
+{
+    uint8_t *friend_pubkey = calloc(1, TOX_PUBLIC_KEY_SIZE);
+    if (friend_pubkey)
+    {
+        bool res = tox_utils_friendnum_to_pubkey(tox, friend_pubkey, friendnumber);
+        if (res == true)
+        {
+            tox_utils_Node *n = tox_utils_list_get(&global_friend_capability_list, friend_pubkey);
+            if (n != NULL)
+            {
+                free(friend_pubkey);
+                return ((global_friend_capability_entry *)(n->data))->msgv2_cap;
+            }
+        }
+        free(friend_pubkey);
+    }
+
+    return false;
+}
+
+static void tox_utils_set_capabilities(Tox *tox, uint32_t friendnumber, bool cap)
+{
+    uint8_t *friend_pubkey = calloc(1, TOX_PUBLIC_KEY_SIZE);
+    if (friend_pubkey)
+    {
+        bool res = tox_utils_friendnum_to_pubkey(tox, friend_pubkey, friendnumber);
+        if (res == true)
+        {
+            global_friend_capability_entry *data = calloc(1, sizeof(global_friend_capability_entry));
+            data->msgv2_cap = cap;
+            
+            tox_utils_Node *n = tox_utils_list_get(&global_friend_capability_list, friend_pubkey);
+            if (n == NULL)
+            {
+                if (cap == true)
+                {
+                    tox_utils_list_add(&global_friend_capability_list, friend_pubkey, data);
+                    Messenger *m = (Messenger *)tox;
+                    LOGGER_WARNING(m->log, "toxutil:set_capabilities(add:1)");
+                }
+            }
+            else
+            {
+                tox_utils_list_remove(&global_friend_capability_list, friend_pubkey);
+                Messenger *m = (Messenger *)tox;
+                LOGGER_WARNING(m->log, "toxutil:set_capabilities(rm)");
+                if (cap == true)
+                {
+                    tox_utils_list_add(&global_friend_capability_list, friend_pubkey, data);
+                    Messenger *m = (Messenger *)tox;
+                    LOGGER_WARNING(m->log, "toxutil:set_capabilities(add:2)");
+                }
+            }
+        }
+        free(friend_pubkey);
+    }
+}
+
+static void tox_utils_send_capabilities(Tox *tox, uint32_t friendnumber)
+{
+    uint8_t data[3];
+    data[0] = 170; // packet ID
+    data[1] = 33;
+    data[2] = 44;
+    TOX_ERR_FRIEND_CUSTOM_PACKET error;
+    tox_friend_send_lossless_packet(tox, friendnumber, data, 3, &error);
+}
+
+static void tox_utils_receive_capabilities(Tox *tox, uint32_t friendnumber, const uint8_t *data,
+        size_t length)
+{
+    if (length == 3)
+    {
+        if ((data[0] == 170) && (data[1] == 33) && (data[2] == 44))
+        {
+            Messenger *m = (Messenger *)tox;
+            LOGGER_WARNING(m->log, "toxutil:receive_capabilities fnum=%d data=%d% d %d",
+                    (int)friendnumber, (int)data[0], (int)data[1], (int)data[2]);
+
+            // friend has message V2 capability
+            tox_utils_set_capabilities(tox, friendnumber, true);
+        }
+    }
+}
+
+// ----------- FUNCS -----------
+
+
+
+
+// --- set callbacks ---
+void (*tox_utils_selfconnectionstatus)(struct Tox *tox, unsigned int, void*) = NULL;
+
+void tox_utils_callback_self_connection_status(Tox *tox, tox_self_connection_status_cb *callback)
+{
+    tox_utils_selfconnectionstatus = (void (*)(Tox *tox,
+            unsigned int, void *))callback;
+}
+
+
+void (*tox_utils_friend_connectionstatuschange)(struct Tox *tox, uint32_t,
+        unsigned int, void *) = NULL;
+
+void tox_utils_callback_friend_connection_status(Tox *tox, tox_friend_connection_status_cb *callback)
+{
+	tox_utils_friend_connectionstatuschange = (void (*)(Tox *tox, uint32_t,
+            unsigned int, void *))callback;
+    Messenger *m = (Messenger *)tox;
+    LOGGER_WARNING(m->log, "toxutil:set callback");
+}
+
+ 
+void (*tox_utils_friend_losslesspacket)(struct Tox *tox, uint32_t, const uint8_t *,
+        size_t, void *) = NULL;
+
+void tox_utils_callback_friend_lossless_packet(Tox *tox, tox_friend_lossless_packet_cb *callback)
+{
+	tox_utils_friend_losslesspacket = (void (*)(Tox *tox, uint32_t,
+            const uint8_t *, size_t, void *))callback;
+}
+
+
+void (*tox_utils_filerecvcontrol)(struct Tox *tox, uint32_t, uint32_t,
+        unsigned int, void *) = NULL;
+
+void tox_utils_callback_file_recv_control(Tox *tox, tox_file_recv_control_cb *callback)
+{
+    tox_utils_filerecvcontrol = (void (*)(Tox *tox, uint32_t, uint32_t,
+        unsigned int, void *))callback;
+}
+
+void (*tox_utils_filechunkrequest)(struct Tox *tox, uint32_t, uint32_t,
+        uint64_t, size_t, void *) = NULL;
+
+void tox_utils_callback_file_chunk_request(Tox *tox, tox_file_chunk_request_cb *callback)
+{
+    tox_utils_filechunkrequest = (void (*)(Tox *tox, uint32_t, uint32_t,
+        uint64_t, size_t, void *))callback;
+}
+
+void (*tox_utils_filerecv)(struct Tox *tox, uint32_t, uint32_t,
+        uint32_t, uint64_t, const uint8_t *, size_t, void *) = NULL;
+
+void tox_utils_callback_file_recv(Tox *tox, tox_file_recv_cb *callback)
+{
+    tox_utils_filerecv = (void (*)(Tox *tox, int32_t, uint32_t,
+        uint32_t, uint64_t, const uint8_t *, size_t, void *))callback;
+}
+
+
+
+
+
+
+
+Tox *tox_utils_new(const struct Tox_Options *options, TOX_ERR_NEW *error)
+{
+    tox_utils_list_init(&global_friend_capability_list);
+    tox_new(options, error);
+}
+
+void tox_utils_kill(Tox *tox)
+{
+    tox_utils_list_clear(&global_friend_capability_list);
+    tox_kill(tox);
+}
+
+bool tox_utils_friend_delete(Tox *tox, uint32_t friend_number, TOX_ERR_FRIEND_DELETE *error)
+{
+    tox_friend_delete(tox, friend_number, error);
+}
+
+// --- set callbacks ---
+
+
+
+void tox_utils_friend_lossless_packet_cb(Tox *tox, uint32_t friend_number, const uint8_t *data,
+        size_t length, void *user_data)
+{
+	// ------- do messageV2 stuff -------
+    tox_utils_receive_capabilities(tox, friend_number, data, length);
+	// ------- do messageV2 stuff -------
+
+	// ------- call the real CB function -------
+	if (tox_utils_friend_losslesspacket)
+	{
+		tox_utils_friend_losslesspacket(tox, friend_number, data, length, user_data);
+	}
+	// ------- call the real CB function -------
+}
+
+
+void tox_utils_self_connection_status_cb(Tox *tox,
+        TOX_CONNECTION connection_status, void *user_data)
+{
+	// ------- do messageV2 stuff -------
+	// ------- do messageV2 stuff -------
+
+	// ------- call the real CB function -------
+	if (tox_utils_selfconnectionstatus)
+	{
+		tox_utils_selfconnectionstatus(tox, connection_status, user_data);
+        Messenger *m = (Messenger *)tox;
+        LOGGER_WARNING(m->log, "toxutil:selfconnectionstatus");
+	}
+	// ------- call the real CB function -------
+}
+
+
+void tox_utils_friend_connection_status_cb(Tox *tox, uint32_t friendnumber,
+        TOX_CONNECTION connection_status, void *user_data)
+{
+	// ------- do messageV2 stuff -------
+    if (connection_status == TOX_CONNECTION_NONE)
+    {
+        tox_utils_set_capabilities(tox, friendnumber, false);
+    }
+    else
+    {
+        tox_utils_send_capabilities(tox, friendnumber);
+    }
+	// ------- do messageV2 stuff -------
+
+	// ------- call the real CB function -------
+	if (tox_utils_friend_connectionstatuschange)
+	{
+		tox_utils_friend_connectionstatuschange(tox, friendnumber, connection_status, user_data);
+        Messenger *m = (Messenger *)tox;
+        LOGGER_WARNING(m->log, "toxutil:friend_connectionstatuschange");
+	}
+	// ------- call the real CB function -------
+}
+
+
+void tox_utils_file_recv_control_cb(Tox *tox, uint32_t friend_number, uint32_t file_number,
+            TOX_FILE_CONTROL control, void *user_data)
+{
+	// ------- do messageV2 stuff -------
+
+	// ------- do messageV2 stuff -------
+
+	// ------- call the real CB function -------
+	if (tox_utils_filerecvcontrol)
+	{
+		tox_utils_filerecvcontrol(tox, friend_number, file_number, control, user_data);
+        Messenger *m = (Messenger *)tox;
+        LOGGER_WARNING(m->log, "toxutil:file_recv_control_cb");
+	}
+	// ------- call the real CB function -------    
+}
+
+
+void tox_utils_file_chunk_request_cb(Tox *tox, uint32_t friend_number, uint32_t file_number,
+            uint64_t position, size_t length, void *user_data)
+{
+	// ------- do messageV2 stuff -------
+
+	// ------- do messageV2 stuff -------
+
+	// ------- call the real CB function -------
+	if (tox_utils_filechunkrequest)
+	{
+		tox_utils_filechunkrequest(tox, friend_number, file_number, position, length, user_data);
+        Messenger *m = (Messenger *)tox;
+        LOGGER_WARNING(m->log, "toxutil:file_recv_control_cb");
+	}
+	// ------- call the real CB function -------        
+}
+
+void tox_utils_file_recv_cb(Tox *tox, uint32_t friend_number, uint32_t file_number,
+            uint32_t kind, uint64_t file_size,
+            const uint8_t *filename, size_t filename_length, void *user_data)
+{
+	// ------- do messageV2 stuff -------
+
+	// ------- do messageV2 stuff -------
+
+	// ------- call the real CB function -------
+	if (tox_utils_filerecv)
+	{
+		tox_utils_filerecv(tox, friend_number, file_number, kind, file_size,
+            filename, filename_length, user_data);
+        Messenger *m = (Messenger *)tox;
+        LOGGER_WARNING(m->log, "toxutil:file_recv_cb");
+	}
+	// ------- call the real CB function -------        
+
+}
+
+
+
+
 
 
