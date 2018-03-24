@@ -61,6 +61,16 @@ void tox_utils_file_recv_chunk_cb(Tox *tox, uint32_t friend_number, uint32_t fil
     void *user_data);
 
 
+// ---- Msg V2 API ----
+
+typedef void tox_util_friend_message_v2_cb(Tox *tox, uint32_t friend_number,
+    const uint8_t *message, size_t length);
+
+void tox_utils_callback_friend_message_v2(Tox *tox, tox_util_friend_message_v2_cb *callback);
+
+// ---- Msg V2 API ----
+
+
 Tox *tox_utils_new(const struct Tox_Options *options, TOX_ERR_NEW *error);
 void tox_utils_kill(Tox *tox);
 bool tox_utils_friend_delete(Tox *tox, uint32_t friend_number, TOX_ERR_FRIEND_DELETE *error);
