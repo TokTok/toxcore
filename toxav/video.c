@@ -109,16 +109,14 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
      * feature.
      */
 
-    if (video_keyframe_method == TOXAV_ENCODER_KF_METHOD_PATTERN)
-    {
+    if (video_keyframe_method == TOXAV_ENCODER_KF_METHOD_PATTERN) {
         cfg->kf_min_dist = 0;
         cfg->kf_mode = VPX_KF_DISABLED;
-    }
-    else
-    {
+    } else {
         cfg->kf_min_dist = 0;
         cfg->kf_mode = VPX_KF_AUTO; // Encoder determines optimal placement automatically
     }
+
     cfg->rc_end_usage = VPX_VBR; // what quality mode?
     /*
      VPX_VBR    Variable Bit Rate (VBR) mode

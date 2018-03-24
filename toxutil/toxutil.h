@@ -44,27 +44,27 @@ void tox_utils_friend_lossless_packet_cb(Tox *tox, uint32_t friend_number,
 
 void tox_utils_callback_file_recv_control(Tox *tox, tox_file_recv_control_cb *callback);
 void tox_utils_file_recv_control_cb(Tox *tox, uint32_t friend_number, uint32_t file_number,
-        TOX_FILE_CONTROL control, void *user_data);
+                                    TOX_FILE_CONTROL control, void *user_data);
 
 void tox_utils_callback_file_chunk_request(Tox *tox, tox_file_chunk_request_cb *callback);
 void tox_utils_file_chunk_request_cb(Tox *tox, uint32_t friend_number, uint32_t file_number,
-        uint64_t position, size_t length, void *user_data);
+                                     uint64_t position, size_t length, void *user_data);
 
 void tox_utils_callback_file_recv(Tox *tox, tox_file_recv_cb *callback);
 void tox_utils_file_recv_cb(Tox *tox, uint32_t friend_number, uint32_t file_number,
-    uint32_t kind, uint64_t file_size,
-    const uint8_t *filename, size_t filename_length, void *user_data);
+                            uint32_t kind, uint64_t file_size,
+                            const uint8_t *filename, size_t filename_length, void *user_data);
 
 void tox_utils_callback_file_recv_chunk(Tox *tox, tox_file_recv_chunk_cb *callback);
 void tox_utils_file_recv_chunk_cb(Tox *tox, uint32_t friend_number, uint32_t file_number,
-    uint64_t position, const uint8_t *data, size_t length,
-    void *user_data);
+                                  uint64_t position, const uint8_t *data, size_t length,
+                                  void *user_data);
 
 
 // ---- Msg V2 API ----
 
 typedef void tox_util_friend_message_v2_cb(Tox *tox, uint32_t friend_number,
-    const uint8_t *message, size_t length);
+        const uint8_t *message, size_t length);
 
 void tox_utils_callback_friend_message_v2(Tox *tox, tox_util_friend_message_v2_cb *callback);
 
