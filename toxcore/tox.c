@@ -1803,7 +1803,8 @@ uint16_t tox_messagev2_get_ts_ms(uint8_t *raw_message)
 
 bool tox_messagev2_get_message_text(uint8_t *raw_message, uint32_t raw_message_len,
                                     bool is_alter_msg,
-                                    uint32_t alter_type, uint8_t *message_text)
+                                    uint32_t alter_type, uint8_t *message_text,
+                                    uint32_t *text_length)
 {
     bool result = false;
 
@@ -1815,12 +1816,18 @@ bool tox_messagev2_get_message_text(uint8_t *raw_message, uint32_t raw_message_l
         return false;
     }
 
+    if (text_length == NULL) {
+        return false;
+    }
+
     if (is_alter_msg == true) {
         if (alter_type == TOX_MESSAGEV2_ALTER_TYPE_DELETE) {
             // TODO: * write me *
+            *text_length = 0;
             return false;
         } else { // TOX_MESSAGEV2_ALTER_TYPE_CORRECT
             // TODO: * write me *
+            *text_length = 0;
             return false;
         }
     } else { // TOX_FILE_KIND_MESSAGEV2_SEND
@@ -1829,7 +1836,8 @@ bool tox_messagev2_get_message_text(uint8_t *raw_message, uint32_t raw_message_l
             return false;
         }
 
-        memcpy(message_text, raw_message + 32 + 4 + 2, (raw_message_len - (32 + 4 + 2)));
+        *text_length = (raw_message_len - (32 + 4 + 2));
+        memcpy(message_text, raw_message + 32 + 4 + 2, *text_length);
     }
 
     return result;

@@ -187,6 +187,12 @@ uint32_t tox_version_minor(void);
 
 uint32_t tox_version_patch(void);
 
+
+
+#define TOX_HAVE_TOXUTIL               1
+
+
+
 /**
  * A macro to check at preprocessing time whether the client code is compatible
  * with the installed version of Tox. Leading zeros in the version number are
@@ -2144,7 +2150,8 @@ uint32_t tox_messagev2_get_ts_sec(uint8_t *raw_message);
 uint16_t tox_messagev2_get_ts_ms(uint8_t *raw_message);
 bool tox_messagev2_get_message_text(uint8_t *raw_message, uint32_t raw_message_len,
                                     bool is_alter_msg,
-                                    uint32_t alter_type, uint8_t *message_text);
+                                    uint32_t alter_type, uint8_t *message_text,
+                                    uint32_t *text_length);
 
 
 /*******************************************************************************
