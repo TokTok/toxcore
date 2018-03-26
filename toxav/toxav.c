@@ -39,7 +39,7 @@
 
 
 #define VIDEO_ACCEPTABLE_LOSS (0.08f) /* if loss is less than this (8%), then don't do anything */
-#define AUDIO_ITERATATIONS_WHILE_VIDEO (8)
+#define AUDIO_ITERATATIONS_WHILE_VIDEO (2)
 
 #if defined(AUDIO_DEBUGGING_SKIP_FRAMES)
 uint32_t _debug_count_sent_audio_frames = 0;
@@ -743,20 +743,21 @@ bool toxav_option_set(ToxAV *av, uint32_t friend_number, TOXAV_OPTIONS_OPTION op
         if (vc->video_encoder_vp8_quality == (int32_t)value) {
             LOGGER_WARNING(av->m->log, "video encoder vp8_quality already set to: %d", (int)value);
         } else {
+            vc->video_encoder_vp8_quality_prev = vc->video_encoder_vp8_quality;
+            vc->video_encoder_vp8_quality = (int32_t)value;
+
             if (vc->video_encoder_vp8_quality == TOXAV_ENCODER_VP8_QUALITY_HIGH) {
                 vc->video_rc_max_quantizer_prev = vc->video_rc_max_quantizer;
                 vc->video_rc_min_quantizer_prev = vc->video_rc_min_quantizer;
-                vc->video_rc_max_quantizer = TOXAV_ENCODER_VP8_RC_MAX_QUANTIZER;
+                vc->video_rc_max_quantizer = TOXAV_ENCODER_VP8_RC_MAX_QUANTIZER_HIGH;
                 vc->video_rc_min_quantizer = TOXAV_ENCODER_VP8_RC_MIN_QUANTIZER_HIGH;
             } else {
                 vc->video_rc_max_quantizer_prev = vc->video_rc_max_quantizer;
                 vc->video_rc_min_quantizer_prev = vc->video_rc_min_quantizer;
-                vc->video_rc_max_quantizer = TOXAV_ENCODER_VP8_RC_MAX_QUANTIZER;
+                vc->video_rc_max_quantizer = TOXAV_ENCODER_VP8_RC_MAX_QUANTIZER_NORMAL;
                 vc->video_rc_min_quantizer = TOXAV_ENCODER_VP8_RC_MIN_QUANTIZER_NORMAL;
             }
 
-            vc->video_encoder_vp8_quality_prev = vc->video_encoder_vp8_quality;
-            vc->video_encoder_vp8_quality = (int32_t)value;
             LOGGER_WARNING(av->m->log, "video encoder setting vp8_quality to: %d", (int)value);
         }
     } else if (option == TOXAV_ENCODER_RC_MAX_QUANTIZER) {

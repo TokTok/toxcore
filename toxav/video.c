@@ -144,29 +144,34 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
     cfg->g_timebase.den = 1000; // timebase units = 1ms = (1/1000)s
 
     if (encoder_codec == TOXAV_ENCODER_CODEC_USED_VP9) {
-        cfg->rc_dropframe_thresh = 5;
-        cfg->rc_resize_allowed = 1;
+        cfg->rc_dropframe_thresh = 0;
+        cfg->rc_resize_allowed = 0;
     } else {
         if (quality == TOXAV_ENCODER_VP8_QUALITY_HIGH) {
             /* Highest-resolution encoder settings */
             cfg->rc_dropframe_thresh = 0; // 0
             cfg->rc_resize_allowed = 0; // 0
             cfg->rc_min_quantizer = rc_min_quantizer; // 2
-            cfg->rc_max_quantizer = rc_max_quantizer; // 63
+            cfg->rc_max_quantizer = rc_max_quantizer; // 40
             cfg->rc_resize_up_thresh = 29;
             cfg->rc_resize_down_thresh = 5;
-            cfg->rc_undershoot_pct = 100; // 100
-            cfg->rc_overshoot_pct = 15; // 15
+            cfg->rc_undershoot_pct = 200; // 100
+            cfg->rc_overshoot_pct = 30; // 15
             cfg->rc_buf_initial_sz = 500; // 500 in ms
             cfg->rc_buf_optimal_sz = 600; // 600 in ms
             cfg->rc_buf_sz = 1000; // 1000 in ms
         } else { // TOXAV_ENCODER_VP8_QUALITY_NORMAL
-            cfg->rc_resize_allowed = 1; // allow encoder to resize to smaller resolution
-            cfg->rc_dropframe_thresh = 1;
+            cfg->rc_dropframe_thresh = 0;
+            cfg->rc_resize_allowed = 0; // allow encoder to resize to smaller resolution
+            cfg->rc_min_quantizer = rc_min_quantizer; // 10
+            cfg->rc_max_quantizer = rc_max_quantizer; // 63
             cfg->rc_resize_up_thresh = TOXAV_ENCODER_VP_RC_RESIZE_UP_THRESH;
             cfg->rc_resize_down_thresh = TOXAV_ENCODER_VP_RC_RESIZE_DOWN_THRESH;
-            cfg->rc_min_quantizer = rc_min_quantizer; // 20
-            cfg->rc_max_quantizer = rc_max_quantizer; // 63
+            cfg->rc_undershoot_pct = 200; // 100
+            cfg->rc_overshoot_pct = 30; // 15
+            // cfg->rc_buf_initial_sz = 500; // 500 in ms
+            // cfg->rc_buf_optimal_sz = 600; // 600 in ms
+            // cfg->rc_buf_sz = 1000; // 1000 in ms
         }
 
     }
@@ -199,11 +204,11 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     // options ---
     vc->video_encoder_cpu_used = VP8E_SET_CPUUSED_VALUE;
     vc->video_encoder_cpu_used_prev = vc->video_encoder_cpu_used;
-    vc->video_encoder_vp8_quality = TOXAV_ENCODER_VP8_QUALITY_HIGH;
+    vc->video_encoder_vp8_quality = TOXAV_ENCODER_VP8_QUALITY_NORMAL;
     vc->video_encoder_vp8_quality_prev = vc->video_encoder_vp8_quality;
-    vc->video_rc_max_quantizer = TOXAV_ENCODER_VP8_RC_MAX_QUANTIZER;
+    vc->video_rc_max_quantizer = TOXAV_ENCODER_VP8_RC_MAX_QUANTIZER_NORMAL;
     vc->video_rc_max_quantizer_prev = vc->video_rc_max_quantizer;
-    vc->video_rc_min_quantizer = TOXAV_ENCODER_VP8_RC_MIN_QUANTIZER_HIGH;
+    vc->video_rc_min_quantizer = TOXAV_ENCODER_VP8_RC_MIN_QUANTIZER_NORMAL;
     vc->video_rc_min_quantizer_prev = vc->video_rc_min_quantizer;
     vc->video_encoder_coded_used = TOXAV_ENCODER_CODEC_USED_VP8;
     vc->video_encoder_coded_used_prev = vc->video_encoder_coded_used;
