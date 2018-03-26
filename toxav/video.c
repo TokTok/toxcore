@@ -344,7 +344,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     }
 
 
-#if 0
+#if 1
     rc = vpx_codec_control(vc->encoder, VP8E_SET_ENABLEAUTOALTREF, 0);
 
     if (rc != VPX_CODEC_OK) {
