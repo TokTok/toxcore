@@ -169,9 +169,9 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
             cfg->rc_resize_down_thresh = TOXAV_ENCODER_VP_RC_RESIZE_DOWN_THRESH;
             cfg->rc_undershoot_pct = 200; // 100
             cfg->rc_overshoot_pct = 30; // 15
-            // cfg->rc_buf_initial_sz = 500; // 500 in ms
-            // cfg->rc_buf_optimal_sz = 600; // 600 in ms
-            // cfg->rc_buf_sz = 1000; // 1000 in ms
+            cfg->rc_buf_initial_sz = 500; // 500 in ms
+            cfg->rc_buf_optimal_sz = 600; // 600 in ms
+            cfg->rc_buf_sz = 1000; // 1000 in ms
         }
 
     }
