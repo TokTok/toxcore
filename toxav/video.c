@@ -793,7 +793,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
                     return 0;
                 }
             }
-#else
+#endif
         } else {
 #if 0
 
