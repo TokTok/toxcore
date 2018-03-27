@@ -365,8 +365,9 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
 #endif
 
 
-#if 0
-    rc = vpx_codec_control(vc->encoder, VP8E_SET_MAX_INTRA_BITRATE_PCT, 450);
+#if 1
+    uint32_t rc_max_intra_target = MaxIntraTarget(600);
+    rc = vpx_codec_control(vc->encoder, VP8E_SET_MAX_INTRA_BITRATE_PCT, rc_max_intra_target);
 
     if (rc != VPX_CODEC_OK) {
         LOGGER_ERROR(log, "Failed to set encoder VP8E_SET_MAX_INTRA_BITRATE_PCT setting: %s value=%d",
@@ -1135,6 +1136,23 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
     return 0;
 }
 
+uint32_t MaxIntraTarget(uint32_t optimalBuffersize)
+{
+  // Set max to the optimal buffer level (normalized by target BR),
+  // and scaled by a scalePar.
+  // Max target size = scalePar * optimalBufferSize * targetBR[Kbps].
+  // This values is presented in percentage of perFrameBw:
+  // perFrameBw = targetBR[Kbps] * 1000 / frameRate.
+  // The target in % is as follows:
+  float scalePar = 0.5;
+  float codec_maxFramerate = 60;
+  uint32_t targetPct = optimalBuffersize * scalePar * codec_maxFramerate / 10;
+
+  // Don't go below 3 times the per frame bandwidth.
+  const uint32_t minIntraTh = 300;
+  return (targetPct < minIntraTh) ? minIntraTh : targetPct;
+}
+
 int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height,
                            int16_t kf_max_dist)
 {
@@ -1251,14 +1269,15 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
         encoder->Control(VP8E_SET_ARNR_TYPE, 3);
         */
 
-#if 0
+#if 1
         /*
         Codec control function to set Max data rate for Intra frames.
         This value controls additional clamping on the maximum size of a keyframe. It is expressed as a percentage of the average per-frame bitrate, with the special (and default) value 0 meaning unlimited, or no additional clamping beyond the codec's built-in algorithm.
         For example, to allocate no more than 4.5 frames worth of bitrate to a keyframe, set this to 450.
         Supported in codecs: VP8, VP9
         */
-        rc = vpx_codec_control(&new_c, VP8E_SET_MAX_INTRA_BITRATE_PCT, 450);
+        uint32_t rc_max_intra_target = MaxIntraTarget(600);
+        rc = vpx_codec_control(&new_c, VP8E_SET_MAX_INTRA_BITRATE_PCT, rc_max_intra_target);
 
         if (rc != VPX_CODEC_OK) {
             LOGGER_ERROR(vc->log, "(b)Failed to set encoder VP8E_SET_MAX_INTRA_BITRATE_PCT setting: %s value=%d",
