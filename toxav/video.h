@@ -55,8 +55,8 @@ VPX_DL_BEST_QUALITY   (0)       deadline parameter analogous to VPx BEST QUALITY
 #define VIDEO_CODEC_DECODER_MAX_WIDTH  (800) // (16384) // thats just some initial dummy value
 #define VIDEO_CODEC_DECODER_MAX_HEIGHT (600) // (16384) // so don't worry
 
-#define VPX_MAX_ENCODER_THREADS (4)
-#define VPX_MAX_DECODER_THREADS (4)
+#define VPX_MAX_ENCODER_THREADS (3)
+#define VPX_MAX_DECODER_THREADS (1)
 #define VIDEO__VP9E_SET_TILE_COLUMNS (1)
 #define VIDEO__VP9E_SET_TILE_ROWS (1)
 #define VIDEO__VP9_KF_MAX_DIST (60)
