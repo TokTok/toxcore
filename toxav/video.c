@@ -785,7 +785,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
         vc->last_seen_fragment_seqnum = header_v3_0->sequnum;
 
         if (skip_video_flag == 1) {
-#if 0
+#if 1
             if ((int)data_type != (int)video_frame_type_KEYFRAME) {
                 free(p);
                 LOGGER_DEBUG(vc->log, "skipping incoming video frame (1)");
@@ -806,12 +806,13 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
                     // LOGGER_WARNING(vc->log, "skipping:003");
                     free(p);
                     LOGGER_WARNING(vc->log, "skipping all incoming video frames (2)");
-                    void *p2;
-                    uint8_t dummy;
-
-                    while (rb_read((RingBuffer *)vc->vbuf_raw, &p2, &dummy)) {
-                        free(p2);
-                    }
+                    //void *p2;
+                    //uint8_t dummy;
+                    //while (rb_read((RingBuffer *)vc->vbuf_raw, &p2, &dummy)) {
+                    //    free(p2);
+                    //}
+                    
+                    rc = vpx_codec_decode(vc->decoder, NULL, 0, NULL, VPX_DL_REALTIME);
 
                     pthread_mutex_unlock(vc->queue_mutex);
                     return 0;
