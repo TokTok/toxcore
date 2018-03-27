@@ -473,7 +473,6 @@ static int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t 
     if (data[0] == PACKET_REQUEST_KEYFRAME)
     {
         LOGGER_WARNING(m->log, "RECVD:PACKET_REQUEST_KEYFRAME");
-        // zzzzzz
         if (session->cs)
         {
             ((VCSession *)(session->cs))->send_keyframe_request_received = 1;

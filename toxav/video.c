@@ -112,7 +112,7 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
 
 
     /* zoff (in 2017) */
-    cfg->g_error_resilient = VPX_ERROR_RESILIENT_DEFAULT | VPX_ERROR_RESILIENT_PARTITIONS;
+    cfg->g_error_resilient = VPX_ERROR_RESILIENT_DEFAULT; // | VPX_ERROR_RESILIENT_PARTITIONS;
     cfg->g_lag_in_frames = 0;
     /* Allow lagged encoding
      *
@@ -158,8 +158,8 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
 
     cfg->g_threads = VPX_MAX_ENCODER_THREADS; // Maximum number of threads to use
 
-    cfg->g_timebase.num = 1; // timebase units = 1ms = (1/1000)s
-    cfg->g_timebase.den = 1000; // timebase units = 1ms = (1/1000)s
+    cfg->g_timebase.num = 1; // 0.1 ms = timebase units = (1/10000)s
+    cfg->g_timebase.den = 10000; // 0.1 ms = timebase units = (1/10000)s
 
     if (encoder_codec == TOXAV_ENCODER_CODEC_USED_VP9) {
         cfg->rc_dropframe_thresh = 0;
@@ -174,7 +174,7 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
             cfg->rc_resize_up_thresh = 29;
             cfg->rc_resize_down_thresh = 5;
             cfg->rc_undershoot_pct = 100; // 100
-            cfg->rc_overshoot_pct = 5; // 15
+            cfg->rc_overshoot_pct = 15; // 15
             cfg->rc_buf_initial_sz = 500; // 500 in ms
             cfg->rc_buf_optimal_sz = 600; // 600 in ms
             cfg->rc_buf_sz = 1000; // 1000 in ms
@@ -186,7 +186,7 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
             cfg->rc_resize_up_thresh = TOXAV_ENCODER_VP_RC_RESIZE_UP_THRESH;
             cfg->rc_resize_down_thresh = TOXAV_ENCODER_VP_RC_RESIZE_DOWN_THRESH;
             cfg->rc_undershoot_pct = 100; // 100
-            cfg->rc_overshoot_pct = 5; // 15
+            cfg->rc_overshoot_pct = 15; // 15
             cfg->rc_buf_initial_sz = 500; // 500 in ms
             cfg->rc_buf_optimal_sz = 600; // 600 in ms
             cfg->rc_buf_sz = 1000; // 1000 in ms
@@ -298,7 +298,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
         if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 1) {
             LOGGER_WARNING(log, "turn on postproc: OK");
         } else if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 2) {
-            vp8_postproc_cfg_t pp = {VP8_DEBLOCK, 1, 0};
+            vp8_postproc_cfg_t pp = {VP8_MFQE, 1, 0};
             vpx_codec_err_t cc_res = vpx_codec_control(vc->decoder, VP8_SET_POSTPROC, &pp);
 
             if (cc_res != VPX_CODEC_OK) {
@@ -384,8 +384,9 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
 #endif
 
 
-#if 0
-    rc = vpx_codec_control(vc->encoder, VP8E_SET_MAX_INTRA_BITRATE_PCT, 450);
+#if 1
+    uint32_t rc_max_intra_target = MaxIntraTarget(600);
+    rc = vpx_codec_control(vc->encoder, VP8E_SET_MAX_INTRA_BITRATE_PCT, rc_max_intra_target);
 
     if (rc != VPX_CODEC_OK) {
         LOGGER_ERROR(log, "Failed to set encoder VP8E_SET_MAX_INTRA_BITRATE_PCT setting: %s value=%d",
@@ -839,28 +840,33 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
         if ((int)data_type == (int)video_frame_type_KEYFRAME)
         {
+            int percent_recvd = (int)(((float)header_v3->received_length_full / (float)full_data_len) * 100.0f);
+
             LOGGER_WARNING(vc->log, "RTP_RECV:sn=%ld fn=%ld pct=%d%% *I* len=%ld recv_len=%ld",
                          (long)header_v3->sequnum,
                          (long)header_v3->fragment_num,
-                         (int)(((float)header_v3->received_length_full / (float)full_data_len) * 100.0f),
+                         percent_recvd,
                          (long)full_data_len,
                          (long)header_v3->received_length_full);
 
-            // if keyframe received has less than 100% of the data, request a new keyframe
-            // from the sender
-            uint32_t pkg_buf_len = 2;
-            uint8_t pkg_buf[pkg_buf_len];
-            pkg_buf[0] = PACKET_REQUEST_KEYFRAME;
-            pkg_buf[1] = 0;
-            if (-1 == send_custom_lossless_packet(m, vc->friend_number, pkg_buf, pkg_buf_len))
+            if (percent_recvd < 100)
             {
-                LOGGER_WARNING(vc->log,
-                    "PACKET_REQUEST_KEYFRAME:RTP send failed");
-            }
-            else
-            {
-                LOGGER_WARNING(vc->log,
-                    "PACKET_REQUEST_KEYFRAME:RTP Sent.");
+                // if keyframe received has less than 100% of the data, request a new keyframe
+                // from the sender
+                uint32_t pkg_buf_len = 2;
+                uint8_t pkg_buf[pkg_buf_len];
+                pkg_buf[0] = PACKET_REQUEST_KEYFRAME;
+                pkg_buf[1] = 0;
+                if (-1 == send_custom_lossless_packet(m, vc->friend_number, pkg_buf, pkg_buf_len))
+                {
+                    LOGGER_WARNING(vc->log,
+                        "PACKET_REQUEST_KEYFRAME:RTP send failed");
+                }
+                else
+                {
+                    LOGGER_WARNING(vc->log,
+                        "PACKET_REQUEST_KEYFRAME:RTP Sent.");
+                }
             }
         }
         else
@@ -1293,14 +1299,15 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
         encoder->Control(VP8E_SET_ARNR_TYPE, 3);
         */
 
-#if 0
+#if 1
         /*
         Codec control function to set Max data rate for Intra frames.
         This value controls additional clamping on the maximum size of a keyframe. It is expressed as a percentage of the average per-frame bitrate, with the special (and default) value 0 meaning unlimited, or no additional clamping beyond the codec's built-in algorithm.
         For example, to allocate no more than 4.5 frames worth of bitrate to a keyframe, set this to 450.
         Supported in codecs: VP8, VP9
         */
-        rc = vpx_codec_control(&new_c, VP8E_SET_MAX_INTRA_BITRATE_PCT, 450);
+        uint32_t rc_max_intra_target = MaxIntraTarget(600);
+        rc = vpx_codec_control(&new_c, VP8E_SET_MAX_INTRA_BITRATE_PCT, rc_max_intra_target);
 
         if (rc != VPX_CODEC_OK) {
             LOGGER_ERROR(vc->log, "(b)Failed to set encoder VP8E_SET_MAX_INTRA_BITRATE_PCT setting: %s value=%d",
