@@ -354,12 +354,12 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
 
     if (rc != VPX_CODEC_OK) {
         LOGGER_ERROR(log, "Failed to set encoder VP8E_SET_ENABLEAUTOALTREF setting: %s value=%d", vpx_codec_err_to_string(rc),
-                     (int)1);
+                     (int)0);
         vpx_codec_destroy(vc->encoder);
         goto BASE_CLEANUP_1;
     } else {
         LOGGER_WARNING(log, "set encoder VP8E_SET_ENABLEAUTOALTREF setting: %s value=%d", vpx_codec_err_to_string(rc),
-                       (int)1);
+                       (int)0);
     }
 
 #endif
