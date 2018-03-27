@@ -24,6 +24,7 @@
 
 #include "../toxcore/logger.h"
 #include "../toxcore/util.h"
+#include "../toxcore/Messenger.h"
 
 #include <vpx/vpx_decoder.h>
 #include <vpx/vpx_encoder.h>
@@ -134,6 +135,8 @@ typedef struct VCSession_s {
     uint32_t encoder_soft_deadline[VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES];
     uint8_t  encoder_soft_deadline_index;
 
+    uint8_t send_keyframe_request_received;
+
     // options ---
     int32_t video_encoder_cpu_used;
     int32_t video_encoder_cpu_used_prev;
@@ -166,7 +169,7 @@ typedef struct VCSession_s {
 
 VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_receive_frame_cb *cb, void *cb_data);
 void vc_kill(VCSession *vc);
-uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timestamp, uint64_t *a_l_timestamp,
+uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_t *a_r_timestamp, uint64_t *a_l_timestamp,
                    uint64_t *v_r_timestamp, uint64_t *v_l_timestamp);
 int vc_queue_message(void *vcp, struct RTPMessage *msg);
 int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height, int16_t kf_max_dist);

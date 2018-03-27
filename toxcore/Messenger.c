@@ -1876,6 +1876,13 @@ int m_callback_rtp_packet(Messenger *m, int32_t friendnumber, uint8_t byte, m_lo
 	    return 0;
     }
 
+    if (byte == PACKET_REQUEST_KEYFRAME) {
+	    m->friendlist[friendnumber].lossy_rtp_packethandlers[6].function =
+	        packet_handler_callback;
+	    m->friendlist[friendnumber].lossy_rtp_packethandlers[6].object = object;
+	    return 0;
+    }
+
     if (byte < PACKET_ID_RANGE_LOSSY_AV_START || byte > PACKET_ID_RANGE_LOSSY_AV_END) {
         return -1;
     }
@@ -1934,6 +1941,16 @@ static int handle_custom_lossless_packet(void *object, int friend_num, const uin
             return m->friendlist[friend_num].lossy_rtp_packethandlers[5].function(
                        m, friend_num, packet, length,
                        m->friendlist[friend_num].lossy_rtp_packethandlers[5].object);
+        }
+
+        return 1;
+    }
+
+    if (packet[0] == (PACKET_REQUEST_KEYFRAME)) {
+        if (m->friendlist[friend_num].lossy_rtp_packethandlers[6].function) {
+            return m->friendlist[friend_num].lossy_rtp_packethandlers[6].function(
+                       m, friend_num, packet, length,
+                       m->friendlist[friend_num].lossy_rtp_packethandlers[6].object);
         }
 
         return 1;

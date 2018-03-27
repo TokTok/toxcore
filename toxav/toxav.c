@@ -240,7 +240,7 @@ static void *video_play_bg(void *data)
 
         if (call) {
             VCSession *vc = (VCSession *)call->video.second;
-            uint8_t got_video_frame = vc_iterate(vc, call->skip_video_flag,
+            uint8_t got_video_frame = vc_iterate(vc, call->av->m, call->skip_video_flag,
                                                  &(call->last_incoming_audio_frame_rtimestamp),
                                                  &(call->last_incoming_audio_frame_ltimestamp),
                                                  &(call->last_incoming_video_frame_rtimestamp),

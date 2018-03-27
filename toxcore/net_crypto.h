@@ -82,6 +82,7 @@
 
 /* video via lossless packets */
 #define PACKET_LOSSLESS_VIDEO 171
+#define PACKET_REQUEST_KEYFRAME 172
 
 /*** Crypto connections. ***/
 

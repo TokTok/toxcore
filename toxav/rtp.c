@@ -24,6 +24,7 @@
 #include "rtp.h"
 
 #include "bwcontroller.h"
+#include "video.h"
 
 #include "../toxcore/Messenger.h"
 #include "../toxcore/network.h"
@@ -39,7 +40,7 @@ enum {
      * The number of milliseconds we want to keep a keyframe in the buffer for,
      * even though there are no free slots for incoming frames.
      */
-    VIDEO_KEEP_KEYFRAME_IN_BUFFER_FOR_MS = 15,
+    VIDEO_KEEP_KEYFRAME_IN_BUFFER_FOR_MS = 80,
 };
 
 int TOXAV_SEND_VIDEO_LOSSLESS_PACKETS = 1;
@@ -466,13 +467,25 @@ static int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t 
 {
     RTPSession *session = (RTPSession *)object;
 
+    // Get the packet type.
+    uint8_t packet_type = data[0];
+    
+    if (data[0] == PACKET_REQUEST_KEYFRAME)
+    {
+        LOGGER_WARNING(m->log, "RECVD:PACKET_REQUEST_KEYFRAME");
+        // zzzzzz
+        if (session->cs)
+        {
+            ((VCSession *)(session->cs))->send_keyframe_request_received = 1;
+        }
+        return 0;
+    }
+
     if (!session || length < RTP_HEADER_SIZE + 1) {
         LOGGER_WARNING(m->log, "No session or invalid length of received buffer!");
         return -1;
     }
-
-    // Get the packet type.
-    uint8_t packet_type = data[0];
+    
     if (data[0] == PACKET_LOSSLESS_VIDEO)
     {
         packet_type = rtp_TypeVideo;
@@ -772,6 +785,15 @@ int rtp_allow_receiving(RTPSession *session)
 	    }
 	}
 
+	if (session->payload_type == rtp_TypeVideo)
+	{
+	    if (m_callback_rtp_packet(session->m, session->friend_number, PACKET_REQUEST_KEYFRAME,
+		                      handle_rtp_packet, session) == -1) {
+    		LOGGER_DEBUG(session->m->log, "Failed to register rtp receive handler");
+    		return -1;
+	    }
+	}
+
     if (m_callback_rtp_packet(session->m, session->friend_number, session->payload_type,
                               handle_rtp_packet, session) == -1) {
         LOGGER_WARNING(session->m->log, "Failed to register rtp receive handler");
@@ -793,6 +815,11 @@ int rtp_stop_receiving(RTPSession *session)
 	if (session->payload_type == rtp_TypeVideo)
 	{
         m_callback_rtp_packet(session->m, session->friend_number, PACKET_LOSSLESS_VIDEO, NULL, NULL);
+	}
+
+	if (session->payload_type == rtp_TypeVideo)
+	{
+        m_callback_rtp_packet(session->m, session->friend_number, PACKET_REQUEST_KEYFRAME, NULL, NULL);
 	}
 
     LOGGER_DEBUG(session->m->log, "Stopped receiving on session: %p", session);
