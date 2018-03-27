@@ -94,7 +94,7 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
 
 
     /* zoff (in 2017) */
-    cfg->g_error_resilient = VPX_ERROR_RESILIENT_DEFAULT | VPX_ERROR_RESILIENT_PARTITIONS;
+    cfg->g_error_resilient = VPX_ERROR_RESILIENT_DEFAULT; // | VPX_ERROR_RESILIENT_PARTITIONS;
     cfg->g_lag_in_frames = 0;
     /* Allow lagged encoding
      *
@@ -117,7 +117,7 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
         cfg->kf_mode = VPX_KF_AUTO; // Encoder determines optimal placement automatically
     }
 
-    cfg->rc_end_usage = VPX_VBR; // what quality mode?
+    cfg->rc_end_usage = VPX_CBR; // what quality mode?
     /*
      VPX_VBR    Variable Bit Rate (VBR) mode
      VPX_CBR    Constant Bit Rate (CBR) mode
@@ -155,8 +155,8 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
             cfg->rc_max_quantizer = rc_max_quantizer; // 40
             cfg->rc_resize_up_thresh = 29;
             cfg->rc_resize_down_thresh = 5;
-            cfg->rc_undershoot_pct = 200; // 100
-            cfg->rc_overshoot_pct = 30; // 15
+            cfg->rc_undershoot_pct = 100; // 100
+            cfg->rc_overshoot_pct = 15; // 15
             cfg->rc_buf_initial_sz = 500; // 500 in ms
             cfg->rc_buf_optimal_sz = 600; // 600 in ms
             cfg->rc_buf_sz = 1000; // 1000 in ms
@@ -167,8 +167,8 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
             cfg->rc_max_quantizer = rc_max_quantizer; // 63
             cfg->rc_resize_up_thresh = TOXAV_ENCODER_VP_RC_RESIZE_UP_THRESH;
             cfg->rc_resize_down_thresh = TOXAV_ENCODER_VP_RC_RESIZE_DOWN_THRESH;
-            cfg->rc_undershoot_pct = 200; // 100
-            cfg->rc_overshoot_pct = 30; // 15
+            cfg->rc_undershoot_pct = 100; // 100
+            cfg->rc_overshoot_pct = 15; // 15
             cfg->rc_buf_initial_sz = 500; // 500 in ms
             cfg->rc_buf_optimal_sz = 600; // 600 in ms
             cfg->rc_buf_sz = 1000; // 1000 in ms
@@ -279,7 +279,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
         if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 1) {
             LOGGER_WARNING(log, "turn on postproc: OK");
         } else if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 2) {
-            vp8_postproc_cfg_t pp = {VP8_DEBLOCK, 1, 0};
+            vp8_postproc_cfg_t pp = {VP8_MFQE, 1, 0};
             vpx_codec_err_t cc_res = vpx_codec_control(vc->decoder, VP8_SET_POSTPROC, &pp);
 
             if (cc_res != VPX_CODEC_OK) {
