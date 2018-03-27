@@ -744,6 +744,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
     uint8_t ret_value = 0;
     struct RTPMessage *p;
+    bool have_requested_index_frame = false;
 
     vpx_codec_err_t rc;
 
@@ -782,9 +783,25 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
         if ((int32_t)header_v3_0->sequnum != (int32_t)(vc->last_seen_fragment_seqnum + 1))
         {
+            uint32_t pkg_buf_len = 2;
+            uint8_t pkg_buf[pkg_buf_len];
+            pkg_buf[0] = PACKET_REQUEST_KEYFRAME;
+            pkg_buf[1] = 0;
+            if (-1 == send_custom_lossless_packet(m, vc->friend_number, pkg_buf, pkg_buf_len))
+            {
+                LOGGER_WARNING(vc->log,
+                    "PACKET_REQUEST_KEYFRAME:RTP send failed (2)");
+            }
+            else
+            {
+                LOGGER_WARNING(vc->log,
+                    "PACKET_REQUEST_KEYFRAME:RTP Sent. (2)");
+                have_requested_index_frame = true;
+            }
+
             int32_t missing_frames_count = (int32_t)header_v3_0->sequnum -
                         (int32_t)(vc->last_seen_fragment_seqnum + 1);
-            LOGGER_DEBUG(vc->log, "missing %d video frames (m1)", (int)missing_frames_count);
+            LOGGER_WARNING(vc->log, "missing %d video frames (m1)", (int)missing_frames_count);
             rc = vpx_codec_decode(vc->decoder, NULL, 0, NULL, VPX_DL_REALTIME);
         }
 
@@ -861,7 +878,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
                          (long)full_data_len,
                          (long)header_v3->received_length_full);
 
-            if (percent_recvd < 100)
+            if ((percent_recvd < 100) && (have_requested_index_frame == false))
             {
                 // if keyframe received has less than 100% of the data, request a new keyframe
                 // from the sender
