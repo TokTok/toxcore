@@ -79,7 +79,6 @@ VPX_DL_BEST_QUALITY   (0)       deadline parameter analogous to VPx BEST QUALITY
 // #define VIDEO_PTS_TIMESTAMPS 1
 
 #define VIDEO_SEND_X_KEYFRAMES_FIRST (2) // force the first n frames to be keyframes!
-// #define VPX_MAX_DIST_NORMAL (200)
 #define VPX_MAX_DIST_START (200)
 
 
@@ -98,7 +97,7 @@ VPX_DL_BEST_QUALITY   (0)       deadline parameter analogous to VPx BEST QUALITY
 #define VIDEO_DECODER_MINFPS_AUTOTUNE (10)
 #define VIDEO_DECODER_LEEWAY_IN_MS_AUTOTUNE (5)
 
-// #define VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE 1
+#define VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE 1
 #define VIDEO_ENCODER_MINFPS_AUTOTUNE (15)
 #define VIDEO_ENCODER_LEEWAY_IN_MS_AUTOTUNE (10)
 

@@ -169,7 +169,7 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
             /* Highest-resolution encoder settings */
             cfg->rc_dropframe_thresh = 0; // 0
             cfg->rc_resize_allowed = 0; // 0
-            cfg->rc_min_quantizer = rc_min_quantizer; // 2
+            cfg->rc_min_quantizer = rc_min_quantizer; // 0
             cfg->rc_max_quantizer = rc_max_quantizer; // 40
             cfg->rc_resize_up_thresh = 29;
             cfg->rc_resize_down_thresh = 5;
@@ -181,7 +181,7 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
         } else { // TOXAV_ENCODER_VP8_QUALITY_NORMAL
             cfg->rc_dropframe_thresh = 0;
             cfg->rc_resize_allowed = 0; // allow encoder to resize to smaller resolution
-            cfg->rc_min_quantizer = rc_min_quantizer; // 10
+            cfg->rc_min_quantizer = rc_min_quantizer; // 2
             cfg->rc_max_quantizer = rc_max_quantizer; // 63
             cfg->rc_resize_up_thresh = TOXAV_ENCODER_VP_RC_RESIZE_UP_THRESH;
             cfg->rc_resize_down_thresh = TOXAV_ENCODER_VP_RC_RESIZE_DOWN_THRESH;
@@ -785,7 +785,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
         vc->last_seen_fragment_seqnum = header_v3_0->sequnum;
 
         if (skip_video_flag == 1) {
-#if 1
+#if 0
             if ((int)data_type != (int)video_frame_type_KEYFRAME) {
                 free(p);
                 LOGGER_DEBUG(vc->log, "skipping incoming video frame (1)");
@@ -843,7 +843,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
         {
             int percent_recvd = (int)(((float)header_v3->received_length_full / (float)full_data_len) * 100.0f);
 
-            LOGGER_WARNING(vc->log, "RTP_RECV:sn=%ld fn=%ld pct=%d%% *I* len=%ld recv_len=%ld",
+            LOGGER_DEBUG(vc->log, "RTP_RECV:sn=%ld fn=%ld pct=%d%% *I* len=%ld recv_len=%ld",
                          (long)header_v3->sequnum,
                          (long)header_v3->fragment_num,
                          percent_recvd,
