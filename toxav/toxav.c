@@ -1190,7 +1190,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
             if (call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP8) {
                 // Key frame flag for first frames
                 vpx_encode_flags = VPX_EFLAG_FORCE_KF;
-                // vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
+                vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
                 // vpx_encode_flags |= VP8_EFLAG_FORCE_ARF;
 
                 max_encode_time_in_us = VPX_DL_REALTIME;
@@ -1279,8 +1279,8 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 
     if (call->video.second->send_keyframe_request_received == 1)
     {
-        vpx_encode_flags |= VPX_EFLAG_FORCE_KF;
-        // vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
+        vpx_encode_flags = VPX_EFLAG_FORCE_KF;
+        vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
         // vpx_encode_flags |= VP8_EFLAG_FORCE_ARF;
         call->video.second->send_keyframe_request_received = 0;
     }

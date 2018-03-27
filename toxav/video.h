@@ -79,7 +79,7 @@ VPX_DL_BEST_QUALITY   (0)       deadline parameter analogous to VPx BEST QUALITY
 // #define VIDEO_PTS_TIMESTAMPS 1
 
 #define VIDEO_SEND_X_KEYFRAMES_FIRST (2) // force the first n frames to be keyframes!
-#define VPX_MAX_DIST_START (200)
+#define VPX_MAX_DIST_START (100)
 
 
 #ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
