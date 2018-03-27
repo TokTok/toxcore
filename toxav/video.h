@@ -93,7 +93,7 @@ VPX_DL_BEST_QUALITY   (0)       deadline parameter analogous to VPx BEST QUALITY
 #endif
 
 #define VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE 1
-#define VIDEO_DECODER_AUTOSWITCH_CODEC 1
+// #define VIDEO_DECODER_AUTOSWITCH_CODEC 1 // sometimes this does not work correctly
 #define VIDEO_DECODER_MINFPS_AUTOTUNE (10)
 #define VIDEO_DECODER_LEEWAY_IN_MS_AUTOTUNE (5)
 
