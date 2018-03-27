@@ -40,10 +40,10 @@ enum {
      * The number of milliseconds we want to keep a keyframe in the buffer for,
      * even though there are no free slots for incoming frames.
      */
-    VIDEO_KEEP_KEYFRAME_IN_BUFFER_FOR_MS = 80,
+    VIDEO_KEEP_KEYFRAME_IN_BUFFER_FOR_MS = 5,
 };
 
-int TOXAV_SEND_VIDEO_LOSSLESS_PACKETS = 1;
+int TOXAV_SEND_VIDEO_LOSSLESS_PACKETS = 0;
 
 
 // allocate_len is NOT including header!
