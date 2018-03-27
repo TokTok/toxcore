@@ -1186,8 +1186,8 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
                 // Key frame flag for first frames
                 vpx_encode_flags = VPX_EFLAG_FORCE_KF;
                 max_encode_time_in_us = VPX_DL_REALTIME;
-                uint32_t lowered_bitrate = (300 * 1000);
-                vc_reconfigure_encoder_bitrate_only(call->video.second, lowered_bitrate);
+                // uint32_t lowered_bitrate = (300 * 1000);
+                // vc_reconfigure_encoder_bitrate_only(call->video.second, lowered_bitrate);
                 // HINT: Zoff: this does not seem to work
                 // vpx_codec_control(call->video.second->encoder, VP8E_SET_FRAME_FLAGS, vpx_encode_flags);
                 LOGGER_INFO(av->m->log, "I_FRAME_FLAG:%d only-i-frame mode", call->video.first->ssrc);
@@ -1200,7 +1200,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
                 // normal keyframe placement
                 vpx_encode_flags = 0;
                 max_encode_time_in_us = MAX_ENCODE_TIME_US;
-                vc_reconfigure_encoder_bitrate_only(call->video.second, call->video_bit_rate * 1000);
+                // vc_reconfigure_encoder_bitrate_only(call->video.second, call->video_bit_rate * 1000);
                 // HINT: Zoff: this does not seem to work
                 // vpx_codec_control(call->video.second->encoder, VP8E_SET_FRAME_FLAGS, vpx_encode_flags);
                 LOGGER_INFO(av->m->log, "I_FRAME_FLAG:%d normal mode", call->video.first->ssrc);

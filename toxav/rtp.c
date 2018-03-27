@@ -42,6 +42,9 @@ enum {
     VIDEO_KEEP_KEYFRAME_IN_BUFFER_FOR_MS = 15,
 };
 
+int TOXAV_SEND_VIDEO_LOSSLESS_PACKETS = 1;
+
+
 // allocate_len is NOT including header!
 static struct RTPMessage *new_message(const struct RTPHeader *header, size_t allocate_len, const uint8_t *data,
                                       uint16_t data_length)
@@ -469,7 +472,11 @@ static int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t 
     }
 
     // Get the packet type.
-    const uint8_t packet_type = data[0];
+    uint8_t packet_type = data[0];
+    if (data[0] == PACKET_LOSSLESS_VIDEO)
+    {
+        packet_type = rtp_TypeVideo;
+    }
     ++data;
     --length;
 
@@ -756,6 +763,15 @@ int rtp_allow_receiving(RTPSession *session)
         return -1;
     }
 
+	if (session->payload_type == rtp_TypeVideo)
+	{
+	    if (m_callback_rtp_packet(session->m, session->friend_number, PACKET_LOSSLESS_VIDEO,
+		                      handle_rtp_packet, session) == -1) {
+    		LOGGER_DEBUG(session->m->log, "Failed to register rtp receive handler");
+    		return -1;
+	    }
+	}
+
     if (m_callback_rtp_packet(session->m, session->friend_number, session->payload_type,
                               handle_rtp_packet, session) == -1) {
         LOGGER_WARNING(session->m->log, "Failed to register rtp receive handler");
@@ -773,6 +789,11 @@ int rtp_stop_receiving(RTPSession *session)
     }
 
     m_callback_rtp_packet(session->m, session->friend_number, session->payload_type, NULL, NULL);
+
+	if (session->payload_type == rtp_TypeVideo)
+	{
+        m_callback_rtp_packet(session->m, session->friend_number, PACKET_LOSSLESS_VIDEO, NULL, NULL);
+	}
 
     LOGGER_DEBUG(session->m->log, "Stopped receiving on session: %p", session);
     return 0;
@@ -848,6 +869,15 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length, boo
     memset(rdata, 0, SIZEOF_VLA(rdata));
     rdata[0] = session->payload_type;  // packet id == payload_type
 
+    if (session->payload_type == rtp_TypeVideo)
+    {
+        if (TOXAV_SEND_VIDEO_LOSSLESS_PACKETS == 1)
+	    {
+	    	// video payload
+		    rdata[0] = PACKET_LOSSLESS_VIDEO; // rewrite to lossless!
+	    }
+    }
+
     if (MAX_CRYPTO_DATA_SIZE > (length + RTP_HEADER_SIZE + 1)) {
         /**
          * The length is lesser than the maximum allowed length (including header)
@@ -856,8 +886,18 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length, boo
         rtp_header_pack(rdata + 1, &header);
         memcpy(rdata + 1 + RTP_HEADER_SIZE, data, length);
 
-        if (-1 == m_send_custom_lossy_packet(session->m, session->friend_number, rdata, SIZEOF_VLA(rdata))) {
-            LOGGER_WARNING(session->m->log, "RTP send failed (len: %d)! std error: %s", SIZEOF_VLA(rdata), strerror(errno));
+
+		if ((session->payload_type == rtp_TypeVideo) && (TOXAV_SEND_VIDEO_LOSSLESS_PACKETS == 1))
+		{
+            if (-1 == send_custom_lossless_packet(session->m, session->friend_number, rdata, SIZEOF_VLA(rdata))) {
+                LOGGER_WARNING(session->m->log, "RTP send failed (len: %d)! std error: %s", SIZEOF_VLA(rdata), strerror(errno));
+            }
+		}
+		else
+		{
+            if (-1 == m_send_custom_lossy_packet(session->m, session->friend_number, rdata, SIZEOF_VLA(rdata))) {
+                LOGGER_WARNING(session->m->log, "RTP send failed (len: %d)! std error: %s", SIZEOF_VLA(rdata), strerror(errno));
+            }
         }
     } else {
         /**
@@ -871,10 +911,21 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length, boo
             rtp_header_pack(rdata + 1, &header);
             memcpy(rdata + 1 + RTP_HEADER_SIZE, data + sent, piece);
 
-            if (-1 == m_send_custom_lossy_packet(session->m, session->friend_number,
-                                                 rdata, piece + RTP_HEADER_SIZE + 1)) {
-                LOGGER_WARNING(session->m->log, "RTP send failed (len: %d)! std error: %s",
-                               piece + RTP_HEADER_SIZE + 1, strerror(errno));
+			if ((session->payload_type == rtp_TypeVideo) && (TOXAV_SEND_VIDEO_LOSSLESS_PACKETS == 1))
+			{
+                if (-1 == send_custom_lossless_packet(session->m, session->friend_number,
+                                                     rdata, piece + RTP_HEADER_SIZE + 1)) {
+                    LOGGER_WARNING(session->m->log, "RTP send failed (len: %d)! std error: %s",
+                                   piece + RTP_HEADER_SIZE + 1, strerror(errno));
+                }
+			}
+			else
+			{
+                if (-1 == m_send_custom_lossy_packet(session->m, session->friend_number,
+                                                     rdata, piece + RTP_HEADER_SIZE + 1)) {
+                    LOGGER_WARNING(session->m->log, "RTP send failed (len: %d)! std error: %s",
+                                   piece + RTP_HEADER_SIZE + 1, strerror(errno));
+                }
             }
 
             sent += piece;
@@ -889,10 +940,21 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length, boo
             rtp_header_pack(rdata + 1, &header);
             memcpy(rdata + 1 + RTP_HEADER_SIZE, data + sent, piece);
 
-            if (-1 == m_send_custom_lossy_packet(session->m, session->friend_number, rdata,
-                                                 piece + RTP_HEADER_SIZE + 1)) {
-                LOGGER_WARNING(session->m->log, "RTP send failed (len: %d)! std error: %s",
-                               piece + RTP_HEADER_SIZE + 1, strerror(errno));
+			if ((session->payload_type == rtp_TypeVideo) && (TOXAV_SEND_VIDEO_LOSSLESS_PACKETS == 1))
+			{
+                if (-1 == send_custom_lossless_packet(session->m, session->friend_number, rdata,
+                                                     piece + RTP_HEADER_SIZE + 1)) {
+                    LOGGER_WARNING(session->m->log, "RTP send failed (len: %d)! std error: %s",
+                                   piece + RTP_HEADER_SIZE + 1, strerror(errno));
+                }
+			}
+			else
+			{
+                if (-1 == m_send_custom_lossy_packet(session->m, session->friend_number, rdata,
+                                                     piece + RTP_HEADER_SIZE + 1)) {
+                    LOGGER_WARNING(session->m->log, "RTP send failed (len: %d)! std error: %s",
+                                   piece + RTP_HEADER_SIZE + 1, strerror(errno));
+                }
             }
         }
     }

@@ -80,6 +80,9 @@
 #define PACKET_ID_MESSAGE_CONFERENCE 99
 #define PACKET_ID_LOSSY_CONFERENCE 199
 
+/* video via lossless packets */
+#define PACKET_LOSSLESS_VIDEO 171
+
 /*** Crypto connections. ***/
 
 typedef enum Crypto_Conn_State {
