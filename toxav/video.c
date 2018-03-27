@@ -61,6 +61,24 @@ struct vpx_frame_user_data {
 };
 
 
+uint32_t MaxIntraTarget(uint32_t optimalBuffersize)
+{
+  // Set max to the optimal buffer level (normalized by target BR),
+  // and scaled by a scalePar.
+  // Max target size = scalePar * optimalBufferSize * targetBR[Kbps].
+  // This values is presented in percentage of perFrameBw:
+  // perFrameBw = targetBR[Kbps] * 1000 / frameRate.
+  // The target in % is as follows:
+  float scalePar = 0.5;
+  float codec_maxFramerate = 30;
+  uint32_t targetPct = optimalBuffersize * scalePar * codec_maxFramerate / 10;
+
+  // Don't go below 3 times the per frame bandwidth.
+  const uint32_t minIntraTh = 300;
+  return (targetPct < minIntraTh) ? minIntraTh : targetPct;
+}
+
+
 void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_dist, int32_t quality,
                           int32_t rc_max_quantizer, int32_t rc_min_quantizer, int32_t encoder_codec,
                           int32_t video_keyframe_method)
@@ -371,12 +389,12 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     if (rc != VPX_CODEC_OK) {
         LOGGER_ERROR(log, "Failed to set encoder VP8E_SET_MAX_INTRA_BITRATE_PCT setting: %s value=%d",
                      vpx_codec_err_to_string(rc),
-                     (int)450);
+                     (int)rc_max_intra_target);
         vpx_codec_destroy(vc->encoder);
         goto BASE_CLEANUP_1;
     } else {
         LOGGER_WARNING(log, "set encoder VP8E_SET_MAX_INTRA_BITRATE_PCT setting: %s value=%d", vpx_codec_err_to_string(rc),
-                       (int)450);
+                       (int)rc_max_intra_target);
     }
 
 #endif
@@ -738,7 +756,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
 
         if ((int32_t)header_v3_0->sequnum < (int32_t)vc->last_seen_fragment_seqnum) {
             // drop frame with too old sequence number
-            LOGGER_DEBUG(vc->log, "skipping incoming video frame (0) with sn=%d lastseen=%d old_frames_count=%d",
+            LOGGER_WARNING(vc->log, "skipping incoming video frame (0) with sn=%d lastseen=%d old_frames_count=%d",
                          (int)header_v3_0->sequnum,
                          (int)vc->last_seen_fragment_seqnum,
                          (int)vc->count_old_video_frames_seen);
@@ -764,6 +782,7 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
         vc->last_seen_fragment_seqnum = header_v3_0->sequnum;
 
         if (skip_video_flag == 1) {
+#if 0
             if ((int)data_type != (int)video_frame_type_KEYFRAME) {
                 free(p);
                 LOGGER_DEBUG(vc->log, "skipping incoming video frame (1)");
@@ -774,8 +793,9 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
                     return 0;
                 }
             }
+#else
         } else {
-#if 1
+#if 0
 
             if ((int)rb_size((RingBuffer *)vc->vbuf_raw) > (int)VIDEO_RINGBUFFER_DROP_THRESHOLD) {
                 // LOGGER_WARNING(vc->log, "skipping:002 data_type=%d", (int)data_type);
@@ -813,17 +833,17 @@ uint8_t vc_iterate(VCSession *vc, uint8_t skip_video_flag, uint64_t *a_r_timesta
         LOGGER_DEBUG(vc->log, "vc_iterate: rb_read p->len=%d data_type=%d", (int)full_data_len, (int)data_type);
         LOGGER_DEBUG(vc->log, "vc_iterate: rb_read rb size=%d", (int)rb_size((RingBuffer *)vc->vbuf_raw));
 
-#if 0
+#if 1
 
         if ((int)data_type == (int)video_frame_type_KEYFRAME) {
-            LOGGER_DEBUG(vc->log, "RTP_RECV:sn=%ld fn=%ld pct=%d%% *I* len=%ld recv_len=%ld",
+            LOGGER_WARNING(vc->log, "RTP_RECV:sn=%ld fn=%ld pct=%d%% *I* len=%ld recv_len=%ld",
                          (long)header_v3->sequnum,
                          (long)header_v3->fragment_num,
                          (int)(((float)header_v3->received_length_full / (float)full_data_len) * 100.0f),
                          (long)full_data_len,
                          (long)header_v3->received_length_full);
         } else {
-            LOGGER_DEBUG(vc->log, "RTP_RECV:sn=%ld fn=%ld pct=%d%% len=%ld recv_len=%ld",
+            LOGGER_WARNING(vc->log, "RTP_RECV:sn=%ld fn=%ld pct=%d%% len=%ld recv_len=%ld",
                          (long)header_v3->sequnum,
                          (long)header_v3->fragment_num,
                          (int)(((float)header_v3->received_length_full / (float)full_data_len) * 100.0f),
@@ -1263,13 +1283,13 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
         if (rc != VPX_CODEC_OK) {
             LOGGER_ERROR(vc->log, "(b)Failed to set encoder VP8E_SET_MAX_INTRA_BITRATE_PCT setting: %s value=%d",
                          vpx_codec_err_to_string(rc),
-                         (int)450);
+                         (int)rc_max_intra_target);
             vpx_codec_destroy(&new_c);
             return -1;
         } else {
             LOGGER_WARNING(vc->log, "(b)set encoder VP8E_SET_MAX_INTRA_BITRATE_PCT setting: %s value=%d",
                            vpx_codec_err_to_string(rc),
-                           (int)450);
+                           (int)rc_max_intra_target);
         }
 
 #endif
