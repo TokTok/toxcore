@@ -1115,7 +1115,7 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
 
     if ((header->flags & RTP_LARGE_FRAME) && header->pt == rtp_TypeVideo % 128) {
         // LOGGER_WARNING(vc->log, "rb_write msg->len=%d b0=%d b1=%d rb_size=%d", (int)msg->len, (int)msg->data[0], (int)msg->data[1], (int)rb_size((RingBuffer *)vc->vbuf_raw));
-        free(rb_write((RingBuffer *)vc->vbuf_raw, msg, (uint8_t)((header->flags & RTP_LARGE_FRAME) != 0)));
+        free(rb_write((RingBuffer *)vc->vbuf_raw, msg, (uint8_t)((header->flags & RTP_KEY_FRAME) != 0)));
     } else {
         free(rb_write((RingBuffer *)vc->vbuf_raw, msg, 0));
     }
