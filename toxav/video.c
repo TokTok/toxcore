@@ -871,12 +871,24 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
         {
             int percent_recvd = (int)(((float)header_v3->received_length_full / (float)full_data_len) * 100.0f);
 
-            LOGGER_WARNING(vc->log, "RTP_RECV:sn=%ld fn=%ld pct=%d%% *I* len=%ld recv_len=%ld",
-                         (long)header_v3->sequnum,
-                         (long)header_v3->fragment_num,
-                         percent_recvd,
-                         (long)full_data_len,
-                         (long)header_v3->received_length_full);
+            if (percent_recvd < 100)
+            {
+                LOGGER_WARNING(vc->log, "RTP_RECV:sn=%ld fn=%ld pct=%d%% *I* len=%ld recv_len=%ld",
+                             (long)header_v3->sequnum,
+                             (long)header_v3->fragment_num,
+                             percent_recvd,
+                             (long)full_data_len,
+                             (long)header_v3->received_length_full);
+            }
+            else
+            {
+                LOGGER_DEBUG(vc->log, "RTP_RECV:sn=%ld fn=%ld pct=%d%% *I* len=%ld recv_len=%ld",
+                             (long)header_v3->sequnum,
+                             (long)header_v3->fragment_num,
+                             percent_recvd,
+                             (long)full_data_len,
+                             (long)header_v3->received_length_full);
+            }
 
             if ((percent_recvd < 100) && (have_requested_index_frame == false))
             {
@@ -900,7 +912,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
         }
         else
         {
-            LOGGER_WARNING(vc->log, "RTP_RECV:sn=%ld fn=%ld pct=%d%% len=%ld recv_len=%ld",
+            LOGGER_DEBUG(vc->log, "RTP_RECV:sn=%ld fn=%ld pct=%d%% len=%ld recv_len=%ld",
                          (long)header_v3->sequnum,
                          (long)header_v3->fragment_num,
                          (int)(((float)header_v3->received_length_full / (float)full_data_len) * 100.0f),
