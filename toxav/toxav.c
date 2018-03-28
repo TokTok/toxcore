@@ -1072,12 +1072,6 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 {
     TOXAV_ERR_SEND_FRAME rc = TOXAV_ERR_SEND_FRAME_OK;
     ToxAVCall *call;
-
-    uint64_t ms_to_last_frame = current_time_monotonic() - call->video.second->last_encoded_frame_ts;
-    if (call->video.second->last_encoded_frame_ts == 0)
-    {
-        ms_to_last_frame = 1;
-    }
     
     uint64_t video_frame_record_timestamp = current_time_monotonic();
 
@@ -1097,6 +1091,17 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         pthread_mutex_unlock(av->mutex);
         rc = TOXAV_ERR_SEND_FRAME_FRIEND_NOT_IN_CALL;
         goto END;
+    }
+
+    uint64_t ms_to_last_frame = 1;
+
+    if (call->video.second)
+    {
+        ms_to_last_frame = current_time_monotonic() - call->video.second->last_encoded_frame_ts;
+        if (call->video.second->last_encoded_frame_ts == 0)
+        {
+            ms_to_last_frame = 1;
+        }
     }
 
     if (call->video_bit_rate == 0 ||
