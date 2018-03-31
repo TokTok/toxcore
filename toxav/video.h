@@ -92,6 +92,9 @@ VPX_DL_BEST_QUALITY   (0)       deadline parameter analogous to VPx BEST QUALITY
 #define VIDEO_RINGBUFFER_DROP_THRESHOLD (5) // start dropping incoming frames (except index frames)
 #endif
 
+#define VIDEO_MIN_REQUEST_KEYFRAME_INTERVAL_MS_FOR_NF 8000 // 1 sec. between KEYFRAME requests
+#define VIDEO_MIN_REQUEST_KEYFRAME_INTERVAL_MS_FOR_KF 1000 // 1 sec. between KEYFRAME requests
+
 #define VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE 1
 // #define VIDEO_DECODER_AUTOSWITCH_CODEC 1 // sometimes this does not work correctly
 #define VIDEO_DECODER_MINFPS_AUTOTUNE (10)
@@ -129,6 +132,7 @@ typedef struct VCSession_s {
     int32_t  last_seen_fragment_num;
     int32_t  last_seen_fragment_seqnum;
     uint16_t count_old_video_frames_seen;
+    uint32_t last_requested_keyframe_ts;
     uint32_t decoder_soft_deadline[VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES];
     uint8_t  decoder_soft_deadline_index;
     uint32_t encoder_soft_deadline[VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES];
@@ -168,7 +172,8 @@ typedef struct VCSession_s {
 
 VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_receive_frame_cb *cb, void *cb_data);
 void vc_kill(VCSession *vc);
-uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_t *a_r_timestamp, uint64_t *a_l_timestamp,
+uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_t *a_r_timestamp,
+                   uint64_t *a_l_timestamp,
                    uint64_t *v_r_timestamp, uint64_t *v_l_timestamp);
 int vc_queue_message(void *vcp, struct RTPMessage *msg);
 int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height, int16_t kf_max_dist);

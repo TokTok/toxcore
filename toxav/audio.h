@@ -41,7 +41,7 @@
 #define AUDIO_START_SAMPLING_RATE (48000)
 #define AUDIO_START_BITRATE_RATE (48000)
 #define AUDIO_START_CHANNEL_COUNT (2)
-#define AUDIO_OPUS_PACKET_LOSS_PERC (20) // allow upto 20% loss of audio packets
+#define AUDIO_OPUS_PACKET_LOSS_PERC (40) // allow upto 50% loss of audio packets
 #define AUDIO_OPUS_COMPLEXITY (10)
 
 #define AUDIO_DECODER__START_SAMPLING_RATE (48000)

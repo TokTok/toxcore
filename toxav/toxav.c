@@ -1072,7 +1072,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 {
     TOXAV_ERR_SEND_FRAME rc = TOXAV_ERR_SEND_FRAME_OK;
     ToxAVCall *call;
-    
+
     uint64_t video_frame_record_timestamp = current_time_monotonic();
 
     if (m_friend_exists(av->m, friend_number) == 0) {
@@ -1095,11 +1095,10 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 
     uint64_t ms_to_last_frame = 1;
 
-    if (call->video.second)
-    {
+    if (call->video.second) {
         ms_to_last_frame = current_time_monotonic() - call->video.second->last_encoded_frame_ts;
-        if (call->video.second->last_encoded_frame_ts == 0)
-        {
+
+        if (call->video.second->last_encoded_frame_ts == 0) {
             ms_to_last_frame = 1;
         }
     }
@@ -1282,15 +1281,12 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 
     call->video.second->last_encoded_frame_ts = current_time_monotonic();
 
-    if (call->video.second->send_keyframe_request_received == 1)
-    {
+    if (call->video.second->send_keyframe_request_received == 1) {
         vpx_encode_flags = VPX_EFLAG_FORCE_KF;
         vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
         // vpx_encode_flags |= VP8_EFLAG_FORCE_ARF;
         call->video.second->send_keyframe_request_received = 0;
-    }
-    else
-    {
+    } else {
         // vpx_encode_flags |= VP8_EFLAG_NO_REF_GF;
         // vpx_encode_flags |= VP8_EFLAG_NO_REF_ARF;
         // vpx_encode_flags |= VP8_EFLAG_NO_REF_LAST;
@@ -1312,10 +1308,11 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         memcpy(img.planes[VPX_PLANE_V], v, (width / 2) * (height / 2));
 
         uint32_t duration = (ms_to_last_frame / 10) + 1;
-        if (duration > 10000)
-        {
+
+        if (duration > 10000) {
             duration = 10000;
         }
+
         vpx_codec_err_t vrc = vpx_codec_encode(call->video.second->encoder, &img,
                                                (int64_t)video_frame_record_timestamp, duration,
                                                vpx_encode_flags,

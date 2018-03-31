@@ -509,6 +509,14 @@ OpusEncoder *create_audio_encoder(Logger *log, int32_t bit_rate, int32_t samplin
         goto FAILURE;
     }
 
+
+    status = opus_encoder_ctl(rc, OPUS_SET_VBR(0));
+
+    if (status != OPUS_OK) {
+        LOGGER_ERROR(log, "Error while setting encoder ctl: %s", opus_strerror(status));
+        goto FAILURE;
+    }
+
     /*
       Configures the encoder's computational complexity.
 

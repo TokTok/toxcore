@@ -469,6 +469,7 @@ void tox_utils_friend_lossless_packet_cb(Tox *tox, uint32_t friend_number, const
     if (tox_utils_friend_losslesspacket) {
         tox_utils_friend_losslesspacket(tox, friend_number, data, length, user_data);
     }
+
     // ------- call the real CB function -------
 }
 
@@ -481,6 +482,7 @@ void tox_utils_self_connection_status_cb(Tox *tox,
         // if we go offline ourselves, remove all FT data
         tox_utils_list_clear(&global_msgv2_incoming_ft_list);
     }
+
     // ------- do messageV2 stuff -------
 
     // ------- call the real CB function -------
@@ -489,6 +491,7 @@ void tox_utils_self_connection_status_cb(Tox *tox,
         Messenger *m = (Messenger *)tox;
         LOGGER_WARNING(m->log, "toxutil:selfconnectionstatus");
     }
+
     // ------- call the real CB function -------
 }
 
@@ -515,6 +518,7 @@ void tox_utils_friend_connection_status_cb(Tox *tox, uint32_t friendnumber,
     } else {
         tox_utils_send_capabilities(tox, friendnumber);
     }
+
     // ------- do messageV2 stuff -------
 
     // ------- call the real CB function -------
@@ -523,6 +527,7 @@ void tox_utils_friend_connection_status_cb(Tox *tox, uint32_t friendnumber,
         Messenger *m = (Messenger *)tox;
         LOGGER_WARNING(m->log, "toxutil:friend_connectionstatuschange");
     }
+
     // ------- call the real CB function -------
 }
 
@@ -540,6 +545,7 @@ void tox_utils_file_recv_control_cb(Tox *tox, uint32_t friend_number, uint32_t f
         Messenger *m = (Messenger *)tox;
         LOGGER_WARNING(m->log, "toxutil:file_recv_control_cb");
     }
+
     // ------- call the real CB function -------
 }
 
@@ -557,6 +563,7 @@ void tox_utils_file_chunk_request_cb(Tox *tox, uint32_t friend_number, uint32_t 
         Messenger *m = (Messenger *)tox;
         LOGGER_WARNING(m->log, "toxutil:file_recv_control_cb");
     }
+
     // ------- call the real CB function -------
 }
 
@@ -606,6 +613,7 @@ void tox_utils_file_recv_cb(Tox *tox, uint32_t friend_number, uint32_t file_numb
             Messenger *m = (Messenger *)tox;
             LOGGER_WARNING(m->log, "toxutil:file_recv_cb");
         }
+
         // ------- call the real CB function -------
     }
 }
@@ -652,6 +660,7 @@ void tox_utils_file_recv_chunk_cb(Tox *tox, uint32_t friend_number, uint32_t fil
 
         free(friend_pubkey);
     }
+
     // ------- do messageV2 stuff -------
 
     // ------- call the real CB function -------
@@ -661,6 +670,7 @@ void tox_utils_file_recv_chunk_cb(Tox *tox, uint32_t friend_number, uint32_t fil
         Messenger *m = (Messenger *)tox;
         LOGGER_WARNING(m->log, "toxutil:file_recv_chunk_cb");
     }
+
     // ------- call the real CB function -------
 }
 

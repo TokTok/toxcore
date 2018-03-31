@@ -63,19 +63,19 @@ struct vpx_frame_user_data {
 
 uint32_t MaxIntraTarget(uint32_t optimalBuffersize)
 {
-  // Set max to the optimal buffer level (normalized by target BR),
-  // and scaled by a scalePar.
-  // Max target size = scalePar * optimalBufferSize * targetBR[Kbps].
-  // This values is presented in percentage of perFrameBw:
-  // perFrameBw = targetBR[Kbps] * 1000 / frameRate.
-  // The target in % is as follows:
-  float scalePar = 0.5;
-  float codec_maxFramerate = 30;
-  uint32_t targetPct = optimalBuffersize * scalePar * codec_maxFramerate / 10;
+    // Set max to the optimal buffer level (normalized by target BR),
+    // and scaled by a scalePar.
+    // Max target size = scalePar * optimalBufferSize * targetBR[Kbps].
+    // This values is presented in percentage of perFrameBw:
+    // perFrameBw = targetBR[Kbps] * 1000 / frameRate.
+    // The target in % is as follows:
+    float scalePar = 0.5;
+    float codec_maxFramerate = 30;
+    uint32_t targetPct = optimalBuffersize * scalePar * codec_maxFramerate / 10;
 
-  // Don't go below 3 times the per frame bandwidth.
-  const uint32_t minIntraTh = 300;
-  return (targetPct < minIntraTh) ? minIntraTh : targetPct;
+    // Don't go below 3 times the per frame bandwidth.
+    const uint32_t minIntraTh = 300;
+    return (targetPct < minIntraTh) ? minIntraTh : targetPct;
 }
 
 
@@ -761,9 +761,9 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
         if ((int32_t)header_v3_0->sequnum < (int32_t)vc->last_seen_fragment_seqnum) {
             // drop frame with too old sequence number
             LOGGER_WARNING(vc->log, "skipping incoming video frame (0) with sn=%d lastseen=%d old_frames_count=%d",
-                         (int)header_v3_0->sequnum,
-                         (int)vc->last_seen_fragment_seqnum,
-                         (int)vc->count_old_video_frames_seen);
+                           (int)header_v3_0->sequnum,
+                           (int)vc->last_seen_fragment_seqnum,
+                           (int)vc->count_old_video_frames_seen);
 
             vc->count_old_video_frames_seen++;
 
@@ -781,27 +781,28 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
             return 0;
         }
 
-        if ((int32_t)header_v3_0->sequnum != (int32_t)(vc->last_seen_fragment_seqnum + 1))
-        {
-            uint32_t pkg_buf_len = 2;
-            uint8_t pkg_buf[pkg_buf_len];
-            pkg_buf[0] = PACKET_REQUEST_KEYFRAME;
-            pkg_buf[1] = 0;
-            if (-1 == send_custom_lossless_packet(m, vc->friend_number, pkg_buf, pkg_buf_len))
-            {
-                LOGGER_WARNING(vc->log,
-                    "PACKET_REQUEST_KEYFRAME:RTP send failed (2)");
-            }
-            else
-            {
-                LOGGER_WARNING(vc->log,
-                    "PACKET_REQUEST_KEYFRAME:RTP Sent. (2)");
-                have_requested_index_frame = true;
+        if ((int32_t)header_v3_0->sequnum != (int32_t)(vc->last_seen_fragment_seqnum + 1)) {
+            if ((vc->last_requested_keyframe_ts + VIDEO_MIN_REQUEST_KEYFRAME_INTERVAL_MS_FOR_NF)
+                    < current_time_monotonic()) {
+                uint32_t pkg_buf_len = 2;
+                uint8_t pkg_buf[pkg_buf_len];
+                pkg_buf[0] = PACKET_REQUEST_KEYFRAME;
+                pkg_buf[1] = 0;
+
+                if (-1 == send_custom_lossless_packet(m, vc->friend_number, pkg_buf, pkg_buf_len)) {
+                    LOGGER_WARNING(vc->log,
+                                   "PACKET_REQUEST_KEYFRAME:RTP send failed (2)");
+                } else {
+                    LOGGER_WARNING(vc->log,
+                                   "PACKET_REQUEST_KEYFRAME:RTP Sent. (2)");
+                    have_requested_index_frame = true;
+                    vc->last_requested_keyframe_ts = current_time_monotonic();
+                }
             }
 
             int32_t missing_frames_count = (int32_t)header_v3_0->sequnum -
-                        (int32_t)(vc->last_seen_fragment_seqnum + 1);
-            LOGGER_WARNING(vc->log, "missing %d video frames (m1)", (int)missing_frames_count);
+                                           (int32_t)(vc->last_seen_fragment_seqnum + 1);
+            LOGGER_DEBUG(vc->log, "missing %d video frames (m1)", (int)missing_frames_count);
             rc = vpx_codec_decode(vc->decoder, NULL, 0, NULL, VPX_DL_REALTIME);
         }
 
@@ -812,6 +813,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
         if (skip_video_flag == 1) {
 #if 1
+
             if ((int)data_type != (int)video_frame_type_KEYFRAME) {
                 free(p);
                 LOGGER_DEBUG(vc->log, "skipping incoming video frame (1)");
@@ -820,10 +822,11 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
                 //if (rb_read((RingBuffer *)vc->vbuf_raw, (void **)&p, &data_type)) {
                 //} else {
-                    pthread_mutex_unlock(vc->queue_mutex);
-                    return 0;
+                pthread_mutex_unlock(vc->queue_mutex);
+                return 0;
                 //}
             }
+
 #endif
         } else {
 #if 0
@@ -839,7 +842,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
                     //while (rb_read((RingBuffer *)vc->vbuf_raw, &p2, &dummy)) {
                     //    free(p2);
                     //}
-                    
+
                     rc = vpx_codec_decode(vc->decoder, NULL, 0, NULL, VPX_DL_REALTIME);
 
                     pthread_mutex_unlock(vc->queue_mutex);
@@ -867,21 +870,17 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
 #if 1
 
-        if ((int)data_type == (int)video_frame_type_KEYFRAME)
-        {
+        if ((int)data_type == (int)video_frame_type_KEYFRAME) {
             int percent_recvd = (int)(((float)header_v3->received_length_full / (float)full_data_len) * 100.0f);
 
-            if (percent_recvd < 100)
-            {
+            if (percent_recvd < 100) {
                 LOGGER_WARNING(vc->log, "RTP_RECV:sn=%ld fn=%ld pct=%d%% *I* len=%ld recv_len=%ld",
-                             (long)header_v3->sequnum,
-                             (long)header_v3->fragment_num,
-                             percent_recvd,
-                             (long)full_data_len,
-                             (long)header_v3->received_length_full);
-            }
-            else
-            {
+                               (long)header_v3->sequnum,
+                               (long)header_v3->fragment_num,
+                               percent_recvd,
+                               (long)full_data_len,
+                               (long)header_v3->received_length_full);
+            } else {
                 LOGGER_DEBUG(vc->log, "RTP_RECV:sn=%ld fn=%ld pct=%d%% *I* len=%ld recv_len=%ld",
                              (long)header_v3->sequnum,
                              (long)header_v3->fragment_num,
@@ -890,28 +889,27 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
                              (long)header_v3->received_length_full);
             }
 
-            if ((percent_recvd < 100) && (have_requested_index_frame == false))
-            {
-                // if keyframe received has less than 100% of the data, request a new keyframe
-                // from the sender
-                uint32_t pkg_buf_len = 2;
-                uint8_t pkg_buf[pkg_buf_len];
-                pkg_buf[0] = PACKET_REQUEST_KEYFRAME;
-                pkg_buf[1] = 0;
-                if (-1 == send_custom_lossless_packet(m, vc->friend_number, pkg_buf, pkg_buf_len))
-                {
-                    LOGGER_WARNING(vc->log,
-                        "PACKET_REQUEST_KEYFRAME:RTP send failed");
-                }
-                else
-                {
-                    LOGGER_WARNING(vc->log,
-                        "PACKET_REQUEST_KEYFRAME:RTP Sent.");
+            if ((percent_recvd < 100) && (have_requested_index_frame == false)) {
+                if ((vc->last_requested_keyframe_ts + VIDEO_MIN_REQUEST_KEYFRAME_INTERVAL_MS_FOR_KF)
+                        < current_time_monotonic()) {
+                    // if keyframe received has less than 100% of the data, request a new keyframe
+                    // from the sender
+                    uint32_t pkg_buf_len = 2;
+                    uint8_t pkg_buf[pkg_buf_len];
+                    pkg_buf[0] = PACKET_REQUEST_KEYFRAME;
+                    pkg_buf[1] = 0;
+
+                    if (-1 == send_custom_lossless_packet(m, vc->friend_number, pkg_buf, pkg_buf_len)) {
+                        LOGGER_WARNING(vc->log,
+                                       "PACKET_REQUEST_KEYFRAME:RTP send failed");
+                    } else {
+                        LOGGER_WARNING(vc->log,
+                                       "PACKET_REQUEST_KEYFRAME:RTP Sent.");
+                        vc->last_requested_keyframe_ts = current_time_monotonic();
+                    }
                 }
             }
-        }
-        else
-        {
+        } else {
             LOGGER_DEBUG(vc->log, "RTP_RECV:sn=%ld fn=%ld pct=%d%% len=%ld recv_len=%ld",
                          (long)header_v3->sequnum,
                          (long)header_v3->fragment_num,
