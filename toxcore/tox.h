@@ -2136,7 +2136,7 @@ bool tox_file_get_file_id(const Tox *tox, uint32_t friend_number, uint32_t file_
 uint32_t tox_messagev2_size(uint32_t text_length, uint32_t type, uint32_t alter_type);
 bool tox_messagev2_wrap(uint32_t text_length, uint32_t type,
                         uint32_t alter_type,
-                        uint8_t *message_text, uint32_t ts_sec,
+                        const uint8_t *message_text, uint32_t ts_sec,
                         uint16_t ts_ms, uint8_t *raw_message,
                         uint8_t *msgid);
 
