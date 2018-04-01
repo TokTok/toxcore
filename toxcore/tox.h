@@ -2146,9 +2146,9 @@ bool tox_messagev2_wrap(uint32_t text_length, uint32_t type,
 bool tox_messagev2_get_message_id(uint8_t *raw_message, uint8_t *msg_id);
 bool tox_messagev2_get_message_alter_id(uint8_t *raw_message, uint8_t *alter_id);
 uint8_t tox_messagev2_get_alter_type(uint8_t *raw_message);
-uint32_t tox_messagev2_get_ts_sec(uint8_t *raw_message);
-uint16_t tox_messagev2_get_ts_ms(uint8_t *raw_message);
-bool tox_messagev2_get_message_text(uint8_t *raw_message, uint32_t raw_message_len,
+uint32_t tox_messagev2_get_ts_sec(const uint8_t *raw_message);
+uint16_t tox_messagev2_get_ts_ms(const uint8_t *raw_message);
+bool tox_messagev2_get_message_text(const uint8_t *raw_message, uint32_t raw_message_len,
                                     bool is_alter_msg,
                                     uint32_t alter_type, uint8_t *message_text,
                                     uint32_t *text_length);

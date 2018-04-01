@@ -109,6 +109,65 @@ static int check_file_signature(const uint8_t *pubkey1, const uint8_t *pubkey2, 
 
 
 
+/**
+ * @fn
+ * get_hex
+ *
+ * @brief
+ * Converts a char into binary string
+ *
+ * @param[in]
+ *     buf Value to be converted to hex string
+ * @param[in]
+ *     buf_len Length of the buffer
+ * @param[in]
+ *     hex_ Pointer to space to put Hex string into
+ * @param[in]
+ *     hex_len Length of the hex string space
+ * @param[in]
+ *     num_col Number of columns in display hex string
+ * @param[out]
+ *     hex_ Contains the hex string
+ * @return  void
+ */
+static inline void
+get_hex(char *buf, int buf_len, char *hex_, int hex_len, int num_col)
+{
+    int i;
+#define ONE_BYTE_HEX_STRING_SIZE   3
+    unsigned int byte_no = 0;
+
+    if (buf_len <= 0) {
+        if (hex_len > 0) {
+            hex_[0] = '\0';
+        }
+
+        return;
+    }
+
+    if (hex_len < ONE_BYTE_HEX_STRING_SIZE + 1) {
+        return;
+    }
+
+    do {
+        for (i = 0; ((i < num_col) && (buf_len > 0) && (hex_len > 0)); ++i) {
+            snprintf(hex_, hex_len, "%02X ", buf[byte_no++] & 0xff);
+            hex_ += ONE_BYTE_HEX_STRING_SIZE;
+            hex_len -= ONE_BYTE_HEX_STRING_SIZE;
+            buf_len--;
+        }
+
+        if (buf_len > 1) {
+            snprintf(hex_, hex_len, "\n");
+            hex_ += 1;
+        }
+    } while ((buf_len) > 0 && (hex_len > 0));
+
+}
+
+
+
+
 static void tox_utils_list_init(tox_utils_List *l)
 {
     l->size = 0;
@@ -369,6 +428,7 @@ static void tox_utils_receive_capabilities(Tox *tox, uint32_t friendnumber, cons
 
 static void tox_utils_housekeeping(Tox *tox)
 {
+#if 0
     // cancel and clear old outgoing FTs ----------------
     tox_utils_List *l = &global_msgv2_outgoing_ft_list;
 
@@ -452,7 +512,7 @@ static void tox_utils_housekeeping(Tox *tox)
     }
 
     // cancel and clear old incoming FTs ----------------
-
+#endif
 }
 
 // ----------- FUNCS -----------
@@ -715,7 +775,6 @@ void tox_utils_file_chunk_request_cb(Tox *tox, uint32_t friend_number, uint32_t 
                                      uint64_t position, size_t length, void *user_data)
 {
     // ------- do messageV2 stuff -------
-    // zzzzzzz
     uint8_t *friend_pubkey = calloc(1, TOX_PUBLIC_KEY_SIZE);
 
     if (friend_pubkey) {
@@ -886,6 +945,12 @@ int64_t tox_util_friend_send_message_v2(Tox *tox, uint32_t friend_number, TOX_ME
     if (message) {
         bool friend_has_msgv2 = tox_utils_get_capabilities(tox, friend_number);
 
+        // DEBUG ==========================
+        // DEBUG ==========================
+        friend_has_msgv2 = true;
+        // DEBUG ==========================
+        // DEBUG ==========================
+
         if (friend_has_msgv2 == true) {
             if (error) {
                 // TODO: make this better
@@ -900,7 +965,8 @@ int64_t tox_util_friend_send_message_v2(Tox *tox, uint32_t friend_number, TOX_ME
 
             uint32_t raw_msg_len = tox_messagev2_size((uint32_t)length,
                                    (uint32_t)TOX_FILE_KIND_MESSAGEV2_SEND, 0);
-            uint8_t *raw_message = calloc(1, raw_msg_len);
+
+            uint8_t *raw_message = calloc(1, (size_t)raw_msg_len);
             uint8_t *msgid = calloc(1, TOX_PUBLIC_KEY_SIZE);
 
             bool result = tox_messagev2_wrap((uint32_t)length,
@@ -911,18 +977,38 @@ int64_t tox_util_friend_send_message_v2(Tox *tox, uint32_t friend_number, TOX_ME
                                              raw_message,
                                              msgid);
 
+#if 0
+            char      data_hex_str[5000];
+            get_hex((raw_message + 32 + 4 + 2), (raw_msg_len - 32 - 4 - 2), data_hex_str, 5000, 16);
+            printf("XXX090:\n%s\n", data_hex_str);
+
+
+
+            Messenger *m = (Messenger *)tox;
+            LOGGER_WARNING(m->log,
+                           "toxutil:tox_util_friend_send_message_v2:0:FT:%d:%d",
+                           (int)raw_msg_len, (int)length);
+            LOGGER_WARNING(m->log,
+                           "toxutil:tox_util_friend_send_message_v2:A:FT:%s",
+                           message);
+            LOGGER_WARNING(m->log,
+                           "toxutil:tox_util_friend_send_message_v2:B:FT:%s",
+                           (char *)(raw_message + 32 + 4 + 2));
+#endif
+
             // every message should have an increasing "dummy" ms-timestamp part
             global_ts_ms++;
 
             if (result == true) {
                 // ok we have our raw message in "raw_message" and the length in "raw_msg_len"
                 // now send it
-                const char *filename = "msgv2";
+                const char *filename = "msgv2.txt";
                 TOX_ERR_FILE_SEND error_send;
                 uint32_t file_num_new = tox_file_send(tox, friend_number,
                                                       (uint32_t)TOX_FILE_KIND_MESSAGEV2_SEND,
                                                       (uint64_t)raw_msg_len, (const uint8_t *)msgid,
-                                                      (const uint8_t *)filename, (size_t)sizeof(filename), &error_send);
+                                                      (const uint8_t *)filename, (size_t)strlen(filename),
+                                                      &error_send);
 
                 if ((file_num_new == UINT32_MAX) || (error_send != TOX_ERR_FILE_SEND_OK)) {
                     free(raw_message);
@@ -939,6 +1025,13 @@ int64_t tox_util_friend_send_message_v2(Tox *tox, uint32_t friend_number, TOX_ME
                     data->kind = TOX_FILE_KIND_MESSAGEV2_SEND;
                     data->file_size = raw_msg_len;
                     data->timestamp = current_time_monotonic();
+
+                    if (raw_msg_len <= TOX_MAX_FILETRANSFER_SIZE_MSGV2) {
+                        memcpy(data->msg_data, raw_message, raw_msg_len);
+                    } else {
+                        // HINT: this should never happen
+                        memcpy(data->msg_data, raw_message, TOX_MAX_FILETRANSFER_SIZE_MSGV2);
+                    }
 
                     uint8_t *friend_pubkey = calloc(1, TOX_PUBLIC_KEY_SIZE);
 

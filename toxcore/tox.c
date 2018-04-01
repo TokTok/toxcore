@@ -1684,33 +1684,37 @@ bool tox_messagev2_wrap(uint32_t text_length, uint32_t type,
 
     if (type == TOX_FILE_KIND_MESSAGEV2_SEND) {
 
+        uint8_t *raw_message_cpy = raw_message;
+
         /* Tox keys are 32 bytes, so we use this directly as new "message id" */
         new_symmetric_key(msgid);
 
-        memcpy(raw_message, msgid, 32);
-        raw_message += 32;
+        memcpy(raw_message_cpy, msgid, 32);
+        raw_message_cpy += 32;
 
-        memcpy(raw_message, &ts_sec, 4);
-        raw_message += 4;
+        memcpy(raw_message_cpy, &ts_sec, 4);
+        raw_message_cpy += 4;
 
-        memcpy(raw_message, &ts_ms, 2);
-        raw_message += 2;
+        memcpy(raw_message_cpy, &ts_ms, 2);
+        raw_message_cpy += 2;
 
-        memcpy(raw_message, message_text, text_length);
-        raw_message += text_length;
+        memcpy(raw_message_cpy, message_text, text_length);
+        raw_message_cpy += text_length;
 
         result_code = true;
 
     } else if (type == TOX_FILE_KIND_MESSAGEV2_ANSWER) {
 
-        memcpy(raw_message, msgid, 32);
-        raw_message += 32;
+        uint8_t *raw_message_cpy = raw_message;
 
-        memcpy(raw_message, &ts_sec, 4);
-        raw_message += 4;
+        memcpy(raw_message_cpy, msgid, 32);
+        raw_message_cpy += 32;
 
-        memcpy(raw_message, &ts_ms, 2);
-        raw_message += 2;
+        memcpy(raw_message_cpy, &ts_sec, 4);
+        raw_message_cpy += 4;
+
+        memcpy(raw_message_cpy, &ts_ms, 2);
+        raw_message_cpy += 2;
 
         result_code = true;
 
@@ -1777,7 +1781,7 @@ uint8_t tox_messagev2_get_alter_type(uint8_t *raw_message)
     return return_value;
 }
 
-uint32_t tox_messagev2_get_ts_sec(uint8_t *raw_message)
+uint32_t tox_messagev2_get_ts_sec(const uint8_t *raw_message)
 {
     if (raw_message == NULL) {
         return false;
@@ -1789,7 +1793,7 @@ uint32_t tox_messagev2_get_ts_sec(uint8_t *raw_message)
     return return_value;
 }
 
-uint16_t tox_messagev2_get_ts_ms(uint8_t *raw_message)
+uint16_t tox_messagev2_get_ts_ms(const uint8_t *raw_message)
 {
     if (raw_message == NULL) {
         return false;
@@ -1801,7 +1805,7 @@ uint16_t tox_messagev2_get_ts_ms(uint8_t *raw_message)
     return return_value;
 }
 
-bool tox_messagev2_get_message_text(uint8_t *raw_message, uint32_t raw_message_len,
+bool tox_messagev2_get_message_text(const uint8_t *raw_message, uint32_t raw_message_len,
                                     bool is_alter_msg,
                                     uint32_t alter_type, uint8_t *message_text,
                                     uint32_t *text_length)

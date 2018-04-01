@@ -1289,15 +1289,12 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         call->video.second->send_keyframe_request_received = 0;
     } else {
         if ((call->video.second->last_sent_keyframe_ts + VIDEO_MIN_SEND_KEYFRAME_INTERVAL)
-                < current_time_monotonic())
-        {
+                < current_time_monotonic()) {
             // it's been x seconds without a keyframe, send one now
             vpx_encode_flags = VPX_EFLAG_FORCE_KF;
             vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
-            // vpx_encode_flags |= VP8_EFLAG_FORCE_ARF;            
-        }
-        else
-        {
+            // vpx_encode_flags |= VP8_EFLAG_FORCE_ARF;
+        } else {
             // vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
             // vpx_encode_flags |= VP8_EFLAG_NO_REF_GF;
             // vpx_encode_flags |= VP8_EFLAG_NO_REF_ARF;
@@ -1355,8 +1352,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
             if (pkt->kind == VPX_CODEC_CX_FRAME_PKT) {
                 const int keyframe = (pkt->data.frame.flags & VPX_FRAME_IS_KEY) != 0;
 
-                if (keyframe)
-                {
+                if (keyframe) {
                     call->video.second->last_sent_keyframe_ts = current_time_monotonic();
                 }
 
