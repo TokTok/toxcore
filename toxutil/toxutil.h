@@ -63,14 +63,16 @@ void tox_utils_file_recv_chunk_cb(Tox *tox, uint32_t friend_number, uint32_t fil
 
 // ---- Msg V2 API ----
 
+// HINT: you still need to register the "old" callback "tox_friend_message_cb"
+//       to get old format messages
 typedef void tox_util_friend_message_v2_cb(Tox *tox, uint32_t friend_number,
         const uint8_t *message, size_t length);
 
 void tox_utils_callback_friend_message_v2(Tox *tox, tox_util_friend_message_v2_cb *callback);
 
+// HINT: use only this API function to send messages (it will automatically send old format if needed)
 int64_t tox_util_friend_send_message_v2(Tox *tox, uint32_t friend_number, TOX_MESSAGE_TYPE type,
-        uint32_t ts_sec, const uint8_t *message, size_t length, TOX_ERR_FRIEND_SEND_MESSAGE *error);
-
+                                        uint32_t ts_sec, const uint8_t *message, size_t length, TOX_ERR_FRIEND_SEND_MESSAGE *error);
 
 // ---- Msg V2 API ----
 

@@ -38,6 +38,8 @@
 #define CAP_BYTE_0 33
 #define CAP_BYTE_1 44
 
+#define TOX_UTIL_EXPIRE_FT_MS 50000 // msgV2 FTs should expire after 50 seconds
+
 typedef struct tox_utils_Node {
     uint8_t key[TOX_PUBLIC_KEY_SIZE];
     uint32_t key2;
@@ -51,37 +53,37 @@ typedef struct tox_utils_List {
 } tox_utils_List;
 
 
-tox_utils_List global_friend_capability_list;
+static tox_utils_List global_friend_capability_list;
 
 typedef struct global_friend_capability_entry {
     bool msgv2_cap;
 } global_friend_capability_entry;
 
 
-tox_utils_List global_msgv2_incoming_ft_list;
+static tox_utils_List global_msgv2_incoming_ft_list;
 
 typedef struct global_msgv2_incoming_ft_entry {
     uint32_t friend_number;
     uint32_t file_number;
     uint32_t kind;
     uint64_t file_size;
+    uint32_t timestamp;
     uint8_t msg_data[TOX_MAX_FILETRANSFER_SIZE_MSGV2];
 } global_msgv2_incoming_ft_entry;
 
 
-tox_utils_List global_msgv2_outgoing_ft_list;
+static tox_utils_List global_msgv2_outgoing_ft_list;
 
 typedef struct global_msgv2_outgoing_ft_entry {
     uint32_t friend_number;
     uint32_t file_number;
     uint32_t kind;
     uint64_t file_size;
+    uint32_t timestamp;
     uint8_t msg_data[TOX_MAX_FILETRANSFER_SIZE_MSGV2];
 } global_msgv2_outgoing_ft_entry;
 
-
-uint16_t global_ts_ms = 0;
-
+static uint16_t global_ts_ms = 0;
 
 // ------------ UTILS ------------
 
@@ -365,6 +367,94 @@ static void tox_utils_receive_capabilities(Tox *tox, uint32_t friendnumber, cons
     }
 }
 
+static void tox_utils_housekeeping(Tox *tox)
+{
+    // cancel and clear old outgoing FTs ----------------
+    tox_utils_List *l = &global_msgv2_outgoing_ft_list;
+
+    tox_utils_Node *head = l->head;
+    tox_utils_Node *next_ = NULL;
+
+    while (head) {
+        next_ = head->next;
+
+        if (head->data) {
+            global_msgv2_outgoing_ft_entry *e = ((global_msgv2_outgoing_ft_entry *)(head->data));
+
+            if ((e->timestamp + TOX_UTIL_EXPIRE_FT_MS) < current_time_monotonic()) {
+                // cancel FT
+                uint32_t friend_number = e->friend_number;
+                uint32_t file_number = e->file_number;
+
+                bool res = tox_file_control(tox, friend_number, file_number,
+                                            (TOX_FILE_CONTROL)TOX_FILE_CONTROL_CANCEL, NULL);
+
+                if (res == true) {
+                    // remove FT from list
+                    if (head->data) {
+                        free(head->data);
+                    }
+
+                    l->size--;
+                    l->head = next_;
+                    free(head);
+
+                    break;
+                }
+            }
+        }
+
+        l->head = next_;
+        head = next_;
+    }
+
+    // cancel and clear old outgoing FTs ----------------
+
+
+
+    // cancel and clear old incoming FTs ----------------
+    l = &global_msgv2_incoming_ft_list;
+
+    head = l->head;
+    next_ = NULL;
+
+    while (head) {
+        next_ = head->next;
+
+        if (head->data) {
+            global_msgv2_incoming_ft_entry *e = ((global_msgv2_incoming_ft_entry *)(head->data));
+
+            if ((e->timestamp + TOX_UTIL_EXPIRE_FT_MS) < current_time_monotonic()) {
+                // cancel FT
+                uint32_t friend_number = e->friend_number;
+                uint32_t file_number = e->file_number;
+
+                bool res = tox_file_control(tox, friend_number, file_number,
+                                            (TOX_FILE_CONTROL)TOX_FILE_CONTROL_CANCEL, NULL);
+
+                if (res == true) {
+                    // remove FT from list
+                    if (head->data) {
+                        free(head->data);
+                    }
+
+                    l->size--;
+                    l->head = next_;
+                    free(head);
+
+                    break;
+                }
+            }
+        }
+
+        l->head = next_;
+        head = next_;
+    }
+
+    // cancel and clear old incoming FTs ----------------
+
+}
+
 // ----------- FUNCS -----------
 
 
@@ -466,6 +556,20 @@ void tox_utils_kill(Tox *tox)
 
 bool tox_utils_friend_delete(Tox *tox, uint32_t friend_number, TOX_ERR_FRIEND_DELETE *error)
 {
+    // clear all FTs of this friend from incmoning/outgoing FT lists
+    uint8_t *friend_pubkey = calloc(1, TOX_PUBLIC_KEY_SIZE);
+
+    if (friend_pubkey) {
+        bool res = tox_utils_friendnum_to_pubkey(tox, friend_pubkey, friend_number);
+
+        if (res == true) {
+            tox_utils_list_remove_2(&global_msgv2_incoming_ft_list, friend_pubkey);
+            tox_utils_list_remove_2(&global_msgv2_outgoing_ft_list, friend_pubkey);
+        }
+
+        free(friend_pubkey);
+    }
+
     return tox_friend_delete(tox, friend_number, error);
 }
 
@@ -553,7 +657,47 @@ void tox_utils_file_recv_control_cb(Tox *tox, uint32_t friend_number, uint32_t f
                                     TOX_FILE_CONTROL control, void *user_data)
 {
     // ------- do messageV2 stuff -------
-    // TODO: ---
+    if (control == TOX_FILE_CONTROL_CANCEL) {
+        uint8_t *friend_pubkey = calloc(1, TOX_PUBLIC_KEY_SIZE);
+
+        if (friend_pubkey) {
+            bool res = tox_utils_friendnum_to_pubkey(tox, friend_pubkey, friend_number);
+
+            if (res == true) {
+                tox_utils_Node *n = tox_utils_list_get(&global_msgv2_outgoing_ft_list,
+                                                       friend_pubkey, file_number);
+
+                if (n != NULL) {
+                    if (((global_msgv2_outgoing_ft_entry *)(n->data))->kind == TOX_FILE_KIND_MESSAGEV2_SEND) {
+                        // remove FT data from list
+                        tox_utils_list_remove(&global_msgv2_outgoing_ft_list,
+                                              friend_pubkey, file_number);
+
+                        free(friend_pubkey);
+                        return;
+                    }
+                }
+
+                n = tox_utils_list_get(&global_msgv2_incoming_ft_list,
+                                       friend_pubkey, file_number);
+
+                if (n != NULL) {
+                    if (((global_msgv2_incoming_ft_entry *)(n->data))->kind == TOX_FILE_KIND_MESSAGEV2_SEND) {
+                        // remove FT data from list
+                        tox_utils_list_remove(&global_msgv2_incoming_ft_list,
+                                              friend_pubkey, file_number);
+
+                        free(friend_pubkey);
+                        return;
+                    }
+                }
+
+            }
+
+            free(friend_pubkey);
+        }
+    }
+
     // ------- do messageV2 stuff -------
 
     // ------- call the real CB function -------
@@ -574,43 +718,35 @@ void tox_utils_file_chunk_request_cb(Tox *tox, uint32_t friend_number, uint32_t 
     // zzzzzzz
     uint8_t *friend_pubkey = calloc(1, TOX_PUBLIC_KEY_SIZE);
 
-    if (friend_pubkey)
-    {
+    if (friend_pubkey) {
         bool res = tox_utils_friendnum_to_pubkey(tox, friend_pubkey, friend_number);
 
-        if (res == true)
-        {
+        if (res == true) {
             tox_utils_Node *n = tox_utils_list_get(&global_msgv2_outgoing_ft_list,
                                                    friend_pubkey, file_number);
 
-            if (n != NULL)
-            {
-                if (((global_msgv2_outgoing_ft_entry *)(n->data))->kind == TOX_FILE_KIND_MESSAGEV2_SEND)
-                {
-                    if (length == 0)
-                    {
+            if (n != NULL) {
+                if (((global_msgv2_outgoing_ft_entry *)(n->data))->kind == TOX_FILE_KIND_MESSAGEV2_SEND) {
+                    if (length == 0) {
                         // FT finished
                         // remove FT data from list
                         tox_utils_list_remove(&global_msgv2_outgoing_ft_list,
                                               friend_pubkey, file_number);
-                    }
-                    else
-                    {
+                    } else {
                         uint8_t *data_ = ((uint8_t *)((global_msgv2_outgoing_ft_entry *)(n->data))->msg_data);
                         uint64_t filesize = ((global_msgv2_outgoing_ft_entry *)(n->data))->file_size;
                         const uint8_t *data = (const uint8_t *)(data_ + position);
 
-                        if (position >= filesize)
-                        {
+                        if (position >= filesize) {
                             free(friend_pubkey);
                             return;
                         }
 
-                        TOX_ERR_FILE_SEND_CHUNK *error_send_chunk;
+                        TOX_ERR_FILE_SEND_CHUNK error_send_chunk;
                         bool result = tox_file_send_chunk(tox, friend_number,
-                                    file_number,
-                                    position, data,
-                                    length, error_send_chunk);
+                                                          file_number,
+                                                          position, data,
+                                                          length, &error_send_chunk);
                     }
 
                     free(friend_pubkey);
@@ -618,7 +754,7 @@ void tox_utils_file_chunk_request_cb(Tox *tox, uint32_t friend_number, uint32_t 
                 }
             }
         }
-        
+
         free(friend_pubkey);
     }
 
@@ -647,6 +783,7 @@ void tox_utils_file_recv_cb(Tox *tox, uint32_t friend_number, uint32_t file_numb
             data->file_number = file_number;
             data->kind = kind;
             data->file_size = file_size;
+            data->timestamp = current_time_monotonic();
 
             uint8_t *friend_pubkey = calloc(1, TOX_PUBLIC_KEY_SIZE);
 
@@ -654,6 +791,7 @@ void tox_utils_file_recv_cb(Tox *tox, uint32_t friend_number, uint32_t file_numb
                 bool res = tox_utils_friendnum_to_pubkey(tox, friend_pubkey, friend_number);
 
                 if (res == true) {
+                    tox_utils_housekeeping(tox);
                     tox_utils_list_add(&global_msgv2_incoming_ft_list, friend_pubkey,
                                        file_number, data);
                     Messenger *m = (Messenger *)tox;
@@ -707,7 +845,7 @@ void tox_utils_file_recv_chunk_cb(Tox *tox, uint32_t friend_number, uint32_t fil
                             const uint8_t *data_ = ((uint8_t *)((global_msgv2_incoming_ft_entry *)
                                                                 (n->data))->msg_data);
                             const uint64_t size_ = ((global_msgv2_incoming_ft_entry *)
-                                                                 (n->data))->file_size;
+                                                    (n->data))->file_size;
                             tox_utils_friend_message_v2(tox, friend_number, data_, (size_t)size_);
                         }
 
@@ -743,56 +881,50 @@ void tox_utils_file_recv_chunk_cb(Tox *tox, uint32_t friend_number, uint32_t fil
 
 
 int64_t tox_util_friend_send_message_v2(Tox *tox, uint32_t friend_number, TOX_MESSAGE_TYPE type,
-        uint32_t ts_sec, const uint8_t *message, size_t length, TOX_ERR_FRIEND_SEND_MESSAGE *error)
+                                        uint32_t ts_sec, const uint8_t *message, size_t length, TOX_ERR_FRIEND_SEND_MESSAGE *error)
 {
-    if (message)
-    {
+    if (message) {
         bool friend_has_msgv2 = tox_utils_get_capabilities(tox, friend_number);
-        
-        if (friend_has_msgv2 == true)
-        {
-            if (error)
-            {
+
+        if (friend_has_msgv2 == true) {
+            if (error) {
                 // TODO: make this better
-                // use some random error value for now
+                // use some "random" error value for now
                 *error = TOX_ERR_FRIEND_SEND_MESSAGE_SENDQ;
             }
 
             // indicate messageV2 was used to send
-            if (length > TOX_MESSAGEV2_MAX_TEXT_LENGTH)
-            {
+            if (length > TOX_MESSAGEV2_MAX_TEXT_LENGTH) {
                 return -1;
             }
 
             uint32_t raw_msg_len = tox_messagev2_size((uint32_t)length,
-                    (uint32_t)TOX_FILE_KIND_MESSAGEV2_SEND, 0);
+                                   (uint32_t)TOX_FILE_KIND_MESSAGEV2_SEND, 0);
             uint8_t *raw_message = calloc(1, raw_msg_len);
             uint8_t *msgid = calloc(1, TOX_PUBLIC_KEY_SIZE);
 
             bool result = tox_messagev2_wrap((uint32_t)length,
-                        (uint32_t)TOX_FILE_KIND_MESSAGEV2_SEND,
-                        0,
-                        message, ts_sec,
-                        global_ts_ms,
-                        raw_message,
-                        msgid);
+                                             (uint32_t)TOX_FILE_KIND_MESSAGEV2_SEND,
+                                             0,
+                                             message, ts_sec,
+                                             global_ts_ms,
+                                             raw_message,
+                                             msgid);
 
             // every message should have an increasing "dummy" ms-timestamp part
             global_ts_ms++;
 
-            if (result == true)
-            {
+            if (result == true) {
                 // ok we have our raw message in "raw_message" and the length in "raw_msg_len"
                 // now send it
                 const char *filename = "msgv2";
-                TOX_ERR_FILE_SEND *error_send;
+                TOX_ERR_FILE_SEND error_send;
                 uint32_t file_num_new = tox_file_send(tox, friend_number,
-                        (uint32_t)TOX_FILE_KIND_MESSAGEV2_SEND,
-                        (uint64_t)raw_msg_len, (const uint8_t *)msgid,
-                        (const uint8_t *)filename, (size_t)sizeof(filename), error_send);
+                                                      (uint32_t)TOX_FILE_KIND_MESSAGEV2_SEND,
+                                                      (uint64_t)raw_msg_len, (const uint8_t *)msgid,
+                                                      (const uint8_t *)filename, (size_t)sizeof(filename), &error_send);
 
-                if ((file_num_new == UINT32_MAX) || (error_send != TOX_ERR_FILE_SEND_OK))
-                {
+                if ((file_num_new == UINT32_MAX) || (error_send != TOX_ERR_FILE_SEND_OK)) {
                     free(raw_message);
                     free(msgid);
 
@@ -801,33 +933,30 @@ int64_t tox_util_friend_send_message_v2(Tox *tox, uint32_t friend_number, TOX_ME
 
                 global_msgv2_outgoing_ft_entry *data = calloc(1, sizeof(global_msgv2_outgoing_ft_entry));
 
-                if (data)
-                {
+                if (data) {
                     data->friend_number = friend_number;
                     data->file_number = file_num_new;
                     data->kind = TOX_FILE_KIND_MESSAGEV2_SEND;
                     data->file_size = raw_msg_len;
+                    data->timestamp = current_time_monotonic();
 
                     uint8_t *friend_pubkey = calloc(1, TOX_PUBLIC_KEY_SIZE);
 
-                    if (friend_pubkey)
-                    {
+                    if (friend_pubkey) {
                         bool res = tox_utils_friendnum_to_pubkey(tox, friend_pubkey, friend_number);
 
-                        if (res == true)
-                        {
+                        if (res == true) {
+                            tox_utils_housekeeping(tox);
                             tox_utils_list_add(&global_msgv2_outgoing_ft_list, friend_pubkey,
                                                file_num_new, data);
                             Messenger *m = (Messenger *)tox;
                             LOGGER_WARNING(m->log,
-                            "toxutil:tox_util_friend_send_message_v2:TOX_FILE_KIND_MESSAGEV2_SEND:%d:%d",
-                            (int)friend_number, (int)file_num_new);
+                                           "toxutil:tox_util_friend_send_message_v2:TOX_FILE_KIND_MESSAGEV2_SEND:%d:%d",
+                                           (int)friend_number, (int)file_num_new);
                         }
 
                         free(friend_pubkey);
-                    }
-                    else
-                    {
+                    } else {
                         free(data);
                     }
                 }
@@ -835,23 +964,18 @@ int64_t tox_util_friend_send_message_v2(Tox *tox, uint32_t friend_number, TOX_ME
                 free(raw_message);
                 free(msgid);
 
-                if (error)
-                {
+                if (error) {
                     *error = TOX_ERR_FRIEND_SEND_MESSAGE_OK;
                 }
             }
 
             return -1;
-        }
-        else
-        {
+        } else {
             // wrap old message send function
             return tox_friend_send_message(tox, friend_number, type, message,
-                                 length, error);
+                                           length, error);
         }
-    }
-    else
-    {
+    } else {
         return -1;
     }
 }
