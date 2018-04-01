@@ -972,6 +972,12 @@ int64_t tox_util_friend_send_message_v2(Tox *tox, uint32_t friend_number, TOX_ME
             return -1;
         } else {
             // wrap old message send function
+
+            Messenger *m = (Messenger *)tox;
+            LOGGER_WARNING(m->log,
+                           "toxutil:tox_util_friend_send_message_v2:WRAP-OLD:%d",
+                           (int)friend_number);
+
             return tox_friend_send_message(tox, friend_number, type, message,
                                            length, error);
         }

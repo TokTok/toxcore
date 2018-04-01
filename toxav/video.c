@@ -53,8 +53,8 @@ deadline parameter analogous to VPx BEST QUALITY mode.
 
 
 // initialize encoder with this value. Target bandwidth to use for this stream, in kilobits per second.
-#define VIDEO_BITRATE_INITIAL_VALUE 4000
-#define VIDEO_BITRATE_INITIAL_VALUE_VP9 4000
+#define VIDEO_BITRATE_INITIAL_VALUE 400
+#define VIDEO_BITRATE_INITIAL_VALUE_VP9 400
 
 struct vpx_frame_user_data {
     uint64_t record_timestamp;
@@ -386,6 +386,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
 
 #if 1
     uint32_t rc_max_intra_target = MaxIntraTarget(600);
+    rc_max_intra_target = 130;
     rc = vpx_codec_control(vc->encoder, VP8E_SET_MAX_INTRA_BITRATE_PCT, rc_max_intra_target);
 
     if (rc != VPX_CODEC_OK) {
@@ -1348,6 +1349,7 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
         Supported in codecs: VP8, VP9
         */
         uint32_t rc_max_intra_target = MaxIntraTarget(600);
+        rc_max_intra_target = 130;
         rc = vpx_codec_control(&new_c, VP8E_SET_MAX_INTRA_BITRATE_PCT, rc_max_intra_target);
 
         if (rc != VPX_CODEC_OK) {

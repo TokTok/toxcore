@@ -40,6 +40,7 @@
 
 #define VIDEO_ACCEPTABLE_LOSS (0.08f) /* if loss is less than this (8%), then don't do anything */
 #define AUDIO_ITERATATIONS_WHILE_VIDEO (2)
+#define VIDEO_MIN_SEND_KEYFRAME_INTERVAL 5000
 
 #if defined(AUDIO_DEBUGGING_SKIP_FRAMES)
 uint32_t _debug_count_sent_audio_frames = 0;
@@ -1287,11 +1288,23 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         // vpx_encode_flags |= VP8_EFLAG_FORCE_ARF;
         call->video.second->send_keyframe_request_received = 0;
     } else {
-        // vpx_encode_flags |= VP8_EFLAG_NO_REF_GF;
-        // vpx_encode_flags |= VP8_EFLAG_NO_REF_ARF;
-        // vpx_encode_flags |= VP8_EFLAG_NO_REF_LAST;
-        // vpx_encode_flags |= VP8_EFLAG_NO_UPD_GF;
-        // vpx_encode_flags |= VP8_EFLAG_NO_UPD_ARF;
+        if ((call->video.second->last_sent_keyframe_ts + VIDEO_MIN_SEND_KEYFRAME_INTERVAL)
+                < current_time_monotonic())
+        {
+            // it's been x seconds without a keyframe, send one now
+            vpx_encode_flags = VPX_EFLAG_FORCE_KF;
+            vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
+            // vpx_encode_flags |= VP8_EFLAG_FORCE_ARF;            
+        }
+        else
+        {
+            // vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
+            // vpx_encode_flags |= VP8_EFLAG_NO_REF_GF;
+            // vpx_encode_flags |= VP8_EFLAG_NO_REF_ARF;
+            // vpx_encode_flags |= VP8_EFLAG_NO_REF_LAST;
+            // vpx_encode_flags |= VP8_EFLAG_NO_UPD_GF;
+            // vpx_encode_flags |= VP8_EFLAG_NO_UPD_ARF;
+        }
     }
 
 
@@ -1341,6 +1354,11 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         while ((pkt = vpx_codec_get_cx_data(call->video.second->encoder, &iter)) != NULL) {
             if (pkt->kind == VPX_CODEC_CX_FRAME_PKT) {
                 const int keyframe = (pkt->data.frame.flags & VPX_FRAME_IS_KEY) != 0;
+
+                if (keyframe)
+                {
+                    call->video.second->last_sent_keyframe_ts = current_time_monotonic();
+                }
 
                 if ((pkt->data.frame.flags & VPX_FRAME_IS_FRAGMENT) != 0) {
                     LOGGER_DEBUG(av->m->log, "VPXENC:VPX_FRAME_IS_FRAGMENT:*yes* size=%lld pid=%d\n",

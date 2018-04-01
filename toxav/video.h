@@ -78,7 +78,7 @@ VPX_DL_BEST_QUALITY   (0)       deadline parameter analogous to VPx BEST QUALITY
 
 // #define VIDEO_PTS_TIMESTAMPS 1
 
-#define VIDEO_SEND_X_KEYFRAMES_FIRST (2) // force the first n frames to be keyframes!
+#define VIDEO_SEND_X_KEYFRAMES_FIRST (3) // force the first n frames to be keyframes!
 #define VPX_MAX_DIST_START (100)
 
 
@@ -92,8 +92,8 @@ VPX_DL_BEST_QUALITY   (0)       deadline parameter analogous to VPx BEST QUALITY
 #define VIDEO_RINGBUFFER_DROP_THRESHOLD (5) // start dropping incoming frames (except index frames)
 #endif
 
-#define VIDEO_MIN_REQUEST_KEYFRAME_INTERVAL_MS_FOR_NF 8000 // 1 sec. between KEYFRAME requests
-#define VIDEO_MIN_REQUEST_KEYFRAME_INTERVAL_MS_FOR_KF 1000 // 1 sec. between KEYFRAME requests
+#define VIDEO_MIN_REQUEST_KEYFRAME_INTERVAL_MS_FOR_NF 5000 // x sec. between KEYFRAME requests
+#define VIDEO_MIN_REQUEST_KEYFRAME_INTERVAL_MS_FOR_KF 1000 // y sec. between KEYFRAME requests
 
 #define VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE 1
 // #define VIDEO_DECODER_AUTOSWITCH_CODEC 1 // sometimes this does not work correctly
@@ -133,6 +133,7 @@ typedef struct VCSession_s {
     int32_t  last_seen_fragment_seqnum;
     uint16_t count_old_video_frames_seen;
     uint32_t last_requested_keyframe_ts;
+    uint32_t last_sent_keyframe_ts;
     uint32_t decoder_soft_deadline[VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES];
     uint8_t  decoder_soft_deadline_index;
     uint32_t encoder_soft_deadline[VIDEO_ENCODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES];
