@@ -947,7 +947,7 @@ int64_t tox_util_friend_send_message_v2(Tox *tox, uint32_t friend_number, TOX_ME
 
         // DEBUG ==========================
         // DEBUG ==========================
-        friend_has_msgv2 = true;
+        // friend_has_msgv2 = true;
         // DEBUG ==========================
         // DEBUG ==========================
 
