@@ -84,6 +84,7 @@ typedef struct global_msgv2_outgoing_ft_entry {
 } global_msgv2_outgoing_ft_entry;
 
 static uint16_t global_ts_ms = 0;
+static pthread_mutex_t mutex_tox_util[1];
 
 // ------------ UTILS ------------
 
@@ -170,35 +171,44 @@ get_hex(char *buf, int buf_len, char *hex_, int hex_len, int num_col)
 
 static void tox_utils_list_init(tox_utils_List *l)
 {
+    pthread_mutex_lock(mutex_tox_util);
     l->size = 0;
     l->head = NULL;
+    pthread_mutex_unlock(mutex_tox_util);
 }
 
 static void tox_utils_list_clear(tox_utils_List *l)
 {
+    pthread_mutex_lock(mutex_tox_util);
+
     tox_utils_Node *head = l->head;
     tox_utils_Node *next_ = NULL;
 
     while (head) {
         next_ = head->next;
 
+        l->size--;
+        l->head = next_;
+
         if (head->data) {
             free(head->data);
         }
 
-        l->size--;
-        l->head = next_;
         free(head);
         head = next_;
     }
 
     l->size = 0;
     l->head = NULL;
+
+    pthread_mutex_unlock(mutex_tox_util);
 }
 
 
 static void tox_utils_list_add(tox_utils_List *l, uint8_t *key, uint32_t key2, void *data)
 {
+    pthread_mutex_lock(mutex_tox_util);
+
     tox_utils_Node *n = calloc(1, sizeof(tox_utils_Node));
 
     memcpy(n->key, key, TOX_PUBLIC_KEY_SIZE);
@@ -213,15 +223,20 @@ static void tox_utils_list_add(tox_utils_List *l, uint8_t *key, uint32_t key2, v
 
     l->head = n;
     l->size++;
+
+    pthread_mutex_unlock(mutex_tox_util);
 }
 
 static tox_utils_Node *tox_utils_list_get(tox_utils_List *l, uint8_t *key, uint32_t key2)
 {
+    pthread_mutex_lock(mutex_tox_util);
+
     tox_utils_Node *head = l->head;
 
     while (head) {
         if (head->key2 == key2) {
             if (check_file_signature(head->key, key, TOX_PUBLIC_KEY_SIZE) == 0) {
+                pthread_mutex_unlock(mutex_tox_util);
                 return head;
             }
         }
@@ -229,17 +244,19 @@ static tox_utils_Node *tox_utils_list_get(tox_utils_List *l, uint8_t *key, uint3
         head = head->next;
     }
 
+    pthread_mutex_unlock(mutex_tox_util);
     return NULL;
 }
 
 static void tox_utils_list_remove(tox_utils_List *l, uint8_t *key, uint32_t key2)
 {
+    pthread_mutex_lock(mutex_tox_util);
+
     tox_utils_Node *head = l->head;
     tox_utils_Node *prev_ = NULL;
     tox_utils_Node *next_ = NULL;
 
     while (head) {
-        prev_ = head;
         next_ = head->next;
 
         if (head->key2 == key2) {
@@ -257,6 +274,7 @@ static void tox_utils_list_remove(tox_utils_List *l, uint8_t *key, uint32_t key2
                 }
 
                 free(head);
+                head = NULL;
                 l->size--;
 
                 if (l->size == 0) {
@@ -269,18 +287,22 @@ static void tox_utils_list_remove(tox_utils_List *l, uint8_t *key, uint32_t key2
             }
         }
 
+        prev_ = head;
         head = next_;
     }
+
+    pthread_mutex_unlock(mutex_tox_util);
 }
 
 static void tox_utils_list_remove_2(tox_utils_List *l, uint8_t *key)
 {
+    pthread_mutex_lock(mutex_tox_util);
+
     tox_utils_Node *head = l->head;
     tox_utils_Node *prev_ = NULL;
     tox_utils_Node *next_ = NULL;
 
     while (head) {
-        prev_ = head;
         next_ = head->next;
 
         if (check_file_signature(head->key, key, TOX_PUBLIC_KEY_SIZE) == 0) {
@@ -297,6 +319,7 @@ static void tox_utils_list_remove_2(tox_utils_List *l, uint8_t *key)
             }
 
             free(head);
+            head = NULL;
             l->size--;
 
             if (l->size == 0) {
@@ -306,8 +329,11 @@ static void tox_utils_list_remove_2(tox_utils_List *l, uint8_t *key)
             }
         }
 
+        prev_ = head;
         head = next_;
     }
+
+    pthread_mutex_unlock(mutex_tox_util);
 }
 
 // ------------ UTILS ------------
@@ -409,6 +435,16 @@ static void tox_utils_send_capabilities(Tox *tox, uint32_t friendnumber)
     data[2] = CAP_BYTE_1;
     TOX_ERR_FRIEND_CUSTOM_PACKET error;
     tox_friend_send_lossless_packet(tox, friendnumber, data, 3, &error);
+
+    if (error == TOX_ERR_FRIEND_CUSTOM_PACKET_SENDQ) {
+        Messenger *m = (Messenger *)tox;
+        LOGGER_WARNING(m->log, "toxutil:tox_utils_send_capabilities fnum=%d error:TOX_ERR_FRIEND_CUSTOM_PACKET_SENDQ",
+                       (int)friendnumber);
+    } else if (error != 0) {
+        Messenger *m = (Messenger *)tox;
+        LOGGER_WARNING(m->log, "toxutil:tox_utils_send_capabilities fnum=%d errnum:%d",
+                       (int)friendnumber, (int)error);
+    }
 }
 
 static void tox_utils_receive_capabilities(Tox *tox, uint32_t friendnumber, const uint8_t *data,
@@ -429,6 +465,9 @@ static void tox_utils_receive_capabilities(Tox *tox, uint32_t friendnumber, cons
 static void tox_utils_housekeeping(Tox *tox)
 {
 #if 0
+
+    pthread_mutex_lock(mutex_tox_util);
+
     // cancel and clear old outgoing FTs ----------------
     tox_utils_List *l = &global_msgv2_outgoing_ft_list;
 
@@ -510,6 +549,8 @@ static void tox_utils_housekeeping(Tox *tox)
         l->head = next_;
         head = next_;
     }
+
+    pthread_mutex_unlock(mutex_tox_util);
 
     // cancel and clear old incoming FTs ----------------
 #endif
@@ -600,9 +641,19 @@ void tox_utils_callback_friend_message_v2(Tox *tox, tox_util_friend_message_v2_c
 
 Tox *tox_utils_new(const struct Tox_Options *options, TOX_ERR_NEW *error)
 {
+    if (pthread_mutex_init(mutex_tox_util, NULL) != 0) {
+        if (error) {
+            // TODO: find a better error code, use malloc error for now
+            *error = TOX_ERR_NEW_MALLOC;
+        }
+
+        return NULL;
+    }
+
     tox_utils_list_init(&global_friend_capability_list);
     tox_utils_list_init(&global_msgv2_incoming_ft_list);
     tox_utils_list_init(&global_msgv2_outgoing_ft_list);
+
     return tox_new(options, error);
 }
 
@@ -611,7 +662,10 @@ void tox_utils_kill(Tox *tox)
     tox_utils_list_clear(&global_friend_capability_list);
     tox_utils_list_clear(&global_msgv2_incoming_ft_list);
     tox_utils_list_clear(&global_msgv2_outgoing_ft_list);
+
     tox_kill(tox);
+
+    pthread_mutex_destroy(mutex_tox_util);
 }
 
 bool tox_utils_friend_delete(Tox *tox, uint32_t friend_number, TOX_ERR_FRIEND_DELETE *error)
@@ -939,8 +993,111 @@ void tox_utils_file_recv_chunk_cb(Tox *tox, uint32_t friend_number, uint32_t fil
 }
 
 
+bool tox_util_friend_send_msg_receipt_v2(Tox *tox, uint32_t friend_number, uint8_t *msgid, uint32_t ts_sec)
+{
+    if (msgid) {
+        bool friend_has_msgv2 = tox_utils_get_capabilities(tox, friend_number);
+
+        // DEBUG ==========================
+        // DEBUG ==========================
+        // friend_has_msgv2 = true;
+        // DEBUG ==========================
+        // DEBUG ==========================
+
+        if (friend_has_msgv2 == true) {
+            uint32_t raw_msg_len = tox_messagev2_size(0, (uint32_t)TOX_FILE_KIND_MESSAGEV2_ANSWER, 0);
+            uint8_t *raw_message = calloc(1, (size_t)raw_msg_len);
+
+            if (!raw_message) {
+                return false;
+            }
+
+            bool result = tox_messagev2_wrap(0,
+                                             (uint32_t)TOX_FILE_KIND_MESSAGEV2_ANSWER,
+                                             0,
+                                             NULL, ts_sec,
+                                             0,
+                                             raw_message,
+                                             msgid);
+
+            if (result == true) {
+                // ok we have our raw message in "raw_message" and the length in "raw_msg_len"
+                // now send it
+                const char *filename = "messagev2ack.txt";
+                TOX_ERR_FILE_SEND error_send;
+                uint32_t file_num_new = tox_file_send(tox, friend_number,
+                                                      (uint32_t)TOX_FILE_KIND_MESSAGEV2_ANSWER,
+                                                      (uint64_t)raw_msg_len, (const uint8_t *)msgid,
+                                                      (const uint8_t *)filename, (size_t)strlen(filename),
+                                                      &error_send);
+
+                if ((file_num_new == UINT32_MAX) || (error_send != TOX_ERR_FILE_SEND_OK)) {
+                    free(raw_message);
+                    return false;
+                }
+
+                global_msgv2_outgoing_ft_entry *data = calloc(1, sizeof(global_msgv2_outgoing_ft_entry));
+
+                if (data) {
+                    data->friend_number = friend_number;
+                    data->file_number = file_num_new;
+                    data->kind = TOX_FILE_KIND_MESSAGEV2_ANSWER;
+                    data->file_size = raw_msg_len;
+                    data->timestamp = current_time_monotonic();
+
+                    if (raw_msg_len <= TOX_MAX_FILETRANSFER_SIZE_MSGV2) {
+                        memcpy(data->msg_data, raw_message, raw_msg_len);
+                    } else {
+                        // HINT: this should never happen
+                        memcpy(data->msg_data, raw_message, TOX_MAX_FILETRANSFER_SIZE_MSGV2);
+                    }
+
+                    uint8_t *friend_pubkey = calloc(1, TOX_PUBLIC_KEY_SIZE);
+
+                    if (friend_pubkey) {
+                        bool res = tox_utils_friendnum_to_pubkey(tox, friend_pubkey, friend_number);
+
+                        if (res == true) {
+                            tox_utils_housekeeping(tox);
+                            tox_utils_list_add(&global_msgv2_outgoing_ft_list, friend_pubkey,
+                                               file_num_new, data);
+                            Messenger *m = (Messenger *)tox;
+                            LOGGER_WARNING(m->log,
+                                           "toxutil:tox_util_friend_send_message_v2:TOX_FILE_KIND_MESSAGEV2_ANSWER:%d:%d",
+                                           (int)friend_number, (int)file_num_new);
+                        }
+
+                        free(friend_pubkey);
+                        free(raw_message);
+                        return true;
+
+                    } else {
+                        free(data);
+
+                        free(raw_message);
+                        return false;
+                    }
+                }
+
+                free(raw_message);
+                return false;
+            } else {
+                free(raw_message);
+                return false;
+            }
+        } else {
+            return false;
+        }
+    } else {
+        return false;
+    }
+}
+
 int64_t tox_util_friend_send_message_v2(Tox *tox, uint32_t friend_number, TOX_MESSAGE_TYPE type,
-                                        uint32_t ts_sec, const uint8_t *message, size_t length, TOX_ERR_FRIEND_SEND_MESSAGE *error)
+                                        uint32_t ts_sec, const uint8_t *message, size_t length,
+                                        uint8_t *raw_message_back, uint32_t *raw_msg_len_back,
+                                        uint8_t *msgid_back,
+                                        TOX_ERR_FRIEND_SEND_MESSAGE *error)
 {
     if (message) {
         bool friend_has_msgv2 = tox_utils_get_capabilities(tox, friend_number);
@@ -967,7 +1124,17 @@ int64_t tox_util_friend_send_message_v2(Tox *tox, uint32_t friend_number, TOX_ME
                                    (uint32_t)TOX_FILE_KIND_MESSAGEV2_SEND, 0);
 
             uint8_t *raw_message = calloc(1, (size_t)raw_msg_len);
+
+            if (!raw_message) {
+                return -1;
+            }
+
             uint8_t *msgid = calloc(1, TOX_PUBLIC_KEY_SIZE);
+
+            if (!msgid) {
+                free(raw_message);
+                return -1;
+            }
 
             bool result = tox_messagev2_wrap((uint32_t)length,
                                              (uint32_t)TOX_FILE_KIND_MESSAGEV2_SEND,
@@ -977,14 +1144,15 @@ int64_t tox_util_friend_send_message_v2(Tox *tox, uint32_t friend_number, TOX_ME
                                              raw_message,
                                              msgid);
 
+
+// --- DEBUG ---
 #if 0
+            Messenger *m = (Messenger *)tox;
             char      data_hex_str[5000];
             get_hex((raw_message + 32 + 4 + 2), (raw_msg_len - 32 - 4 - 2), data_hex_str, 5000, 16);
-            printf("XXX090:\n%s\n", data_hex_str);
+            LOGGER_WARNING(m->log, "%s", data_hex_str);
 
 
-
-            Messenger *m = (Messenger *)tox;
             LOGGER_WARNING(m->log,
                            "toxutil:tox_util_friend_send_message_v2:0:FT:%d:%d",
                            (int)raw_msg_len, (int)length);
@@ -995,14 +1163,31 @@ int64_t tox_util_friend_send_message_v2(Tox *tox, uint32_t friend_number, TOX_ME
                            "toxutil:tox_util_friend_send_message_v2:B:FT:%s",
                            (char *)(raw_message + 32 + 4 + 2));
 #endif
+// --- DEBUG ---
+
 
             // every message should have an increasing "dummy" ms-timestamp part
             global_ts_ms++;
 
             if (result == true) {
                 // ok we have our raw message in "raw_message" and the length in "raw_msg_len"
+
+                // give raw message and the length back to caller
+                if (raw_message_back) {
+                    memcpy(raw_message_back, raw_message, raw_msg_len);
+
+                    if (raw_msg_len_back) {
+                        *raw_msg_len_back = raw_msg_len;
+                    }
+                }
+
+                // give message id (= message hash) back to caller
+                if (msgid_back) {
+                    memcpy(msgid_back, msgid, TOX_PUBLIC_KEY_SIZE);
+                }
+
                 // now send it
-                const char *filename = "msgv2.txt";
+                const char *filename = "messagev2.txt";
                 TOX_ERR_FILE_SEND error_send;
                 uint32_t file_num_new = tox_file_send(tox, friend_number,
                                                       (uint32_t)TOX_FILE_KIND_MESSAGEV2_SEND,

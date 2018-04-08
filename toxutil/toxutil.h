@@ -64,15 +64,38 @@ void tox_utils_file_recv_chunk_cb(Tox *tox, uint32_t friend_number, uint32_t fil
 // ---- Msg V2 API ----
 
 // HINT: you still need to register the "old" callback "tox_friend_message_cb"
-//       to get old format messages
+//       to get receive format messages
 typedef void tox_util_friend_message_v2_cb(Tox *tox, uint32_t friend_number,
         const uint8_t *message, size_t length);
 
 void tox_utils_callback_friend_message_v2(Tox *tox, tox_util_friend_message_v2_cb *callback);
 
 // HINT: use only this API function to send messages (it will automatically send old format if needed)
+// params: friend_number friend to send message to
+//         type          type of message (only used for old style messages)
+//         ts_sec        unixtimestamp when message was sent (in seconds since epoch)
+//         message       buffer with message text
+//         length        bytes in buffer of message text
+//         raw_message_back buffer of TOX_MAX_FILETRANSFER_SIZE_MSGV2 size
+//                       the raw message (incl. header) will be put there
+//         raw_msg_len_back number of bytes the raw message actually uses in the buffer
+//         msgid_back    buffer of the message hash, exactly TOX_PUBLIC_KEY_SIZE byte long
+//         error         error code used for both old and new style messages
+// return: int64_t       always -1 for new style messages (to indicate new style was used)
+//         int64_t       return value of tox_friend_send_message() for old style messages
+//                       (can't be negative)
 int64_t tox_util_friend_send_message_v2(Tox *tox, uint32_t friend_number, TOX_MESSAGE_TYPE type,
-                                        uint32_t ts_sec, const uint8_t *message, size_t length, TOX_ERR_FRIEND_SEND_MESSAGE *error);
+                                        uint32_t ts_sec, const uint8_t *message, size_t length,
+                                        uint8_t *raw_message_back, uint32_t *raw_msg_len_back,
+                                        uint8_t *msgid_back,
+                                        TOX_ERR_FRIEND_SEND_MESSAGE *error);
+
+// send message receipt
+// params: friend_number friend to send message to
+//         msgid         buffer of the message hash, exactly TOX_PUBLIC_KEY_SIZE byte long
+//         ts_sec        unixtimestamp when message was received (in seconds since epoch)
+bool tox_util_friend_send_msg_receipt_v2(Tox *tox, uint32_t friend_number, uint8_t *msgid, uint32_t ts_sec);
+
 
 // ---- Msg V2 API ----
 
