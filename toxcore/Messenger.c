@@ -46,35 +46,61 @@ static int write_cryptpacket_id(const Messenger *m, int32_t friendnumber, uint8_
 // friend_not_valid determines if the friendnumber passed is valid in the Messenger object
 static uint8_t friend_not_valid(const Messenger *m, int32_t friendnumber)
 {
-    if ((unsigned int)friendnumber < m->numfriends) {
-        if (m->friendlist[friendnumber].status != 0) {
-            return 0;
+    if (m->friendlist) {
+        if ((unsigned int)friendnumber < m->numfriends) {
+            if (m->friendlist[friendnumber].status != 0) {
+                return 0;
+            }
         }
     }
 
     return 1;
 }
 
-/* Set the size of the friend list to numfriends.
+/* Set the size of the friend list to num_new.
+ * params: num_old -> current size
+ *         num_new -> new size
  *
  *  return -1 if realloc fails.
  */
-static int realloc_friendlist(Messenger *m, uint32_t num)
+static int realloc_friendlist(Messenger *m, uint32_t num_new, uint32_t num_old)
 {
-    if (num == 0) {
-        free(m->friendlist);
+    if (num_new == 0) {
+        Friend *friendlist_copy = m->friendlist;
         m->friendlist = nullptr;
+        free(friendlist_copy);
         return 0;
     }
 
-    Friend *newfriendlist = (Friend *)realloc(m->friendlist, num * sizeof(Friend));
+    Friend *newfriendlist = (Friend *)calloc(1, num_new * sizeof(Friend));
 
     if (newfriendlist == nullptr) {
+        Friend *friendlist_copy = m->friendlist;
+        m->friendlist = NULL;
+        free(friendlist_copy);
         return -1;
     }
 
-    m->friendlist = newfriendlist;
-    return 0;
+    if (num_new > num_old) {
+        Friend *friendlist_copy = m->friendlist;
+        memcpy(newfriendlist, m->friendlist, (num_old * sizeof(Friend)));
+        m->friendlist = newfriendlist;
+        free(friendlist_copy);
+        return 0;
+    } else if (num_new == num_old) {
+        // should not get here
+        Friend *friendlist_copy = m->friendlist;
+        memcpy(newfriendlist, m->friendlist, (num_old * sizeof(Friend)));
+        m->friendlist = newfriendlist;
+        free(friendlist_copy);
+        return 0;
+    } else {
+        Friend *friendlist_copy = m->friendlist;
+        memcpy(newfriendlist, m->friendlist, (num_new * sizeof(Friend)));
+        m->friendlist = newfriendlist;
+        free(friendlist_copy);
+        return 0;
+    }
 }
 
 /*  return the friend id associated to that public key.
@@ -178,12 +204,12 @@ static int m_handle_lossy_packet(void *object, int friend_num, const uint8_t *pa
 
 static int32_t init_new_friend(Messenger *m, const uint8_t *real_pk, uint8_t status)
 {
-    /* Resize the friend list if necessary. */
-    if (realloc_friendlist(m, m->numfriends + 1) != 0) {
+    // here we increase the list (+1)
+    if (realloc_friendlist(m, m->numfriends + 1, m->numfriends) != 0) {
         return FAERR_NOMEM;
     }
 
-    memset(&m->friendlist[m->numfriends], 0, sizeof(Friend));
+    m->numfriends++;
 
     int friendcon_id = new_friend_connection(m->fr_c, real_pk);
 
@@ -193,9 +219,13 @@ static int32_t init_new_friend(Messenger *m, const uint8_t *real_pk, uint8_t sta
 
     uint32_t i;
 
+    // here it goes wrong:
+    // if there is a free slot somewhere in the list we use it
+    // but we have created a new entry in the list (above) regardless
+    // so the list increases always
+    // conclusion: check first, and dont realloc list if there is a free slot anyway!
     for (i = 0; i <= m->numfriends; ++i) {
         if (m->friendlist[i].status == NOFRIEND) {
-            m->friendlist[i].status = status;
             m->friendlist[i].friendcon_id = friendcon_id;
             m->friendlist[i].friendrequest_lastsent = 0;
             id_copy(m->friendlist[i].real_pk, real_pk);
@@ -203,12 +233,11 @@ static int32_t init_new_friend(Messenger *m, const uint8_t *real_pk, uint8_t sta
             m->friendlist[i].userstatus = USERSTATUS_NONE;
             m->friendlist[i].is_typing = 0;
             m->friendlist[i].message_id = 0;
+            // set this value last, since its the key if we look at this entry
+            m->friendlist[i].status = status;
+
             friend_connection_callbacks(m->fr_c, friendcon_id, MESSENGER_CALLBACK_INDEX, &m_handle_status, &m_handle_packet,
                                         &m_handle_lossy_packet, m, i);
-
-            if (m->numfriends == i) {
-                ++m->numfriends;
-            }
 
             if (friend_con_connected(m->fr_c, friendcon_id) == FRIENDCONN_STATUS_CONNECTED) {
                 send_online_packet(m, i);
@@ -405,11 +434,6 @@ static int do_receipts(Messenger *m, int32_t friendnumber, void *userdata)
     return 0;
 }
 
-/* Remove a friend.
- *
- *  return 0 if success.
- *  return -1 if failure.
- */
 int m_delfriend(Messenger *m, int32_t friendnumber)
 {
     if (friend_not_valid(m, friendnumber)) {
@@ -421,7 +445,7 @@ int m_delfriend(Messenger *m, int32_t friendnumber)
     }
 
     clear_receipts(m, friendnumber);
-    remove_request_received(m->fr, m->friendlist[friendnumber].real_pk);
+    remove_request_received(&(m->fr), m->friendlist[friendnumber].real_pk);
     friend_connection_callbacks(m->fr_c, m->friendlist[friendnumber].friendcon_id, MESSENGER_CALLBACK_INDEX, nullptr,
                                 nullptr, nullptr, nullptr, 0);
 
@@ -430,22 +454,29 @@ int m_delfriend(Messenger *m, int32_t friendnumber)
     }
 
     kill_friend_connection(m->fr_c, m->friendlist[friendnumber].friendcon_id);
-    memset(&m->friendlist[friendnumber], 0, sizeof(Friend));
-    uint32_t i;
 
-    for (i = m->numfriends; i != 0; --i) {
-        if (m->friendlist[i - 1].status != NOFRIEND) {
-            break;
+    if (m->numfriends < 1) {
+        return -1;
+    }
+
+    /* actually change data struct here */
+    uint32_t numfriends_old = m->numfriends;
+    uint32_t numfriends_new = m->numfriends - 1;
+    int return_code = 0;
+
+    if (friendnumber < numfriends_new) {
+        // we want to delete a friend in the middle of the list
+        memset(&m->friendlist[friendnumber], 0, sizeof(Friend));
+    } else {
+        // friend is at end of the list
+        m->numfriends--;
+
+        if (realloc_friendlist(m, numfriends_new, numfriends_old) != 0) {
+            return_code = FAERR_NOMEM;
         }
     }
 
-    m->numfriends = i;
-
-    if (realloc_friendlist(m, m->numfriends) != 0) {
-        return FAERR_NOMEM;
-    }
-
-    return 0;
+    return return_code;
 }
 
 int m_get_friend_connectionstatus(const Messenger *m, int32_t friendnumber)
@@ -1870,17 +1901,17 @@ int m_callback_rtp_packet(Messenger *m, int32_t friendnumber, uint8_t byte, m_lo
     }
 
     if (byte == PACKET_LOSSLESS_VIDEO) {
-	    m->friendlist[friendnumber].lossy_rtp_packethandlers[5].function =
-	        packet_handler_callback;
-	    m->friendlist[friendnumber].lossy_rtp_packethandlers[5].object = object;
-	    return 0;
+        m->friendlist[friendnumber].lossy_rtp_packethandlers[5].function =
+            packet_handler_callback;
+        m->friendlist[friendnumber].lossy_rtp_packethandlers[5].object = object;
+        return 0;
     }
 
     if (byte == PACKET_REQUEST_KEYFRAME) {
-	    m->friendlist[friendnumber].lossy_rtp_packethandlers[6].function =
-	        packet_handler_callback;
-	    m->friendlist[friendnumber].lossy_rtp_packethandlers[6].object = object;
-	    return 0;
+        m->friendlist[friendnumber].lossy_rtp_packethandlers[6].function =
+            packet_handler_callback;
+        m->friendlist[friendnumber].lossy_rtp_packethandlers[6].object = object;
+        return 0;
     }
 
     if (byte < PACKET_ID_RANGE_LOSSY_AV_START || byte > PACKET_ID_RANGE_LOSSY_AV_END) {
@@ -2172,7 +2203,9 @@ void kill_messenger(Messenger *m)
     kill_networking(m->net);
 
     for (i = 0; i < m->numfriends; ++i) {
-        clear_receipts(m, i);
+        if (m->friendlist[i].status > 0) {
+            clear_receipts(m, i);
+        }
     }
 
     logger_kill(m->log);

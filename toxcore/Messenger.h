@@ -73,7 +73,7 @@ struct Receipts {
 
 /* Status definitions. */
 typedef enum Friend_Status {
-    NOFRIEND,
+    NOFRIEND = 0,
     FRIEND_ADDED,
     FRIEND_REQUESTED,
     FRIEND_CONFIRMED,
