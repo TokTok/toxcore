@@ -726,8 +726,8 @@ void tox_utils_self_connection_status_cb(Tox *tox,
     // ------- call the real CB function -------
     if (tox_utils_selfconnectionstatus) {
         tox_utils_selfconnectionstatus(tox, connection_status, user_data);
-        Messenger *m = (Messenger *)tox;
-        LOGGER_WARNING(m->log, "toxutil:selfconnectionstatus");
+        // Messenger *m = (Messenger *)tox;
+        // LOGGER_WARNING(m->log, "toxutil:selfconnectionstatus");
     }
 
     // ------- call the real CB function -------
@@ -763,8 +763,8 @@ void tox_utils_friend_connection_status_cb(Tox *tox, uint32_t friendnumber,
     // ------- call the real CB function -------
     if (tox_utils_friend_connectionstatuschange) {
         tox_utils_friend_connectionstatuschange(tox, friendnumber, connection_status, user_data);
-        Messenger *m = (Messenger *)tox;
-        LOGGER_WARNING(m->log, "toxutil:friend_connectionstatuschange");
+        // Messenger *m = (Messenger *)tox;
+        // LOGGER_WARNING(m->log, "toxutil:friend_connectionstatuschange");
     }
 
     // ------- call the real CB function -------
@@ -821,8 +821,8 @@ void tox_utils_file_recv_control_cb(Tox *tox, uint32_t friend_number, uint32_t f
     // ------- call the real CB function -------
     if (tox_utils_filerecvcontrol) {
         tox_utils_filerecvcontrol(tox, friend_number, file_number, control, user_data);
-        Messenger *m = (Messenger *)tox;
-        LOGGER_WARNING(m->log, "toxutil:file_recv_control_cb");
+        // Messenger *m = (Messenger *)tox;
+        // LOGGER_WARNING(m->log, "toxutil:file_recv_control_cb");
     }
 
     // ------- call the real CB function -------
@@ -880,8 +880,8 @@ void tox_utils_file_chunk_request_cb(Tox *tox, uint32_t friend_number, uint32_t 
     // ------- call the real CB function -------
     if (tox_utils_filechunkrequest) {
         tox_utils_filechunkrequest(tox, friend_number, file_number, position, length, user_data);
-        Messenger *m = (Messenger *)tox;
-        LOGGER_WARNING(m->log, "toxutil:file_recv_control_cb");
+        // Messenger *m = (Messenger *)tox;
+        // LOGGER_WARNING(m->log, "toxutil:file_recv_control_cb");
     }
 
     // ------- call the real CB function -------
@@ -911,9 +911,9 @@ void tox_utils_file_recv_cb(Tox *tox, uint32_t friend_number, uint32_t file_numb
                     tox_utils_housekeeping(tox);
                     tox_utils_list_add(&global_msgv2_incoming_ft_list, friend_pubkey,
                                        file_number, data);
-                    Messenger *m = (Messenger *)tox;
-                    LOGGER_WARNING(m->log, "toxutil:file_recv_cb:TOX_FILE_KIND_MESSAGEV2_SEND:%d:%d",
-                                   (int)friend_number, (int)file_number);
+                    // Messenger *m = (Messenger *)tox;
+                    // LOGGER_WARNING(m->log, "toxutil:file_recv_cb:TOX_FILE_KIND_MESSAGEV2_SEND:%d:%d",
+                    //               (int)friend_number, (int)file_number);
                 }
 
                 free(friend_pubkey);
@@ -932,8 +932,8 @@ void tox_utils_file_recv_cb(Tox *tox, uint32_t friend_number, uint32_t file_numb
         if (tox_utils_filerecv) {
             tox_utils_filerecv(tox, friend_number, file_number, kind, file_size,
                                filename, filename_length, user_data);
-            Messenger *m = (Messenger *)tox;
-            LOGGER_WARNING(m->log, "toxutil:file_recv_cb");
+            // Messenger *m = (Messenger *)tox;
+            // LOGGER_WARNING(m->log, "toxutil:file_recv_cb");
         }
 
         // ------- call the real CB function -------
@@ -989,8 +989,8 @@ void tox_utils_file_recv_chunk_cb(Tox *tox, uint32_t friend_number, uint32_t fil
     if (tox_utils_filerecvchunk) {
         tox_utils_filerecvchunk(tox, friend_number, file_number,
                                 position, data, length, user_data);
-        Messenger *m = (Messenger *)tox;
-        LOGGER_WARNING(m->log, "toxutil:file_recv_chunk_cb");
+        // Messenger *m = (Messenger *)tox;
+        // LOGGER_WARNING(m->log, "toxutil:file_recv_chunk_cb");
     }
 
     // ------- call the real CB function -------
