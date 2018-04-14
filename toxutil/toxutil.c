@@ -248,6 +248,42 @@ static tox_utils_Node *tox_utils_list_get(tox_utils_List *l, uint8_t *key, uint3
     return NULL;
 }
 
+static void tox_utils_list_remove_single_node(tox_utils_List *l, tox_utils_Node *n, tox_utils_Node *n_minus_1)
+{
+    if (!l) {
+        return;
+    }
+
+    if (!n) {
+        return;
+    }
+
+    if (n_minus_1 == NULL) {
+        // want to delete the first node
+        l->head = n->next;
+
+        if (n->data) {
+            free(n->data);
+        }
+
+        free(n);
+        l->size--;
+        n = NULL;
+        return;
+    } else {
+        n_minus_1->next = n->next;
+
+        if (n->data) {
+            free(n->data);
+        }
+
+        free(n);
+        l->size--;
+        n = NULL;
+    }
+
+}
+
 static void tox_utils_list_remove(tox_utils_List *l, uint8_t *key, uint32_t key2)
 {
     pthread_mutex_lock(mutex_tox_util);
@@ -261,29 +297,12 @@ static void tox_utils_list_remove(tox_utils_List *l, uint8_t *key, uint32_t key2
 
         if (head->key2 == key2) {
             if (check_file_signature(head->key, key, TOX_PUBLIC_KEY_SIZE) == 0) {
-                if (prev_) {
-                    if (next_) {
-                        prev_->next = next_;
-                    } else {
-                        prev_->next = NULL;
-                    }
-                }
-
-                if (head->data) {
-                    free(head->data);
-                }
-
-                free(head);
-                head = NULL;
-                l->size--;
-
-                if (l->size == 0) {
-                    // list empty
-                    // TODO: more to do here?
-                    l->head = NULL;
-                }
-
-                break;
+                tox_utils_list_remove_single_node(l, head, prev_);
+                // start from beginning of the list
+                head = l->head;
+                prev_ = NULL;
+                next_ = NULL;
+                continue;
             }
         }
 
@@ -306,27 +325,12 @@ static void tox_utils_list_remove_2(tox_utils_List *l, uint8_t *key)
         next_ = head->next;
 
         if (check_file_signature(head->key, key, TOX_PUBLIC_KEY_SIZE) == 0) {
-            if (prev_) {
-                if (next_) {
-                    prev_->next = next_;
-                } else {
-                    prev_->next = NULL;
-                }
-            }
-
-            if (head->data) {
-                free(head->data);
-            }
-
-            free(head);
-            head = NULL;
-            l->size--;
-
-            if (l->size == 0) {
-                // list empty
-                // TODO: more to do here?
-                l->head = NULL;
-            }
+            tox_utils_list_remove_single_node(l, head, prev_);
+            // start from beginning of the list
+            head = l->head;
+            prev_ = NULL;
+            next_ = NULL;
+            continue;
         }
 
         prev_ = head;
