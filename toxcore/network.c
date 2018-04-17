@@ -377,7 +377,7 @@ static void loglogdata(Logger *log, const char *message, const uint8_t *buffer,
 
     if (res < 0) { /* Windows doesn't necessarily know %zu */
         int error = net_error();
-        char *strerror = net_new_strerror(error);
+        const char *strerror = net_new_strerror(error);
         LOGGER_TRACE(log, "[%2u] %s %3u%c %s:%u (%u: %s) | %04x%04x",
                      buffer[0], message, (buflen < 999 ? buflen : 999), 'E',
                      ip_ntoa(&ip_port.ip, ip_str, sizeof(ip_str)), net_ntohs(ip_port.port), error,
@@ -504,7 +504,7 @@ static int receivepacket(Logger *log, Socket sock, IP_Port *ip_port, uint8_t *da
         int error = net_error();
 
         if (fail_or_len < 0 && error != TOX_EWOULDBLOCK) {
-            char *strerror = net_new_strerror(error);
+            const char *strerror = net_new_strerror(error);
             LOGGER_ERROR(log, "Unexpected error reading from socket: %u, %s", error, strerror);
             net_kill_strerror(strerror);
         }
@@ -688,7 +688,7 @@ Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint1
     /* Check for socket error. */
     if (!sock_valid(temp->sock)) {
         int neterror = net_error();
-        char *strerror = net_new_strerror(neterror);
+        const char *strerror = net_new_strerror(neterror);
         LOGGER_ERROR(log, "Failed to get a socket?! %d, %s", neterror, strerror);
         net_kill_strerror(strerror);
         free(temp);
@@ -779,7 +779,7 @@ Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint1
         int res = setsockopt(temp->sock, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, (const char *)&mreq, sizeof(mreq));
 
         int neterror = net_error();
-        char *strerror = net_new_strerror(neterror);
+        const char *strerror = net_new_strerror(neterror);
         LOGGER_DEBUG(log, res < 0 ? "Failed to activate local multicast membership. (%d, %s)" :
                      "Local multicast group FF02::1 joined successfully", neterror, strerror);
         net_kill_strerror(strerror);
@@ -840,7 +840,7 @@ Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint1
 
     char ip_str[IP_NTOA_LEN];
     int neterror = net_error();
-    char *strerror = net_new_strerror(neterror);
+    const char *strerror = net_new_strerror(neterror);
     LOGGER_ERROR(log, "Failed to bind socket: %d, %s IP: %s port_from: %u port_to: %u", neterror, strerror,
                  ip_ntoa(&ip, ip_str, sizeof(ip_str)), port_from, port_to);
     net_kill_strerror(strerror);
@@ -1544,10 +1544,17 @@ int net_error(void)
 #endif
 }
 
-char *net_new_strerror(int error)
+const char *net_new_strerror(int error)
 {
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
     char *str = nullptr;
+    // Windows API is weird. The 5th function arg is of char* type, but we
+    // have to pass char** so that it could assign new memory block to our
+    // pointer, so we have to cast our char** to char* for the compilation
+    // not to fail (otherwise it would fail to find a variant of this function
+    // accepting char** as the 5th arg) and Windows inside casts it back
+    // to char** to do the assignment. So no, this cast you see here, although
+    // it looks weird, is not a mistake.
     FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr,
                    error, 0, (char *)&str, 0, nullptr);
     return str;
@@ -1556,9 +1563,9 @@ char *net_new_strerror(int error)
 #endif
 }
 
-void net_kill_strerror(char *strerror)
+void net_kill_strerror(const char *strerror)
 {
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
-    LocalFree(strerror);
+    LocalFree((char *)strerror);
 #endif
 }

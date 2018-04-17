@@ -802,7 +802,7 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length,
         memcpy(rdata + 1 + RTP_HEADER_SIZE, data, length);
 
         if (-1 == m_send_custom_lossy_packet(session->m, session->friend_number, rdata, SIZEOF_VLA(rdata))) {
-            char *netstrerror = net_new_strerror(net_error());
+            const char *netstrerror = net_new_strerror(net_error());
             LOGGER_WARNING(session->m->log, "RTP send failed (len: %u)! std error: %s, net error: %s",
                            (unsigned)SIZEOF_VLA(rdata), strerror(errno), netstrerror);
             net_kill_strerror(netstrerror);
@@ -821,7 +821,7 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length,
 
             if (-1 == m_send_custom_lossy_packet(session->m, session->friend_number,
                                                  rdata, piece + RTP_HEADER_SIZE + 1)) {
-                char *netstrerror = net_new_strerror(net_error());
+                const char *netstrerror = net_new_strerror(net_error());
                 LOGGER_WARNING(session->m->log, "RTP send failed (len: %d)! std error: %s, net error: %s",
                                piece + RTP_HEADER_SIZE + 1, strerror(errno), netstrerror);
                 net_kill_strerror(netstrerror);
@@ -841,7 +841,7 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length,
 
             if (-1 == m_send_custom_lossy_packet(session->m, session->friend_number, rdata,
                                                  piece + RTP_HEADER_SIZE + 1)) {
-                char *netstrerror = net_new_strerror(net_error());
+                const char *netstrerror = net_new_strerror(net_error());
                 LOGGER_WARNING(session->m->log, "RTP send failed (len: %d)! std error: %s, net error: %s",
                                piece + RTP_HEADER_SIZE + 1, strerror(errno), netstrerror);
                 net_kill_strerror(netstrerror);

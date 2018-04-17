@@ -39,7 +39,7 @@ START_TEST(test_addr_resolv_localhost)
     int res = addr_resolve(localhost, &ip, nullptr);
 
     int error = net_error();
-    char *strerror = net_new_strerror(error);
+    const char *strerror = net_new_strerror(error);
     ck_assert_msg(res > 0, "Resolver failed: %d, %s", error, strerror);
     net_kill_strerror(strerror);
 
