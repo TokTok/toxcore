@@ -620,7 +620,7 @@ void (*tox_utils_filerecv)(struct Tox *tox, uint32_t, uint32_t,
 
 void tox_utils_callback_file_recv(Tox *tox, tox_file_recv_cb *callback)
 {
-    tox_utils_filerecv = (void (*)(Tox * tox, int32_t, uint32_t,
+    tox_utils_filerecv = (void (*)(Tox * tox, uint32_t, uint32_t,
                                    uint32_t, uint64_t, const uint8_t *, size_t, void *))callback;
 }
 

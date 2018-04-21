@@ -67,7 +67,7 @@ static int realloc_friendlist(Messenger *m, uint32_t num_new, uint32_t num_old)
 {
     if (num_new == num_old) {
         // nothing to do
-        return 0
+        return 0;
     }
 
     if (num_new == 0) {
