@@ -63,12 +63,26 @@ void tox_utils_file_recv_chunk_cb(Tox *tox, uint32_t friend_number, uint32_t fil
 
 // ---- Msg V2 API ----
 
-// HINT: you still need to register the "old" callback "tox_friend_message_cb"
-//       to get receive format messages
+// HINT: receive a message in new messageV2 format
+//       (you still need to register the "old" callback "tox_friend_message_cb"
+//       to get receive format messages)
+// params: message       raw messageV2 data incl. header
+//         length        length of raw messageV2 data incl. header
 typedef void tox_util_friend_message_v2_cb(Tox *tox, uint32_t friend_number,
         const uint8_t *message, size_t length);
 
 void tox_utils_callback_friend_message_v2(Tox *tox, tox_util_friend_message_v2_cb *callback);
+
+// HINT: receive message receipt (ACK)
+// params: friend_number friend
+//         ts_sec        unixtimestamp when message was received by the friend (in seconds since epoch)
+//         msgid         buffer of the message hash, exactly TOX_PUBLIC_KEY_SIZE byte long
+typedef void tox_utils_friend_read_receipt_message_v2_cb(Tox *tox, uint32_t friend_number,
+        uint32_t ts_sec, const uint8_t *msgid);
+
+void tox_utils_callback_friend_read_receipt_message_v2(Tox *tox,
+        tox_utils_friend_read_receipt_message_v2_cb *callback);
+
 
 // HINT: use only this API function to send messages (it will automatically send old format if needed)
 // params: friend_number friend to send message to

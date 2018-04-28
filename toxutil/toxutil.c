@@ -643,6 +643,17 @@ void tox_utils_callback_friend_message_v2(Tox *tox, tox_util_friend_message_v2_c
                                             size_t))callback;
 }
 
+void (*tox_utils_friend_read_receipt_message_v2)(struct Tox *tox, uint32_t, uint32_t,
+        const uint8_t *) = NULL;
+
+void tox_utils_callback_friend_read_receipt_message_v2(Tox *tox,
+        tox_utils_friend_read_receipt_message_v2_cb *callback)
+{
+    tox_utils_friend_read_receipt_message_v2 = (void (*)(Tox * tox, uint32_t, uint32_t,
+            const uint8_t *))callback;
+}
+
+
 Tox *tox_utils_new(const struct Tox_Options *options, TOX_ERR_NEW *error)
 {
     if (pthread_mutex_init(mutex_tox_util, NULL) != 0) {
@@ -786,7 +797,11 @@ void tox_utils_file_recv_control_cb(Tox *tox, uint32_t friend_number, uint32_t f
                                                        friend_pubkey, file_number);
 
                 if (n != NULL) {
-                    if (((global_msgv2_outgoing_ft_entry *)(n->data))->kind == TOX_FILE_KIND_MESSAGEV2_SEND) {
+                    if (
+                        (((global_msgv2_outgoing_ft_entry *)(n->data))->kind == TOX_FILE_KIND_MESSAGEV2_SEND)
+                        ||
+                        (((global_msgv2_outgoing_ft_entry *)(n->data))->kind == TOX_FILE_KIND_MESSAGEV2_ANSWER)
+                    ) {
                         // remove FT data from list
                         tox_utils_list_remove(&global_msgv2_outgoing_ft_list,
                                               friend_pubkey, file_number);
@@ -800,7 +815,11 @@ void tox_utils_file_recv_control_cb(Tox *tox, uint32_t friend_number, uint32_t f
                                        friend_pubkey, file_number);
 
                 if (n != NULL) {
-                    if (((global_msgv2_incoming_ft_entry *)(n->data))->kind == TOX_FILE_KIND_MESSAGEV2_SEND) {
+                    if (
+                        (((global_msgv2_incoming_ft_entry *)(n->data))->kind == TOX_FILE_KIND_MESSAGEV2_SEND)
+                        ||
+                        (((global_msgv2_incoming_ft_entry *)(n->data))->kind == TOX_FILE_KIND_MESSAGEV2_ANSWER)
+                    ) {
                         // remove FT data from list
                         tox_utils_list_remove(&global_msgv2_incoming_ft_list,
                                               friend_pubkey, file_number);
@@ -843,7 +862,11 @@ void tox_utils_file_chunk_request_cb(Tox *tox, uint32_t friend_number, uint32_t 
                                                    friend_pubkey, file_number);
 
             if (n != NULL) {
-                if (((global_msgv2_outgoing_ft_entry *)(n->data))->kind == TOX_FILE_KIND_MESSAGEV2_SEND) {
+                if (
+                    (((global_msgv2_outgoing_ft_entry *)(n->data))->kind == TOX_FILE_KIND_MESSAGEV2_SEND)
+                    ||
+                    (((global_msgv2_outgoing_ft_entry *)(n->data))->kind == TOX_FILE_KIND_MESSAGEV2_ANSWER)
+                ) {
                     if (length == 0) {
                         // FT finished
                         // remove FT data from list
@@ -892,7 +915,11 @@ void tox_utils_file_recv_cb(Tox *tox, uint32_t friend_number, uint32_t file_numb
                             const uint8_t *filename, size_t filename_length, void *user_data)
 {
     // ------- do messageV2 stuff -------
-    if (kind == TOX_FILE_KIND_MESSAGEV2_SEND) {
+    if (
+        (kind == TOX_FILE_KIND_MESSAGEV2_SEND)
+        ||
+        (kind == TOX_FILE_KIND_MESSAGEV2_ANSWER)
+    ) {
         global_msgv2_incoming_ft_entry *data = calloc(1, sizeof(global_msgv2_incoming_ft_entry));
 
         if (data) {
@@ -923,7 +950,6 @@ void tox_utils_file_recv_cb(Tox *tox, uint32_t friend_number, uint32_t file_numb
         }
 
         return;
-    } else if (kind == TOX_FILE_KIND_MESSAGEV2_ANSWER) {
     } else if (kind == TOX_FILE_KIND_MESSAGEV2_ALTER) {
     } else {
         // ------- do messageV2 stuff -------
@@ -970,6 +996,50 @@ void tox_utils_file_recv_chunk_cb(Tox *tox, uint32_t friend_number, uint32_t fil
                         tox_utils_list_remove(&global_msgv2_incoming_ft_list,
                                               friend_pubkey, file_number);
                     } else {
+                        // copy chunk into buffer
+                        uint8_t *data_ = ((uint8_t *)((global_msgv2_incoming_ft_entry *)(n->data))->msg_data);
+                        memcpy((data_ + position), data, length);
+                    }
+
+                    free(friend_pubkey);
+                    return;
+                } else if (((global_msgv2_incoming_ft_entry *)(n->data))->kind == TOX_FILE_KIND_MESSAGEV2_ANSWER) {
+                    if (length == 0) {
+                        // FT finished
+                        if (tox_utils_friend_read_receipt_message_v2) {
+                            const uint8_t *data_ = ((uint8_t *)((global_msgv2_incoming_ft_entry *)
+                                                                (n->data))->msg_data);
+                            const uint64_t size_ = ((global_msgv2_incoming_ft_entry *)
+                                                    (n->data))->file_size;
+
+                            uint32_t answer_raw_size = tox_messagev2_size(0,
+                                                       TOX_FILE_KIND_MESSAGEV2_ANSWER,
+                                                       0);
+
+                            if (size_ >= answer_raw_size) {
+
+                                const uint32_t ts_sec_ = tox_messagev2_get_ts_sec(data_);
+                                uint8_t *msgid_ = calloc(1, TOX_PUBLIC_KEY_SIZE);
+
+                                if (msgid_) {
+                                    bool res1 = tox_messagev2_get_message_id(data_, msgid_);
+
+                                    if (res1 == true) {
+                                        tox_utils_friend_read_receipt_message_v2(tox, friend_number,
+                                                ts_sec_, (const uint8_t *)msgid_);
+                                    }
+
+                                    free(msgid_);
+                                }
+                            }
+
+                        }
+
+                        // remove FT data from list
+                        tox_utils_list_remove(&global_msgv2_incoming_ft_list,
+                                              friend_pubkey, file_number);
+                    } else {
+                        // copy chunk into buffer
                         uint8_t *data_ = ((uint8_t *)((global_msgv2_incoming_ft_entry *)(n->data))->msg_data);
                         memcpy((data_ + position), data, length);
                     }
@@ -977,6 +1047,8 @@ void tox_utils_file_recv_chunk_cb(Tox *tox, uint32_t friend_number, uint32_t fil
                     free(friend_pubkey);
                     return;
                 }
+
+
             }
         }
 

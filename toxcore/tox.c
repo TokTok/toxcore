@@ -1734,7 +1734,7 @@ bool tox_messagev2_wrap(uint32_t text_length, uint32_t type,
 /*
  * receiving
  */
-bool tox_messagev2_get_message_id(uint8_t *raw_message, uint8_t *msg_id)
+bool tox_messagev2_get_message_id(const uint8_t *raw_message, uint8_t *msg_id)
 {
     if (raw_message == NULL) {
         return false;
