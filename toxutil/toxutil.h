@@ -65,7 +65,7 @@ void tox_utils_file_recv_chunk_cb(Tox *tox, uint32_t friend_number, uint32_t fil
 
 // HINT: receive a message in new messageV2 format
 //       (you still need to register the "old" callback "tox_friend_message_cb"
-//       to get receive format messages)
+//       to receive old format messages)
 // params: message       raw messageV2 data incl. header
 //         length        length of raw messageV2 data incl. header
 typedef void tox_util_friend_message_v2_cb(Tox *tox, uint32_t friend_number,
