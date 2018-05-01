@@ -335,7 +335,7 @@ uint32_t tox_max_custom_packet_size(void);
 /**
  * Maximum size of MessageV2 Messagetext
  */
-#define TOX_MESSAGEV2_MAX_HEADER_SIZE   (32 + 4 + 2 + 1)
+#define TOX_MESSAGEV2_MAX_HEADER_SIZE   (TOX_PUBLIC_KEY_SIZE + 4 + 2 + 1)
 
 /**
  * Maximum size of MessageV2 Filetransfers (overall size including any overhead)

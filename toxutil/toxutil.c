@@ -1169,6 +1169,88 @@ bool tox_util_friend_send_msg_receipt_v2(Tox *tox, uint32_t friend_number, uint8
     }
 }
 
+bool tox_util_friend_resend_message_v2(Tox *tox, uint32_t friend_number,
+                                       const uint8_t *raw_message, const uint32_t raw_msg_len,
+                                       TOX_ERR_FRIEND_SEND_MESSAGE *error)
+{
+
+    if (error) {
+        // TODO: make this better
+        // use some "random" error value for now
+        *error = TOX_ERR_FRIEND_SEND_MESSAGE_SENDQ;
+    }
+
+    uint8_t *msgid = calloc(1, TOX_PUBLIC_KEY_SIZE);
+
+    if (!msgid) {
+        return false;
+    }
+
+    bool res2 = tox_messagev2_get_message_id(raw_message, msgid);
+
+    if (res2 == false) {
+        free(msgid);
+        return false;
+    }
+
+    // now send it
+    const char *filename = "messagev2.txt";
+    TOX_ERR_FILE_SEND error_send;
+    uint32_t file_num_new = tox_file_send(tox, friend_number,
+                                          (uint32_t)TOX_FILE_KIND_MESSAGEV2_SEND,
+                                          (uint64_t)raw_msg_len, (const uint8_t *)msgid,
+                                          (const uint8_t *)filename, (size_t)strlen(filename),
+                                          &error_send);
+
+    if ((file_num_new == UINT32_MAX) || (error_send != TOX_ERR_FILE_SEND_OK)) {
+        free(msgid);
+        return false;
+    }
+
+    global_msgv2_outgoing_ft_entry *data = calloc(1, sizeof(global_msgv2_outgoing_ft_entry));
+
+    if (data) {
+        data->friend_number = friend_number;
+        data->file_number = file_num_new;
+        data->kind = TOX_FILE_KIND_MESSAGEV2_SEND;
+        data->file_size = raw_msg_len;
+        data->timestamp = current_time_monotonic();
+
+        if (raw_msg_len <= TOX_MAX_FILETRANSFER_SIZE_MSGV2) {
+            memcpy(data->msg_data, raw_message, raw_msg_len);
+        } else {
+            // HINT: this should never happen
+            memcpy(data->msg_data, raw_message, TOX_MAX_FILETRANSFER_SIZE_MSGV2);
+        }
+
+        uint8_t *friend_pubkey = calloc(1, TOX_PUBLIC_KEY_SIZE);
+
+        if (friend_pubkey) {
+            bool res = tox_utils_friendnum_to_pubkey(tox, friend_pubkey, friend_number);
+
+            if (res == true) {
+                tox_utils_housekeeping(tox);
+                tox_utils_list_add(&global_msgv2_outgoing_ft_list, friend_pubkey,
+                                   file_num_new, data);
+                Messenger *m = (Messenger *)tox;
+                LOGGER_WARNING(m->log,
+                               "toxutil:tox_util_friend_resend_message_v2:TOX_FILE_KIND_MESSAGEV2_SEND:%d:%d",
+                               (int)friend_number, (int)file_num_new);
+            }
+
+            free(friend_pubkey);
+        } else {
+            free(data);
+        }
+    }
+
+    if (error) {
+        *error = TOX_ERR_FRIEND_SEND_MESSAGE_OK;
+    }
+
+    return true;
+}
+
 int64_t tox_util_friend_send_message_v2(Tox *tox, uint32_t friend_number, TOX_MESSAGE_TYPE type,
                                         uint32_t ts_sec, const uint8_t *message, size_t length,
                                         uint8_t *raw_message_back, uint32_t *raw_msg_len_back,

@@ -1630,14 +1630,14 @@ uint16_t tox_self_get_tcp_port(const Tox *tox, Tox_Err_Get_Port *error)
 uint32_t tox_messagev2_size(uint32_t text_length, uint32_t type, uint32_t alter_type)
 {
     if (type == TOX_FILE_KIND_MESSAGEV2_SEND) {
-        return (32 + 4 + 2 + text_length);
+        return (TOX_PUBLIC_KEY_SIZE + 4 + 2 + text_length);
     } else if (type == TOX_FILE_KIND_MESSAGEV2_ANSWER) {
-        return (32 + 4 + 2);
+        return (TOX_PUBLIC_KEY_SIZE + 4 + 2);
     } else { // TOX_FILE_KIND_MESSAGEV2_ALTER
         if (alter_type == TOX_MESSAGEV2_ALTER_TYPE_CORRECT) {
-            return (32 + 32 + 4 + 2 + 1 + text_length);
+            return (TOX_PUBLIC_KEY_SIZE + 32 + 4 + 2 + 1 + text_length);
         } else { // TOX_MESSAGEV2_ALTER_TYPE_DELETE
-            return (32 + 32 + 4 + 2 + 1);
+            return (TOX_PUBLIC_KEY_SIZE + 32 + 4 + 2 + 1);
         }
 
     }
@@ -1689,8 +1689,8 @@ bool tox_messagev2_wrap(uint32_t text_length, uint32_t type,
         /* Tox keys are 32 bytes, so we use this directly as new "message id" */
         new_symmetric_key(msgid);
 
-        memcpy(raw_message_cpy, msgid, 32);
-        raw_message_cpy += 32;
+        memcpy(raw_message_cpy, msgid, TOX_PUBLIC_KEY_SIZE);
+        raw_message_cpy += TOX_PUBLIC_KEY_SIZE;
 
         memcpy(raw_message_cpy, &ts_sec, 4);
         raw_message_cpy += 4;
@@ -1707,8 +1707,8 @@ bool tox_messagev2_wrap(uint32_t text_length, uint32_t type,
 
         uint8_t *raw_message_cpy = raw_message;
 
-        memcpy(raw_message_cpy, msgid, 32);
-        raw_message_cpy += 32;
+        memcpy(raw_message_cpy, msgid, TOX_PUBLIC_KEY_SIZE);
+        raw_message_cpy += TOX_PUBLIC_KEY_SIZE;
 
         memcpy(raw_message_cpy, &ts_sec, 4);
         raw_message_cpy += 4;
@@ -1744,7 +1744,7 @@ bool tox_messagev2_get_message_id(const uint8_t *raw_message, uint8_t *msg_id)
         return false;
     }
 
-    memcpy(msg_id, raw_message, 32);
+    memcpy(msg_id, raw_message, TOX_PUBLIC_KEY_SIZE);
 
     return true;
 }
@@ -1759,7 +1759,7 @@ bool tox_messagev2_get_message_alter_id(uint8_t *raw_message, uint8_t *alter_id)
         return false;
     }
 
-    memcpy(alter_id, raw_message + 32 + 4 + 2 + 1, 32);
+    memcpy(alter_id, raw_message + TOX_PUBLIC_KEY_SIZE + 4 + 2 + 1, TOX_PUBLIC_KEY_SIZE);
 
     return true;
 }
@@ -1771,7 +1771,7 @@ uint8_t tox_messagev2_get_alter_type(uint8_t *raw_message)
     }
 
     uint8_t return_value;
-    memcpy(&return_value, raw_message + 32 + 4 + 2, sizeof(return_value));
+    memcpy(&return_value, raw_message + TOX_PUBLIC_KEY_SIZE + 4 + 2, sizeof(return_value));
 
     // HINT: crude check, that type will be a valid value
     if (return_value != TOX_MESSAGEV2_ALTER_TYPE_DELETE) {
@@ -1788,7 +1788,7 @@ uint32_t tox_messagev2_get_ts_sec(const uint8_t *raw_message)
     }
 
     uint32_t return_value;
-    memcpy(&return_value, raw_message + 32, sizeof(return_value));
+    memcpy(&return_value, raw_message + TOX_PUBLIC_KEY_SIZE, sizeof(return_value));
 
     return return_value;
 }
@@ -1800,7 +1800,7 @@ uint16_t tox_messagev2_get_ts_ms(const uint8_t *raw_message)
     }
 
     uint16_t return_value;
-    memcpy(&return_value, raw_message + 32 + 4, sizeof(return_value));
+    memcpy(&return_value, raw_message + TOX_PUBLIC_KEY_SIZE + 4, sizeof(return_value));
 
     return return_value;
 }
@@ -1836,12 +1836,12 @@ bool tox_messagev2_get_message_text(const uint8_t *raw_message, uint32_t raw_mes
         }
     } else { // TOX_FILE_KIND_MESSAGEV2_SEND
         // HINT: we want at least 1 byte of real message text
-        if (raw_message_len < (32 + 4 + 2 + 1)) {
+        if (raw_message_len < (TOX_PUBLIC_KEY_SIZE + 4 + 2 + 1)) {
             return false;
         }
 
-        *text_length = (raw_message_len - (32 + 4 + 2));
-        memcpy(message_text, raw_message + 32 + 4 + 2, *text_length);
+        *text_length = (raw_message_len - (TOX_PUBLIC_KEY_SIZE + 4 + 2));
+        memcpy(message_text, raw_message + TOX_PUBLIC_KEY_SIZE + 4 + 2, *text_length);
     }
 
     return result;

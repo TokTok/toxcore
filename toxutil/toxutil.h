@@ -104,6 +104,16 @@ int64_t tox_util_friend_send_message_v2(Tox *tox, uint32_t friend_number, TOX_ME
                                         uint8_t *msgid_back,
                                         TOX_ERR_FRIEND_SEND_MESSAGE *error);
 
+// resend a message
+// params: friend_number friend to send message to
+//         raw_message   buffer of the raw message (incl. header)
+//         raw_msg_len   number of bytes length of raw message
+// return: bool          true -> if message was sent OK
+bool tox_util_friend_resend_message_v2(Tox *tox, uint32_t friend_number,
+                                       const uint8_t *raw_message,
+                                       const uint32_t raw_msg_len,
+                                       TOX_ERR_FRIEND_SEND_MESSAGE *error);
+
 // send message receipt
 // params: friend_number friend to send message to
 //         msgid         buffer of the message hash, exactly TOX_PUBLIC_KEY_SIZE byte long
