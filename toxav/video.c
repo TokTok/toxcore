@@ -135,7 +135,7 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
         cfg->kf_mode = VPX_KF_AUTO; // Encoder determines optimal placement automatically
     }
 
-    cfg->rc_end_usage = VPX_VBR; // what quality mode?
+    cfg->rc_end_usage = VPX_CBR; // VPX_VBR; // what quality mode?
     /*
      VPX_VBR    Variable Bit Rate (VBR) mode
      VPX_CBR    Constant Bit Rate (CBR) mode
