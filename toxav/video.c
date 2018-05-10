@@ -386,7 +386,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
 
 #if 1
     uint32_t rc_max_intra_target = MaxIntraTarget(600);
-    rc_max_intra_target = 130;
+    rc_max_intra_target = 102;
     rc = vpx_codec_control(vc->encoder, VP8E_SET_MAX_INTRA_BITRATE_PCT, rc_max_intra_target);
 
     if (rc != VPX_CODEC_OK) {
