@@ -1317,7 +1317,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         memcpy(img.planes[VPX_PLANE_U], u, (width / 2) * (height / 2));
         memcpy(img.planes[VPX_PLANE_V], v, (width / 2) * (height / 2));
 
-#if 1
+#if 0
         uint32_t duration = (ms_to_last_frame * 10) + 1;
 
         if (duration > 10000) {
