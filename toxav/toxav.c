@@ -1325,8 +1325,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         }
 #else
         // set to hardcoded 24fps (this is only for vpx internal calculations!!)
-        #define 24FPS_IN_MS 41
-        uint32_t duration = (24FPS_IN_MS * 10);
+        uint32_t duration = (41 * 10); // HINT: 24fps ~= 41ms
 #endif
 
         vpx_codec_err_t vrc = vpx_codec_encode(call->video.second->encoder, &img,
