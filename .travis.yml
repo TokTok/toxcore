@@ -52,7 +52,6 @@ matrix:
     services:
     - docker
   - stage: "Stage 1"
-    if: type IN (push, api, cron)
     env: JOB=toxcore ENV=freebsd
     dist: trusty
     sudo: required
@@ -65,7 +64,6 @@ matrix:
     - docker
     sudo: required
   - stage: "Stage 2"
-    if: type IN (push, api, cron)
     env: JOB=toxcore ENV=freebsd
     dist: trusty
     sudo: required
