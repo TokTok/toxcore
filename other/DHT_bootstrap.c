@@ -71,7 +71,7 @@ static void manage_keys(DHT *dht)
         }
 
         dht_set_self_public_key(dht, keys);
-        dht_set_self_public_key(dht, keys + CRYPTO_PUBLIC_KEY_SIZE);
+        dht_set_self_secret_key(dht, keys + CRYPTO_PUBLIC_KEY_SIZE);
         printf("Keys loaded successfully.\n");
     } else {
         memcpy(keys, dht_get_self_public_key(dht), CRYPTO_PUBLIC_KEY_SIZE);
@@ -156,8 +156,8 @@ int main(int argc, char *argv[])
 
     for (i = 0; i < 32; i++) {
         const uint8_t *const self_public_key = dht_get_self_public_key(dht);
-        printf("%02hhX", self_public_key[i]);
-        fprintf(file, "%02hhX", self_public_key[i]);
+        printf("%02X", self_public_key[i]);
+        fprintf(file, "%02X", self_public_key[i]);
     }
 
     fclose(file);

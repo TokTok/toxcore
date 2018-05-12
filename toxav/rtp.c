@@ -467,7 +467,8 @@ static int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t 
         return -1;
     }
 
-    if (header.offset_full >= header.data_length_full) {
+    if (header.offset_full >= header.data_length_full
+            && (header.offset_full != 0 || header.data_length_full != 0)) {
         LOGGER_ERROR(m->log, "Invalid video packet: frame offset (%u) >= full frame length (%u)",
                      (unsigned)header.offset_full, (unsigned)header.data_length_full);
         return -1;
@@ -769,7 +770,9 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length,
     // here the highest bits gets stripped anyway, no need to do keyframe bit magic here!
     header.data_length_lower = length;
 
-    header.flags = RTP_LARGE_FRAME;
+    if (session->payload_type == rtp_TypeVideo) {
+        header.flags = RTP_LARGE_FRAME;
+    }
 
     uint16_t length_safe = (uint16_t)length;
 
@@ -799,7 +802,10 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length,
         memcpy(rdata + 1 + RTP_HEADER_SIZE, data, length);
 
         if (-1 == m_send_custom_lossy_packet(session->m, session->friend_number, rdata, SIZEOF_VLA(rdata))) {
-            LOGGER_WARNING(session->m->log, "RTP send failed (len: %zu)! std error: %s", SIZEOF_VLA(rdata), strerror(errno));
+            const char *netstrerror = net_new_strerror(net_error());
+            LOGGER_WARNING(session->m->log, "RTP send failed (len: %u)! std error: %s, net error: %s",
+                           (unsigned)SIZEOF_VLA(rdata), strerror(errno), netstrerror);
+            net_kill_strerror(netstrerror);
         }
     } else {
         /**
@@ -815,8 +821,10 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length,
 
             if (-1 == m_send_custom_lossy_packet(session->m, session->friend_number,
                                                  rdata, piece + RTP_HEADER_SIZE + 1)) {
-                LOGGER_WARNING(session->m->log, "RTP send failed (len: %d)! std error: %s",
-                               piece + RTP_HEADER_SIZE + 1, strerror(errno));
+                const char *netstrerror = net_new_strerror(net_error());
+                LOGGER_WARNING(session->m->log, "RTP send failed (len: %d)! std error: %s, net error: %s",
+                               piece + RTP_HEADER_SIZE + 1, strerror(errno), netstrerror);
+                net_kill_strerror(netstrerror);
             }
 
             sent += piece;
@@ -833,8 +841,10 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length,
 
             if (-1 == m_send_custom_lossy_packet(session->m, session->friend_number, rdata,
                                                  piece + RTP_HEADER_SIZE + 1)) {
-                LOGGER_WARNING(session->m->log, "RTP send failed (len: %d)! std error: %s",
-                               piece + RTP_HEADER_SIZE + 1, strerror(errno));
+                const char *netstrerror = net_new_strerror(net_error());
+                LOGGER_WARNING(session->m->log, "RTP send failed (len: %d)! std error: %s, net error: %s",
+                               piece + RTP_HEADER_SIZE + 1, strerror(errno), netstrerror);
+                net_kill_strerror(netstrerror);
             }
         }
     }

@@ -63,15 +63,15 @@
 #include <sys/time.h>
 #include <sys/types.h>
 
+#define TOX_EWOULDBLOCK EWOULDBLOCK
+
 #else
 
 #ifndef IPV6_V6ONLY
 #define IPV6_V6ONLY 27
 #endif
 
-#ifndef EWOULDBLOCK
-#define EWOULDBLOCK WSAEWOULDBLOCK
-#endif
+#define TOX_EWOULDBLOCK WSAEWOULDBLOCK
 
 static const char *inet_ntop(Family family, const void *addr, char *buf, size_t bufsize)
 {
@@ -376,10 +376,13 @@ static void loglogdata(Logger *log, const char *message, const uint8_t *buffer,
     char ip_str[IP_NTOA_LEN];
 
     if (res < 0) { /* Windows doesn't necessarily know %zu */
+        int error = net_error();
+        const char *strerror = net_new_strerror(error);
         LOGGER_TRACE(log, "[%2u] %s %3u%c %s:%u (%u: %s) | %04x%04x",
                      buffer[0], message, (buflen < 999 ? buflen : 999), 'E',
-                     ip_ntoa(&ip_port.ip, ip_str, sizeof(ip_str)), net_ntohs(ip_port.port), errno,
-                     strerror(errno), data_0(buflen, buffer), data_1(buflen, buffer));
+                     ip_ntoa(&ip_port.ip, ip_str, sizeof(ip_str)), net_ntohs(ip_port.port), error,
+                     strerror, data_0(buflen, buffer), data_1(buflen, buffer));
+        net_kill_strerror(strerror);
     } else if ((res > 0) && ((size_t)res <= buflen)) {
         LOGGER_TRACE(log, "[%2u] %s %3u%c %s:%u (%u: %s) | %04x%04x",
                      buffer[0], message, (res < 999 ? res : 999), ((size_t)res < buflen ? '<' : '='),
@@ -423,7 +426,7 @@ uint16_t net_port(const Networking_Core *net)
  */
 int sendpacket(Networking_Core *net, IP_Port ip_port, const uint8_t *data, uint16_t length)
 {
-    if (net->family == 0) { /* Socket not initialized */
+    if (net->family == TOX_AF_UNSPEC) { /* Socket not initialized */
         return -1;
     }
 
@@ -436,42 +439,35 @@ int sendpacket(Networking_Core *net, IP_Port ip_port, const uint8_t *data, uint1
 
     size_t addrsize = 0;
 
+    if (ip_port.ip.family == TOX_AF_INET && net->family == TOX_AF_INET6) {
+        /* must convert to IPV4-in-IPV6 address */
+        IP6 ip6;
+
+        /* there should be a macro for this in a standards compliant
+         * environment, not found */
+        ip6.uint32[0] = 0;
+        ip6.uint32[1] = 0;
+        ip6.uint32[2] = net_htonl(0xFFFF);
+        ip6.uint32[3] = ip_port.ip.ip.v4.uint32;
+
+        ip_port.ip.family = TOX_AF_INET6;
+        ip_port.ip.ip.v6 = ip6;
+    }
+
     if (ip_port.ip.family == TOX_AF_INET) {
-        if (net->family == TOX_AF_INET6) {
-            /* must convert to IPV4-in-IPV6 address */
-            struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *)&addr;
+        struct sockaddr_in *addr4 = (struct sockaddr_in *)&addr;
 
-            addrsize = sizeof(struct sockaddr_in6);
-            addr6->sin6_family = AF_INET6;
-            addr6->sin6_port = ip_port.port;
-
-            /* there should be a macro for this in a standards compliant
-             * environment, not found */
-            IP6 ip6;
-
-            ip6.uint32[0] = 0;
-            ip6.uint32[1] = 0;
-            ip6.uint32[2] = net_htonl(0xFFFF);
-            ip6.uint32[3] = ip_port.ip.ip.v4.uint32;
-            fill_addr6(ip6, &addr6->sin6_addr);
-
-            addr6->sin6_flowinfo = 0;
-            addr6->sin6_scope_id = 0;
-        } else {
-            struct sockaddr_in *addr4 = (struct sockaddr_in *)&addr;
-
-            addrsize = sizeof(struct sockaddr_in);
-            addr4->sin_family = AF_INET;
-            fill_addr4(ip_port.ip.ip.v4, &addr4->sin_addr);
-            addr4->sin_port = ip_port.port;
-        }
+        addrsize = sizeof(struct sockaddr_in);
+        fill_addr4(ip_port.ip.ip.v4, &addr4->sin_addr);
+        addr4->sin_family = AF_INET;
+        addr4->sin_port = ip_port.port;
     } else if (ip_port.ip.family == TOX_AF_INET6) {
         struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *)&addr;
 
         addrsize = sizeof(struct sockaddr_in6);
+        fill_addr6(ip_port.ip.ip.v6, &addr6->sin6_addr);
         addr6->sin6_family = AF_INET6;
         addr6->sin6_port = ip_port.port;
-        fill_addr6(ip_port.ip.ip.v6, &addr6->sin6_addr);
 
         addr6->sin6_flowinfo = 0;
         addr6->sin6_scope_id = 0;
@@ -480,7 +476,7 @@ int sendpacket(Networking_Core *net, IP_Port ip_port, const uint8_t *data, uint1
         return -1;
     }
 
-    int res = sendto(net->sock, (const char *) data, length, 0, (struct sockaddr *)&addr, addrsize);
+    const int res = sendto(net->sock, (const char *) data, length, 0, (struct sockaddr *)&addr, addrsize);
 
     loglogdata(net->log, "O=>", data, length, ip_port, res);
 
@@ -505,9 +501,12 @@ static int receivepacket(Logger *log, Socket sock, IP_Port *ip_port, uint8_t *da
     int fail_or_len = recvfrom(sock, (char *) data, MAX_UDP_PACKET_SIZE, 0, (struct sockaddr *)&addr, &addrlen);
 
     if (fail_or_len < 0) {
+        int error = net_error();
 
-        if (fail_or_len < 0 && errno != EWOULDBLOCK) {
-            LOGGER_ERROR(log, "Unexpected error reading from socket: %u, %s\n", errno, strerror(errno));
+        if (fail_or_len < 0 && error != TOX_EWOULDBLOCK) {
+            const char *strerror = net_new_strerror(error);
+            LOGGER_ERROR(log, "Unexpected error reading from socket: %u, %s", error, strerror);
+            net_kill_strerror(strerror);
         }
 
         return -1; /* Nothing received. */
@@ -664,7 +663,7 @@ Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint1
 
     /* maybe check for invalid IPs like 224+.x.y.z? if there is any IP set ever */
     if (ip.family != TOX_AF_INET && ip.family != TOX_AF_INET6) {
-        LOGGER_ERROR(log, "Invalid address family: %u\n", ip.family);
+        LOGGER_ERROR(log, "Invalid address family: %u", ip.family);
         return nullptr;
     }
 
@@ -688,7 +687,10 @@ Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint1
 
     /* Check for socket error. */
     if (!sock_valid(temp->sock)) {
-        LOGGER_ERROR(log, "Failed to get a socket?! %u, %s\n", errno, strerror(errno));
+        int neterror = net_error();
+        const char *strerror = net_new_strerror(neterror);
+        LOGGER_ERROR(log, "Failed to get a socket?! %d, %s", neterror, strerror);
+        net_kill_strerror(strerror);
         free(temp);
 
         if (error) {
@@ -776,8 +778,11 @@ Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint1
         mreq.ipv6mr_interface = 0;
         int res = setsockopt(temp->sock, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, (const char *)&mreq, sizeof(mreq));
 
-        LOGGER_DEBUG(log, res < 0 ? "Failed to activate local multicast membership. (%u, %s)" :
-                     "Local multicast group FF02::1 joined successfully", errno, strerror(errno));
+        int neterror = net_error();
+        const char *strerror = net_new_strerror(neterror);
+        LOGGER_DEBUG(log, res < 0 ? "Failed to activate local multicast membership. (%d, %s)" :
+                     "Local multicast group FF02::1 joined successfully", neterror, strerror);
+        net_kill_strerror(strerror);
     }
 
     /* a hanging program or a different user might block the standard port;
@@ -834,9 +839,11 @@ Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint1
     }
 
     char ip_str[IP_NTOA_LEN];
-    LOGGER_ERROR(log, "Failed to bind socket: %u, %s IP: %s port_from: %u port_to: %u", errno, strerror(errno),
+    int neterror = net_error();
+    const char *strerror = net_new_strerror(neterror);
+    LOGGER_ERROR(log, "Failed to bind socket: %d, %s IP: %s port_from: %u port_to: %u", neterror, strerror,
                  ip_ntoa(&ip, ip_str, sizeof(ip_str)), port_from, port_to);
-
+    net_kill_strerror(strerror);
     kill_networking(temp);
 
     if (error) {
@@ -1526,4 +1533,39 @@ size_t net_unpack_u64(const uint8_t *bytes, uint64_t *v)
     p += net_unpack_u32(p, &lo);
     *v = ((uint64_t)hi << 32) | lo;
     return p - bytes;
+}
+
+int net_error(void)
+{
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+    return WSAGetLastError();
+#else
+    return errno;
+#endif
+}
+
+const char *net_new_strerror(int error)
+{
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+    char *str = nullptr;
+    // Windows API is weird. The 5th function arg is of char* type, but we
+    // have to pass char** so that it could assign new memory block to our
+    // pointer, so we have to cast our char** to char* for the compilation
+    // not to fail (otherwise it would fail to find a variant of this function
+    // accepting char** as the 5th arg) and Windows inside casts it back
+    // to char** to do the assignment. So no, this cast you see here, although
+    // it looks weird, is not a mistake.
+    FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr,
+                   error, 0, (char *)&str, 0, nullptr);
+    return str;
+#else
+    return strerror(error);
+#endif
+}
+
+void net_kill_strerror(const char *strerror)
+{
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+    LocalFree((char *)strerror);
+#endif
 }
