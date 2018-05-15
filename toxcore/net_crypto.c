@@ -2448,7 +2448,7 @@ static void send_crypto_packets(Net_Crypto *c)
         Crypto_Connection *conn = get_crypto_connection(c, i);
 
         if (conn == nullptr) {
-            return;
+            continue;
         }
 
         if (CRYPTO_SEND_PACKET_INTERVAL + conn->temp_packet_sent_time < temp_time) {
