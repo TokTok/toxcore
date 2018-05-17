@@ -1137,10 +1137,10 @@ bool tox_util_friend_send_msg_receipt_v2(Tox *tox, uint32_t friend_number, uint8
                             tox_utils_housekeeping(tox);
                             tox_utils_list_add(&global_msgv2_outgoing_ft_list, friend_pubkey,
                                                file_num_new, data);
-                            Messenger *m = (Messenger *)tox;
-                            LOGGER_WARNING(m->log,
-                                           "toxutil:tox_util_friend_send_message_v2:TOX_FILE_KIND_MESSAGEV2_ANSWER:%d:%d",
-                                           (int)friend_number, (int)file_num_new);
+                            //Messenger *m = (Messenger *)tox;
+                            //LOGGER_WARNING(m->log,
+                            //               "toxutil:tox_util_friend_send_message_v2:TOX_FILE_KIND_MESSAGEV2_ANSWER:%d:%d",
+                            //               (int)friend_number, (int)file_num_new);
                         }
 
                         free(friend_pubkey);
@@ -1232,10 +1232,10 @@ bool tox_util_friend_resend_message_v2(Tox *tox, uint32_t friend_number,
                 tox_utils_housekeeping(tox);
                 tox_utils_list_add(&global_msgv2_outgoing_ft_list, friend_pubkey,
                                    file_num_new, data);
-                Messenger *m = (Messenger *)tox;
-                LOGGER_WARNING(m->log,
-                               "toxutil:tox_util_friend_resend_message_v2:TOX_FILE_KIND_MESSAGEV2_SEND:%d:%d",
-                               (int)friend_number, (int)file_num_new);
+                //Messenger *m = (Messenger *)tox;
+                //LOGGER_WARNING(m->log,
+                //               "toxutil:tox_util_friend_resend_message_v2:TOX_FILE_KIND_MESSAGEV2_SEND:%d:%d",
+                //               (int)friend_number, (int)file_num_new);
             }
 
             free(friend_pubkey);
@@ -1385,10 +1385,10 @@ int64_t tox_util_friend_send_message_v2(Tox *tox, uint32_t friend_number, TOX_ME
                             tox_utils_housekeeping(tox);
                             tox_utils_list_add(&global_msgv2_outgoing_ft_list, friend_pubkey,
                                                file_num_new, data);
-                            Messenger *m = (Messenger *)tox;
-                            LOGGER_WARNING(m->log,
-                                           "toxutil:tox_util_friend_send_message_v2:TOX_FILE_KIND_MESSAGEV2_SEND:%d:%d",
-                                           (int)friend_number, (int)file_num_new);
+                            //Messenger *m = (Messenger *)tox;
+                            //LOGGER_WARNING(m->log,
+                            //               "toxutil:tox_util_friend_send_message_v2:TOX_FILE_KIND_MESSAGEV2_SEND:%d:%d",
+                            //               (int)friend_number, (int)file_num_new);
                         }
 
                         free(friend_pubkey);
@@ -1409,10 +1409,10 @@ int64_t tox_util_friend_send_message_v2(Tox *tox, uint32_t friend_number, TOX_ME
         } else {
             // wrap old message send function
 
-            Messenger *m = (Messenger *)tox;
-            LOGGER_WARNING(m->log,
-                           "toxutil:tox_util_friend_send_message_v2:WRAP-OLD:%d",
-                           (int)friend_number);
+            //Messenger *m = (Messenger *)tox;
+            //LOGGER_WARNING(m->log,
+            //               "toxutil:tox_util_friend_send_message_v2:WRAP-OLD:%d",
+            //               (int)friend_number);
 
             return tox_friend_send_message(tox, friend_number, type, message,
                                            length, error);
