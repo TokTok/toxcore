@@ -544,6 +544,7 @@ endif()
 
 option(DHT_BOOTSTRAP "Enable building of DHT_bootstrap" ON)
 if(DHT_BOOTSTRAP)
+  add_definitions(-DUSE_STDERR_LOGGER=1)
   add_executable(DHT_bootstrap ${CPUFEATURES}
     other/DHT_bootstrap.c
     other/bootstrap_node_packets.c)
