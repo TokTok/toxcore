@@ -63,15 +63,15 @@ if(APPLE)
 endif()
 
 if(UNIX)
-    if(CMAKE_SYSTEM_NAME MATCHES ".*Linux")
-        set(LINUX TRUE)
-    elseif(CMAKE_SYSTEM_NAME MATCHES "kOpenBSD.*|OpenBSD.*")
-        set(OPENBSD TRUE)
-    elseif(CMAKE_SYSTEM_NAME MATCHES "kNetBSD.*|NetBSD.*")
-        set(NETBSD TRUE)
-    elseif(CMAKE_SYSTEM_NAME MATCHES "kFreeBSD.*|FreeBSD")
-        set(FREEBSD TRUE)
-    endif()
+  if(CMAKE_SYSTEM_NAME MATCHES ".*Linux")
+    set(LINUX TRUE)
+  elseif(CMAKE_SYSTEM_NAME MATCHES "kOpenBSD.*|OpenBSD.*")
+    set(OPENBSD TRUE)
+  elseif(CMAKE_SYSTEM_NAME MATCHES "kNetBSD.*|NetBSD.*")
+    set(NETBSD TRUE)
+  elseif(CMAKE_SYSTEM_NAME MATCHES "kFreeBSD.*|FreeBSD")
+    set(FREEBSD TRUE)
+  endif()
 endif()
 
 enable_testing()
@@ -544,6 +544,7 @@ endif()
 
 option(DHT_BOOTSTRAP "Enable building of DHT_bootstrap" ON)
 if(DHT_BOOTSTRAP)
+  add_definitions(-DUSE_STDERR_LOGGER=1)
   add_executable(DHT_bootstrap ${CPUFEATURES}
     other/DHT_bootstrap.c
     other/bootstrap_node_packets.c)
@@ -560,6 +561,7 @@ if(BOOTSTRAP_DAEMON)
     message(WARNING "Option BOOTSTRAP_DAEMON is enabled but required library LIBCONFIG was not found.")
     set(BOOTSTRAP_DAEMON OFF)
   else()
+    add_definitions(-DUSE_STDERR_LOGGER=1)
     add_executable(tox-bootstrapd ${CPUFEATURES}
       other/bootstrap_daemon/src/command_line_arguments.c
       other/bootstrap_daemon/src/command_line_arguments.h
