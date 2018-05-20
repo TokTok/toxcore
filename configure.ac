@@ -135,6 +135,7 @@ AC_ARG_ENABLE([daemon],
         if test "x$enableval" = "xno"; then
             BUILD_DHT_BOOTSTRAP_DAEMON="no"
         elif test "x$enableval" = "xyes"; then
+            AC_DEFINE([USE_STDERR_LOGGER],[1],[define to 1 to enable stderr_logger])
             BUILD_DHT_BOOTSTRAP_DAEMON="yes"
         fi
     ]
@@ -146,6 +147,7 @@ AC_ARG_ENABLE([dht-bootstrap],
         if test "x$enableval" = "xno"; then
             BUILD_DHT_BOOTSTRAP="no"
         elif test "x$enableval" = "xyes"; then
+            AC_DEFINE([USE_STDERR_LOGGER],[1],[define to 1 to enable stderr_logger])
             BUILD_DHT_BOOTSTRAP="yes"
         fi
     ]
