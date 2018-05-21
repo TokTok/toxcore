@@ -199,23 +199,63 @@ VCSession *vc_new_h264(Logger *log, ToxAV *av, uint32_t friend_number, toxav_vid
                        VCSession *vc)
 {
 
-#if 0
-    int rv = WelsCreateSVCEncoder(vc->h264_encoder);
+    // ENCODER -------
+    x264_param_t param;
 
-    if (rv == 0) {
-        SEncParamBase param;
-        memset(&param, 0, sizeof(SEncParamBase));
-        // param.iUsageType = usageType;
-        // param.fMaxFrameRate = frameRate;
-        param.iPicWidth = 1920;
-        param.iPicHeight = 1080;
-        param.iTargetBitrate = 5000000;
-        // Initialize(vc->h264_encoder, &param);
-    } else {
-        // HINT: init failed, what now?
+    if (x264_param_default_preset(&param, "medium", NULL) < 0) {
+        // goto fail;
     }
 
-#endif
+    /* Configure non-default params */
+    // param.i_bitdepth = 8;
+    param.i_csp = X264_CSP_I420;
+    param.i_width  = 1920;
+    param.i_height = 1080;
+    param.i_threads = 3;
+    param.b_vfr_input = 0;
+    param.b_repeat_headers = 1;
+    param.b_annexb = 1;
+
+    /* Apply profile restrictions. */
+    if (x264_param_apply_profile(&param, "high") < 0) {
+        // goto fail;
+    }
+
+    vc->h264_encoder = x264_encoder_open(&param);
+
+//    goto good;
+
+//fail:
+//    vc->h264_encoder = NULL;
+
+//good:
+
+    // ENCODER -------
+
+
+    // DECODER -------
+    AVCodec *codec;
+    vc->h264_decoder = NULL;
+
+    avcodec_register_all();
+
+    codec = avcodec_find_decoder(AV_CODEC_ID_H264);
+
+    if (!codec) {
+        LOGGER_WARNING(log, "codec not found H264 on decoder");
+    }
+
+    vc->h264_decoder = avcodec_alloc_context3(codec);
+
+    if (codec->capabilities & CODEC_CAP_TRUNCATED) {
+        vc->h264_decoder->flags |= CODEC_FLAG_TRUNCATED; /* we do not send complete frames */
+    }
+
+    if (avcodec_open2(vc->h264_decoder, codec, NULL) < 0) {
+        LOGGER_WARNING(log, "could not open codec H264 on decoder");
+    }
+
+    // DECODER -------
 
     return vc;
 }
@@ -638,8 +678,8 @@ void vc_kill_vpx(VCSession *vc)
 
 void vc_kill_h264(VCSession *vc)
 {
-    // Uninitialize(vc->h264_encoder);
-    // WelsDestroySVCEncoder(vc->h264_encoder);
+    x264_encoder_close(vc->h264_encoder);
+    avcodec_free_context(&vc->h264_decoder);
 }
 
 void vc_kill(VCSession *vc)
@@ -1278,6 +1318,16 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
     return 0;
 }
 
+int vc_reconfigure_encoder_h264(VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height,
+                                int16_t kf_max_dist)
+{
+    if (!vc) {
+        return -1;
+    }
+
+    return 0;
+}
+
 int vc_reconfigure_encoder_vpx(VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height,
                                int16_t kf_max_dist)
 {
@@ -1523,7 +1573,20 @@ int vc_reconfigure_encoder_vpx(VCSession *vc, uint32_t bit_rate, uint16_t width,
 int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height,
                            int16_t kf_max_dist)
 {
-    return vc_reconfigure_encoder_vpx(vc, bit_rate, width, height, kf_max_dist);
+    if (vc->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP8) {
+        return vc_reconfigure_encoder_vpx(vc, bit_rate, width, height, kf_max_dist);
+    } else {
+        return vc_reconfigure_encoder_h264(vc, bit_rate, width, height, kf_max_dist);
+    }
+}
+
+int vc_reconfigure_encoder_bitrate_only_h264(VCSession *vc, uint32_t bit_rate)
+{
+    if (!vc) {
+        return -1;
+    }
+
+    return 0;
 }
 
 int vc_reconfigure_encoder_bitrate_only_vpx(VCSession *vc, uint32_t bit_rate)
@@ -1556,6 +1619,10 @@ int vc_reconfigure_encoder_bitrate_only_vpx(VCSession *vc, uint32_t bit_rate)
 
 int vc_reconfigure_encoder_bitrate_only(VCSession *vc, uint32_t bit_rate)
 {
-    return vc_reconfigure_encoder_bitrate_only_vpx(vc, bit_rate);
+    if (vc->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP8) {
+        return vc_reconfigure_encoder_bitrate_only_vpx(vc, bit_rate);
+    } else {
+        return vc_reconfigure_encoder_bitrate_only_h264(vc, bit_rate);
+    }
 }
 

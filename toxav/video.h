@@ -35,7 +35,9 @@
 // for VPX ----------
 
 // for openH264 ----------
-// #include <wels/codec_api.h>
+#include <x264.h>
+#include <libavcodec/avcodec.h>
+#include <libavutil/common.h>
 // for openH264 ----------
 
 
@@ -124,10 +126,11 @@ typedef struct VCSession_s {
     /* encoding */
     vpx_codec_ctx_t encoder[1];
     uint32_t frame_counter;
-    // ISVCEncoder h264_encoder[1];
+    x264_t *h264_encoder;
 
     /* decoding */
     vpx_codec_ctx_t decoder[1];
+    AVCodecContext *h264_decoder;
     struct RingBuffer *vbuf_raw; /* Un-decoded data */
 
     uint64_t linfts; /* Last received frame time stamp */

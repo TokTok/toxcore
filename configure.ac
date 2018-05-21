@@ -506,6 +506,26 @@ AC_CHECK_LIB([pthread], [pthread_self],
 #fi
 
 if test "x$BUILD_AV" = "xyes"; then
+    PKG_CHECK_MODULES([LIBAVCODEC], [libavcodec],
+        [],
+        [
+            AC_MSG_WARN([disabling AV support $LIBAVCODEC_PKG_ERRORS])
+            BUILD_AV="no"
+        ]
+    )
+fi
+
+if test "x$BUILD_AV" = "xyes"; then
+    PKG_CHECK_MODULES([X264], [x264],
+        [],
+        [
+            AC_MSG_WARN([disabling AV support $X264_PKG_ERRORS])
+            BUILD_AV="no"
+        ]
+    )
+fi
+
+if test "x$BUILD_AV" = "xyes"; then
     PKG_CHECK_MODULES([OPUS], [opus],
         [],
         [
@@ -528,10 +548,10 @@ fi
 if test "x$BUILD_AV" = "xyes"; then
     # toxcore lib needs an global?
     # So far this works okay
-    AV_LIBS="$OPUS_LIBS $VPX_LIBS $OPENH264_LIBS"
+    AV_LIBS="$OPUS_LIBS $VPX_LIBS $LIBAVCODEC_LIBS $X264_LIBS"
     AC_SUBST(AV_LIBS)
 
-    AV_CFLAGS="$OPUS_CFLAGS $VPX_CFLAGS $OPENH264_CFLAGS"
+    AV_CFLAGS="$OPUS_CFLAGS $VPX_CFLAGS $LIBAVCODEC_CFLAGS $X264_CFLAGS"
     AC_SUBST(AV_CFLAGS)
 fi
 
