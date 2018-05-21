@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
     ip_init(&ip, ipv6enabled);
 
     Logger *logger = logger_new();
-    DHT *dht = new_DHT(logger, new_networking(nullptr, ip, PORT), true);
+    DHT *dht = new_DHT(logger, new_networking(logger, ip, PORT), true);
     Onion *onion = new_onion(dht);
     Onion_Announce *onion_a = new_onion_announce(dht);
 
@@ -145,7 +145,6 @@ int main(int argc, char *argv[])
         printf("TCP server failed to initialize.\n");
         exit(1);
     }
-
 #endif
 
     const char *const public_id_filename = "PUBLIC_ID.txt";
