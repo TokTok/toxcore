@@ -450,7 +450,7 @@ static int handle_gc_announce_request(Onion_Announce *onion_a, IP_Port source, c
     /*Respond with a announce response packet*/
     Node_format nodes_list[MAX_SENT_NODES];
     GC_Peer_Announce gc_announces[MAX_SENT_NODES];
-    unsigned int num_nodes = get_close_nodes(onion_a->dht, plain + ONION_PING_ID_SIZE, nodes_list, 0,
+    unsigned int num_nodes = get_close_nodes(onion_a->dht, plain + ONION_PING_ID_SIZE, nodes_list, net_family_unspec,
                                              ip_is_lan(source.ip) == 0, 1);
     uint8_t nonce[CRYPTO_NONCE_SIZE];
     random_nonce(nonce);

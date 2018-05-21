@@ -1027,7 +1027,7 @@ static int handle_gc_sync_response(Messenger *m, int groupnumber, int peernumber
             return -1;
         }
 
-        uint8_t *peer_pk = data + length - public_keys_size;
+        const uint8_t *peer_pk = data + length - public_keys_size;
 
         for (i = 0; i < num_peers; i++) {
             if (!memcmp(peer_pk, chat->self_public_key, ENC_PUBLIC_KEY)) {
@@ -4461,7 +4461,7 @@ static int handle_gc_handshake_request(Messenger *m, int groupnumber, IP_Port *i
     bytes_to_U32(&gconn->friend_shared_state_version, data + ENC_PUBLIC_KEY + SIG_PUBLIC_KEY + 2);
 
     if (join_type == HJ_PUBLIC && !is_public_chat(chat)) {
-        gc_peer_delete(m, groupnumber, peer_number, "join priv chat as public", 15);
+        gc_peer_delete(m, groupnumber, peer_number, (const uint8_t *)"join priv chat as public", 15);
         return -1;
     }
 
@@ -5087,7 +5087,7 @@ static int peer_update(Messenger *m, int groupnumber, GC_GroupPeer *peer, uint32
             (*c->peer_exit)(m, groupnumber, chat->group[peernumber].peer_id, nullptr, 0, c->peer_exit_userdata);
         }
 
-        gc_peer_delete(m, groupnumber, peernumber, "duplicate nick", 13);
+        gc_peer_delete(m, groupnumber, peernumber, (const uint8_t *)"duplicate nick", 13);
         return -1;
     }
 

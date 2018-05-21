@@ -190,6 +190,9 @@ typedef struct {
     unsigned int num_to_bootstrap;
 } DHT_Friend;
 
+const uint8_t *dht_friend_public_key(const DHT_Friend *dht_friend);
+const Client_data *dht_friend_client(const DHT_Friend *dht_friend, size_t index);
+
 /* Return packet size of packed node with ip_family on success.
  * Return -1 on failure.
  */

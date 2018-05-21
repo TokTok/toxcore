@@ -988,8 +988,6 @@ static int tcp_response_callback(void *object, uint8_t connection_id, const uint
         return -1;
     }
 
-    fprintf(stderr, "registered\n");
-
     set_tcp_connection_number(tcp_con->connection, connection_id, connections_number);
 
     return 0;
