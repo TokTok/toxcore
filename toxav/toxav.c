@@ -1323,6 +1323,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         if (duration > 10000) {
             duration = 10000;
         }
+
 #else
         // set to hardcoded 24fps (this is only for vpx internal calculations!!)
         uint32_t duration = (41 * 10); // HINT: 24fps ~= 41ms

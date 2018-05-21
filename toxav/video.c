@@ -195,48 +195,36 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
     }
 }
 
-
-
-VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_receive_frame_cb *cb, void *cb_data)
+VCSession *vc_new_h264(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_receive_frame_cb *cb, void *cb_data,
+                       VCSession *vc)
 {
-    VCSession *vc = (VCSession *)calloc(sizeof(VCSession), 1);
+
+#if 0
+    int rv = WelsCreateSVCEncoder(vc->h264_encoder);
+
+    if (rv == 0) {
+        SEncParamBase param;
+        memset(&param, 0, sizeof(SEncParamBase));
+        // param.iUsageType = usageType;
+        // param.fMaxFrameRate = frameRate;
+        param.iPicWidth = 1920;
+        param.iPicHeight = 1080;
+        param.iTargetBitrate = 5000000;
+        // Initialize(vc->h264_encoder, &param);
+    } else {
+        // HINT: init failed, what now?
+    }
+
+#endif
+
+    return vc;
+}
+
+VCSession *vc_new_vpx(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_receive_frame_cb *cb, void *cb_data,
+                      VCSession *vc)
+{
+
     vpx_codec_err_t rc;
-
-    if (!vc) {
-        LOGGER_WARNING(log, "Allocation failed! Application might misbehave!");
-        return NULL;
-    }
-
-    if (create_recursive_mutex(vc->queue_mutex) != 0) {
-        LOGGER_WARNING(log, "Failed to create recursive mutex!");
-        free(vc);
-        return NULL;
-    }
-
-    if (!(vc->vbuf_raw = rb_new(VIDEO_RINGBUFFER_BUFFER_ELEMENTS))) {
-        goto BASE_CLEANUP;
-    }
-
-
-
-    // options ---
-    vc->video_encoder_cpu_used = VP8E_SET_CPUUSED_VALUE;
-    vc->video_encoder_cpu_used_prev = vc->video_encoder_cpu_used;
-    vc->video_encoder_vp8_quality = TOXAV_ENCODER_VP8_QUALITY_NORMAL;
-    vc->video_encoder_vp8_quality_prev = vc->video_encoder_vp8_quality;
-    vc->video_rc_max_quantizer = TOXAV_ENCODER_VP8_RC_MAX_QUANTIZER_NORMAL;
-    vc->video_rc_max_quantizer_prev = vc->video_rc_max_quantizer;
-    vc->video_rc_min_quantizer = TOXAV_ENCODER_VP8_RC_MIN_QUANTIZER_NORMAL;
-    vc->video_rc_min_quantizer_prev = vc->video_rc_min_quantizer;
-    vc->video_encoder_coded_used = TOXAV_ENCODER_CODEC_USED_VP8;
-    vc->video_encoder_coded_used_prev = vc->video_encoder_coded_used;
-    vc->video_keyframe_method = TOXAV_ENCODER_KF_METHOD_NORMAL;
-    vc->video_keyframe_method_prev = vc->video_keyframe_method;
-    vc->video_decoder_error_concealment = VIDEO__VP8_DECODER_ERROR_CONCEALMENT;
-    vc->video_decoder_error_concealment_prev = vc->video_decoder_error_concealment;
-    vc->video_decoder_codec_used = TOXAV_ENCODER_CODEC_USED_VP8;
-    // options ---
-
     vc->send_keyframe_request_received = 0;
 
     /*
@@ -580,12 +568,60 @@ BASE_CLEANUP:
     return NULL;
 }
 
-void vc_kill(VCSession *vc)
+VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_receive_frame_cb *cb, void *cb_data)
 {
+    VCSession *vc = (VCSession *)calloc(sizeof(VCSession), 1);
+
     if (!vc) {
-        return;
+        LOGGER_WARNING(log, "Allocation failed! Application might misbehave!");
+        return NULL;
     }
 
+    if (create_recursive_mutex(vc->queue_mutex) != 0) {
+        LOGGER_WARNING(log, "Failed to create recursive mutex!");
+        free(vc);
+        return NULL;
+    }
+
+    // options ---
+    vc->video_encoder_cpu_used = VP8E_SET_CPUUSED_VALUE;
+    vc->video_encoder_cpu_used_prev = vc->video_encoder_cpu_used;
+    vc->video_encoder_vp8_quality = TOXAV_ENCODER_VP8_QUALITY_NORMAL;
+    vc->video_encoder_vp8_quality_prev = vc->video_encoder_vp8_quality;
+    vc->video_rc_max_quantizer = TOXAV_ENCODER_VP8_RC_MAX_QUANTIZER_NORMAL;
+    vc->video_rc_max_quantizer_prev = vc->video_rc_max_quantizer;
+    vc->video_rc_min_quantizer = TOXAV_ENCODER_VP8_RC_MIN_QUANTIZER_NORMAL;
+    vc->video_rc_min_quantizer_prev = vc->video_rc_min_quantizer;
+    vc->video_encoder_coded_used = TOXAV_ENCODER_CODEC_USED_VP8;
+    vc->video_encoder_coded_used_prev = vc->video_encoder_coded_used;
+    vc->video_keyframe_method = TOXAV_ENCODER_KF_METHOD_NORMAL;
+    vc->video_keyframe_method_prev = vc->video_keyframe_method;
+    vc->video_decoder_error_concealment = VIDEO__VP8_DECODER_ERROR_CONCEALMENT;
+    vc->video_decoder_error_concealment_prev = vc->video_decoder_error_concealment;
+    vc->video_decoder_codec_used = TOXAV_ENCODER_CODEC_USED_VP8;
+    // options ---
+
+
+    if (!(vc->vbuf_raw = rb_new(VIDEO_RINGBUFFER_BUFFER_ELEMENTS))) {
+        goto BASE_CLEANUP;
+    }
+
+    // HINT: initialize the H264 encoder
+    vc = vc_new_h264(log, av, friend_number, cb, cb_data, vc);
+
+    // HINT: initialize VP8 encoder
+    return vc_new_vpx(log, av, friend_number, cb, cb_data, vc);
+
+BASE_CLEANUP:
+    pthread_mutex_destroy(vc->queue_mutex);
+    rb_kill((RingBuffer *)vc->vbuf_raw);
+    free(vc);
+    return NULL;
+}
+
+
+void vc_kill_vpx(VCSession *vc)
+{
     int jk;
 
     for (jk = 0; jk < vc->fragment_buf_counter; jk++) {
@@ -595,9 +631,25 @@ void vc_kill(VCSession *vc)
 
     vc->fragment_buf_counter = 0;
 
-
     vpx_codec_destroy(vc->encoder);
     vpx_codec_destroy(vc->decoder);
+}
+
+
+void vc_kill_h264(VCSession *vc)
+{
+    // Uninitialize(vc->h264_encoder);
+    // WelsDestroySVCEncoder(vc->h264_encoder);
+}
+
+void vc_kill(VCSession *vc)
+{
+    if (!vc) {
+        return;
+    }
+
+    vc_kill_h264(vc);
+    vc_kill_vpx(vc);
 
     void *p;
     uint8_t dummy;
@@ -614,11 +666,8 @@ void vc_kill(VCSession *vc)
     free(vc);
 }
 
-
-
-void video_switch_decoder(VCSession *vc)
+void video_switch_decoder_vpx(VCSession *vc)
 {
-
 
     /*
     vpx_codec_err_t vpx_codec_peek_stream_info  (   vpx_codec_iface_t *     iface,
@@ -734,6 +783,10 @@ void video_switch_decoder(VCSession *vc)
 
 }
 
+void video_switch_decoder(VCSession *vc)
+{
+    video_switch_decoder_vpx(vc);
+}
 
 uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_t *a_r_timestamp,
                    uint64_t *a_l_timestamp,
@@ -1225,8 +1278,8 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
     return 0;
 }
 
-int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height,
-                           int16_t kf_max_dist)
+int vc_reconfigure_encoder_vpx(VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height,
+                               int16_t kf_max_dist)
 {
     if (!vc) {
         return -1;
@@ -1467,8 +1520,13 @@ int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uin
     return 0;
 }
 
+int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height,
+                           int16_t kf_max_dist)
+{
+    return vc_reconfigure_encoder_vpx(vc, bit_rate, width, height, kf_max_dist);
+}
 
-int vc_reconfigure_encoder_bitrate_only(VCSession *vc, uint32_t bit_rate)
+int vc_reconfigure_encoder_bitrate_only_vpx(VCSession *vc, uint32_t bit_rate)
 {
     if (!vc) {
         return -1;
@@ -1496,4 +1554,8 @@ int vc_reconfigure_encoder_bitrate_only(VCSession *vc, uint32_t bit_rate)
     return 0;
 }
 
+int vc_reconfigure_encoder_bitrate_only(VCSession *vc, uint32_t bit_rate)
+{
+    return vc_reconfigure_encoder_bitrate_only_vpx(vc, bit_rate);
+}
 

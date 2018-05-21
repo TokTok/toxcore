@@ -26,12 +26,18 @@
 #include "../toxcore/util.h"
 #include "../toxcore/Messenger.h"
 
+// for VPX ----------
 #include <vpx/vpx_decoder.h>
 #include <vpx/vpx_encoder.h>
 #include <vpx/vpx_image.h>
-
 #include <vpx/vp8cx.h>
 #include <vpx/vp8dx.h>
+// for VPX ----------
+
+// for openH264 ----------
+// #include <wels/codec_api.h>
+// for openH264 ----------
+
 
 // TODO: don't hardcode this, let the application choose it
 // VPX Info: Time to spend encoding, in microseconds (it's a *soft* deadline)
@@ -118,6 +124,7 @@ typedef struct VCSession_s {
     /* encoding */
     vpx_codec_ctx_t encoder[1];
     uint32_t frame_counter;
+    // ISVCEncoder h264_encoder[1];
 
     /* decoding */
     vpx_codec_ctx_t decoder[1];
