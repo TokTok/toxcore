@@ -202,7 +202,7 @@ VCSession *vc_new_h264(Logger *log, ToxAV *av, uint32_t friend_number, toxav_vid
     // ENCODER -------
     x264_param_t param;
 
-    if (x264_param_default_preset(&param, "medium", NULL) < 0) {
+    if (x264_param_default_preset(&param, "ultrafast", "zerolatency") < 0) {
         // goto fail;
     }
 
