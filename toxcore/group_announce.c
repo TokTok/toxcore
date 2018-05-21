@@ -2,11 +2,12 @@
  * Copyright © 2016-2020 The TokTok team.
  * Copyright © 2015 Tox project.
  */
+#include "group_announce.h"
 
 #include <stdlib.h>
 #include <string.h>
 #include <wchar.h>
-#include "group_announce.h"
+
 #include "util.h"
 
 
