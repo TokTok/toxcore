@@ -36,6 +36,7 @@ typedef struct Messenger Tox;
 #include "tox.h"
 
 #include <assert.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "Messenger.h"
