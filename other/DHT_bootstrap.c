@@ -145,6 +145,7 @@ int main(int argc, char *argv[])
         printf("TCP server failed to initialize.\n");
         exit(1);
     }
+
 #endif
 
     const char *const public_id_filename = "PUBLIC_ID.txt";
