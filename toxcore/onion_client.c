@@ -498,15 +498,15 @@ static int client_send_announce_request(Onion_Client *onion_c, uint32_t num, IP_
                                       nc_get_self_secret_key(onion_c->c), ping_id, nc_get_self_public_key(onion_c->c),
                                       onion_c->temp_public_key, sendback);
     } else {
-        Onion_Friend friend = onion_c->friends_list[num - 1];
+        Onion_Friend onion_friend = onion_c->friends_list[num - 1];
 
-        if (friend.gc_data_length > 0) { // contact is a gc
-            len = create_gc_announce_request(request, sizeof(request), dest_pubkey, friend.temp_public_key,
-                                          friend.temp_secret_key, ping_id, friend.real_public_key, zero_ping_id,
-                                          sendback, friend.gc_data, friend.gc_data_length);
+        if (onion_friend.gc_data_length > 0) { // contact is a gc
+            len = create_gc_announce_request(request, sizeof(request), dest_pubkey, onion_friend.temp_public_key,
+                                          onion_friend.temp_secret_key, ping_id, onion_friend.real_public_key, zero_ping_id,
+                                          sendback, onion_friend.gc_data, onion_friend.gc_data_length);
         } else { // contact is a friend
-            len = create_announce_request(request, sizeof(request), dest_pubkey, friend.temp_public_key,
-                                          friend.temp_secret_key, ping_id, friend.real_public_key, zero_ping_id,
+            len = create_announce_request(request, sizeof(request), dest_pubkey, onion_friend.temp_public_key,
+                                          onion_friend.temp_secret_key, ping_id, onion_friend.real_public_key, zero_ping_id,
                                           sendback);
         }
     }
@@ -1796,7 +1796,7 @@ void do_onion_client(Onion_Client *onion_c)
 Onion_Client *new_onion_client(Mono_Time *mono_time, Net_Crypto *c, GC_Session *gc_session)
 {
     if (!c || !gc_session) {
-        return NULL;
+        return nullptr;
     }
 
     Onion_Client *onion_c = (Onion_Client *)calloc(1, sizeof(Onion_Client));

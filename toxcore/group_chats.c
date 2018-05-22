@@ -1156,7 +1156,7 @@ static int handle_gc_sync_request(const Messenger *m, int groupnumber, int peern
     Node_format *sender_relay = (Node_format *)malloc(sizeof(Node_format));
 
     uint32_t i, num = 0;
-    uint32_t *indexes = malloc(sizeof(uint32_t) * (chat->numpeers - 1));
+    uint32_t *indexes = (uint32_t*)malloc(sizeof(uint32_t) * (chat->numpeers - 1));
 
     if (!indexes || !tcp_relays || !sender_relay) {
         return -1;
@@ -1508,6 +1508,9 @@ int handle_gc_invite_request(Messenger *m, int groupnumber, uint32_t peernumber,
     }
 
     uint8_t invite_error = GJ_INVITE_FAILED;
+    uint8_t nick[MAX_GC_NICK_SIZE];
+    uint16_t nick_len;
+    int peer_number_by_nick;
 
     if (get_gc_confirmed_numpeers(chat) >= chat->shared_state.maxpeers) {
         fprintf(stderr, "invite full gc\n");
@@ -1515,7 +1518,6 @@ int handle_gc_invite_request(Messenger *m, int groupnumber, uint32_t peernumber,
         goto failed_invite;
     }
 
-    uint16_t nick_len;
     net_unpack_u16(data, &nick_len);
 
     if (nick_len > MAX_GC_NICK_SIZE) {
@@ -1527,10 +1529,9 @@ int handle_gc_invite_request(Messenger *m, int groupnumber, uint32_t peernumber,
         goto failed_invite;
     }
 
-    uint8_t nick[MAX_GC_NICK_SIZE];
     memcpy(nick, data + sizeof(uint16_t), nick_len);
 
-    int peer_number_by_nick = get_nick_peernumber(chat, nick, nick_len);
+    peer_number_by_nick = get_nick_peernumber(chat, nick, nick_len);
     if (peer_number_by_nick != -1 && peer_number_by_nick != peernumber) { // in case of duplicate invite
         fprintf(stderr, "nick taken\n");
         invite_error = GJ_NICK_TAKEN;
@@ -5681,6 +5682,7 @@ int gc_group_load(GC_Session *c, struct Saved_Group *save)
  * Return -4 if the the group object fails to initialize.
  * Return -5 if the group state fails to initialize.
  * Return -6 if the self peer info is invalid
+ * Return -7 if the announce was unsuccessfull
  */
 int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name, uint16_t group_name_length,
                  const GC_SelfPeerInfo *peer_info)
@@ -5694,7 +5696,7 @@ int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name
     }
 
     if (!is_self_peer_info_valid(peer_info)) {
-        return -6;
+        return -7;
     }
 
     if (privacy_state >= GI_INVALID) {
