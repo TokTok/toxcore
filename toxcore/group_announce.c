@@ -24,7 +24,7 @@ static void remove_announces(GC_Announces_List *gc_announces_list, GC_Announces 
 
 GC_Announces_List *new_gca_list()
 {
-    GC_Announces_List *announces_list = malloc(sizeof(GC_Announces_List));
+    GC_Announces_List *announces_list = (GC_Announces_List*)malloc(sizeof(GC_Announces_List));
 
     if (announces_list) {
         announces_list->announces_count = 0;
@@ -220,7 +220,7 @@ GC_Peer_Announce* add_gc_announce(GC_Announces_List *gc_announces_list, const No
     GC_Announces *announces = get_announces_by_chat_id(gc_announces_list, chat_id);
     if (!announces) {
         gc_announces_list->announces_count++;
-        announces = malloc(sizeof(GC_Announces));
+        announces = (GC_Announces*)malloc(sizeof(GC_Announces));
         announces->index = 0;
         announces->prev_announce = NULL;
         if (gc_announces_list->announces) {

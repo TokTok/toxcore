@@ -2146,7 +2146,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
         kill_onion_announce(m->onion_a);
         kill_onion_client(m->onion_c);
 #ifndef VANILLA_NACL
-        kill_groupchats(m->group_handler);
+        kill_dht_groupchats(m->group_handler);
 #endif /* VANILLA_NACL */
         kill_net_crypto(m->net_crypto);
         kill_dht(m->dht);
