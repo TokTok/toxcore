@@ -3380,10 +3380,14 @@ typedef enum TOX_ERR_GROUP_NEW {
     TOX_ERR_GROUP_NEW_STATE,
 
     /**
-     * The group failed to announce to the DHT. This indicates a network related error.
+     * Invalid self peer info.
      */
-    TOX_ERR_GROUP_NEW_ANNOUNCE,
+    TOX_ERR_GROUP_NEW_PEER_INFO,
 
+    /**
+     * Announce of new group failed.
+     */
+    TOX_ERR_GROUP_NEW_ANNOUNCE
 } TOX_ERR_GROUP_NEW;
 
 
@@ -3392,6 +3396,8 @@ struct Group_Chat_Self_Peer_Info {
     uint16_t nick_length;
     TOX_USER_STATUS user_status;
 };
+
+typedef struct Group_Chat_Self_Peer_Info Group_Chat_Self_Peer_Info;
 
 typedef enum TOX_ERR_GC_SELF_PEER_INFO_NEW {
 
