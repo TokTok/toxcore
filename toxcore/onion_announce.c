@@ -496,7 +496,7 @@ static int handle_gc_announce_request(Onion_Announce *onion_a, IP_Port source, c
 
     GC_Announces_List *gc_announces_list = onion_a->gc_announces_list;
     GC_Peer_Announce *new_announce = add_gc_announce(onion_a->mono_time, gc_announces_list,
-                                                plain + ONION_PING_ID_SIZE + ENC_PUBLIC_KEY * 2 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH,
+                                                (const Node_format *)(plain + ONION_PING_ID_SIZE + ENC_PUBLIC_KEY * 2 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH),
                                                 plain + ONION_PING_ID_SIZE,
                                                 plain + ONION_PING_ID_SIZE + ENC_PUBLIC_KEY * 2 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH + sizeof(Node_format));
     if (!new_announce) {
