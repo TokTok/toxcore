@@ -324,7 +324,7 @@ int32_t m_addfriend_norequest(Messenger *m, const uint8_t *real_pk)
     return init_new_friend(m, real_pk, FRIEND_CONFIRMED);
 }
 
-int32_t m_add_friend_gc(Messenger *m, const GC_Chat *chat)
+int32_t m_add_friend_gc(Messenger *m, GC_Chat *chat)
 {
     int32_t friend_number = m_addfriend_norequest(m, CHAT_ID(chat->chat_public_key));
     if (friend_number >= 0) {

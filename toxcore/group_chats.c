@@ -2014,7 +2014,7 @@ static int broadcast_gc_shared_state(GC_Chat *chat)
  *
  * The initial retrieval of the shared state on group join will be ignored by this function.
  */
-static void do_gc_shared_state_changes(GC_Session *c, const GC_Chat *chat, const GC_SharedState *old_shared_state)
+static void do_gc_shared_state_changes(GC_Session *c, GC_Chat *chat, const GC_SharedState *old_shared_state)
 {
     /* Max peers changed */
     if (chat->shared_state.maxpeers != old_shared_state->maxpeers) {
@@ -3394,7 +3394,7 @@ int gc_founder_set_max_peers(GC_Chat *chat, int groupnumber, uint32_t maxpeers)
         return -1;
     }
 
-    maxpeers = MIN(maxpeers, MAX_GC_NUM_PEERS);
+    maxpeers = min_u32(maxpeers, MAX_GC_NUM_PEERS);
     uint32_t old_maxpeers = chat->shared_state.maxpeers;
 
     if (maxpeers == chat->shared_state.maxpeers) {
