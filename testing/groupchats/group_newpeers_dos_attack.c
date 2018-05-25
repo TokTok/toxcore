@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
 
     for (i = 0; i < PEERCOUNT; i++) {
         do_messenger_cycle(tox, PEERCOUNT, nullptr);
-        int res = gc_group_join(tox[i]->group_handler, chatid, nullptr, 0);
+        int res = gc_group_join(tox[i]->group_handler, chatid, nullptr, 0, nullptr);
         idle_n_secs(1, tox, PEERCOUNT, nullptr);   // comment this out to spam invites as fast as possible
 
         if (res < 0) {

@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
     printf("Network is connected\n");
 
     chat->group_handler = new_dht_groupchats(chat);
-    int groupnumber = gc_group_add(chat->group_handler, 0, (const uint8_t *)"Test", 4);
+    int groupnumber = gc_group_add(chat->group_handler, 0, (const uint8_t *)"Test", 4, nullptr);
 
     if (groupnumber < 0) {
         printf("Cannot create group\n");

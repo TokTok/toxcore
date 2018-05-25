@@ -107,34 +107,34 @@ static void basicannouncetest(void)
     uint8_t group_pk[EXT_PUBLIC_KEY];
     uint8_t group_sk[EXT_SECRET_KEY];
 
-    create_extended_keypair(group_pk, group_sk);
+//    create_extended_keypair(group_pk, group_sk);
 
-    int res;
-    printf("Sending announce requests\n");
-    res = gca_send_announce_request(peers[0].tox->group_handler->announce, peers[0].pk,
-                                    peers[0].sk, group_pk);
-    printf("Announced node: %s\n", id_toa(peers[0].pk));
+//    int res;
+//    printf("Sending announce requests\n");
+//    res = gca_send_announce_request(peers[0].tox->group_handler->announce, peers[0].pk,
+//                                    peers[0].sk, group_pk);
+//    printf("Announced node: %s\n", id_toa(peers[0].pk));
 
 
-    printf("Number of sent announce requests %d\n", res);
-    idle_n_secs(10, peers, PEERCOUNT, nullptr);
+//    printf("Number of sent announce requests %d\n", res);
+//    idle_n_secs(10, peers, PEERCOUNT, nullptr);
 
-    printf("Sending get announced nodes requests\n");
-    res = gca_send_get_nodes_request(peers[1].tox->group_handler->announce, peers[1].pk,
-                                     peers[1].sk, group_pk);
-    printf("Number of sent get announced nodes requests %d\n", res);
-    idle_n_secs(10, peers, PEERCOUNT, nullptr);
+//    printf("Sending get announced nodes requests\n");
+//    res = gca_send_get_nodes_request(peers[1].tox->group_handler->announce, peers[1].pk,
+//                                     peers[1].sk, group_pk);
+//    printf("Number of sent get announced nodes requests %d\n", res);
+//    idle_n_secs(10, peers, PEERCOUNT, nullptr);
 
-    printf("Getting announced nodes\n");
+//    printf("Getting announced nodes\n");
 
-    GC_Announce_Node nodes[10 * 4];
-    int num_nodes = gca_get_requested_nodes(peers[1].tox->group_handler->announce, group_pk, nodes);
+//    GC_Announce_Node nodes[10 * 4];
+//    int num_nodes = gca_get_requested_nodes(peers[1].tox->group_handler->announce, group_pk, nodes);
 
-    printf("Number of announced nodes %d\n", num_nodes);
+//    printf("Number of announced nodes %d\n", num_nodes);
 
-    for (i = 0; i < num_nodes; i++) {
-        printf("Announced node: %s\n", id_toa(nodes[i].public_key));
-    }
+//    for (i = 0; i < num_nodes; i++) {
+//        printf("Announced node: %s\n", id_toa(nodes[i].public_key));
+//    }
 }
 
 int main(void)
