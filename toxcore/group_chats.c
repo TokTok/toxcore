@@ -5696,7 +5696,7 @@ int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name
     }
 
     if (!is_self_peer_info_valid(peer_info)) {
-        return -7;
+        return -6;
     }
 
     if (privacy_state >= GI_INVALID) {
@@ -5739,8 +5739,9 @@ int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name
     if (is_public_chat(chat)) {
         int friend_number = m_add_friend_gc(c->messenger, chat);
         if (friend_number < 0) {
+            fprintf(stderr, "friend add failed %d\n", friend_number);
             group_delete(c, chat);
-            return -6;
+            return -7;
         }
     }
 

@@ -308,14 +308,10 @@ int32_t m_addfriend(Messenger *m, const uint8_t *address, const uint8_t *data, u
     return ret;
 }
 
-int32_t m_addfriend_norequest(Messenger *m, const uint8_t *real_pk)
+static int32_t m_add_contact_no_request(Messenger *m, const uint8_t *real_pk)
 {
     if (getfriend_id(m, real_pk) != -1) {
         return FAERR_ALREADYSENT;
-    }
-
-    if (!public_key_valid(real_pk)) {
-        return FAERR_BADCHECKSUM;
     }
 
     if (id_equal(real_pk, nc_get_self_public_key(m->net_crypto))) {
@@ -325,9 +321,18 @@ int32_t m_addfriend_norequest(Messenger *m, const uint8_t *real_pk)
     return init_new_friend(m, real_pk, FRIEND_CONFIRMED);
 }
 
+int32_t m_addfriend_norequest(Messenger *m, const uint8_t *real_pk)
+{
+    if (!public_key_valid(real_pk)) {
+        return FAERR_BADCHECKSUM;
+    }
+
+    return m_add_contact_no_request(m, real_pk);
+}
+
 int32_t m_add_friend_gc(Messenger *m, GC_Chat *chat)
 {
-    int32_t friend_number = m_addfriend_norequest(m, get_chat_id(chat->chat_public_key));
+    int32_t friend_number = m_add_contact_no_request(m, get_chat_id(chat->chat_public_key));
     if (friend_number >= 0) {
         Friend *frnd = &m->friendlist[friend_number];
         frnd->type = CONTACT_TYPE_GC;
