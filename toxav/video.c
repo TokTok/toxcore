@@ -213,7 +213,8 @@ VCSession *vc_new_h264(Logger *log, ToxAV *av, uint32_t friend_number, toxav_vid
     param.i_height = 1080;
     vc->h264_enc_width = param.i_width;
     vc->h264_enc_height = param.i_height;
-    param.i_threads = 3;
+    param.i_threads = 2;
+    param.b_open_gop = 20;
     param.b_vfr_input = 1; /* VFR input.  If 1, use timebase and timestamps for ratecontrol purposes.
                             * If 0, use fps only. */
     param.i_timebase_num = 1;       // 1 ms = timebase units = (1/1000)s
@@ -221,8 +222,11 @@ VCSession *vc_new_h264(Logger *log, ToxAV *av, uint32_t friend_number, toxav_vid
     param.b_repeat_headers = 1;
     param.b_annexb = 1;
 
+    param.rc.i_bitrate = 1200;
+    vc->h264_enc_bitrate = param.rc.i_bitrate;
+
     /* Apply profile restrictions. */
-    if (x264_param_apply_profile(&param, "high") < 0) {
+    if (x264_param_apply_profile(&param, "high") < 0) { // "baseline", "main", "high", "high10", "high422", "high444"
         // goto fail;
     }
 
@@ -1309,25 +1313,25 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
              */
 
-            AVPacket compr_data;
-            av_init_packet(&compr_data);
+            AVPacket *compr_data;
+            compr_data = av_packet_alloc();
 
 #if 0
-            compr_data.pts = AV_NOPTS_VALUE;
-            compr_data.dts = AV_NOPTS_VALUE;
+            compr_data->pts = AV_NOPTS_VALUE;
+            compr_data->dts = AV_NOPTS_VALUE;
 
-            compr_data.duration = 0;
-            compr_data.post = -1;
+            compr_data->duration = 0;
+            compr_data->post = -1;
 #endif
 
-            // HINT: dirty hack:
+            // HINT: dirty hack to add FF_INPUT_BUFFER_PADDING_SIZE bytes!!
             uint8_t *tmp_buf = calloc(1, full_data_len + FF_INPUT_BUFFER_PADDING_SIZE);
             memcpy(tmp_buf, p->data, full_data_len);
 
-            compr_data.data = tmp_buf; // p->data;
-            compr_data.size = (int)full_data_len; // hmm, "int" again
+            compr_data->data = tmp_buf; // p->data;
+            compr_data->size = (int)full_data_len; // hmm, "int" again
 
-            avcodec_send_packet(vc->h264_decoder, &compr_data);
+            avcodec_send_packet(vc->h264_decoder, compr_data);
 
 
             int ret_ = 0;
@@ -1367,6 +1371,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
                 av_frame_free(&frame);
             }
 
+            av_packet_free(&compr_data);
             free(tmp_buf);
 
             free(p);
@@ -1469,7 +1474,10 @@ int vc_reconfigure_encoder_h264(Logger *log, VCSession *vc, uint32_t bit_rate, u
         return -1;
     }
 
-    if ((vc->h264_enc_width != width) || (vc->h264_enc_height != height)) {
+    if ((vc->h264_enc_width != width) ||
+            (vc->h264_enc_height != height) ||
+            (vc->h264_enc_bitrate != bit_rate)
+       ) {
         // input image size changed
 
         x264_param_t param;
@@ -1486,7 +1494,8 @@ int vc_reconfigure_encoder_h264(Logger *log, VCSession *vc, uint32_t bit_rate, u
         param.i_height = height;
         vc->h264_enc_width = param.i_width;
         vc->h264_enc_height = param.i_height;
-        param.i_threads = 3;
+        param.i_threads = 2;
+        param.b_open_gop = 20;
         param.b_vfr_input = 1; /* VFR input.  If 1, use timebase and timestamps for ratecontrol purposes.
                             * If 0, use fps only. */
         param.i_timebase_num = 1;       // 1 ms = timebase units = (1/1000)s
@@ -1494,16 +1503,20 @@ int vc_reconfigure_encoder_h264(Logger *log, VCSession *vc, uint32_t bit_rate, u
         param.b_repeat_headers = 1;
         param.b_annexb = 1;
 
+        param.rc.i_bitrate = bit_rate / 1000;
+        vc->h264_enc_bitrate = bit_rate;
+
         /* Apply profile restrictions. */
-        if (x264_param_apply_profile(&param, "high") < 0) {
+        if (x264_param_apply_profile(&param, "high") < 0) { // "baseline", "main", "high", "high10", "high422", "high444"
             // goto fail;
         }
 
-        LOGGER_DEBUG(log, "H264: reconfigure encoder:001: w:%d h:%d w_new:%d h_new:%d\n",
+        LOGGER_DEBUG(log, "H264: reconfigure encoder:001: w:%d h:%d w_new:%d h_new:%d BR:%d\n",
                      vc->h264_enc_width,
                      vc->h264_enc_height,
                      width,
-                     height);
+                     height,
+                     (int)bit_rate);
 
         // free old stuff ---------
         x264_encoder_close(vc->h264_encoder);
@@ -1786,6 +1799,51 @@ int vc_reconfigure_encoder_bitrate_only_h264(VCSession *vc, uint32_t bit_rate)
 {
     if (!vc) {
         return -1;
+    }
+
+    if (vc->h264_enc_bitrate != bit_rate) {
+
+        x264_param_t param;
+
+        if (x264_param_default_preset(&param, "ultrafast", "zerolatency") < 0) {
+            // goto fail;
+        }
+
+        /* Configure non-default params */
+        // param.i_bitdepth = 8;
+        param.i_csp = X264_CSP_I420;
+        param.i_width  = vc->h264_enc_width;
+        param.i_height = vc->h264_enc_height;
+        param.i_threads = 2;
+        param.b_open_gop = 20;
+        param.b_vfr_input = 1; /* VFR input.  If 1, use timebase and timestamps for ratecontrol purposes.
+                            * If 0, use fps only. */
+        param.i_timebase_num = 1;       // 1 ms = timebase units = (1/1000)s
+        param.i_timebase_den = 1000;   // 1 ms = timebase units = (1/1000)s
+        param.b_repeat_headers = 1;
+        param.b_annexb = 1;
+
+        param.rc.i_bitrate = (bit_rate / 1000);
+        vc->h264_enc_bitrate = bit_rate;
+
+        /* Apply profile restrictions. */
+        if (x264_param_apply_profile(&param, "high") < 0) { // "baseline", "main", "high", "high10", "high422", "high444"
+            // goto fail;
+        }
+
+        // free old stuff ---------
+        x264_encoder_close(vc->h264_encoder);
+        x264_picture_clean(&(vc->h264_in_pic));
+        // free old stuff ---------
+
+        // alloc with new values -------
+        if (x264_picture_alloc(&(vc->h264_in_pic), param.i_csp, param.i_width, param.i_height) < 0) {
+            // goto fail;
+        }
+
+        vc->h264_encoder = x264_encoder_open(&param);
+        // alloc with new values -------
+
     }
 
     return 0;

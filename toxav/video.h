@@ -131,6 +131,7 @@ typedef struct VCSession_s {
     x264_picture_t h264_out_pic;
     int h264_enc_width;
     int h264_enc_height;
+    uint32_t h264_enc_bitrate;
 
     /* decoding */
     vpx_codec_ctx_t decoder[1];
