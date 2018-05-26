@@ -4519,10 +4519,6 @@ static int handle_gc_handshake_packet(Messenger *m, GC_Chat *chat, IP_Port *ipp,
     int peernumber;
 
     if (handshake_type == GH_REQUEST) {
-        if (ipp == nullptr) {
-            return -1;
-        }
-
         peernumber = handle_gc_handshake_request(m, chat->groupnumber, ipp, sender_pk, real_data, real_len);
     } else if (handshake_type == GH_RESPONSE) {
         peernumber = handle_gc_handshake_response(m, chat->groupnumber, sender_pk, real_data, real_len);
@@ -5739,7 +5735,6 @@ int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name
     if (is_public_chat(chat)) {
         int friend_number = m_add_friend_gc(c->messenger, chat);
         if (friend_number < 0) {
-            fprintf(stderr, "friend add failed %d\n", friend_number);
             group_delete(c, chat);
             return -7;
         }
