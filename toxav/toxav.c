@@ -1471,7 +1471,11 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         } else {
             // HINT: H264
 
+            LOGGER_WARNING(av->m->log, "H264:send frame:001");
+
             if (i_frame_size > 0) {
+
+                LOGGER_WARNING(av->m->log, "H264:send frame:002");
 
                 // use the record timestamp that was actually used for this frame
                 video_frame_record_timestamp = (uint64_t)call->video.second->h264_in_pic.i_pts;

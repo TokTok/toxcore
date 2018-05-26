@@ -254,6 +254,7 @@ VCSession *vc_new_h264(Logger *log, ToxAV *av, uint32_t friend_number, toxav_vid
 
     codec = avcodec_find_decoder(AV_CODEC_ID_H264);
 
+
     if (!codec) {
         LOGGER_WARNING(log, "codec not found H264 on decoder");
     }
@@ -264,9 +265,23 @@ VCSession *vc_new_h264(Logger *log, ToxAV *av, uint32_t friend_number, toxav_vid
         vc->h264_decoder->flags |= CODEC_FLAG_TRUNCATED; /* we do not send complete frames */
     }
 
+    vc->h264_decoder->refcounted_frames = 0;
+    /*   When AVCodecContext.refcounted_frames is set to 0, the returned
+    *             reference belongs to the decoder and is valid only until the
+    *             next call to this function or until closing or flushing the
+    *             decoder. The caller may not write to it.
+    */
+
     if (avcodec_open2(vc->h264_decoder, codec, NULL) < 0) {
         LOGGER_WARNING(log, "could not open codec H264 on decoder");
     }
+
+    vc->h264_decoder->refcounted_frames = 0;
+    /*   When AVCodecContext.refcounted_frames is set to 0, the returned
+    *             reference belongs to the decoder and is valid only until the
+    *             next call to this function or until closing or flushing the
+    *             decoder. The caller may not write to it.
+    */
 
     // DECODER -------
 
@@ -738,7 +753,7 @@ void video_switch_decoder_vpx(VCSession *vc)
 
     // toggle decoder codec between VP8 and VP9
     // TODO: put codec into header flags at encoder side, then use this at decoder side!
-    if (vc->video_decoder_codec_used != TOXAV_ENCODER_CODEC_USED_VP9) {
+    if (vc->video_decoder_codec_used == TOXAV_ENCODER_CODEC_USED_VP8) {
         vc->video_decoder_codec_used = TOXAV_ENCODER_CODEC_USED_VP9;
     } else {
         vc->video_decoder_codec_used = TOXAV_ENCODER_CODEC_USED_VP8;
@@ -839,13 +854,14 @@ void video_switch_decoder_vpx(VCSession *vc)
 
 void video_switch_decoder(VCSession *vc)
 {
-    video_switch_decoder_vpx(vc);
+    // ** DISABLED ** // video_switch_decoder_vpx(vc);
 }
 
 uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_t *a_r_timestamp,
                    uint64_t *a_l_timestamp,
                    uint64_t *v_r_timestamp, uint64_t *v_l_timestamp)
 {
+
     if (!vc) {
         return 0;
     }
@@ -1030,65 +1046,80 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
 #endif
 
-        long decoder_soft_dealine_value_used = VPX_DL_REALTIME;
-        void *user_priv = NULL;
 
-        if (header_v3->frame_record_timestamp > 0) {
+
+
+
+
+
+        if (vc->video_decoder_codec_used != TOXAV_ENCODER_CODEC_USED_H264) {
+
+
+
+            LOGGER_ERROR(vc->log, "DEC:VP8------------");
+
+
+
+
+            long decoder_soft_dealine_value_used = VPX_DL_REALTIME;
+            void *user_priv = NULL;
+
+            if (header_v3->frame_record_timestamp > 0) {
 #ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
-            // --- //
+                // --- //
 #else
 
 #ifdef VIDEO_PTS_TIMESTAMPS
-            struct vpx_frame_user_data *vpx_u_data = calloc(1, sizeof(struct vpx_frame_user_data));
-            vpx_u_data->record_timestamp = header_v3->frame_record_timestamp;
-            user_priv = vpx_u_data;
+                struct vpx_frame_user_data *vpx_u_data = calloc(1, sizeof(struct vpx_frame_user_data));
+                vpx_u_data->record_timestamp = header_v3->frame_record_timestamp;
+                user_priv = vpx_u_data;
 #endif
 
 #endif
-        }
-
-        if ((int)rb_size((RingBuffer *)vc->vbuf_raw) > (int)VIDEO_RINGBUFFER_FILL_THRESHOLD) {
-            rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, VPX_DL_REALTIME);
-            LOGGER_DEBUG(vc->log, "skipping:REALTIME");
-        }
-
-#ifdef VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE
-        else {
-            long decode_time_auto_tune = MAX_DECODE_TIME_US;
-
-            if (vc->last_decoded_frame_ts > 0) {
-
-                // calc mean value
-                decode_time_auto_tune = 0;
-
-                for (int k = 0; k < VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES; k++) {
-                    decode_time_auto_tune = decode_time_auto_tune + vc->decoder_soft_deadline[k];
-                }
-
-                decode_time_auto_tune = decode_time_auto_tune / VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES;
-
-                if (decode_time_auto_tune > (1000000 / VIDEO_DECODER_MINFPS_AUTOTUNE)) {
-                    decode_time_auto_tune = (1000000 / VIDEO_DECODER_MINFPS_AUTOTUNE);
-                }
-
-                if (decode_time_auto_tune > (VIDEO_DECODER_LEEWAY_IN_MS_AUTOTUNE * 1000)) {
-                    decode_time_auto_tune = decode_time_auto_tune - (VIDEO_DECODER_LEEWAY_IN_MS_AUTOTUNE * 1000); // give x ms more room
-                }
             }
 
-            decoder_soft_dealine_value_used = decode_time_auto_tune;
-            rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, (long)decode_time_auto_tune);
+            if ((int)rb_size((RingBuffer *)vc->vbuf_raw) > (int)VIDEO_RINGBUFFER_FILL_THRESHOLD) {
+                rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, VPX_DL_REALTIME);
+                LOGGER_DEBUG(vc->log, "skipping:REALTIME");
+            }
 
-            LOGGER_DEBUG(vc->log, "AUTOTUNE:MAX_DECODE_TIME_US=%ld us = %.1f fps", (long)decode_time_auto_tune,
-                         (float)(1000000.0f / decode_time_auto_tune));
-        }
+#ifdef VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE
+            else {
+                long decode_time_auto_tune = MAX_DECODE_TIME_US;
+
+                if (vc->last_decoded_frame_ts > 0) {
+
+                    // calc mean value
+                    decode_time_auto_tune = 0;
+
+                    for (int k = 0; k < VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES; k++) {
+                        decode_time_auto_tune = decode_time_auto_tune + vc->decoder_soft_deadline[k];
+                    }
+
+                    decode_time_auto_tune = decode_time_auto_tune / VIDEO_DECODER_SOFT_DEADLINE_AUTOTUNE_ENTRIES;
+
+                    if (decode_time_auto_tune > (1000000 / VIDEO_DECODER_MINFPS_AUTOTUNE)) {
+                        decode_time_auto_tune = (1000000 / VIDEO_DECODER_MINFPS_AUTOTUNE);
+                    }
+
+                    if (decode_time_auto_tune > (VIDEO_DECODER_LEEWAY_IN_MS_AUTOTUNE * 1000)) {
+                        decode_time_auto_tune = decode_time_auto_tune - (VIDEO_DECODER_LEEWAY_IN_MS_AUTOTUNE * 1000); // give x ms more room
+                    }
+                }
+
+                decoder_soft_dealine_value_used = decode_time_auto_tune;
+                rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, (long)decode_time_auto_tune);
+
+                LOGGER_DEBUG(vc->log, "AUTOTUNE:MAX_DECODE_TIME_US=%ld us = %.1f fps", (long)decode_time_auto_tune,
+                             (float)(1000000.0f / decode_time_auto_tune));
+            }
 
 #else
-        else {
-            decoder_soft_dealine_value_used = MAX_DECODE_TIME_US;
-            rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, MAX_DECODE_TIME_US);
-            // LOGGER_WARNING(vc->log, "NORMAL:MAX_DECODE_TIME_US=%d", (int)MAX_DECODE_TIME_US);
-        }
+            else {
+                decoder_soft_dealine_value_used = MAX_DECODE_TIME_US;
+                rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, MAX_DECODE_TIME_US);
+                // LOGGER_WARNING(vc->log, "NORMAL:MAX_DECODE_TIME_US=%d", (int)MAX_DECODE_TIME_US);
+            }
 
 #endif
 
@@ -1096,155 +1127,254 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
 #ifdef VIDEO_DECODER_AUTOSWITCH_CODEC
 
-        if (rc != VPX_CODEC_OK) {
-            if ((rc == VPX_CODEC_CORRUPT_FRAME) || (rc == VPX_CODEC_UNSUP_BITSTREAM)) {
-                LOGGER_WARNING(vc->log, "Switching VPX Decoder");
-                video_switch_decoder(vc);
+            if (rc != VPX_CODEC_OK) {
+                if ((rc == VPX_CODEC_CORRUPT_FRAME) || (rc == VPX_CODEC_UNSUP_BITSTREAM)) {
+                    LOGGER_WARNING(vc->log, "Switching VPX Decoder");
+                    video_switch_decoder(vc);
 
-                rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, VPX_DL_REALTIME);
+                    rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, VPX_DL_REALTIME);
 
-                if (rc != VPX_CODEC_OK) {
-                    LOGGER_ERROR(vc->log, "There is still an error decoding video: err-num=%d err-str=%s", (int)rc,
-                                 vpx_codec_err_to_string(rc));
+                    if (rc != VPX_CODEC_OK) {
+                        LOGGER_ERROR(vc->log, "There is still an error decoding video: err-num=%d err-str=%s", (int)rc,
+                                     vpx_codec_err_to_string(rc));
 
-                    if (user_priv != NULL) {
-                        free(user_priv);
+                        if (user_priv != NULL) {
+                            free(user_priv);
+                        }
                     }
+                } else {
+                    // LOGGER_ERROR(vc->log, "Error decoding video: err-num=%d err-str=%s", (int)rc, vpx_codec_err_to_string(rc));
                 }
-            } else {
-                // LOGGER_ERROR(vc->log, "Error decoding video: err-num=%d err-str=%s", (int)rc, vpx_codec_err_to_string(rc));
             }
-        }
 
 #else
 
-        if (rc != VPX_CODEC_OK) {
-            if (rc == VPX_CODEC_CORRUPT_FRAME) {
-                LOGGER_WARNING(vc->log, "Corrupt frame detected: data size=%d start byte=%d end byte=%d",
-                               (int)full_data_len, (int)p->data[0], (int)p->data[full_data_len - 1]);
-            } else {
-                // LOGGER_ERROR(vc->log, "Error decoding video: err-num=%d err-str=%s", (int)rc, vpx_codec_err_to_string(rc));
+            if (rc != VPX_CODEC_OK) {
+                if (rc == VPX_CODEC_CORRUPT_FRAME) {
+                    LOGGER_WARNING(vc->log, "Corrupt frame detected: data size=%d start byte=%d end byte=%d",
+                                   (int)full_data_len, (int)p->data[0], (int)p->data[full_data_len - 1]);
+                } else {
+                    // LOGGER_ERROR(vc->log, "Error decoding video: err-num=%d err-str=%s", (int)rc, vpx_codec_err_to_string(rc));
+                }
             }
-        }
 
 #endif
 
-        if (rc == VPX_CODEC_OK) {
+            if (rc == VPX_CODEC_OK) {
 
 #ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
 
-            int save_current_buf = 0;
+                int save_current_buf = 0;
 
-            if (header_v3->fragment_num < vc->last_seen_fragment_num) {
-                if (vc->flag_end_video_fragment == 0) {
-                    //LOGGER_WARNING(vc->log, "endframe:x:%d", (int)header_v3->fragment_num);
-                    vc->flag_end_video_fragment = 1;
-                    save_current_buf = 1;
-                    vpx_codec_decode(vc->decoder, NULL, 0, user_priv, decoder_soft_dealine_value_used);
+                if (header_v3->fragment_num < vc->last_seen_fragment_num) {
+                    if (vc->flag_end_video_fragment == 0) {
+                        //LOGGER_WARNING(vc->log, "endframe:x:%d", (int)header_v3->fragment_num);
+                        vc->flag_end_video_fragment = 1;
+                        save_current_buf = 1;
+                        vpx_codec_decode(vc->decoder, NULL, 0, user_priv, decoder_soft_dealine_value_used);
+                    } else {
+                        vc->flag_end_video_fragment = 0;
+                        //LOGGER_WARNING(vc->log, "reset:flag:%d", (int)header_v3->fragment_num);
+                    }
                 } else {
-                    vc->flag_end_video_fragment = 0;
-                    //LOGGER_WARNING(vc->log, "reset:flag:%d", (int)header_v3->fragment_num);
+                    if ((long)header_v3->fragment_num == (long)(VIDEO_CODEC_FRAGMENT_NUMS - 1)) {
+                        //LOGGER_WARNING(vc->log, "endframe:N:%d", (int)(VIDEO_CODEC_FRAGMENT_NUMS - 1));
+                        vc->flag_end_video_fragment = 1;
+                        vpx_codec_decode(vc->decoder, NULL, 0, user_priv, decoder_soft_dealine_value_used);
+                    }
                 }
-            } else {
-                if ((long)header_v3->fragment_num == (long)(VIDEO_CODEC_FRAGMENT_NUMS - 1)) {
-                    //LOGGER_WARNING(vc->log, "endframe:N:%d", (int)(VIDEO_CODEC_FRAGMENT_NUMS - 1));
-                    vc->flag_end_video_fragment = 1;
-                    vpx_codec_decode(vc->decoder, NULL, 0, user_priv, decoder_soft_dealine_value_used);
+
+                // push buffer to list
+                if (vc->fragment_buf_counter < (uint16_t)(VIDEO_MAX_FRAGMENT_BUFFER_COUNT - 1)) {
+                    vc->vpx_frames_buf_list[vc->fragment_buf_counter] = p;
+                    vc->fragment_buf_counter++;
+                } else {
+                    LOGGER_WARNING(vc->log, "mem leak: VIDEO_MAX_FRAGMENT_BUFFER_COUNT");
                 }
-            }
 
-            // push buffer to list
-            if (vc->fragment_buf_counter < (uint16_t)(VIDEO_MAX_FRAGMENT_BUFFER_COUNT - 1)) {
-                vc->vpx_frames_buf_list[vc->fragment_buf_counter] = p;
-                vc->fragment_buf_counter++;
-            } else {
-                LOGGER_WARNING(vc->log, "mem leak: VIDEO_MAX_FRAGMENT_BUFFER_COUNT");
-            }
-
-            vc->last_seen_fragment_num = header_v3->fragment_num;
+                vc->last_seen_fragment_num = header_v3->fragment_num;
 #endif
 
-            /* Play decoded images */
-            vpx_codec_iter_t iter = NULL;
-            vpx_image_t *dest = NULL;
+                /* Play decoded images */
+                vpx_codec_iter_t iter = NULL;
+                vpx_image_t *dest = NULL;
 
-            while ((dest = vpx_codec_get_frame(vc->decoder, &iter)) != NULL) {
-                // we have a frame, set return code
-                ret_value = 1;
+                while ((dest = vpx_codec_get_frame(vc->decoder, &iter)) != NULL) {
+                    // we have a frame, set return code
+                    ret_value = 1;
 
-                if (vc->vcb.first) {
+                    if (vc->vcb.first) {
 
-                    // what is the audio to video latency?
-                    //
-                    if (dest->user_priv != NULL) {
-                        uint64_t frame_record_timestamp_vpx = ((struct vpx_frame_user_data *)(dest->user_priv))->record_timestamp;
+                        // what is the audio to video latency?
+                        //
+                        if (dest->user_priv != NULL) {
+                            uint64_t frame_record_timestamp_vpx = ((struct vpx_frame_user_data *)(dest->user_priv))->record_timestamp;
 
-                        //LOGGER_ERROR(vc->log, "VIDEO:TTx: %llu now=%llu", frame_record_timestamp_vpx, current_time_monotonic());
-                        if (frame_record_timestamp_vpx > 0) {
-                            ret_value = 1;
+                            //LOGGER_ERROR(vc->log, "VIDEO:TTx: %llu now=%llu", frame_record_timestamp_vpx, current_time_monotonic());
+                            if (frame_record_timestamp_vpx > 0) {
+                                ret_value = 1;
 
-                            if (*v_r_timestamp < frame_record_timestamp_vpx) {
-                                // LOGGER_ERROR(vc->log, "VIDEO:TTx:2: %llu", frame_record_timestamp_vpx);
-                                *v_r_timestamp = frame_record_timestamp_vpx;
-                                *v_l_timestamp = current_time_monotonic();
-                            } else {
-                                // TODO: this should not happen here!
-                                LOGGER_DEBUG(vc->log, "VIDEO: remote timestamp older");
+                                if (*v_r_timestamp < frame_record_timestamp_vpx) {
+                                    // LOGGER_ERROR(vc->log, "VIDEO:TTx:2: %llu", frame_record_timestamp_vpx);
+                                    *v_r_timestamp = frame_record_timestamp_vpx;
+                                    *v_l_timestamp = current_time_monotonic();
+                                } else {
+                                    // TODO: this should not happen here!
+                                    LOGGER_DEBUG(vc->log, "VIDEO: remote timestamp older");
+                                }
                             }
+
+                            //
+                            // what is the audio to video latency?
+                            free(dest->user_priv);
                         }
 
-                        //
-                        // what is the audio to video latency?
-                        free(dest->user_priv);
+                        LOGGER_DEBUG(vc->log, "VIDEO: -FRAME OUT- %p %p %p",
+                                     (const uint8_t *)dest->planes[0],
+                                     (const uint8_t *)dest->planes[1],
+                                     (const uint8_t *)dest->planes[2]);
+
+                        vc->vcb.first(vc->av, vc->friend_number, dest->d_w, dest->d_h,
+                                      (const uint8_t *)dest->planes[0],
+                                      (const uint8_t *)dest->planes[1],
+                                      (const uint8_t *)dest->planes[2],
+                                      dest->stride[0], dest->stride[1], dest->stride[2], vc->vcb.second);
                     }
 
-                    LOGGER_DEBUG(vc->log, "VIDEO: -FRAME OUT- %p %p %p",
-                                 (const uint8_t *)dest->planes[0],
-                                 (const uint8_t *)dest->planes[1],
-                                 (const uint8_t *)dest->planes[2]);
-
-                    vc->vcb.first(vc->av, vc->friend_number, dest->d_w, dest->d_h,
-                                  (const uint8_t *)dest->planes[0],
-                                  (const uint8_t *)dest->planes[1],
-                                  (const uint8_t *)dest->planes[2],
-                                  dest->stride[0], dest->stride[1], dest->stride[2], vc->vcb.second);
+                    vpx_img_free(dest); // is this needed? none of the VPx examples show that
                 }
-
-                vpx_img_free(dest); // is this needed? none of the VPx examples show that
-            }
 
 #ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
 
-            if (vc->flag_end_video_fragment == 1) {
-                //LOGGER_ERROR(vc->log, "free vpx_frames_buf_list:count=%d", (int)vc->fragment_buf_counter);
-                uint16_t jk = 0;
+                if (vc->flag_end_video_fragment == 1) {
+                    //LOGGER_ERROR(vc->log, "free vpx_frames_buf_list:count=%d", (int)vc->fragment_buf_counter);
+                    uint16_t jk = 0;
 
-                if (save_current_buf == 1) {
-                    for (jk = 0; jk < (vc->fragment_buf_counter - 1); jk++) {
-                        free(vc->vpx_frames_buf_list[jk]);
-                        vc->vpx_frames_buf_list[jk] = NULL;
+                    if (save_current_buf == 1) {
+                        for (jk = 0; jk < (vc->fragment_buf_counter - 1); jk++) {
+                            free(vc->vpx_frames_buf_list[jk]);
+                            vc->vpx_frames_buf_list[jk] = NULL;
+                        }
+
+                        vc->vpx_frames_buf_list[0] = vc->vpx_frames_buf_list[vc->fragment_buf_counter];
+                        vc->vpx_frames_buf_list[vc->fragment_buf_counter] = NULL;
+                        vc->fragment_buf_counter = 1;
+                    } else {
+                        for (jk = 0; jk < vc->fragment_buf_counter; jk++) {
+                            free(vc->vpx_frames_buf_list[jk]);
+                            vc->vpx_frames_buf_list[jk] = NULL;
+                        }
+
+                        vc->fragment_buf_counter = 0;
                     }
-
-                    vc->vpx_frames_buf_list[0] = vc->vpx_frames_buf_list[vc->fragment_buf_counter];
-                    vc->vpx_frames_buf_list[vc->fragment_buf_counter] = NULL;
-                    vc->fragment_buf_counter = 1;
-                } else {
-                    for (jk = 0; jk < vc->fragment_buf_counter; jk++) {
-                        free(vc->vpx_frames_buf_list[jk]);
-                        vc->vpx_frames_buf_list[jk] = NULL;
-                    }
-
-                    vc->fragment_buf_counter = 0;
                 }
-            }
 
 #else
-            free(p);
+                free(p);
 #endif
 
+            } else {
+                free(p);
+            }
+
+
+
+
+
+
+
+
         } else {
+
+            // HINT: H264 decode ----------------
+
+
+            LOGGER_ERROR(vc->log, "DEC:H264------------");
+
+
+            /*
+             For decoding, call avcodec_send_packet() to give the decoder raw
+                  compressed data in an AVPacket.
+
+
+                  For decoding, call avcodec_receive_frame(). On success, it will return
+                  an AVFrame containing uncompressed audio or video data.
+
+
+             *   Repeat this call until it returns AVERROR(EAGAIN) or an error. The
+             *   AVERROR(EAGAIN) return value means that new input data is required to
+             *   return new output. In this case, continue with sending input. For each
+             *   input frame/packet, the codec will typically return 1 output frame/packet,
+             *   but it can also be 0 or more than 1.
+
+             */
+
+            AVPacket compr_data;
+            av_init_packet(&compr_data);
+
+#if 0
+            compr_data.pts = AV_NOPTS_VALUE;
+            compr_data.dts = AV_NOPTS_VALUE;
+
+            compr_data.duration = 0;
+            compr_data.post = -1;
+#endif
+
+            // HINT: dirty hack:
+            uint8_t *tmp_buf = calloc(1, full_data_len + FF_INPUT_BUFFER_PADDING_SIZE);
+            memcpy(tmp_buf, p->data, full_data_len);
+
+            compr_data.data = tmp_buf; // p->data;
+            compr_data.size = (int)full_data_len; // hmm, "int" again
+
+            avcodec_send_packet(vc->h264_decoder, &compr_data);
+
+
+            int ret_ = 0;
+
+            while (ret_ >= 0) {
+
+                AVFrame *frame = av_frame_alloc();
+                ret_ = avcodec_receive_frame(vc->h264_decoder, frame);
+
+                LOGGER_ERROR(vc->log, "H264:decoder:ret_=%d\n", (int)ret_);
+
+
+                if (ret_ == AVERROR(EAGAIN) || ret_ == AVERROR_EOF) {
+                    // error
+                    break;
+                } else if (ret_ < 0) {
+                    // Error during decoding
+                    break;
+                } else if (ret_ == 0) {
+
+                    LOGGER_ERROR(vc->log, "H264:decoder:fnum=%d\n", (int)vc->h264_decoder->frame_number);
+                    LOGGER_ERROR(vc->log, "H264:decoder:linesize=%d\n", (int)frame->linesize[0]);
+                    LOGGER_ERROR(vc->log, "H264:decoder:w=%d\n", (int)frame->width);
+                    LOGGER_ERROR(vc->log, "H264:decoder:h=%d\n", (int)frame->height);
+
+                    vc->vcb.first(vc->av, vc->friend_number, frame->width, frame->height,
+                                  (const uint8_t *)frame->data[0],
+                                  (const uint8_t *)frame->data[1],
+                                  (const uint8_t *)frame->data[2],
+                                  frame->linesize[0], frame->linesize[1],
+                                  frame->linesize[2], vc->vcb.second);
+
+                } else {
+                    // some other error
+                }
+
+                av_frame_free(&frame);
+            }
+
+            free(tmp_buf);
+
             free(p);
+
+            // HINT: H264 decode ----------------
+
         }
+
 
         return ret_value;
     } else {
