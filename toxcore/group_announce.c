@@ -4,6 +4,7 @@
 #include <string.h>
 #include <wchar.h>
 
+#include "mono_time.h"
 #include "util.h"
 
 
