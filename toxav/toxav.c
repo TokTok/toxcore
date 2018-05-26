@@ -1390,11 +1390,11 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
                 // nal->p_payload --> outbuf
                 // i_frame_size --> out size in bytes
 
-                LOGGER_ERROR(av->m->log, "H264: i_frame_size=%d nal_buf=%p KF=%d\n",
-                             (int)i_frame_size,
-                             nal->p_payload,
-                             (int)call->video.second->h264_out_pic.b_keyframe
-                            );
+                // LOGGER_ERROR(av->m->log, "H264: i_frame_size=%d nal_buf=%p KF=%d\n",
+                //             (int)i_frame_size,
+                //             nal->p_payload,
+                //             (int)call->video.second->h264_out_pic.b_keyframe
+                //            );
 
             }
         }
@@ -1471,11 +1471,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         } else {
             // HINT: H264
 
-            LOGGER_WARNING(av->m->log, "H264:send frame:001");
-
             if (i_frame_size > 0) {
-
-                LOGGER_WARNING(av->m->log, "H264:send frame:002");
 
                 // use the record timestamp that was actually used for this frame
                 video_frame_record_timestamp = (uint64_t)call->video.second->h264_in_pic.i_pts;

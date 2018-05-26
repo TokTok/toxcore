@@ -1056,7 +1056,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
 
 
-            LOGGER_ERROR(vc->log, "DEC:VP8------------");
+            // LOGGER_ERROR(vc->log, "DEC:VP8------------");
 
 
 
@@ -1289,7 +1289,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
             // HINT: H264 decode ----------------
 
 
-            LOGGER_ERROR(vc->log, "DEC:H264------------");
+            // LOGGER_ERROR(vc->log, "DEC:H264------------");
 
 
             /*
@@ -1337,7 +1337,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
                 AVFrame *frame = av_frame_alloc();
                 ret_ = avcodec_receive_frame(vc->h264_decoder, frame);
 
-                LOGGER_ERROR(vc->log, "H264:decoder:ret_=%d\n", (int)ret_);
+                // LOGGER_ERROR(vc->log, "H264:decoder:ret_=%d\n", (int)ret_);
 
 
                 if (ret_ == AVERROR(EAGAIN) || ret_ == AVERROR_EOF) {
@@ -1348,10 +1348,10 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
                     break;
                 } else if (ret_ == 0) {
 
-                    LOGGER_ERROR(vc->log, "H264:decoder:fnum=%d\n", (int)vc->h264_decoder->frame_number);
-                    LOGGER_ERROR(vc->log, "H264:decoder:linesize=%d\n", (int)frame->linesize[0]);
-                    LOGGER_ERROR(vc->log, "H264:decoder:w=%d\n", (int)frame->width);
-                    LOGGER_ERROR(vc->log, "H264:decoder:h=%d\n", (int)frame->height);
+                    // LOGGER_ERROR(vc->log, "H264:decoder:fnum=%d\n", (int)vc->h264_decoder->frame_number);
+                    // LOGGER_ERROR(vc->log, "H264:decoder:linesize=%d\n", (int)frame->linesize[0]);
+                    // LOGGER_ERROR(vc->log, "H264:decoder:w=%d\n", (int)frame->width);
+                    // LOGGER_ERROR(vc->log, "H264:decoder:h=%d\n", (int)frame->height);
 
                     vc->vcb.first(vc->av, vc->friend_number, frame->width, frame->height,
                                   (const uint8_t *)frame->data[0],
