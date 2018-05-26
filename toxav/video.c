@@ -86,7 +86,7 @@ void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t kf_max_
 
     vpx_codec_err_t rc;
 
-    if (encoder_codec == TOXAV_ENCODER_CODEC_USED_VP8) {
+    if (encoder_codec != TOXAV_ENCODER_CODEC_USED_VP9) {
         LOGGER_WARNING(log, "Using VP8 codec for encoder (1)");
         rc = vpx_codec_enc_config_default(VIDEO_CODEC_ENCODER_INTERFACE_VP8, cfg, 0);
     } else {
@@ -211,8 +211,13 @@ VCSession *vc_new_h264(Logger *log, ToxAV *av, uint32_t friend_number, toxav_vid
     param.i_csp = X264_CSP_I420;
     param.i_width  = 1920;
     param.i_height = 1080;
+    vc->h264_enc_width = param.i_width;
+    vc->h264_enc_height = param.i_height;
     param.i_threads = 3;
-    param.b_vfr_input = 0;
+    param.b_vfr_input = 1; /* VFR input.  If 1, use timebase and timestamps for ratecontrol purposes.
+                            * If 0, use fps only. */
+    param.i_timebase_num = 1;       // 1 ms = timebase units = (1/1000)s
+    param.i_timebase_den = 1000;   // 1 ms = timebase units = (1/1000)s
     param.b_repeat_headers = 1;
     param.b_annexb = 1;
 
@@ -220,6 +225,14 @@ VCSession *vc_new_h264(Logger *log, ToxAV *av, uint32_t friend_number, toxav_vid
     if (x264_param_apply_profile(&param, "high") < 0) {
         // goto fail;
     }
+
+    if (x264_picture_alloc(&(vc->h264_in_pic), param.i_csp, param.i_width, param.i_height) < 0) {
+        // goto fail;
+    }
+
+    // vc->h264_in_pic.img.plane[0] --> Y
+    // vc->h264_in_pic.img.plane[1] --> U
+    // vc->h264_in_pic.img.plane[2] --> V
 
     vc->h264_encoder = x264_encoder_open(&param);
 
@@ -279,7 +292,7 @@ VCSession *vc_new_vpx(Logger *log, ToxAV *av, uint32_t friend_number, toxav_vide
     dec_cfg.w = VIDEO_CODEC_DECODER_MAX_WIDTH;
     dec_cfg.h = VIDEO_CODEC_DECODER_MAX_HEIGHT;
 
-    if (VPX_DECODER_USED == TOXAV_ENCODER_CODEC_USED_VP8) {
+    if (VPX_DECODER_USED != TOXAV_ENCODER_CODEC_USED_VP9) {
         LOGGER_WARNING(log, "Using VP8 codec for decoder (0)");
 
         vpx_codec_flags_t dec_flags_ = 0;
@@ -322,7 +335,7 @@ VCSession *vc_new_vpx(Logger *log, ToxAV *av, uint32_t friend_number, toxav_vide
     }
 
 
-    if (VPX_DECODER_USED == TOXAV_ENCODER_CODEC_USED_VP8) {
+    if (VPX_DECODER_USED != TOXAV_ENCODER_CODEC_USED_VP9) {
         if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 1) {
             LOGGER_WARNING(log, "turn on postproc: OK");
         } else if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 2) {
@@ -374,7 +387,7 @@ VCSession *vc_new_vpx(Logger *log, ToxAV *av, uint32_t friend_number, toxav_vide
                          vc->video_encoder_coded_used,
                          vc->video_keyframe_method);
 
-    if (vc->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP8) {
+    if (vc->video_encoder_coded_used != TOXAV_ENCODER_CODEC_USED_VP9) {
         LOGGER_WARNING(log, "Using VP8 codec for encoder (0.1)");
 
 #ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
@@ -469,7 +482,7 @@ VCSession *vc_new_vpx(Logger *log, ToxAV *av, uint32_t friend_number, toxav_vide
 
 #ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
 
-    if (vc->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP8) {
+    if (vc->video_encoder_coded_used != TOXAV_ENCODER_CODEC_USED_VP9) {
         rc = vpx_codec_control(vc->encoder, VP8E_SET_TOKEN_PARTITIONS, VIDEO_CODEC_FRAGMENT_VPX_NUMS);
 
         if (rc != VPX_CODEC_OK) {
@@ -632,13 +645,13 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc->video_rc_max_quantizer_prev = vc->video_rc_max_quantizer;
     vc->video_rc_min_quantizer = TOXAV_ENCODER_VP8_RC_MIN_QUANTIZER_NORMAL;
     vc->video_rc_min_quantizer_prev = vc->video_rc_min_quantizer;
-    vc->video_encoder_coded_used = TOXAV_ENCODER_CODEC_USED_VP8;
+    vc->video_encoder_coded_used = TOXAV_ENCODER_CODEC_USED_H264; // DEBUG: H264 !!
     vc->video_encoder_coded_used_prev = vc->video_encoder_coded_used;
     vc->video_keyframe_method = TOXAV_ENCODER_KF_METHOD_NORMAL;
     vc->video_keyframe_method_prev = vc->video_keyframe_method;
     vc->video_decoder_error_concealment = VIDEO__VP8_DECODER_ERROR_CONCEALMENT;
     vc->video_decoder_error_concealment_prev = vc->video_decoder_error_concealment;
-    vc->video_decoder_codec_used = TOXAV_ENCODER_CODEC_USED_VP8;
+    vc->video_decoder_codec_used = TOXAV_ENCODER_CODEC_USED_H264; // DEBUG: H264 !!
     // options ---
 
 
@@ -679,6 +692,7 @@ void vc_kill_vpx(VCSession *vc)
 void vc_kill_h264(VCSession *vc)
 {
     x264_encoder_close(vc->h264_encoder);
+    x264_picture_clean(&(vc->h264_in_pic));
     avcodec_free_context(&vc->h264_decoder);
 }
 
@@ -724,7 +738,7 @@ void video_switch_decoder_vpx(VCSession *vc)
 
     // toggle decoder codec between VP8 and VP9
     // TODO: put codec into header flags at encoder side, then use this at decoder side!
-    if (vc->video_decoder_codec_used == TOXAV_ENCODER_CODEC_USED_VP8) {
+    if (vc->video_decoder_codec_used != TOXAV_ENCODER_CODEC_USED_VP9) {
         vc->video_decoder_codec_used = TOXAV_ENCODER_CODEC_USED_VP9;
     } else {
         vc->video_decoder_codec_used = TOXAV_ENCODER_CODEC_USED_VP8;
@@ -740,7 +754,7 @@ void video_switch_decoder_vpx(VCSession *vc)
     dec_cfg.w = VIDEO_CODEC_DECODER_MAX_WIDTH;
     dec_cfg.h = VIDEO_CODEC_DECODER_MAX_HEIGHT;
 
-    if (vc->video_decoder_codec_used == TOXAV_ENCODER_CODEC_USED_VP8) {
+    if (vc->video_decoder_codec_used != TOXAV_ENCODER_CODEC_USED_VP9) {
 
         vpx_codec_flags_t dec_flags_ = 0;
 
@@ -782,7 +796,7 @@ void video_switch_decoder_vpx(VCSession *vc)
     }
 
 
-    if (vc->video_decoder_codec_used == TOXAV_ENCODER_CODEC_USED_VP8) {
+    if (vc->video_decoder_codec_used != TOXAV_ENCODER_CODEC_USED_VP9) {
         if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 1) {
             LOGGER_WARNING(vc->log, "turn on postproc: OK");
         } else if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 2) {
@@ -1318,17 +1332,75 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
     return 0;
 }
 
-int vc_reconfigure_encoder_h264(VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height,
+int vc_reconfigure_encoder_h264(Logger *log, VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height,
                                 int16_t kf_max_dist)
 {
     if (!vc) {
         return -1;
     }
 
+    if ((vc->h264_enc_width != width) || (vc->h264_enc_height != height)) {
+        // input image size changed
+
+        x264_param_t param;
+
+        if (x264_param_default_preset(&param, "ultrafast", "zerolatency") < 0) {
+            // goto fail;
+        }
+
+
+        /* Configure non-default params */
+        // param.i_bitdepth = 8;
+        param.i_csp = X264_CSP_I420;
+        param.i_width  = width;
+        param.i_height = height;
+        vc->h264_enc_width = param.i_width;
+        vc->h264_enc_height = param.i_height;
+        param.i_threads = 3;
+        param.b_vfr_input = 1; /* VFR input.  If 1, use timebase and timestamps for ratecontrol purposes.
+                            * If 0, use fps only. */
+        param.i_timebase_num = 1;       // 1 ms = timebase units = (1/1000)s
+        param.i_timebase_den = 1000;   // 1 ms = timebase units = (1/1000)s
+        param.b_repeat_headers = 1;
+        param.b_annexb = 1;
+
+        /* Apply profile restrictions. */
+        if (x264_param_apply_profile(&param, "high") < 0) {
+            // goto fail;
+        }
+
+        LOGGER_DEBUG(log, "H264: reconfigure encoder:001: w:%d h:%d w_new:%d h_new:%d\n",
+                     vc->h264_enc_width,
+                     vc->h264_enc_height,
+                     width,
+                     height);
+
+        // free old stuff ---------
+        x264_encoder_close(vc->h264_encoder);
+        x264_picture_clean(&(vc->h264_in_pic));
+        // free old stuff ---------
+
+        LOGGER_DEBUG(log, "H264: reconfigure encoder:002\n");
+
+        // alloc with new values -------
+        if (x264_picture_alloc(&(vc->h264_in_pic), param.i_csp, param.i_width, param.i_height) < 0) {
+            // goto fail;
+        }
+
+        LOGGER_DEBUG(log, "H264: reconfigure encoder:003\n");
+
+        vc->h264_encoder = x264_encoder_open(&param);
+        // alloc with new values -------
+
+
+        LOGGER_DEBUG(log, "H264: reconfigure encoder:004\n");
+
+    }
+
     return 0;
 }
 
-int vc_reconfigure_encoder_vpx(VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height,
+int vc_reconfigure_encoder_vpx(Logger *log, VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height,
                                int16_t kf_max_dist)
 {
     if (!vc) {
@@ -1401,7 +1473,7 @@ int vc_reconfigure_encoder_vpx(VCSession *vc, uint32_t bit_rate, uint16_t width,
         cfg.g_h = height;
 
 
-        if (vc->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP8) {
+        if (vc->video_encoder_coded_used != TOXAV_ENCODER_CODEC_USED_VP9) {
             LOGGER_WARNING(vc->log, "Using VP8 codec for encoder");
 
 #ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
@@ -1506,7 +1578,7 @@ int vc_reconfigure_encoder_vpx(VCSession *vc, uint32_t bit_rate, uint16_t width,
 
 #ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
 
-        if (vc->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP8) {
+        if (vc->video_encoder_coded_used != TOXAV_ENCODER_CODEC_USED_VP9) {
             rc = vpx_codec_control(&new_c, VP8E_SET_TOKEN_PARTITIONS, VIDEO_CODEC_FRAGMENT_VPX_NUMS);
 
             if (rc != VPX_CODEC_OK) {
@@ -1570,13 +1642,13 @@ int vc_reconfigure_encoder_vpx(VCSession *vc, uint32_t bit_rate, uint16_t width,
     return 0;
 }
 
-int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height,
+int vc_reconfigure_encoder(Logger *log, VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height,
                            int16_t kf_max_dist)
 {
     if (vc->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP8) {
-        return vc_reconfigure_encoder_vpx(vc, bit_rate, width, height, kf_max_dist);
+        return vc_reconfigure_encoder_vpx(log, vc, bit_rate, width, height, kf_max_dist);
     } else {
-        return vc_reconfigure_encoder_h264(vc, bit_rate, width, height, kf_max_dist);
+        return vc_reconfigure_encoder_h264(log, vc, bit_rate, width, height, kf_max_dist);
     }
 }
 

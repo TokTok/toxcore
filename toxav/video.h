@@ -127,6 +127,10 @@ typedef struct VCSession_s {
     vpx_codec_ctx_t encoder[1];
     uint32_t frame_counter;
     x264_t *h264_encoder;
+    x264_picture_t h264_in_pic;
+    x264_picture_t h264_out_pic;
+    int h264_enc_width;
+    int h264_enc_height;
 
     /* decoding */
     vpx_codec_ctx_t decoder[1];
@@ -187,7 +191,8 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
                    uint64_t *a_l_timestamp,
                    uint64_t *v_r_timestamp, uint64_t *v_l_timestamp);
 int vc_queue_message(void *vcp, struct RTPMessage *msg);
-int vc_reconfigure_encoder(VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height, int16_t kf_max_dist);
+int vc_reconfigure_encoder(Logger *log, VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height,
+                           int16_t kf_max_dist);
 int vc_reconfigure_encoder_bitrate_only(VCSession *vc, uint32_t bit_rate);
 
 #endif /* VIDEO_H */
