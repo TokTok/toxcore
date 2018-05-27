@@ -51,6 +51,8 @@ VPX_DL_BEST_QUALITY   (0)
 deadline parameter analogous to VPx BEST QUALITY mode.
 */
 
+#define x264_param_profile_str "high"
+
 
 // initialize encoder with this value. Target bandwidth to use for this stream, in kilobits per second.
 #define VIDEO_BITRATE_INITIAL_VALUE 400
@@ -213,8 +215,12 @@ VCSession *vc_new_h264(Logger *log, ToxAV *av, uint32_t friend_number, toxav_vid
     param.i_height = 1080;
     vc->h264_enc_width = param.i_width;
     vc->h264_enc_height = param.i_height;
-    param.i_threads = 2;
-    param.b_open_gop = 20;
+    param.i_threads = 3;
+    // param.b_open_gop = 20;
+    param.i_keyint_max = 20;
+    // param.rc.i_rc_method = X264_RC_CRF; // X264_RC_ABR;
+    // param.i_nal_hrd = X264_NAL_HRD_CBR;
+
     param.b_vfr_input = 1; /* VFR input.  If 1, use timebase and timestamps for ratecontrol purposes.
                             * If 0, use fps only. */
     param.i_timebase_num = 1;       // 1 ms = timebase units = (1/1000)s
@@ -222,11 +228,15 @@ VCSession *vc_new_h264(Logger *log, ToxAV *av, uint32_t friend_number, toxav_vid
     param.b_repeat_headers = 1;
     param.b_annexb = 1;
 
+    // param.rc.f_rate_tolerance = 1.0;
+    // param.rc.i_vbv_buffer_size = 1200;
+    param.rc.i_vbv_max_bitrate = 1200;
     param.rc.i_bitrate = 1200;
     vc->h264_enc_bitrate = param.rc.i_bitrate;
 
     /* Apply profile restrictions. */
-    if (x264_param_apply_profile(&param, "high") < 0) { // "baseline", "main", "high", "high10", "high422", "high444"
+    if (x264_param_apply_profile(&param,
+                                 x264_param_profile_str) < 0) { // "baseline", "main", "high", "high10", "high422", "high444"
         // goto fail;
     }
 
@@ -1490,12 +1500,15 @@ int vc_reconfigure_encoder_h264(Logger *log, VCSession *vc, uint32_t bit_rate, u
         /* Configure non-default params */
         // param.i_bitdepth = 8;
         param.i_csp = X264_CSP_I420;
-        param.i_width  = width;
-        param.i_height = height;
+        param.i_width  = 1920;
+        param.i_height = 1080;
         vc->h264_enc_width = param.i_width;
         vc->h264_enc_height = param.i_height;
-        param.i_threads = 2;
-        param.b_open_gop = 20;
+        param.i_threads = 3;
+        // param.b_open_gop = 20;
+        param.i_keyint_max = 20;
+        // param.rc.i_rc_method = X264_RC_ABR;
+
         param.b_vfr_input = 1; /* VFR input.  If 1, use timebase and timestamps for ratecontrol purposes.
                             * If 0, use fps only. */
         param.i_timebase_num = 1;       // 1 ms = timebase units = (1/1000)s
@@ -1503,11 +1516,16 @@ int vc_reconfigure_encoder_h264(Logger *log, VCSession *vc, uint32_t bit_rate, u
         param.b_repeat_headers = 1;
         param.b_annexb = 1;
 
+        // param.rc.f_rate_tolerance = 1.0;
+        // param.rc.i_vbv_buffer_size = bit_rate / 1000;
+        param.rc.i_vbv_max_bitrate = bit_rate / 1000;
+
         param.rc.i_bitrate = bit_rate / 1000;
         vc->h264_enc_bitrate = bit_rate;
 
         /* Apply profile restrictions. */
-        if (x264_param_apply_profile(&param, "high") < 0) { // "baseline", "main", "high", "high10", "high422", "high444"
+        if (x264_param_apply_profile(&param,
+                                     x264_param_profile_str) < 0) { // "baseline", "main", "high", "high10", "high422", "high444"
             // goto fail;
         }
 
@@ -1812,10 +1830,15 @@ int vc_reconfigure_encoder_bitrate_only_h264(VCSession *vc, uint32_t bit_rate)
         /* Configure non-default params */
         // param.i_bitdepth = 8;
         param.i_csp = X264_CSP_I420;
-        param.i_width  = vc->h264_enc_width;
-        param.i_height = vc->h264_enc_height;
-        param.i_threads = 2;
-        param.b_open_gop = 20;
+        param.i_width  = 1920;
+        param.i_height = 1080;
+        vc->h264_enc_width = param.i_width;
+        vc->h264_enc_height = param.i_height;
+        param.i_threads = 3;
+        // param.b_open_gop = 20;
+        param.i_keyint_max = 20;
+        // param.rc.i_rc_method = X264_RC_ABR;
+
         param.b_vfr_input = 1; /* VFR input.  If 1, use timebase and timestamps for ratecontrol purposes.
                             * If 0, use fps only. */
         param.i_timebase_num = 1;       // 1 ms = timebase units = (1/1000)s
@@ -1823,11 +1846,16 @@ int vc_reconfigure_encoder_bitrate_only_h264(VCSession *vc, uint32_t bit_rate)
         param.b_repeat_headers = 1;
         param.b_annexb = 1;
 
-        param.rc.i_bitrate = (bit_rate / 1000);
+        // param.rc.f_rate_tolerance = 1.0;
+        // param.rc.i_vbv_buffer_size = bit_rate / 1000;
+        param.rc.i_vbv_max_bitrate = bit_rate / 1000;
+
+        param.rc.i_bitrate = bit_rate / 1000;
         vc->h264_enc_bitrate = bit_rate;
 
         /* Apply profile restrictions. */
-        if (x264_param_apply_profile(&param, "high") < 0) { // "baseline", "main", "high", "high10", "high422", "high444"
+        if (x264_param_apply_profile(&param,
+                                     x264_param_profile_str) < 0) { // "baseline", "main", "high", "high10", "high422", "high444"
             // goto fail;
         }
 
