@@ -51,14 +51,19 @@ VPX_DL_BEST_QUALITY   (0)
 deadline parameter analogous to VPx BEST QUALITY mode.
 */
 
-#define x264_param_profile_str "high"
-
 
 // initialize encoder with this value. Target bandwidth to use for this stream, in kilobits per second.
 #define VIDEO_BITRATE_INITIAL_VALUE 400
 #define VIDEO_BITRATE_INITIAL_VALUE_VP9 400
-#define VIDEO_BITRATE_INITIAL_VALUE_H264 4000
-#define VIDEO_MAX_KF_H264 150
+
+// H264 settings -----------
+#define x264_param_profile_str "high"
+#define VIDEO_BITRATE_INITIAL_VALUE_H264 3000
+#define VIDEO_MAX_KF_H264 52
+#define VIDEO_BUF_FACTOR_H264 4
+#define VIDEO_F_RATE_TOLERANCE_H264 1.2
+#define VIDEO_BITRATE_FACTOR_H264 0.7
+// H264 settings -----------
 
 struct vpx_frame_user_data {
     uint64_t record_timestamp;
@@ -230,11 +235,12 @@ VCSession *vc_new_h264(Logger *log, ToxAV *av, uint32_t friend_number, toxav_vid
     param.b_repeat_headers = 1;
     param.b_annexb = 1;
 
-    param.rc.f_rate_tolerance = 1.0;
-    param.rc.i_vbv_buffer_size = VIDEO_BITRATE_INITIAL_VALUE_H264 * 2;
+    param.rc.f_rate_tolerance = VIDEO_F_RATE_TOLERANCE_H264;
+    param.rc.i_vbv_buffer_size = VIDEO_BITRATE_INITIAL_VALUE_H264 * VIDEO_BUF_FACTOR_H264;
     param.rc.i_vbv_max_bitrate = VIDEO_BITRATE_INITIAL_VALUE_H264 * 1;
-    param.rc.i_bitrate = VIDEO_BITRATE_INITIAL_VALUE_H264;
-    vc->h264_enc_bitrate = param.rc.i_bitrate;
+    // param.rc.i_bitrate = VIDEO_BITRATE_INITIAL_VALUE_H264 * VIDEO_BITRATE_FACTOR_H264;
+
+    vc->h264_enc_bitrate = VIDEO_BITRATE_INITIAL_VALUE_H264 * 1000;
 
     /* Apply profile restrictions. */
     if (x264_param_apply_profile(&param,
@@ -1518,11 +1524,11 @@ int vc_reconfigure_encoder_h264(Logger *log, VCSession *vc, uint32_t bit_rate, u
         param.b_repeat_headers = 1;
         param.b_annexb = 1;
 
-        param.rc.f_rate_tolerance = 1.0;
-        param.rc.i_vbv_buffer_size = (bit_rate / 1000) * 2;
+        param.rc.f_rate_tolerance = VIDEO_F_RATE_TOLERANCE_H264;
+        param.rc.i_vbv_buffer_size = (bit_rate / 1000) * VIDEO_BUF_FACTOR_H264;
         param.rc.i_vbv_max_bitrate = (bit_rate / 1000) * 1;
 
-        param.rc.i_bitrate = bit_rate / 1000;
+        // param.rc.i_bitrate = (bit_rate / 1000) * VIDEO_BITRATE_FACTOR_H264;
         vc->h264_enc_bitrate = bit_rate;
 
         /* Apply profile restrictions. */
@@ -1846,11 +1852,11 @@ int vc_reconfigure_encoder_bitrate_only_h264(VCSession *vc, uint32_t bit_rate)
         param.b_repeat_headers = 1;
         param.b_annexb = 1;
 
-        param.rc.f_rate_tolerance = 1.0;
-        param.rc.i_vbv_buffer_size = (bit_rate / 1000) * 2;
+        param.rc.f_rate_tolerance = VIDEO_F_RATE_TOLERANCE_H264;
+        param.rc.i_vbv_buffer_size = (bit_rate / 1000) * VIDEO_BUF_FACTOR_H264;
         param.rc.i_vbv_max_bitrate = (bit_rate / 1000) * 1;
 
-        param.rc.i_bitrate = bit_rate / 1000;
+        // param.rc.i_bitrate = (bit_rate / 1000) * VIDEO_BITRATE_FACTOR_H264;
         vc->h264_enc_bitrate = bit_rate;
 
         /* Apply profile restrictions. */
