@@ -217,7 +217,7 @@ VCSession *vc_new_h264(Logger *log, ToxAV *av, uint32_t friend_number, toxav_vid
     vc->h264_enc_height = param.i_height;
     param.i_threads = 3;
     // param.b_open_gop = 20;
-    param.i_keyint_max = 20;
+    param.i_keyint_max = 50;
     // param.rc.i_rc_method = X264_RC_CRF; // X264_RC_ABR;
     // param.i_nal_hrd = X264_NAL_HRD_CBR;
 
@@ -228,8 +228,8 @@ VCSession *vc_new_h264(Logger *log, ToxAV *av, uint32_t friend_number, toxav_vid
     param.b_repeat_headers = 1;
     param.b_annexb = 1;
 
-    // param.rc.f_rate_tolerance = 1.0;
-    // param.rc.i_vbv_buffer_size = 1200;
+    param.rc.f_rate_tolerance = 1.0;
+    param.rc.i_vbv_buffer_size = 1200;
     param.rc.i_vbv_max_bitrate = 1200;
     param.rc.i_bitrate = 1200;
     vc->h264_enc_bitrate = param.rc.i_bitrate;
@@ -1500,13 +1500,13 @@ int vc_reconfigure_encoder_h264(Logger *log, VCSession *vc, uint32_t bit_rate, u
         /* Configure non-default params */
         // param.i_bitdepth = 8;
         param.i_csp = X264_CSP_I420;
-        param.i_width  = 1920;
-        param.i_height = 1080;
+        param.i_width  = width;
+        param.i_height = height;
         vc->h264_enc_width = param.i_width;
         vc->h264_enc_height = param.i_height;
         param.i_threads = 3;
         // param.b_open_gop = 20;
-        param.i_keyint_max = 20;
+        param.i_keyint_max = 50;
         // param.rc.i_rc_method = X264_RC_ABR;
 
         param.b_vfr_input = 1; /* VFR input.  If 1, use timebase and timestamps for ratecontrol purposes.
@@ -1516,8 +1516,8 @@ int vc_reconfigure_encoder_h264(Logger *log, VCSession *vc, uint32_t bit_rate, u
         param.b_repeat_headers = 1;
         param.b_annexb = 1;
 
-        // param.rc.f_rate_tolerance = 1.0;
-        // param.rc.i_vbv_buffer_size = bit_rate / 1000;
+        param.rc.f_rate_tolerance = 1.0;
+        param.rc.i_vbv_buffer_size = bit_rate / 1000;
         param.rc.i_vbv_max_bitrate = bit_rate / 1000;
 
         param.rc.i_bitrate = bit_rate / 1000;
@@ -1830,13 +1830,11 @@ int vc_reconfigure_encoder_bitrate_only_h264(VCSession *vc, uint32_t bit_rate)
         /* Configure non-default params */
         // param.i_bitdepth = 8;
         param.i_csp = X264_CSP_I420;
-        param.i_width  = 1920;
-        param.i_height = 1080;
-        vc->h264_enc_width = param.i_width;
-        vc->h264_enc_height = param.i_height;
+        param.i_width  = vc->h264_enc_width;
+        param.i_height = vc->h264_enc_height;
         param.i_threads = 3;
         // param.b_open_gop = 20;
-        param.i_keyint_max = 20;
+        param.i_keyint_max = 50;
         // param.rc.i_rc_method = X264_RC_ABR;
 
         param.b_vfr_input = 1; /* VFR input.  If 1, use timebase and timestamps for ratecontrol purposes.
@@ -1846,8 +1844,8 @@ int vc_reconfigure_encoder_bitrate_only_h264(VCSession *vc, uint32_t bit_rate)
         param.b_repeat_headers = 1;
         param.b_annexb = 1;
 
-        // param.rc.f_rate_tolerance = 1.0;
-        // param.rc.i_vbv_buffer_size = bit_rate / 1000;
+        param.rc.f_rate_tolerance = 1.0;
+        param.rc.i_vbv_buffer_size = bit_rate / 1000;
         param.rc.i_vbv_max_bitrate = bit_rate / 1000;
 
         param.rc.i_bitrate = bit_rate / 1000;
