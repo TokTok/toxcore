@@ -3,6 +3,31 @@
 
 cd
 
+
+
+sudo apt-get update
+sudo apt-get --yes --force-yes install git
+
+
+# totally disable swap ---------------
+sudo service dphys-swapfile stop
+sudo systemctl disable dphys-swapfile
+sudo apt-get --yes --force-yes purge dphys-swapfile
+# totally disable swap ---------------
+
+# ------------- install packages -------------
+sudo apt-get --yes --force-yes install libjpeg-dev libpng-dev imagemagick htop mc fbset cmake qrencode
+sudo apt-get --yes --force-yes install libqrencode-dev vim nano wget git make
+sudo apt-get --yes --force-yes install autotools-dev libtool bc libv4l-dev libv4lconvert0 v4l-conf v4l-utils
+sudo apt-get --yes --force-yes install libopus-dev libvpx-dev pkg-config libjpeg-dev libpulse-dev libconfig-dev
+sudo apt-get --yes --force-yes install automake checkinstall check yasm
+sudo apt-get --yes --force-yes install libao-dev libasound2-dev
+
+sudo apt-get --yes --force-yes install imagemagick qrencode
+# ------------- install packages -------------
+
+
+
 export CF2=" -O3 -g -marm -march=armv8-a+crc -mtune=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=hard -ftree-vectorize "
 export CF3=" -funsafe-math-optimizations "
 export VV1=" VERBOSE=1 V=1 "
