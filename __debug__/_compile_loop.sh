@@ -7,7 +7,7 @@ export CF2=" -O3 -g -marm -march=armv8-a+crc -mtune=cortex-a53 -mfpu=neon-fp-arm
 export CF3=" -funsafe-math-optimizations "
 export VV1=" VERBOSE=1 V=1 "
 
-export FULL=0
+export FULL=1
 export ASAN=0
 
 export _HOME_=$(pwd)
@@ -129,10 +129,10 @@ fi
 
 
 cd $_SRC_
-# git clone https://github.com/zoff99/c-toxcore_team
+git clone https://github.com/zoff99/c-toxcore_team c-toxcore
 cd c-toxcore
 
-# git checkout zoff99/toxcore_v1.0.10__toxav_h264_001
+git checkout zoff99/toxcore_v1.0.10__toxav_h264_001
 ## ** ## git pull
 
 ./autogen.sh
