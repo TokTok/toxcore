@@ -21,9 +21,9 @@ sudo apt-get --yes --force-yes install libqrencode-dev vim nano wget git make
 sudo apt-get --yes --force-yes install autotools-dev libtool bc libv4l-dev libv4lconvert0 v4l-conf v4l-utils
 sudo apt-get --yes --force-yes install libopus-dev libvpx-dev pkg-config libjpeg-dev libpulse-dev libconfig-dev
 sudo apt-get --yes --force-yes install automake checkinstall check yasm
-sudo apt-get --yes --force-yes install libao-dev libasound2-dev
+sudo apt-get --yes --force-yes install libao-dev libasound2-dev speedometer
 
-sudo apt-get --yes --force-yes install imagemagick qrencode
+sudo apt-get --yes --force-yes install imagemagick qrencode tor tor-arm
 # ------------- install packages -------------
 
 
