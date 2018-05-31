@@ -1163,16 +1163,18 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
                 // vc_reconfigure_encoder_bitrate_only(call->video.second, lowered_bitrate);
                 // HINT: Zoff: this does not seem to work
                 // vpx_codec_control(call->video.second->encoder, VP8E_SET_FRAME_FLAGS, vpx_encode_flags);
-                LOGGER_ERROR(av->m->log, "I_FRAME_FLAG:%d only-i-frame mode", call->video.first->ssrc);
+                // LOGGER_ERROR(av->m->log, "I_FRAME_FLAG:%d only-i-frame mode", call->video.first->ssrc);
             }
 
-            if (call->video.second->video_encoder_coded_used != TOXAV_ENCODER_CODEC_USED_H264) {
+#if 1
+            if (call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_H264) {
                 // HINT: don't know yet how else to force real I-Frames on H264
                 vc_reconfigure_encoder(av->m->log, call->video.second,
                                        call->video_bit_rate * 1000,
-                                       width, height, -1);
-                LOGGER_ERROR(av->m->log, "I_FRAME_FLAG:%d only-i-frame mode", call->video.first->ssrc);
+                                       width, height, -2);
+                // LOGGER_ERROR(av->m->log, "I_FRAME_FLAG:%d only-i-frame mode", call->video.first->ssrc);
             }
+#endif
 
             call->video.first->ssrc++;
         } else if (call->video.first->ssrc == VIDEO_SEND_X_KEYFRAMES_FIRST) {
@@ -1270,8 +1272,8 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 
 
     // for the H264 encoder -------
-    x264_nal_t *nal;
-    int i_frame_size;
+    x264_nal_t *nal = NULL;
+    int i_frame_size = 0;
     // for the H264 encoder -------
 
     { /* Encode */
@@ -1348,6 +1350,18 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
                 //             (int)call->video.second->h264_out_pic.b_keyframe
                 //            );
 
+            }
+
+            if (nal == NULL)
+            {
+                pthread_mutex_unlock(call->mutex_video);
+                goto END;
+            }
+
+            if (nal->p_payload == NULL)
+            {
+                pthread_mutex_unlock(call->mutex_video);
+                goto END;
             }
         }
     }

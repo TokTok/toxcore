@@ -921,15 +921,6 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
         data_type = (uint8_t)((frame_flags & RTP_KEY_FRAME) != 0);
         h264_encoded_video_frame = (uint8_t)((frame_flags & RTP_ENCODER_IS_H264) != 0);
 
-        if ((vc->video_decoder_codec_used != TOXAV_ENCODER_CODEC_USED_H264)
-                && (h264_encoded_video_frame == 1)) {
-            video_switch_decoder(vc, TOXAV_ENCODER_CODEC_USED_H264);
-        } else if ((vc->video_decoder_codec_used == TOXAV_ENCODER_CODEC_USED_H264)
-                   && (h264_encoded_video_frame == 0)) {
-            video_switch_decoder(vc, TOXAV_ENCODER_CODEC_USED_VP8);
-        }
-
-
 
         if ((int32_t)header_v3_0->sequnum < (int32_t)vc->last_seen_fragment_seqnum) {
             // drop frame with too old sequence number
@@ -1096,6 +1087,20 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
 #endif
 
+
+
+
+        LOGGER_DEBUG(vc->log, "h264_encoded_video_frame=%d", (int)h264_encoded_video_frame);
+
+        if ((vc->video_decoder_codec_used != TOXAV_ENCODER_CODEC_USED_H264)
+                && (h264_encoded_video_frame == 1)) {
+            LOGGER_DEBUG(vc->log, "h264_encoded_video_frame:AA");
+            video_switch_decoder(vc, TOXAV_ENCODER_CODEC_USED_H264);
+        } else if ((vc->video_decoder_codec_used == TOXAV_ENCODER_CODEC_USED_H264)
+                   && (h264_encoded_video_frame == 0)) {
+            LOGGER_DEBUG(vc->log, "h264_encoded_video_frame:BB");
+            video_switch_decoder(vc, TOXAV_ENCODER_CODEC_USED_VP8);
+        }
 
 
 
@@ -1514,7 +1519,8 @@ int vc_reconfigure_encoder_h264(Logger *log, VCSession *vc, uint32_t bit_rate, u
 
     if ((vc->h264_enc_width != width) ||
             (vc->h264_enc_height != height) ||
-            (vc->h264_enc_bitrate != bit_rate)
+            (vc->h264_enc_bitrate != bit_rate) ||
+            (kf_max_dist == -2)
        ) {
         // input image size changed
 
