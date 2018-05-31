@@ -731,12 +731,16 @@ bool toxav_option_set(ToxAV *av, uint32_t friend_number, TOXAV_OPTIONS_OPTION op
     } else if (option == TOXAV_ENCODER_CODEC_USED) {
         VCSession *vc = (VCSession *)call->video.second;
 
-        if (vc->video_encoder_coded_used == (int32_t)value) {
-            LOGGER_WARNING(av->m->log, "video video_encoder_coded_used already set to: %d", (int)value);
-        } else {
-            vc->video_encoder_coded_used_prev = vc->video_encoder_coded_used;
-            vc->video_encoder_coded_used = (int32_t)value;
-            LOGGER_WARNING(av->m->log, "video video_encoder_coded_used to: %d", (int)value);
+        if (((int32_t)value >= TOXAV_ENCODER_CODEC_USED_VP8)
+                && ((int32_t)value <= TOXAV_ENCODER_CODEC_USED_H264)) {
+
+            if (vc->video_encoder_coded_used == (int32_t)value) {
+                LOGGER_WARNING(av->m->log, "video video_encoder_coded_used already set to: %d", (int)value);
+            } else {
+                vc->video_encoder_coded_used_prev = vc->video_encoder_coded_used;
+                vc->video_encoder_coded_used = (int32_t)value;
+                LOGGER_WARNING(av->m->log, "video video_encoder_coded_used to: %d", (int)value);
+            }
         }
     } else if (option == TOXAV_ENCODER_VP8_QUALITY) {
         VCSession *vc = (VCSession *)call->video.second;
@@ -1031,13 +1035,14 @@ bool toxav_audio_send_frame(ToxAV *av, uint32_t friend_number, const int16_t *pc
             _debug_count_sent_audio_frames = 0;
         } else {
 #endif
-            // LOGGER_DEBUG(av->m->log, "audio packet record time: %llu", audio_frame_record_timestamp);
+            // LOGGER_ERROR(av->m->log, "audio packet record time: %llu", audio_frame_record_timestamp);
 
             if (rtp_send_data(call->audio.first, dest,
                               vrc + sizeof(sampling_rate),
                               false,
                               audio_frame_record_timestamp,
                               VIDEO_FRAGMENT_NUM_NO_FRAG,
+                              0,
                               av->m->log) != 0) {
                 LOGGER_WARNING(av->m->log, "Failed to send audio packet");
                 rc = TOXAV_ERR_SEND_FRAME_RTP_FAILED;
@@ -1144,66 +1149,9 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
     unsigned long max_encode_time_in_us = MAX_ENCODE_TIME_US;
 
 
-    if (call->video.second->video_keyframe_method == TOXAV_ENCODER_KF_METHOD_PATTERN) {
-
-        switch (call->video.first->ssrc % 16) {
-            case 0:
-                vpx_encode_flags |= VPX_EFLAG_FORCE_KF;
-                vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
-                vpx_encode_flags |= VP8_EFLAG_FORCE_ARF;
-                break;
-
-            case 1:
-            case 3:
-            case 5:
-            case 7:
-            case 9:
-            case 11:
-            case 13:
-            case 15:
-                vpx_encode_flags |= VP8_EFLAG_NO_UPD_LAST;
-                vpx_encode_flags |= VP8_EFLAG_NO_UPD_GF;
-                vpx_encode_flags |= VP8_EFLAG_NO_UPD_ARF;
-                break;
-
-            case 2:
-            case 6:
-            case 10:
-            case 14:
-                break;
-
-            case 4:
-                vpx_encode_flags |= VP8_EFLAG_NO_REF_LAST;
-                vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
-                break;
-
-            case 8:
-                vpx_encode_flags |= VP8_EFLAG_NO_REF_LAST;
-                vpx_encode_flags |= VP8_EFLAG_NO_REF_GF;
-                vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
-                vpx_encode_flags |= VP8_EFLAG_FORCE_ARF;
-                break;
-
-            case 12:
-                vpx_encode_flags |= VP8_EFLAG_NO_REF_LAST;
-                vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
-                break;
-        }
-
-
-        call->video.first->ssrc++;
-
-        if (call->video.first->ssrc == 16) {
-            call->video.first->ssrc = 0;
-        }
-
-
-    }
-
     if (call->video.second->video_keyframe_method == TOXAV_ENCODER_KF_METHOD_NORMAL) {
         if (call->video.first->ssrc < VIDEO_SEND_X_KEYFRAMES_FIRST) {
-            //if (call->video.first->ssrc == 0)
-            //{
+
             if (call->video.second->video_encoder_coded_used != TOXAV_ENCODER_CODEC_USED_VP9) {
                 // Key frame flag for first frames
                 vpx_encode_flags = VPX_EFLAG_FORCE_KF;
@@ -1215,19 +1163,23 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
                 // vc_reconfigure_encoder_bitrate_only(call->video.second, lowered_bitrate);
                 // HINT: Zoff: this does not seem to work
                 // vpx_codec_control(call->video.second->encoder, VP8E_SET_FRAME_FLAGS, vpx_encode_flags);
-                LOGGER_INFO(av->m->log, "I_FRAME_FLAG:%d only-i-frame mode", call->video.first->ssrc);
+                LOGGER_ERROR(av->m->log, "I_FRAME_FLAG:%d only-i-frame mode", call->video.first->ssrc);
             }
 
-            //}
+            if (call->video.second->video_encoder_coded_used != TOXAV_ENCODER_CODEC_USED_H264) {
+                // HINT: don't know yet how else to force real I-Frames on H264
+                vc_reconfigure_encoder(av->m->log, call->video.second,
+                                       call->video_bit_rate * 1000,
+                                       width, height, -1);
+                LOGGER_ERROR(av->m->log, "I_FRAME_FLAG:%d only-i-frame mode", call->video.first->ssrc);
+            }
+
             call->video.first->ssrc++;
         } else if (call->video.first->ssrc == VIDEO_SEND_X_KEYFRAMES_FIRST) {
             if (call->video.second->video_encoder_coded_used != TOXAV_ENCODER_CODEC_USED_VP9) {
                 // normal keyframe placement
                 vpx_encode_flags = 0;
                 max_encode_time_in_us = MAX_ENCODE_TIME_US;
-                // vc_reconfigure_encoder_bitrate_only(call->video.second, call->video_bit_rate * 1000);
-                // HINT: Zoff: this does not seem to work
-                // vpx_codec_control(call->video.second->encoder, VP8E_SET_FRAME_FLAGS, vpx_encode_flags);
                 LOGGER_INFO(av->m->log, "I_FRAME_FLAG:%d normal mode", call->video.first->ssrc);
             }
 
@@ -1448,6 +1400,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
                                   keyframe,
                                   video_frame_record_timestamp,
                                   (int32_t)pkt->data.frame.partition_id,
+                                  TOXAV_ENCODER_CODEC_USED_VP8,
                                   av->m->log
                               );
 
@@ -1486,6 +1439,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
                               keyframe,
                               video_frame_record_timestamp,
                               (int32_t)0,
+                              TOXAV_ENCODER_CODEC_USED_H264,
                               av->m->log
                           );
 

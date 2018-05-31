@@ -59,7 +59,7 @@ deadline parameter analogous to VPx BEST QUALITY mode.
 // H264 settings -----------
 #define x264_param_profile_str "high"
 #define VIDEO_BITRATE_INITIAL_VALUE_H264 3000
-#define VIDEO_MAX_KF_H264 52
+#define VIDEO_MAX_KF_H264 50
 #define VIDEO_BUF_FACTOR_H264 4
 #define VIDEO_F_RATE_TOLERANCE_H264 1.2
 #define VIDEO_BITRATE_FACTOR_H264 0.7
@@ -223,6 +223,7 @@ VCSession *vc_new_h264(Logger *log, ToxAV *av, uint32_t friend_number, toxav_vid
     vc->h264_enc_width = param.i_width;
     vc->h264_enc_height = param.i_height;
     param.i_threads = 3;
+    param.b_deterministic = 1;
     // param.b_open_gop = 20;
     param.i_keyint_max = VIDEO_MAX_KF_H264;
     // param.rc.i_rc_method = X264_RC_CRF; // X264_RC_ABR;
@@ -682,13 +683,13 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc->video_rc_max_quantizer_prev = vc->video_rc_max_quantizer;
     vc->video_rc_min_quantizer = TOXAV_ENCODER_VP8_RC_MIN_QUANTIZER_NORMAL;
     vc->video_rc_min_quantizer_prev = vc->video_rc_min_quantizer;
-    vc->video_encoder_coded_used = TOXAV_ENCODER_CODEC_USED_H264; // DEBUG: H264 !!
+    vc->video_encoder_coded_used = TOXAV_ENCODER_CODEC_USED_VP8; // DEBUG: H264 !!
     vc->video_encoder_coded_used_prev = vc->video_encoder_coded_used;
     vc->video_keyframe_method = TOXAV_ENCODER_KF_METHOD_NORMAL;
     vc->video_keyframe_method_prev = vc->video_keyframe_method;
     vc->video_decoder_error_concealment = VIDEO__VP8_DECODER_ERROR_CONCEALMENT;
     vc->video_decoder_error_concealment_prev = vc->video_decoder_error_concealment;
-    vc->video_decoder_codec_used = TOXAV_ENCODER_CODEC_USED_H264; // DEBUG: H264 !!
+    vc->video_decoder_codec_used = TOXAV_ENCODER_CODEC_USED_VP8; // DEBUG: H264 !!
     // options ---
 
 
@@ -743,7 +744,7 @@ void vc_kill(VCSession *vc)
     vc_kill_vpx(vc);
 
     void *p;
-    uint8_t dummy;
+    uint64_t dummy;
 
     while (rb_read((RingBuffer *)vc->vbuf_raw, &p, &dummy)) {
         free(p);
@@ -757,7 +758,7 @@ void vc_kill(VCSession *vc)
     free(vc);
 }
 
-void video_switch_decoder_vpx(VCSession *vc)
+void video_switch_decoder_vpx(VCSession *vc, TOXAV_ENCODER_CODEC_USED_VALUE decoder_to_use)
 {
 
     /*
@@ -874,9 +875,20 @@ void video_switch_decoder_vpx(VCSession *vc)
 
 }
 
-void video_switch_decoder(VCSession *vc)
+void video_switch_decoder(VCSession *vc, TOXAV_ENCODER_CODEC_USED_VALUE decoder_to_use)
 {
-    // ** DISABLED ** // video_switch_decoder_vpx(vc);
+    if (vc->video_decoder_codec_used != decoder_to_use) {
+        if ((decoder_to_use == TOXAV_ENCODER_CODEC_USED_VP8)
+                || (decoder_to_use == TOXAV_ENCODER_CODEC_USED_VP9)
+                || (decoder_to_use == TOXAV_ENCODER_CODEC_USED_H264)) {
+
+            // ** DISABLED ** // video_switch_decoder_vpx(vc, decoder_to_use);
+            vc->video_decoder_codec_used = decoder_to_use;
+            LOGGER_ERROR(vc->log, "**switching DECODER to **:%d",
+                         (int)vc->video_decoder_codec_used);
+
+        }
+    }
 }
 
 uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_t *a_r_timestamp,
@@ -896,13 +908,28 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
     pthread_mutex_lock(vc->queue_mutex);
 
+    uint64_t frame_flags;
     uint8_t data_type;
+    uint8_t h264_encoded_video_frame;
 
     uint32_t full_data_len;
 
 
-    if (rb_read((RingBuffer *)vc->vbuf_raw, (void **)&p, &data_type)) {
+    if (rb_read((RingBuffer *)vc->vbuf_raw, (void **)&p, &frame_flags)) {
         const struct RTPHeader *header_v3_0 = (void *) & (p->header);
+
+        data_type = (uint8_t)((frame_flags & RTP_KEY_FRAME) != 0);
+        h264_encoded_video_frame = (uint8_t)((frame_flags & RTP_ENCODER_IS_H264) != 0);
+
+        if ((vc->video_decoder_codec_used != TOXAV_ENCODER_CODEC_USED_H264)
+                && (h264_encoded_video_frame == 1)) {
+            video_switch_decoder(vc, TOXAV_ENCODER_CODEC_USED_H264);
+        } else if ((vc->video_decoder_codec_used == TOXAV_ENCODER_CODEC_USED_H264)
+                   && (h264_encoded_video_frame == 0)) {
+            video_switch_decoder(vc, TOXAV_ENCODER_CODEC_USED_VP8);
+        }
+
+
 
         if ((int32_t)header_v3_0->sequnum < (int32_t)vc->last_seen_fragment_seqnum) {
             // drop frame with too old sequence number
@@ -920,7 +947,9 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
                 vc->count_old_video_frames_seen = 0;
             }
 
+            // if (vc->video_decoder_codec_used != TOXAV_ENCODER_CODEC_USED_H264) {
             // rc = vpx_codec_decode(vc->decoder, NULL, 0, NULL, VPX_DL_REALTIME);
+            // }
 
             free(p);
             pthread_mutex_unlock(vc->queue_mutex);
@@ -931,7 +960,10 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
             int32_t missing_frames_count = (int32_t)header_v3_0->sequnum -
                                            (int32_t)(vc->last_seen_fragment_seqnum + 1);
             LOGGER_DEBUG(vc->log, "missing %d video frames (m1)", (int)missing_frames_count);
-            rc = vpx_codec_decode(vc->decoder, NULL, 0, NULL, VPX_DL_REALTIME);
+
+            if (vc->video_decoder_codec_used != TOXAV_ENCODER_CODEC_USED_H264) {
+                rc = vpx_codec_decode(vc->decoder, NULL, 0, NULL, VPX_DL_REALTIME);
+            }
 
             if (missing_frames_count > 5) {
                 if ((vc->last_requested_keyframe_ts + VIDEO_MIN_REQUEST_KEYFRAME_INTERVAL_MS_FOR_NF)
@@ -966,13 +998,12 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
                 free(p);
                 LOGGER_DEBUG(vc->log, "skipping incoming video frame (1)");
 
-                rc = vpx_codec_decode(vc->decoder, NULL, 0, NULL, VPX_DL_REALTIME);
+                if (vc->video_decoder_codec_used != TOXAV_ENCODER_CODEC_USED_H264) {
+                    rc = vpx_codec_decode(vc->decoder, NULL, 0, NULL, VPX_DL_REALTIME);
+                }
 
-                //if (rb_read((RingBuffer *)vc->vbuf_raw, (void **)&p, &data_type)) {
-                //} else {
                 pthread_mutex_unlock(vc->queue_mutex);
                 return 0;
-                //}
             }
 
 #endif
@@ -985,13 +1016,10 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
                     // LOGGER_WARNING(vc->log, "skipping:003");
                     free(p);
                     LOGGER_WARNING(vc->log, "skipping all incoming video frames (2)");
-                    //void *p2;
-                    //uint8_t dummy;
-                    //while (rb_read((RingBuffer *)vc->vbuf_raw, &p2, &dummy)) {
-                    //    free(p2);
-                    //}
 
-                    rc = vpx_codec_decode(vc->decoder, NULL, 0, NULL, VPX_DL_REALTIME);
+                    if (vc->video_decoder_codec_used != TOXAV_ENCODER_CODEC_USED_H264) {
+                        rc = vpx_codec_decode(vc->decoder, NULL, 0, NULL, VPX_DL_REALTIME);
+                    }
 
                     pthread_mutex_unlock(vc->queue_mutex);
                     return 0;
@@ -1013,8 +1041,8 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
             LOGGER_DEBUG(vc->log, "vc_iterate:002");
         }
 
-        LOGGER_DEBUG(vc->log, "vc_iterate: rb_read p->len=%d data_type=%d", (int)full_data_len, (int)data_type);
-        LOGGER_DEBUG(vc->log, "vc_iterate: rb_read rb size=%d", (int)rb_size((RingBuffer *)vc->vbuf_raw));
+        // LOGGER_DEBUG(vc->log, "vc_iterate: rb_read p->len=%d data_type=%d", (int)full_data_len, (int)data_type);
+        // LOGGER_DEBUG(vc->log, "vc_iterate: rb_read rb size=%d", (int)rb_size((RingBuffer *)vc->vbuf_raw));
 
 #if 1
 
@@ -1151,19 +1179,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
             if (rc != VPX_CODEC_OK) {
                 if ((rc == VPX_CODEC_CORRUPT_FRAME) || (rc == VPX_CODEC_UNSUP_BITSTREAM)) {
-                    LOGGER_WARNING(vc->log, "Switching VPX Decoder");
-                    video_switch_decoder(vc);
-
-                    rc = vpx_codec_decode(vc->decoder, p->data, full_data_len, user_priv, VPX_DL_REALTIME);
-
-                    if (rc != VPX_CODEC_OK) {
-                        LOGGER_ERROR(vc->log, "There is still an error decoding video: err-num=%d err-str=%s", (int)rc,
-                                     vpx_codec_err_to_string(rc));
-
-                        if (user_priv != NULL) {
-                            free(user_priv);
-                        }
-                    }
+                    // LOGGER_ERROR(vc->log, "Error decoding video: VPX_CODEC_CORRUPT_FRAME or VPX_CODEC_UNSUP_BITSTREAM");
                 } else {
                     // LOGGER_ERROR(vc->log, "Error decoding video: err-num=%d err-str=%s", (int)rc, vpx_codec_err_to_string(rc));
                 }
@@ -1342,9 +1358,10 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
             compr_data->post = -1;
 #endif
 
-            // HINT: dirty hack to add FF_INPUT_BUFFER_PADDING_SIZE bytes!!
+            // HINT: dirty hack to add FF_INPUT_BUFFER_PADDING_SIZE bytes!! ----------
             uint8_t *tmp_buf = calloc(1, full_data_len + FF_INPUT_BUFFER_PADDING_SIZE);
             memcpy(tmp_buf, p->data, full_data_len);
+            // HINT: dirty hack to add FF_INPUT_BUFFER_PADDING_SIZE bytes!! ----------
 
             compr_data->data = tmp_buf; // p->data;
             compr_data->size = (int)full_data_len; // hmm, "int" again
@@ -1390,7 +1407,10 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
             }
 
             av_packet_free(&compr_data);
+
+            // HINT: dirty hack to add FF_INPUT_BUFFER_PADDING_SIZE bytes!! ----------
             free(tmp_buf);
+            // HINT: dirty hack to add FF_INPUT_BUFFER_PADDING_SIZE bytes!! ----------
 
             free(p);
 
@@ -1445,7 +1465,7 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
 
     if ((header->flags & RTP_LARGE_FRAME) && header->pt == rtp_TypeVideo % 128) {
         // LOGGER_WARNING(vc->log, "rb_write msg->len=%d b0=%d b1=%d rb_size=%d", (int)msg->len, (int)msg->data[0], (int)msg->data[1], (int)rb_size((RingBuffer *)vc->vbuf_raw));
-        free(rb_write((RingBuffer *)vc->vbuf_raw, msg, (uint8_t)((header->flags & RTP_KEY_FRAME) != 0)));
+        free(rb_write((RingBuffer *)vc->vbuf_raw, msg, (uint64_t)header->flags));
     } else {
         free(rb_write((RingBuffer *)vc->vbuf_raw, msg, 0));
     }
@@ -1513,6 +1533,7 @@ int vc_reconfigure_encoder_h264(Logger *log, VCSession *vc, uint32_t bit_rate, u
         vc->h264_enc_width = param.i_width;
         vc->h264_enc_height = param.i_height;
         param.i_threads = 3;
+        param.b_deterministic = 1;
         // param.b_open_gop = 20;
         param.i_keyint_max = VIDEO_MAX_KF_H264;
         // param.rc.i_rc_method = X264_RC_ABR;
@@ -1818,105 +1839,6 @@ int vc_reconfigure_encoder(Logger *log, VCSession *vc, uint32_t bit_rate, uint16
         return vc_reconfigure_encoder_vpx(log, vc, bit_rate, width, height, kf_max_dist);
     } else {
         return vc_reconfigure_encoder_h264(log, vc, bit_rate, width, height, kf_max_dist);
-    }
-}
-
-int vc_reconfigure_encoder_bitrate_only_h264(VCSession *vc, uint32_t bit_rate)
-{
-    if (!vc) {
-        return -1;
-    }
-
-    if (vc->h264_enc_bitrate != bit_rate) {
-
-        x264_param_t param;
-
-        if (x264_param_default_preset(&param, "ultrafast", "zerolatency") < 0) {
-            // goto fail;
-        }
-
-        /* Configure non-default params */
-        // param.i_bitdepth = 8;
-        param.i_csp = X264_CSP_I420;
-        param.i_width  = vc->h264_enc_width;
-        param.i_height = vc->h264_enc_height;
-        param.i_threads = 3;
-        // param.b_open_gop = 20;
-        param.i_keyint_max = VIDEO_MAX_KF_H264;
-        // param.rc.i_rc_method = X264_RC_ABR;
-
-        param.b_vfr_input = 1; /* VFR input.  If 1, use timebase and timestamps for ratecontrol purposes.
-                            * If 0, use fps only. */
-        param.i_timebase_num = 1;       // 1 ms = timebase units = (1/1000)s
-        param.i_timebase_den = 1000;   // 1 ms = timebase units = (1/1000)s
-        param.b_repeat_headers = 1;
-        param.b_annexb = 1;
-
-        param.rc.f_rate_tolerance = VIDEO_F_RATE_TOLERANCE_H264;
-        param.rc.i_vbv_buffer_size = (bit_rate / 1000) * VIDEO_BUF_FACTOR_H264;
-        param.rc.i_vbv_max_bitrate = (bit_rate / 1000) * 1;
-
-        // param.rc.i_bitrate = (bit_rate / 1000) * VIDEO_BITRATE_FACTOR_H264;
-        vc->h264_enc_bitrate = bit_rate;
-
-        /* Apply profile restrictions. */
-        if (x264_param_apply_profile(&param,
-                                     x264_param_profile_str) < 0) { // "baseline", "main", "high", "high10", "high422", "high444"
-            // goto fail;
-        }
-
-        // free old stuff ---------
-        x264_encoder_close(vc->h264_encoder);
-        x264_picture_clean(&(vc->h264_in_pic));
-        // free old stuff ---------
-
-        // alloc with new values -------
-        if (x264_picture_alloc(&(vc->h264_in_pic), param.i_csp, param.i_width, param.i_height) < 0) {
-            // goto fail;
-        }
-
-        vc->h264_encoder = x264_encoder_open(&param);
-        // alloc with new values -------
-
-    }
-
-    return 0;
-}
-
-int vc_reconfigure_encoder_bitrate_only_vpx(VCSession *vc, uint32_t bit_rate)
-{
-    if (!vc) {
-        return -1;
-    }
-
-    vpx_codec_enc_cfg_t cfg2 = *vc->encoder->config.enc;
-    vpx_codec_err_t rc;
-
-    if (cfg2.rc_target_bitrate == bit_rate) {
-        return 0; /* Nothing changed */
-    }
-
-    /* bit rate changed */
-    LOGGER_WARNING(vc->log, "bitrate change (2) from: %u to: %u", (uint32_t)(cfg2.rc_target_bitrate / 1000),
-                   (uint32_t)(bit_rate / 1000));
-
-    cfg2.rc_target_bitrate = bit_rate;
-    rc = vpx_codec_enc_config_set(vc->encoder, &cfg2);
-
-    if (rc != VPX_CODEC_OK) {
-        LOGGER_ERROR(vc->log, "Failed to set (2) encoder control setting: %s", vpx_codec_err_to_string(rc));
-        return -1;
-    }
-
-    return 0;
-}
-
-int vc_reconfigure_encoder_bitrate_only(VCSession *vc, uint32_t bit_rate)
-{
-    if (vc->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP8) {
-        return vc_reconfigure_encoder_bitrate_only_vpx(vc, bit_rate);
-    } else {
-        return vc_reconfigure_encoder_bitrate_only_h264(vc, bit_rate);
     }
 }
 

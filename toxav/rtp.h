@@ -85,6 +85,12 @@ enum RTPFlags {
      * Whether the packet is part of a key frame.
      */
     RTP_KEY_FRAME = 1 << 1,
+
+    /**
+     * Whether H264 codec was used to encode this vide frame
+     */
+    RTP_ENCODER_IS_H264 = 1 << 2,
+
 };
 
 
@@ -248,7 +254,8 @@ int rtp_stop_receiving(RTPSession *session);
  *   audio frame, this parameter is ignored.
  */
 int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length, bool is_keyframe,
-                  uint64_t frame_record_timestamp, int32_t fragment_num, Logger *log);
+                  uint64_t frame_record_timestamp, int32_t fragment_num, uint32_t codec_used,
+                  Logger *log);
 
 #ifdef __cplusplus
 }  // extern "C"
