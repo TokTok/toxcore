@@ -5442,7 +5442,7 @@ static int get_new_group_index(GC_Session *c)
 
     int new_index = c->num_chats;
     memset(&(c->chats[new_index]), 0, sizeof(GC_Chat));
-    memset(&(c->chats[new_index].saved_invites), -1, MAX_GC_SAVED_INVITES);
+    memset(&(c->chats[new_index].saved_invites), -1, MAX_GC_SAVED_INVITES * sizeof(uint32_t));
 
     ++c->num_chats;
 
@@ -5660,10 +5660,6 @@ int gc_group_load(GC_Session *c, struct Saved_Group *save)
         gconn->is_pending_handshake_response = false;
         gconn->pending_handshake_type = HS_INVITE_REQUEST;
         gconn->last_rcvd_ping = gconn->pending_handshake = mono_time_get(chat->mono_time) + HANDSHAKE_SENDING_TIMEOUT;
-    }
-
-    if (is_public_chat(chat)) {
-        m_add_friend_gc(m, chat);
     }
 
     return groupnumber;
