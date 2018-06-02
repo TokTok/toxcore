@@ -35,7 +35,7 @@
 
 #define MAX_SENT_GC_NODES 1
 #define ONION_ANNOUNCE_REQUEST_MIN_SIZE (1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE + ONION_PING_ID_SIZE + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_PUBLIC_KEY_SIZE + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH + CRYPTO_MAC_SIZE)
-#define ONION_ANNOUNCE_REQUEST_MAX_SIZE (ONION_ANNOUNCE_REQUEST_MIN_SIZE + (sizeof(Node_format) + CRYPTO_PUBLIC_KEY_SIZE) * MAX_SENT_GC_NODES)
+#define ONION_ANNOUNCE_REQUEST_MAX_SIZE (ONION_ANNOUNCE_REQUEST_MIN_SIZE + CRYPTO_PUBLIC_KEY_SIZE + (sizeof(Node_format) + CRYPTO_PUBLIC_KEY_SIZE) * MAX_SENT_GC_NODES)
 
 #define ONION_ANNOUNCE_RESPONSE_MIN_SIZE (2 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH + CRYPTO_NONCE_SIZE + ONION_PING_ID_SIZE + CRYPTO_MAC_SIZE)
 #define ONION_ANNOUNCE_RESPONSE_MAX_SIZE (ONION_ANNOUNCE_RESPONSE_MIN_SIZE + (sizeof(Node_format) * 2 + CRYPTO_PUBLIC_KEY_SIZE) * MAX_SENT_NODES)
@@ -76,7 +76,7 @@ int create_announce_request(uint8_t *packet, uint16_t max_packet_length, const u
 int create_gc_announce_request(uint8_t *packet, uint16_t max_packet_length, const uint8_t *dest_client_id,
                                const uint8_t *public_key, const uint8_t *secret_key, const uint8_t *ping_id,
                                const uint8_t *client_id, const uint8_t *data_public_key, uint64_t sendback_data,
-                               const uint8_t *gc_data, size_t gc_data_length);
+                               const uint8_t *gc_data, short gc_data_length);
 
 /* Create an onion data request packet in packet of max_packet_length (recommended size ONION_MAX_PACKET_SIZE).
  *
