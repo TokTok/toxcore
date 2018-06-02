@@ -55,7 +55,7 @@
 
 #define MAX_PATH_NODES 32
 
-#define GC_MAX_DATA_LENGTH (sizeof(Node_format) + CRYPTO_PUBLIC_KEY_SIZE)
+#define GC_MAX_DATA_LENGTH (sizeof(Node_format) + CRYPTO_PUBLIC_KEY_SIZE * 2)
 
 /* If no packets are received within that interval tox will
  * be considered offline.
@@ -63,7 +63,6 @@
 #define ONION_OFFLINE_TIMEOUT (ONION_NODE_PING_INTERVAL * (ONION_NODE_MAX_PINGS+2))
 
 /* Onion data packet ids. */
-#define ONION_DATA_FRIEND_REQ CRYPTO_PACKET_FRIEND_REQ
 #define ONION_DATA_DHTPK CRYPTO_PACKET_DHTPK
 
 typedef struct {
@@ -133,6 +132,7 @@ typedef struct {
     uint32_t run_count;
 
     uint8_t gc_data[GC_MAX_DATA_LENGTH];
+    uint8_t gc_public_key[ENC_PUBLIC_KEY];
     short gc_data_length;
 } Onion_Friend;
 
