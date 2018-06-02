@@ -257,6 +257,8 @@ typedef struct GC_Chat {
 
     int32_t saved_invites[MAX_GC_SAVED_INVITES];
     uint8_t saved_invites_index;
+
+    uint8_t onion_friend_public_key[ENC_PUBLIC_KEY];
 } GC_Chat;
 
 #ifndef MESSENGER_DEFINED
