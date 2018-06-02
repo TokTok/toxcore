@@ -313,15 +313,21 @@ int32_t m_addfriend_norequest(Messenger *m, const uint8_t *real_pk)
 
 int32_t m_add_friend_gc(Messenger *m, GC_Chat *chat)
 {
-    int32_t friend_number = m_add_contact_no_request(m, get_chat_id(chat->chat_public_key));
-    if (friend_number >= 0) {
-        Friend *frnd = &m->friendlist[friend_number];
-        frnd->type = CONTACT_TYPE_GC;
+    uint8_t tmp_public_key[ENC_PUBLIC_KEY];
+    memcpy(tmp_public_key, get_chat_id(chat->chat_public_key), ENC_PUBLIC_KEY);
+    random_bytes(tmp_public_key + ENC_PUBLIC_KEY / 2, ENC_PUBLIC_KEY / 2);
+    memcpy(chat->onion_friend_public_key, tmp_public_key, ENC_PUBLIC_KEY);
+    int32_t friend_number = m_add_contact_no_request(m, tmp_public_key);
 
-        int friend_connection_id = frnd->friendcon_id;
+    if (friend_number >= 0) {
+        Friend *f = &m->friendlist[friend_number];
+        f->type = CONTACT_TYPE_GC;
+
+        int friend_connection_id = f->friendcon_id;
         Friend_Conn *connection = &m->fr_c->conns[friend_connection_id];
         int onion_friend_number = connection->onion_friendnum;
         Onion_Friend *onion_friend = &m->onion_c->friends_list[onion_friend_number];
+        memcpy(onion_friend->gc_public_key, get_chat_id(chat->chat_public_key), ENC_PUBLIC_KEY);
 
         Node_format tcp_relay[1]; // TODO: send > 1 relay?
         int tcp_num = tcp_copy_connected_relays(chat->tcp_conn, tcp_relay, 1);
@@ -329,6 +335,8 @@ int32_t m_add_friend_gc(Messenger *m, GC_Chat *chat)
         if (tcp_num == 1) {
             memcpy(onion_friend->gc_data, tcp_relay, sizeof(Node_format));
             memcpy(onion_friend->gc_data + sizeof(Node_format), chat->self_public_key, ENC_PUBLIC_KEY);
+            memcpy(onion_friend->gc_data + sizeof(Node_format) + ENC_PUBLIC_KEY,
+                   get_chat_id(chat->chat_public_key), ENC_PUBLIC_KEY);
             onion_friend->gc_data_length = GC_MAX_DATA_LENGTH;
             memcpy(&chat->announced_node, tcp_relay, sizeof(Node_format));
             add_self_announce(m->mono_time, m->group_announce, get_chat_id(chat->chat_public_key), &chat->announced_node);
@@ -343,7 +351,7 @@ int32_t m_add_friend_gc(Messenger *m, GC_Chat *chat)
 
 int32_t m_remove_friend_gc(Messenger *m, const GC_Chat *chat)
 {
-    int friend_number = getfriend_id(m, get_chat_id(chat->chat_public_key));
+    int friend_number = getfriend_id(m, chat->onion_friend_public_key);
     if (friend_number >= 0) {
         m_delfriend(m, friend_number);
     }
@@ -453,7 +461,7 @@ int m_delfriend(Messenger *m, int32_t friendnumber)
         return -1;
     }
 
-    if (m->friend_connectionstatuschange_internal) {
+    if (m->friend_connectionstatuschange_internal && m->friendlist[friendnumber].type == CONTACT_TYPE_FRIEND) {
         m->friend_connectionstatuschange_internal(m, friendnumber, 0, m->friend_connectionstatuschange_internal_userdata);
     }
 
@@ -2660,14 +2668,16 @@ static void update_gc_friends_data(const Messenger *m)
     Node_format tcp_relay[1]; // TODO: send > 1 relay?
     for (i = 0; i < m->onion_c->num_friends; i++) {
         Onion_Friend *onion_friend = &m->onion_c->friends_list[i];
-        if (m->onion_c->friends_list[i].gc_data_length != -1) {
+        if (onion_friend->gc_data_length != -1) {
             continue;
         }
-        GC_Chat *chat = gc_get_group_by_public_key(m->group_handler, onion_friend->real_public_key);
+        GC_Chat *chat = gc_get_group_by_public_key(m->group_handler, onion_friend->gc_public_key);
         int tcp_num = tcp_copy_connected_relays(chat->tcp_conn, tcp_relay, 1);
         if (tcp_num == 1) {
             memcpy(onion_friend->gc_data, tcp_relay, sizeof(Node_format));
             memcpy(onion_friend->gc_data + sizeof(Node_format), chat->self_public_key, ENC_PUBLIC_KEY);
+            memcpy(onion_friend->gc_data + sizeof(Node_format) + ENC_PUBLIC_KEY,
+                   get_chat_id(chat->chat_public_key), ENC_PUBLIC_KEY);
             onion_friend->gc_data_length = GC_MAX_DATA_LENGTH;
             memcpy(&chat->announced_node, tcp_relay, sizeof(Node_format));
             add_self_announce(m->mono_time, m->group_announce, get_chat_id(chat->chat_public_key), &chat->announced_node);
@@ -3252,13 +3262,13 @@ static State_Load_Status groups_load(Messenger *m, const uint8_t *data, uint32_t
         struct Saved_Group temp;
         memcpy(&temp, data + i * sizeof(struct Saved_Group), sizeof(struct Saved_Group));
 
-        int ret = gc_group_load(m->group_handler, &temp);
+        int group_number = gc_group_load(m->group_handler, &temp);
 
-        if (ret == -1) {
+        if (group_number == -1) {
             LOGGER_WARNING(m->log, "Failed to join group");
         }
         else {
-            GC_Chat *chat = gc_get_group(m->group_handler, ret);
+            GC_Chat *chat = gc_get_group(m->group_handler, group_number);
             if (is_public_chat(chat)) {
                 m_add_friend_gc(m, chat);
             }
