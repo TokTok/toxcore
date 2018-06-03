@@ -177,7 +177,11 @@ cd $_HOME_/build
 mkdir -p utox_build
 cd utox_build/
 
-rsync -av $_HOME_/uTox/ ./
+
+
+## rsync -av $_HOME_/uTox/ ./
+git clone https://github.com/zoff99/uTox ./
+git checkout zoff99/linux_custom_003
 
 
 mkdir build2
