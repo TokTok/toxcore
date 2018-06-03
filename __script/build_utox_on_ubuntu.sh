@@ -24,7 +24,7 @@ export PKG_CONFIG_PATH=$_INST_/lib/pkgconfig
 
 
 
-full="0"
+full="1"
 
 if [ "$full""x" == "1x" ]; then
 
