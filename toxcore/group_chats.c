@@ -975,7 +975,7 @@ static int send_gc_peer_exchange(const GC_Session *c, GC_Chat *chat, GC_Connecti
 static int send_gc_handshake_packet(GC_Chat *chat, uint32_t peernumber, uint8_t handshake_type,
                                     uint8_t request_type, uint8_t join_type);
 
-static int send_gc_oob_handshake_packet(GC_Chat *chat, uint32_t peernumber, uint8_t handshake_type,
+static int send_gc_oob_handshake_packet(GC_Chat *chat, uint32_t peer_number, uint8_t handshake_type,
                                         uint8_t request_type, uint8_t join_type);
 
 static int handle_gc_sync_response(Messenger *m, int groupnumber, int peernumber, GC_Connection *gconn,
@@ -4241,11 +4241,11 @@ static int send_gc_handshake_packet(GC_Chat *chat, uint32_t peernumber, uint8_t 
     return 0;
 }
 
-static int send_gc_oob_handshake_packet(GC_Chat *chat, uint32_t peernumber, uint8_t handshake_type,
+static int send_gc_oob_handshake_packet(GC_Chat *chat, uint32_t peer_number, uint8_t handshake_type,
                                         uint8_t request_type, uint8_t join_type)
 {
-    GC_Connection *gconn = gcc_get_connection(chat, peernumber);
-    if (gconn == NULL) {
+    GC_Connection *gconn = gcc_get_connection(chat, peer_number);
+    if (gconn == nullptr) {
         return -1;
     }
 
@@ -4253,13 +4253,14 @@ static int send_gc_oob_handshake_packet(GC_Chat *chat, uint32_t peernumber, uint
     gcc_copy_tcp_relay(gconn, node);
 
     uint8_t packet[GC_ENCRYPTED_HS_PACKET_SIZE + sizeof(Node_format)];
-    int length = make_gc_handshake_packet(chat, gconn, handshake_type, request_type, join_type, packet, sizeof(packet), node);
+    int length = make_gc_handshake_packet(chat, gconn, handshake_type, request_type, join_type, packet,
+                                          sizeof(packet), node);
     if (length == -1) {
-        fprintf(stderr, "length error\n");
         return -1;
     }
 
-    int ret = tcp_send_oob_packet_using_relay(chat->tcp_conn, gconn->oob_relay_pk, gconn->addr.public_key, packet, length);
+    int ret = tcp_send_oob_packet_using_relay(chat->tcp_conn, gconn->oob_relay_pk,
+                                              gconn->addr.public_key, packet, length);
 
     return ret;
 }
@@ -5281,7 +5282,7 @@ static void do_new_connection_cooldown(GC_Chat *chat)
 #define PENDING_HANDSHAKE_SENDING_MAX_INTERVAL 10
 static int send_pending_handshake(GC_Chat *chat, GC_Connection *gconn, uint32_t peer_number)
 {
-    if (!chat || !gconn) {
+    if (!chat || !gconn || !peer_number) {
         return 1;
     }
 
@@ -5630,7 +5631,7 @@ int gc_group_load(GC_Session *c, struct Saved_Group *save)
     uint16_t i, num_addrs = net_ntohs(save->num_addrs);
 
     for (i = 0; i < num_addrs && i < MAX_GC_PEER_ADDRS; ++i) {
-        int peer_number = peer_add(m, chat->groupnumber, NULL, save->addrs[i].public_key);
+        int peer_number = peer_add(m, chat->groupnumber, nullptr, save->addrs[i].public_key);
         if (peer_number < 0) {
             continue;
         }
