@@ -536,27 +536,6 @@ static int find_tcp_connection_relay(TCP_Connections *tcp_c, const uint8_t *rela
     return -1;
 }
 
-bool copy_tcp_connection_relay_ip_port_by_pk(TCP_Connections *tcp_c, const uint8_t *relay_pk, IP_Port *dest)
-{
-    if (!dest || !tcp_c || !relay_pk) {
-        return false;
-    }
-
-    int connection_number = find_tcp_connection_relay(tcp_c, relay_pk);
-    if (connection_number < 0) {
-        return false;
-    }
-
-    TCP_con *tcp_con = get_tcp_connection(tcp_c, connection_number);
-    if (!tcp_con || !tcp_con->connection) {
-        return false;
-    }
-
-    *dest = tcp_con_ip_port(tcp_con->connection);
-
-    return true;
-}
-
 /* Create a new TCP connection to public_key.
  *
  * public_key must be the counterpart to the secret key that the other peer used with new_tcp_connections().
