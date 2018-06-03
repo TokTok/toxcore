@@ -133,9 +133,9 @@ cd $_HOME_/build
 
 if [ "$full""x" == "1x" ]; then
     rm -Rf c-toxcore
-    git clone https://github.com/zoff99/c-toxcore
+    git clone https://github.com/zoff99/c-toxcore_team c-toxcore
     cd c-toxcore
-    git checkout zoff99/_0.1.10_2017_runtime_val_changes ## new branch now!!
+    git checkout zoff99/toxcore_v1.0.10__toxav_h264_001 ## new branch now!!
     ./autogen.sh
     export CFLAGS=" -g -O0 -I$_INST_/include/ "
     export LDFLAGS=" -O0 -L$_INST_/lib "
