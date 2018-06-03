@@ -2698,7 +2698,7 @@ uint32_t messenger_run_interval(const Messenger *m)
 static void update_gc_friends_data(const Messenger *m)
 {
     int i;
-    Node_format tcp_relay[1]; // TODO: send > 1 relay?
+    Node_format tcp_relay[MAX_SENT_GC_NODES]; // TODO: send > 1 relay?
     for (i = 0; i < m->onion_c->num_friends; i++) {
         Onion_Friend *onion_friend = &m->onion_c->friends_list[i];
         if (onion_friend->gc_data_length != -1) {
