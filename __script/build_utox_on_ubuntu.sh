@@ -180,9 +180,13 @@ cd utox_build/
 
 
 ## rsync -av $_HOME_/uTox/ ./
+
+# --recurse-submodules
+
 git clone https://github.com/zoff99/uTox ./
 git checkout zoff99/linux_custom_003
 
+git submodule update --init --recursive
 
 mkdir build2
 cd build2/
