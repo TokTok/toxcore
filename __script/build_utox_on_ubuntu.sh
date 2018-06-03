@@ -263,7 +263,12 @@ src/layout/libutoxLAYOUT.a
 
 # ldd utox
 
+echo ""
+echo ""
+echo "########################"
+echo "########################"
+
 pwd
 ls -hal utox
-ls -al utox && cp -av utox ~/utox/local_utox
+ls -al utox
 
