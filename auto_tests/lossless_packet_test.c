@@ -16,6 +16,7 @@
 #include <time.h>
 
 #include "../toxcore/ccompat.h"
+#include "../toxcore/env.h"
 #include "../toxcore/tox.h"
 #include "../toxcore/util.h"
 
@@ -108,5 +109,7 @@ int main(void)
     setvbuf(stdout, nullptr, _IONBF, 0);
 
     test_lossless_packet();
+
+    assert(env_malloc_check());
     return 0;
 }

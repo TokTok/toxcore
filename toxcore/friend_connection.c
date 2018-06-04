@@ -3,7 +3,7 @@
  */
 
 /*
- * Copyright © 2016-2017 The TokTok team.
+ * Copyright © 2016-2018 The TokTok team.
  * Copyright © 2014 Tox project.
  *
  * This file is part of Tox, the free peer to peer instant messenger.
@@ -31,6 +31,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "env.h"
 #include "util.h"
 
 #define PORTS_PER_DISCOVERY 10
@@ -111,12 +112,12 @@ static bool friendconn_id_valid(const Friend_Connections *fr_c, int friendcon_id
 static bool realloc_friendconns(Friend_Connections *fr_c, uint32_t num)
 {
     if (num == 0) {
-        free(fr_c->conns);
+        env_free(fr_c->conns);
         fr_c->conns = nullptr;
         return true;
     }
 
-    Friend_Conn *newgroup_cons = (Friend_Conn *)realloc(fr_c->conns, num * sizeof(Friend_Conn));
+    Friend_Conn *newgroup_cons = (Friend_Conn *)env_realloc(fr_c->conns, num * sizeof(Friend_Conn));
 
     if (newgroup_cons == nullptr) {
         return false;
@@ -853,7 +854,7 @@ Friend_Connections *new_friend_connections(Onion_Client *onion_c, bool local_dis
         return nullptr;
     }
 
-    Friend_Connections *const temp = (Friend_Connections *)calloc(1, sizeof(Friend_Connections));
+    Friend_Connections *const temp = (Friend_Connections *)env_calloc(1, sizeof(Friend_Connections));
 
     if (temp == nullptr) {
         return nullptr;
@@ -964,5 +965,5 @@ void kill_friend_connections(Friend_Connections *fr_c)
         lan_discovery_kill(fr_c->dht);
     }
 
-    free(fr_c);
+    env_free(fr_c);
 }

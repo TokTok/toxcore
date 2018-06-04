@@ -3,7 +3,7 @@
  */
 
 /*
- * Copyright © 2016-2017 The TokTok team.
+ * Copyright © 2016-2018 The TokTok team.
  * Copyright © 2013 Tox project.
  *
  * This file is part of Tox, the free peer to peer instant messenger.
@@ -33,6 +33,7 @@
 #include <string.h>
 #include <time.h>
 
+#include "env.h"
 #include "logger.h"
 #include "network.h"
 #include "util.h"
@@ -59,12 +60,12 @@ static uint8_t friend_not_valid(const Messenger *m, int32_t friendnumber)
 static int realloc_friendlist(Messenger *m, uint32_t num)
 {
     if (num == 0) {
-        free(m->friendlist);
+        env_free(m->friendlist);
         m->friendlist = nullptr;
         return 0;
     }
 
-    Friend *newfriendlist = (Friend *)realloc(m->friendlist, num * sizeof(Friend));
+    Friend *newfriendlist = (Friend *)env_realloc(m->friendlist, num * sizeof(Friend));
 
     if (newfriendlist == nullptr) {
         return -1;
@@ -321,7 +322,7 @@ static int clear_receipts(Messenger *m, int32_t friendnumber)
 
     while (receipts) {
         struct Receipts *temp_r = receipts->next;
-        free(receipts);
+        env_free(receipts);
         receipts = temp_r;
     }
 
@@ -336,7 +337,7 @@ static int add_receipt(Messenger *m, int32_t friendnumber, uint32_t packet_num, 
         return -1;
     }
 
-    struct Receipts *new_receipts = (struct Receipts *)calloc(1, sizeof(struct Receipts));
+    struct Receipts *new_receipts = (struct Receipts *)env_calloc(1, sizeof(struct Receipts));
 
     if (!new_receipts) {
         return -1;
@@ -388,7 +389,7 @@ static int do_receipts(Messenger *m, int32_t friendnumber, void *userdata)
 
         struct Receipts *r_next = receipts->next;
 
-        free(receipts);
+        env_free(receipts);
 
         m->friendlist[friendnumber].receipts_start = r_next;
 
@@ -1968,7 +1969,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
         *error = MESSENGER_ERROR_OTHER;
     }
 
-    Messenger *m = (Messenger *)calloc(1, sizeof(Messenger));
+    Messenger *m = (Messenger *)env_calloc(1, sizeof(Messenger));
 
     if (!m) {
         return nullptr;
@@ -1977,7 +1978,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
     m->fr = friendreq_new();
 
     if (!m->fr) {
-        free(m);
+        env_free(m);
         return nullptr;
     }
 
@@ -2004,7 +2005,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
     if (m->net == nullptr) {
         friendreq_kill(m->fr);
         logger_kill(m->log);
-        free(m);
+        env_free(m);
 
         if (error && net_err == 1) {
             *error = MESSENGER_ERROR_PORT;
@@ -2019,7 +2020,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
         kill_networking(m->net);
         friendreq_kill(m->fr);
         logger_kill(m->log);
-        free(m);
+        env_free(m);
         return nullptr;
     }
 
@@ -2030,7 +2031,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
         kill_DHT(m->dht);
         friendreq_kill(m->fr);
         logger_kill(m->log);
-        free(m);
+        env_free(m);
         return nullptr;
     }
 
@@ -2049,7 +2050,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
         kill_networking(m->net);
         friendreq_kill(m->fr);
         logger_kill(m->log);
-        free(m);
+        env_free(m);
         return nullptr;
     }
 
@@ -2067,7 +2068,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
             kill_networking(m->net);
             friendreq_kill(m->fr);
             logger_kill(m->log);
-            free(m);
+            env_free(m);
 
             if (error) {
                 *error = MESSENGER_ERROR_TCP_SERVER;
@@ -2117,9 +2118,9 @@ void kill_messenger(Messenger *m)
     }
 
     logger_kill(m->log);
-    free(m->friendlist);
+    env_free(m->friendlist);
     friendreq_kill(m->fr);
-    free(m);
+    env_free(m);
 }
 
 /* Check for and handle a timed-out friend request. If the request has

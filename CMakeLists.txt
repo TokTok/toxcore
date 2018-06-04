@@ -253,6 +253,12 @@ set(toxcore_PKGCONFIG_LIBS)
 # Requires: in pkg-config file.
 set(toxcore_PKGCONFIG_REQUIRES)
 
+# LAYER 0: Operating system environment
+# -------------------------------------
+set(toxcore_SOURCES ${toxcore_SOURCES}
+  toxcore/env.c
+  toxcore/env.h)
+
 # LAYER 1: Crypto core
 # --------------------
 apidsl(toxcore/crypto_core.api.h)

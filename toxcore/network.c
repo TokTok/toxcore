@@ -3,7 +3,7 @@
  */
 
 /*
- * Copyright © 2016-2017 The TokTok team.
+ * Copyright © 2016-2018 The TokTok team.
  * Copyright © 2013 Tox project.
  *
  * This file is part of Tox, the free peer to peer instant messenger.
@@ -169,6 +169,7 @@ static int inet_pton(int family, const char *addrString, void *addrbuf)
 #include <stdlib.h>
 #include <string.h>
 
+#include "env.h"
 #include "logger.h"
 #include "util.h"
 
@@ -814,7 +815,7 @@ Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint1
         return nullptr;
     }
 
-    Networking_Core *temp = (Networking_Core *)calloc(1, sizeof(Networking_Core));
+    Networking_Core *temp = (Networking_Core *)env_calloc(1, sizeof(Networking_Core));
 
     if (temp == nullptr) {
         return nullptr;
@@ -834,7 +835,7 @@ Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint1
         const char *strerror = net_new_strerror(neterror);
         LOGGER_ERROR(log, "Failed to get a socket?! %d, %s", neterror, strerror);
         net_kill_strerror(strerror);
-        free(temp);
+        env_free(temp);
 
         if (error) {
             *error = 1;
@@ -904,7 +905,7 @@ Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint1
 
         portptr = &addr6->sin6_port;
     } else {
-        free(temp);
+        env_free(temp);
         return nullptr;
     }
 
@@ -999,7 +1000,7 @@ Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint1
 Networking_Core *new_networking_no_udp(Logger *log)
 {
     /* this is the easiest way to completely disable UDP without changing too much code. */
-    Networking_Core *net = (Networking_Core *)calloc(1, sizeof(Networking_Core));
+    Networking_Core *net = (Networking_Core *)env_calloc(1, sizeof(Networking_Core));
 
     if (net == nullptr) {
         return nullptr;
@@ -1022,7 +1023,7 @@ void kill_networking(Networking_Core *net)
         kill_sock(net->sock);
     }
 
-    free(net);
+    env_free(net);
 }
 
 
@@ -1301,25 +1302,19 @@ int addr_resolve(const char *address, IP *to, IP *extra)
         return 0;
     }
 
-    Family tox_family = to->family;
-    int family = make_family(tox_family);
-
-    struct addrinfo *server = nullptr;
-    struct addrinfo *walker = nullptr;
-    struct addrinfo  hints;
-    int rc;
-    int result = 0;
-    int done = 0;
-
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family   = family;
-    hints.ai_socktype = SOCK_DGRAM; // type of socket Tox uses.
-
     if (networking_at_startup() != 0) {
         return 0;
     }
 
-    rc = getaddrinfo(address, nullptr, &hints, &server);
+    const int family = make_family(to->family);
+
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family   = family;
+    hints.ai_socktype = SOCK_DGRAM; // type of socket Tox uses.
+
+    struct addrinfo *server = nullptr;
+    const int rc = getaddrinfo(address, nullptr, &hints, &server);
 
     // Lookup failed.
     if (rc != 0) {
@@ -1331,14 +1326,17 @@ int addr_resolve(const char *address, IP *to, IP *extra)
     IP ip6;
     ip_init(&ip6, 1); // ipv6enabled = 1
 
-    for (walker = server; (walker != nullptr) && !done; walker = walker->ai_next) {
+    int result = 0;
+    bool done = false;
+
+    for (struct addrinfo *walker = server; walker != nullptr && !done; walker = walker->ai_next) {
         switch (walker->ai_family) {
             case AF_INET:
                 if (walker->ai_family == family) { /* AF_INET requested, done */
                     struct sockaddr_in *addr = (struct sockaddr_in *)walker->ai_addr;
                     get_ip4(&to->ip.v4, &addr->sin_addr);
                     result = TOX_ADDR_RESOLVE_INET;
-                    done = 1;
+                    done = true;
                 } else if (!(result & TOX_ADDR_RESOLVE_INET)) { /* AF_UNSPEC requested, store away */
                     struct sockaddr_in *addr = (struct sockaddr_in *)walker->ai_addr;
                     get_ip4(&ip4.ip.v4, &addr->sin_addr);
@@ -1353,7 +1351,7 @@ int addr_resolve(const char *address, IP *to, IP *extra)
                         struct sockaddr_in6 *addr = (struct sockaddr_in6 *)walker->ai_addr;
                         get_ip6(&to->ip.v6, &addr->sin6_addr);
                         result = TOX_ADDR_RESOLVE_INET6;
-                        done = 1;
+                        done = true;
                     }
                 } else if (!(result & TOX_ADDR_RESOLVE_INET6)) { /* AF_UNSPEC requested, store away */
                     if (walker->ai_addrlen == sizeof(struct sockaddr_in6)) {
@@ -1472,7 +1470,7 @@ int32_t net_getipport(const char *node, IP_Port **res, int tox_type)
         return 0;
     }
 
-    *res = (IP_Port *)malloc(sizeof(IP_Port) * count);
+    *res = (IP_Port *)env_malloc(sizeof(IP_Port) * count);
 
     if (*res == nullptr) {
         freeaddrinfo(infos);
@@ -1516,7 +1514,7 @@ int32_t net_getipport(const char *node, IP_Port **res, int tox_type)
 
 void net_freeipport(IP_Port *ip_ports)
 {
-    free(ip_ports);
+    env_free(ip_ports);
 }
 
 /* return 1 on success

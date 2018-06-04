@@ -3,7 +3,7 @@
  */
 
 /*
- * Copyright © 2016-2017 The TokTok team.
+ * Copyright © 2016-2018 The TokTok team.
  * Copyright © 2013,2015 Tox project.
  *
  * This file is part of Tox, the free peer to peer instant messenger.
@@ -25,6 +25,7 @@
 #include "config.h"
 #endif
 
+#include "env.h"
 #include "logger.h"
 
 #include <assert.h>
@@ -82,12 +83,12 @@ static const Logger logger_stderr = {
  */
 Logger *logger_new(void)
 {
-    return (Logger *)calloc(1, sizeof(Logger));
+    return (Logger *)env_calloc(1, sizeof(Logger));
 }
 
 void logger_kill(Logger *log)
 {
-    free(log);
+    env_free(log);
 }
 
 void logger_callback_log(Logger *log, logger_cb *function, void *context, void *userdata)

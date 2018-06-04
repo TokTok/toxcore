@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "env.h"
 #include "util.h"
 
 #define RETURN_1 ONION_RETURN_1
@@ -667,7 +668,7 @@ Onion *new_onion(DHT *dht)
         return nullptr;
     }
 
-    Onion *onion = (Onion *)calloc(1, sizeof(Onion));
+    Onion *onion = (Onion *)env_calloc(1, sizeof(Onion));
 
     if (onion == nullptr) {
         return nullptr;
@@ -703,5 +704,5 @@ void kill_onion(Onion *onion)
     networking_registerhandler(onion->net, NET_PACKET_ONION_RECV_2, nullptr, nullptr);
     networking_registerhandler(onion->net, NET_PACKET_ONION_RECV_1, nullptr, nullptr);
 
-    free(onion);
+    env_free(onion);
 }

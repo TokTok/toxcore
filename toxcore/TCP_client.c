@@ -3,7 +3,7 @@
  */
 
 /*
- * Copyright © 2016-2017 The TokTok team.
+ * Copyright © 2016-2018 The TokTok team.
  * Copyright © 2014 Tox project.
  *
  * This file is part of Tox, the free peer to peer instant messenger.
@@ -31,6 +31,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "env.h"
 #include "util.h"
 
 struct TCP_Client_Connection {
@@ -375,7 +376,7 @@ static int client_send_pending_data(TCP_Client_Connection *con)
 
         TCP_Priority_List *pp = p;
         p = p->next;
-        free(pp);
+        env_free(pp);
     }
 
     con->priority_queue_start = p;
@@ -394,7 +395,7 @@ static int client_send_pending_data(TCP_Client_Connection *con)
 static bool client_add_priority(TCP_Client_Connection *con, const uint8_t *packet, uint16_t size, uint16_t sent)
 {
     TCP_Priority_List *p = con->priority_queue_end;
-    TCP_Priority_List *new_list = (TCP_Priority_List *)malloc(sizeof(TCP_Priority_List) + size);
+    TCP_Priority_List *new_list = (TCP_Priority_List *)env_malloc(sizeof(TCP_Priority_List) + size);
 
     if (!new_list) {
         return 0;
@@ -422,7 +423,7 @@ static void wipe_priority_list(TCP_Client_Connection *con)
     while (p) {
         TCP_Priority_List *pp = p;
         p = p->next;
-        free(pp);
+        env_free(pp);
     }
 }
 
@@ -729,7 +730,7 @@ TCP_Client_Connection *new_TCP_connection(IP_Port ip_port, const uint8_t *public
         return nullptr;
     }
 
-    TCP_Client_Connection *temp = (TCP_Client_Connection *)calloc(sizeof(TCP_Client_Connection), 1);
+    TCP_Client_Connection *temp = (TCP_Client_Connection *)env_calloc(sizeof(TCP_Client_Connection), 1);
 
     if (temp == nullptr) {
         kill_sock(sock);
@@ -759,7 +760,7 @@ TCP_Client_Connection *new_TCP_connection(IP_Port ip_port, const uint8_t *public
 
             if (generate_handshake(temp) == -1) {
                 kill_sock(sock);
-                free(temp);
+                env_free(temp);
                 return nullptr;
             }
 
@@ -1068,5 +1069,5 @@ void kill_TCP_connection(TCP_Client_Connection *TCP_connection)
     wipe_priority_list(TCP_connection);
     kill_sock(TCP_connection->sock);
     crypto_memzero(TCP_connection, sizeof(TCP_Client_Connection));
-    free(TCP_connection);
+    env_free(TCP_connection);
 }

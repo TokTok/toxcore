@@ -30,6 +30,6 @@ cc_library(
         "*.c",
         "*.h",
     ]),
-    visibility = ["//c-toxcore/other:__pkg__"],
+    visibility = ["//c-toxcore/auto_tests:__pkg__"],
     deps = ["//c-toxcore/toxcore:crypto_core"],
 )

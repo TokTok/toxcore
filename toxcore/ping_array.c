@@ -3,7 +3,7 @@
  */
 
 /*
- * Copyright © 2016-2017 The TokTok team.
+ * Copyright © 2016-2018 The TokTok team.
  * Copyright © 2014 Tox project.
  *
  * This file is part of Tox, the free peer to peer instant messenger.
@@ -31,6 +31,7 @@
 #include <string.h>
 
 #include "crypto_core.h"
+#include "env.h"
 #include "util.h"
 
 
@@ -63,16 +64,16 @@ Ping_Array *ping_array_new(uint32_t size, uint32_t timeout)
         return nullptr;
     }
 
-    Ping_Array *empty_array = (Ping_Array *)calloc(1, sizeof(Ping_Array));
+    Ping_Array *empty_array = (Ping_Array *)env_calloc(1, sizeof(Ping_Array));
 
     if (empty_array == nullptr) {
         return nullptr;
     }
 
-    empty_array->entries = (Ping_Array_Entry *)calloc(size, sizeof(Ping_Array_Entry));
+    empty_array->entries = (Ping_Array_Entry *)env_calloc(size, sizeof(Ping_Array_Entry));
 
     if (empty_array->entries == nullptr) {
-        free(empty_array);
+        env_free(empty_array);
         return nullptr;
     }
 
@@ -84,7 +85,7 @@ Ping_Array *ping_array_new(uint32_t size, uint32_t timeout)
 
 static void clear_entry(Ping_Array *array, uint32_t index)
 {
-    free(array->entries[index].data);
+    env_free(array->entries[index].data);
     array->entries[index].data = nullptr;
     array->entries[index].length =
         array->entries[index].time =
@@ -101,8 +102,8 @@ void ping_array_kill(Ping_Array *array)
         ++array->last_deleted;
     }
 
-    free(array->entries);
-    free(array);
+    env_free(array->entries);
+    env_free(array);
 }
 
 /* Clear timed out entries.
@@ -136,7 +137,7 @@ uint64_t ping_array_add(Ping_Array *array, const uint8_t *data, uint32_t length)
         clear_entry(array, index);
     }
 
-    array->entries[index].data = malloc(length);
+    array->entries[index].data = env_malloc(length);
 
     if (array->entries[index].data == nullptr) {
         return 0;

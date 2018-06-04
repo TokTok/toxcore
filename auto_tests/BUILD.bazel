@@ -14,7 +14,7 @@ cc_library(
     copts = ["-Wno-sign-compare"],
     deps = [
         ":helpers",
-        "//c-toxcore/other:monolith",
+        ":monolith",
         "//c-toxcore/testing:misc_tools",
         "//c-toxcore/toxav",
         "//c-toxcore/toxcore",
@@ -24,6 +24,15 @@ cc_library(
 
 cc_library(
     name = "monolith",
+    deps = [
+        "//c-toxcore/toxav:monolith",
+        "//c-toxcore/toxcore:monolith",
+        "//c-toxcore/toxencryptsave:monolith",
+    ],
+)
+
+cc_library(
+    name = "all_test_sources",
     hdrs = glob([
         "*.c",
         "*.h",
@@ -36,9 +45,9 @@ cc_test(
     srcs = ["monolith_test.cpp"],
     copts = ["-Wno-sign-compare"],
     deps = [
+        ":all_test_sources",
         ":helpers",
         ":monolith",
-        "//c-toxcore/other:monolith",
         "//c-toxcore/testing:misc_tools",
     ],
 )

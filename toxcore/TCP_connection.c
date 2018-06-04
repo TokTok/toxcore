@@ -3,7 +3,7 @@
  */
 
 /*
- * Copyright © 2016-2017 The TokTok team.
+ * Copyright © 2016-2018 The TokTok team.
  * Copyright © 2015 Tox project.
  *
  * This file is part of Tox, the free peer to peer instant messenger.
@@ -27,11 +27,12 @@
 
 #include "TCP_connection.h"
 
+#include "env.h"
+#include "util.h"
+
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "util.h"
 
 
 struct TCP_Connections {
@@ -78,12 +79,12 @@ const uint8_t *tcp_connections_public_key(const TCP_Connections *tcp_c)
 static int realloc_##T(T **array, size_t num)                   \
 {                                                               \
     if (!num) {                                                 \
-        free(*array);                                           \
+        env_free(*array);                                       \
         *array = nullptr;                                       \
         return 0;                                               \
     }                                                           \
                                                                 \
-    T *temp_pointer = (T *)realloc(*array, num * sizeof(T));    \
+    T *temp_pointer = (T *)env_realloc(*array, num * sizeof(T));\
                                                                 \
     if (!temp_pointer) {                                        \
         return -1;                                              \
@@ -1384,7 +1385,7 @@ TCP_Connections *new_tcp_connections(const uint8_t *secret_key, TCP_Proxy_Info *
         return nullptr;
     }
 
-    TCP_Connections *temp = (TCP_Connections *)calloc(1, sizeof(TCP_Connections));
+    TCP_Connections *temp = (TCP_Connections *)env_calloc(1, sizeof(TCP_Connections));
 
     if (temp == nullptr) {
         return nullptr;
@@ -1497,7 +1498,7 @@ void kill_tcp_connections(TCP_Connections *tcp_c)
         kill_TCP_connection(tcp_c->tcp_connections[i].connection);
     }
 
-    free(tcp_c->tcp_connections);
-    free(tcp_c->connections);
-    free(tcp_c);
+    env_free(tcp_c->tcp_connections);
+    env_free(tcp_c->connections);
+    env_free(tcp_c);
 }

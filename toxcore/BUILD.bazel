@@ -13,6 +13,13 @@ cc_library(
 )
 
 cc_library(
+    name = "env",
+    srcs = ["env.c"],
+    hdrs = ["env.h"],
+    deps = [":ccompat"],
+)
+
+cc_library(
     name = "crypto_core",
     srcs = [
         "crypto_core.c",
@@ -41,14 +48,20 @@ cc_library(
     name = "list",
     srcs = ["list.c"],
     hdrs = ["list.h"],
-    deps = [":ccompat"],
+    deps = [
+        ":ccompat",
+        ":env",
+    ],
 )
 
 cc_library(
     name = "logger",
     srcs = ["logger.c"],
     hdrs = ["logger.h"],
-    deps = [":ccompat"],
+    deps = [
+        ":ccompat",
+        ":env",
+    ],
 )
 
 cc_library(
@@ -222,7 +235,7 @@ cc_library(
         "*.h",
     ]),
     linkopts = ["-lpthread"],
-    visibility = ["//c-toxcore/other:__pkg__"],
+    visibility = ["//c-toxcore/auto_tests:__pkg__"],
     deps = [
         "//c-toxcore/toxencryptsave:defines",
         "@libsodium",

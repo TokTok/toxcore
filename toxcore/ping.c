@@ -3,7 +3,7 @@
  */
 
 /*
- * Copyright © 2016-2017 The TokTok team.
+ * Copyright © 2016-2018 The TokTok team.
  * Copyright © 2013 Tox project.
  * Copyright © 2013 plutooo
  *
@@ -33,6 +33,7 @@
 #include <string.h>
 
 #include "DHT.h"
+#include "env.h"
 #include "network.h"
 #include "ping_array.h"
 #include "util.h"
@@ -354,7 +355,7 @@ void ping_iterate(Ping *ping)
 
 Ping *ping_new(DHT *dht)
 {
-    Ping *ping = (Ping *)calloc(1, sizeof(Ping));
+    Ping *ping = (Ping *)env_calloc(1, sizeof(Ping));
 
     if (ping == nullptr) {
         return nullptr;
@@ -363,7 +364,7 @@ Ping *ping_new(DHT *dht)
     ping->ping_array = ping_array_new(PING_NUM_MAX, PING_TIMEOUT);
 
     if (ping->ping_array == nullptr) {
-        free(ping);
+        env_free(ping);
         return nullptr;
     }
 
@@ -380,5 +381,5 @@ void ping_kill(Ping *ping)
     networking_registerhandler(dht_get_net(ping->dht), NET_PACKET_PING_RESPONSE, nullptr, nullptr);
     ping_array_kill(ping->ping_array);
 
-    free(ping);
+    env_free(ping);
 }

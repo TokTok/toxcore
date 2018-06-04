@@ -1,6 +1,7 @@
 #include "tox.h"
 
 #include "ccompat.h"
+#include "env.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -82,7 +83,7 @@ void tox_options_default(struct Tox_Options *options)
 
 struct Tox_Options *tox_options_new(TOX_ERR_OPTIONS_NEW *error)
 {
-    struct Tox_Options *options = (struct Tox_Options *)malloc(sizeof(struct Tox_Options));
+    struct Tox_Options *options = (struct Tox_Options *)env_malloc(sizeof(struct Tox_Options));
 
     if (options) {
         tox_options_default(options);
@@ -96,5 +97,5 @@ struct Tox_Options *tox_options_new(TOX_ERR_OPTIONS_NEW *error)
 
 void tox_options_free(struct Tox_Options *options)
 {
-    free(options);
+    env_free(options);
 }
