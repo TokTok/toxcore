@@ -164,6 +164,7 @@ typedef struct VCSession_s {
     uint8_t  encoder_soft_deadline_index;
 
     uint8_t send_keyframe_request_received;
+    uint8_t h264_video_capabilities_received;
 
     // options ---
     int32_t video_encoder_cpu_used;

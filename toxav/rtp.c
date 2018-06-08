@@ -469,7 +469,7 @@ static int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t 
     uint8_t packet_type = data[0];
 
     if (data[0] == PACKET_TOXAV_COMM_CHANNEL) {
-        LOGGER_ERROR(m->log, "RECVD:PACKET_TOXAV_COMM_CHANNEL:length=%d", (int)length);
+        // LOGGER_ERROR(m->log, "RECVD:PACKET_TOXAV_COMM_CHANNEL:length=%d", (int)length);
 
         if (length >= 2) {
             if (data[1] == PACKET_TOXAV_COMM_CHANNEL_REQUEST_KEYFRAME) {
@@ -478,6 +478,10 @@ static int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t 
                 }
             } else if (data[1] == PACKET_TOXAV_COMM_CHANNEL_HAVE_H264_VIDEO) {
                 LOGGER_ERROR(m->log, "RECVD:PACKET_TOXAV_COMM_CHANNEL_HAVE_H264_VIDEO");
+
+                if (session->cs) {
+                    ((VCSession *)(session->cs))->h264_video_capabilities_received = 1;
+                }
             }
         }
 

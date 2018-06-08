@@ -60,7 +60,7 @@ deadline parameter analogous to VPx BEST QUALITY mode.
 
 // H264 settings -----------
 #define x264_param_profile_str "high"
-#define VIDEO_BITRATE_INITIAL_VALUE_H264 3000
+#define VIDEO_BITRATE_INITIAL_VALUE_H264 6000
 #define VIDEO_MAX_KF_H264 50
 #define VIDEO_BUF_FACTOR_H264 4
 #define VIDEO_F_RATE_TOLERANCE_H264 1.2
@@ -319,6 +319,7 @@ VCSession *vc_new_vpx(Logger *log, ToxAV *av, uint32_t friend_number, toxav_vide
 
     vpx_codec_err_t rc;
     vc->send_keyframe_request_received = 0;
+    vc->h264_video_capabilities_received = 0;
 
     /*
     VPX_CODEC_USE_FRAME_THREADING

@@ -131,6 +131,7 @@ END:
 
     return av;
 }
+
 void toxav_kill(ToxAV *av)
 {
     if (av == NULL) {
@@ -1074,6 +1075,20 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         goto END;
     }
 
+
+    // LOGGER_ERROR(av->m->log, "h264_video_capabilities_received=%d",
+    //             (int)call->video.second->h264_video_capabilities_received);
+
+    // HINT: auto switch encoder, if we got capabilities packet from friend ------
+    if ((call->video.second->h264_video_capabilities_received == 1)
+            &&
+            (call->video.second->video_encoder_coded_used != TOXAV_ENCODER_CODEC_USED_H264)) {
+        call->video.second->video_encoder_coded_used = TOXAV_ENCODER_CODEC_USED_H264;
+        LOGGER_ERROR(av->m->log, "TOXAV_ENCODER_CODEC_USED_H264");
+    }
+
+    // HINT: auto switch encoder, if we got capabilities packet from friend ------
+
     if ((call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP8)
             || (call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP9)) {
 
@@ -1232,7 +1247,6 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 
         if ((call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP8)
                 || (call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP9)) {
-
 
             vpx_image_t img;
             img.w = img.h = img.d_w = img.d_h = 0;
@@ -1522,6 +1536,17 @@ int callback_invite(void *toxav_inst, MSICall *call)
         return -1;
     }
 
+    // HINT: tell friend that we have H264 decoder capabilities (1) -------
+    uint32_t pkg_buf_len = 2;
+    uint8_t pkg_buf[pkg_buf_len];
+    pkg_buf[0] = PACKET_TOXAV_COMM_CHANNEL;
+    pkg_buf[1] = PACKET_TOXAV_COMM_CHANNEL_HAVE_H264_VIDEO;
+
+    int result = send_custom_lossless_packet(toxav->m, call->friend_number, pkg_buf, pkg_buf_len);
+    LOGGER_ERROR(toxav->m->log, "PACKET_TOXAV_COMM_CHANNEL_HAVE_H264_VIDEO=%d\n", (int)result);
+    // HINT: tell friend that we have H264 decoder capabilities -------
+
+
     pthread_mutex_unlock(toxav->mutex);
     return 0;
 }
@@ -1551,7 +1576,7 @@ int callback_start(void *toxav_inst, MSICall *call)
         return -1;
     }
 
-    // HINT: tell friend that we have H264 decoder capabilities -------
+    // HINT: tell friend that we have H264 decoder capabilities (1) -------
     uint32_t pkg_buf_len = 2;
     uint8_t pkg_buf[pkg_buf_len];
     pkg_buf[0] = PACKET_TOXAV_COMM_CHANNEL;
