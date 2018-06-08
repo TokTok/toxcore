@@ -469,13 +469,15 @@ static int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t 
     uint8_t packet_type = data[0];
 
     if (data[0] == PACKET_TOXAV_COMM_CHANNEL) {
-        LOGGER_WARNING(m->log, "RECVD:PACKET_TOXAV_COMM_CHANNEL");
+        LOGGER_ERROR(m->log, "RECVD:PACKET_TOXAV_COMM_CHANNEL:length=%d", (int)length);
 
         if (length >= 2) {
             if (data[1] == PACKET_TOXAV_COMM_CHANNEL_REQUEST_KEYFRAME) {
                 if (session->cs) {
                     ((VCSession *)(session->cs))->send_keyframe_request_received = 1;
                 }
+            } else if (data[1] == PACKET_TOXAV_COMM_CHANNEL_HAVE_H264_VIDEO) {
+                LOGGER_ERROR(m->log, "RECVD:PACKET_TOXAV_COMM_CHANNEL_HAVE_H264_VIDEO");
             }
         }
 
