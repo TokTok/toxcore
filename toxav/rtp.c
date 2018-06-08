@@ -468,11 +468,15 @@ static int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t 
     // Get the packet type.
     uint8_t packet_type = data[0];
 
-    if (data[0] == PACKET_REQUEST_KEYFRAME) {
-        LOGGER_WARNING(m->log, "RECVD:PACKET_REQUEST_KEYFRAME");
+    if (data[0] == PACKET_TOXAV_COMM_CHANNEL) {
+        LOGGER_WARNING(m->log, "RECVD:PACKET_TOXAV_COMM_CHANNEL");
 
-        if (session->cs) {
-            ((VCSession *)(session->cs))->send_keyframe_request_received = 1;
+        if (length >= 2) {
+            if (data[1] == PACKET_TOXAV_COMM_CHANNEL_REQUEST_KEYFRAME) {
+                if (session->cs) {
+                    ((VCSession *)(session->cs))->send_keyframe_request_received = 1;
+                }
+            }
         }
 
         return 0;
@@ -783,7 +787,7 @@ int rtp_allow_receiving(RTPSession *session)
     }
 
     if (session->payload_type == rtp_TypeVideo) {
-        if (m_callback_rtp_packet(session->m, session->friend_number, PACKET_REQUEST_KEYFRAME,
+        if (m_callback_rtp_packet(session->m, session->friend_number, PACKET_TOXAV_COMM_CHANNEL,
                                   handle_rtp_packet, session) == -1) {
             LOGGER_DEBUG(session->m->log, "Failed to register rtp receive handler");
             return -1;
@@ -813,7 +817,7 @@ int rtp_stop_receiving(RTPSession *session)
     }
 
     if (session->payload_type == rtp_TypeVideo) {
-        m_callback_rtp_packet(session->m, session->friend_number, PACKET_REQUEST_KEYFRAME, NULL, NULL);
+        m_callback_rtp_packet(session->m, session->friend_number, PACKET_TOXAV_COMM_CHANNEL, NULL, NULL);
     }
 
     LOGGER_DEBUG(session->m->log, "Stopped receiving on session: %p", session);

@@ -1912,7 +1912,7 @@ int m_callback_rtp_packet(Messenger *m, int32_t friendnumber, uint8_t byte, m_lo
         return 0;
     }
 
-    if (byte == PACKET_REQUEST_KEYFRAME) {
+    if (byte == PACKET_TOXAV_COMM_CHANNEL) {
         m->friendlist[friendnumber].lossy_rtp_packethandlers[6].function =
             packet_handler_callback;
         m->friendlist[friendnumber].lossy_rtp_packethandlers[6].object = object;
@@ -1982,7 +1982,7 @@ static int handle_custom_lossless_packet(void *object, int friend_num, const uin
         return 1;
     }
 
-    if (packet[0] == (PACKET_REQUEST_KEYFRAME)) {
+    if (packet[0] == (PACKET_TOXAV_COMM_CHANNEL)) {
         if (m->friendlist[friend_num].lossy_rtp_packethandlers[6].function) {
             return m->friendlist[friend_num].lossy_rtp_packethandlers[6].function(
                        m, friend_num, packet, length,

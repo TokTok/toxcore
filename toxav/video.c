@@ -961,15 +961,15 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
                         < current_time_monotonic()) {
                     uint32_t pkg_buf_len = 2;
                     uint8_t pkg_buf[pkg_buf_len];
-                    pkg_buf[0] = PACKET_REQUEST_KEYFRAME;
-                    pkg_buf[1] = 0;
+                    pkg_buf[0] = PACKET_TOXAV_COMM_CHANNEL;
+                    pkg_buf[1] = PACKET_TOXAV_COMM_CHANNEL_REQUEST_KEYFRAME;
 
                     if (-1 == send_custom_lossless_packet(m, vc->friend_number, pkg_buf, pkg_buf_len)) {
                         LOGGER_WARNING(vc->log,
-                                       "PACKET_REQUEST_KEYFRAME:RTP send failed (2)");
+                                       "PACKET_TOXAV_COMM_CHANNEL:RTP send failed (2)");
                     } else {
                         LOGGER_WARNING(vc->log,
-                                       "PACKET_REQUEST_KEYFRAME:RTP Sent. (2)");
+                                       "PACKET_TOXAV_COMM_CHANNEL:RTP Sent. (2)");
                         have_requested_index_frame = true;
                         vc->last_requested_keyframe_ts = current_time_monotonic();
                     }
@@ -1063,15 +1063,15 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
                     // from the sender
                     uint32_t pkg_buf_len = 2;
                     uint8_t pkg_buf[pkg_buf_len];
-                    pkg_buf[0] = PACKET_REQUEST_KEYFRAME;
-                    pkg_buf[1] = 0;
+                    pkg_buf[0] = PACKET_TOXAV_COMM_CHANNEL;
+                    pkg_buf[1] = PACKET_TOXAV_COMM_CHANNEL_REQUEST_KEYFRAME;
 
                     if (-1 == send_custom_lossless_packet(m, vc->friend_number, pkg_buf, pkg_buf_len)) {
                         LOGGER_WARNING(vc->log,
-                                       "PACKET_REQUEST_KEYFRAME:RTP send failed");
+                                       "PACKET_TOXAV_COMM_CHANNEL:RTP send failed");
                     } else {
                         LOGGER_WARNING(vc->log,
-                                       "PACKET_REQUEST_KEYFRAME:RTP Sent.");
+                                       "PACKET_TOXAV_COMM_CHANNEL:RTP Sent.");
                         vc->last_requested_keyframe_ts = current_time_monotonic();
                     }
                 }

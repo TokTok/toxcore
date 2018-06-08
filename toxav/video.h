@@ -52,6 +52,12 @@ VPX_DL_BEST_QUALITY   (0)       deadline parameter analogous to VPx BEST QUALITY
 */
 
 
+typedef enum PACKET_TOXAV_COMM_CHANNEL_FUNCTION {
+    PACKET_TOXAV_COMM_CHANNEL_REQUEST_KEYFRAME = 0,
+    PACKET_TOXAV_COMM_CHANNEL_HAVE_H264_VIDEO = 1,
+} PACKET_TOXAV_COMM_CHANNEL_FUNCTION;
+
+
 // Zoff --
 // -- VP8 codec ----------------
 #define VIDEO_CODEC_DECODER_INTERFACE_VP8 (vpx_codec_vp8_dx())

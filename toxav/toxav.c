@@ -1167,6 +1167,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
             }
 
 #if 1
+
             if (call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_H264) {
                 // HINT: don't know yet how else to force real I-Frames on H264
                 vc_reconfigure_encoder(av->m->log, call->video.second,
@@ -1174,6 +1175,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
                                        width, height, -2);
                 // LOGGER_ERROR(av->m->log, "I_FRAME_FLAG:%d only-i-frame mode", call->video.first->ssrc);
             }
+
 #endif
 
             call->video.first->ssrc++;
@@ -1352,14 +1354,12 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 
             }
 
-            if (nal == NULL)
-            {
+            if (nal == NULL) {
                 pthread_mutex_unlock(call->mutex_video);
                 goto END;
             }
 
-            if (nal->p_payload == NULL)
-            {
+            if (nal->p_payload == NULL) {
                 pthread_mutex_unlock(call->mutex_video);
                 goto END;
             }
