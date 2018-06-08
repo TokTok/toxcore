@@ -22,6 +22,7 @@
 
 #include "toxav.h"
 
+
 #include "../toxcore/logger.h"
 #include "../toxcore/util.h"
 #include "../toxcore/Messenger.h"
@@ -128,6 +129,8 @@ typedef enum PACKET_TOXAV_COMM_CHANNEL_FUNCTION {
 struct RTPMessage;
 struct RingBuffer;
 
+
+
 typedef struct VCSession_s {
     /* encoding */
     vpx_codec_ctx_t encoder[1];
@@ -191,6 +194,8 @@ typedef struct VCSession_s {
 
     pthread_mutex_t queue_mutex[1];
 } VCSession;
+
+
 
 VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_receive_frame_cb *cb, void *cb_data);
 void vc_kill(VCSession *vc);

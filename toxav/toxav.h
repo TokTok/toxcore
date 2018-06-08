@@ -303,6 +303,38 @@ bool toxav_answer(ToxAV *av, uint32_t friend_number, uint32_t audio_bit_rate, ui
                   TOXAV_ERR_ANSWER *error);
 
 
+
+
+
+typedef enum TOXAV_CALL_COMM_INFO {
+    TOXAV_CALL_COMM_DECODER_IN_USE_VP8 = 0,
+    TOXAV_CALL_COMM_DECODER_IN_USE_H264 = 1,
+    TOXAV_CALL_COMM_ENCODER_IN_USE_VP8 = 2,
+    TOXAV_CALL_COMM_ENCODER_IN_USE_H264 = 3,
+} TOXAV_CALL_COMM_INFO;
+
+
+
+/**
+ * The function type for the call_comm callback.
+ *
+ * @param friend_number The friend number from which the call is incoming.
+ * @param comm_value enum value of for the information.
+ */
+typedef void toxav_call_comm_cb(ToxAV *av, uint32_t friend_number, TOXAV_CALL_COMM_INFO comm_value,
+                                void *user_data);
+
+
+/**
+ * Set the callback for the `call_comm` event. Pass NULL to unset.
+ *
+ */
+void toxav_callback_call_comm(ToxAV *av, toxav_call_comm_cb *callback, void *user_data);
+
+
+
+
+
 /*******************************************************************************
  *
  * :: Call state graph
