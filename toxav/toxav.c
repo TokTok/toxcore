@@ -1087,6 +1087,8 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
     // LOGGER_ERROR(av->m->log, "h264_video_capabilities_received=%d",
     //             (int)call->video.second->h264_video_capabilities_received);
 
+    int16_t force_reinit_encoder = -1;
+
     // HINT: auto switch encoder, if we got capabilities packet from friend ------
     if ((call->video.second->h264_video_capabilities_received == 1)
             &&
@@ -1099,6 +1101,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 
         call->video.second->video_encoder_coded_used = TOXAV_ENCODER_CODEC_USED_H264;
         LOGGER_ERROR(av->m->log, "TOXAV_ENCODER_CODEC_USED_H264");
+        force_reinit_encoder = -2;
 
         if (av->call_comm_cb.first) {
             av->call_comm_cb.first(av, friend_number, TOXAV_CALL_COMM_ENCODER_IN_USE_H264,
@@ -1121,7 +1124,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
     } else {
         // HINT: H264
         if (vc_reconfigure_encoder(av->m->log, call->video.second, call->video_bit_rate * 1000,
-                                   width, height, -1) != 0) {
+                                   width, height, force_reinit_encoder) != 0) {
             pthread_mutex_unlock(call->mutex_video);
             rc = TOXAV_ERR_SEND_FRAME_INVALID;
             goto END;
