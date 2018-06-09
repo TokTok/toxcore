@@ -1133,7 +1133,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         if (av->call_comm_cb.first) {
             av->call_comm_cb.first(av, friend_number,
                                    TOXAV_CALL_COMM_ENCODER_CURRENT_BITRATE,
-                                   call->video_bit_rate,
+                                   (int64_t)call->video_bit_rate,
                                    av->call_comm_cb.second);
         }
 

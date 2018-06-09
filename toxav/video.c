@@ -1518,7 +1518,7 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
                 if (vc->av->call_comm_cb.first) {
                     vc->av->call_comm_cb.first(vc->av, vc->friend_number,
                                                TOXAV_CALL_COMM_DECODER_CURRENT_BITRATE,
-                                               header->encoder_bit_rate_used,
+                                               (int64_t)header->encoder_bit_rate_used,
                                                vc->av->call_comm_cb.second);
                 }
 
