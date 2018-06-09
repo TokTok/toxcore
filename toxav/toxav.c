@@ -393,6 +393,8 @@ bool toxav_call(ToxAV *av, uint32_t friend_number, uint32_t audio_bit_rate, uint
     call->audio_bit_rate = audio_bit_rate;
     call->video_bit_rate = video_bit_rate;
 
+    LOGGER_ERROR(av->m->log, "toxav_call:vb=%d", (int)video_bit_rate);
+
     call->previous_self_capabilities = msi_CapRAudio | msi_CapRVideo;
 
     call->previous_self_capabilities |= audio_bit_rate > 0 ? msi_CapSAudio : 0;
@@ -466,6 +468,8 @@ bool toxav_answer(ToxAV *av, uint32_t friend_number, uint32_t audio_bit_rate, ui
 
     call->audio_bit_rate = audio_bit_rate;
     call->video_bit_rate = video_bit_rate;
+
+    LOGGER_ERROR(av->m->log, "toxav_answer:vb=%d", (int)video_bit_rate);
 
     call->previous_self_capabilities = msi_CapRAudio | msi_CapRVideo;
 
@@ -873,6 +877,9 @@ bool toxav_bit_rate_set(ToxAV *av, uint32_t friend_number, int32_t audio_bit_rat
             }
 
             call->video_bit_rate = video_bit_rate;
+
+            LOGGER_ERROR(av->m->log, "toxav_bit_rate_set:vb=%d", (int)video_bit_rate);
+
             pthread_mutex_unlock(call->mutex);
         }
     }
@@ -1083,6 +1090,12 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
     if ((call->video.second->h264_video_capabilities_received == 1)
             &&
             (call->video.second->video_encoder_coded_used != TOXAV_ENCODER_CODEC_USED_H264)) {
+        // when switching to H264 set default video bitrate
+
+        if (call->video_bit_rate > 0) {
+            call->video_bit_rate = VIDEO_BITRATE_INITIAL_VALUE_H264;
+        }
+
         call->video.second->video_encoder_coded_used = TOXAV_ENCODER_CODEC_USED_H264;
         LOGGER_ERROR(av->m->log, "TOXAV_ENCODER_CODEC_USED_H264");
     }
@@ -1129,7 +1142,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
                 // LOGGER_ERROR(av->m->log, "I_FRAME_FLAG:%d only-i-frame mode", call->video.first->ssrc);
             }
 
-#if 1
+#if 0
 
             if (call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_H264) {
                 // HINT: don't know yet how else to force real I-Frames on H264
@@ -1483,32 +1496,52 @@ void callback_bwc(BWController *bwc, uint32_t friend_number, float loss, void *u
     ToxAVCall *call = (ToxAVCall *)user_data;
     assert(call);
 
-    LOGGER_DEBUG(call->av->m->log, "Reported loss of %f%%", loss * 100);
+    LOGGER_ERROR(call->av->m->log, "Reported loss of %f%% : %f", loss * 100, loss);
 
-    /* if less than x% data loss we do nothing! */
-    if (loss < VIDEO_ACCEPTABLE_LOSS) {
-        return;
-    }
+    if (call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_H264) {
+        pthread_mutex_lock(call->av->mutex);
 
-    pthread_mutex_lock(call->av->mutex);
+        if ((loss * 100) < VIDEO_BITRATE_AUTO_INC_THRESHOLD) {
+            if (call->video_bit_rate < VIDEO_BITRATE_MAX_AUTO_VALUE_H264) {
+                call->video_bit_rate = (uint32_t)((float)call->video_bit_rate * (float)VIDEO_BITRATE_AUTO_INC_TO);
+                LOGGER_ERROR(call->av->m->log, "callback_bwc:INC:vb=%d", (int)call->video_bit_rate);
+            }
+        } else if ((loss * 100) > VIDEO_BITRATE_AUTO_DEC_THRESHOLD) {
+            if (call->video_bit_rate > VIDEO_BITRATE_MIN_AUTO_VALUE_H264) {
+                call->video_bit_rate = (uint32_t)((float)call->video_bit_rate * (1.0f - loss));
+                LOGGER_ERROR(call->av->m->log, "callback_bwc:DEC:vb=%d", (int)call->video_bit_rate);
+            }
+        }
 
-    if (!call->av->bcb.first) {
         pthread_mutex_unlock(call->av->mutex);
-        LOGGER_DEBUG(call->av->m->log, "No callback to report loss on");
-        return;
-    }
+    } else {
 
-    if (call->video_bit_rate) {
-        (*call->av->bcb.first)(call->av, friend_number, call->audio_bit_rate,
-                               call->video_bit_rate - (call->video_bit_rate * loss),
-                               call->av->bcb.second);
-    } else if (call->audio_bit_rate) {
-        (*call->av->bcb.first)(call->av, friend_number,
-                               call->audio_bit_rate - (call->audio_bit_rate * loss),
-                               0, call->av->bcb.second);
-    }
+        /* if less than x% data loss we do nothing! */
+        if (loss < VIDEO_ACCEPTABLE_LOSS) {
+            return;
+        }
 
-    pthread_mutex_unlock(call->av->mutex);
+        pthread_mutex_lock(call->av->mutex);
+
+        if (!call->av->bcb.first) {
+            pthread_mutex_unlock(call->av->mutex);
+            LOGGER_DEBUG(call->av->m->log, "No callback to report loss on");
+            return;
+        }
+
+        if (call->video_bit_rate) {
+            (*call->av->bcb.first)(call->av, friend_number, call->audio_bit_rate,
+                                   call->video_bit_rate - (call->video_bit_rate * loss),
+                                   call->av->bcb.second);
+        } else if (call->audio_bit_rate) {
+            (*call->av->bcb.first)(call->av, friend_number,
+                                   call->audio_bit_rate - (call->audio_bit_rate * loss),
+                                   0, call->av->bcb.second);
+        }
+
+        pthread_mutex_unlock(call->av->mutex);
+
+    }
 }
 
 int callback_invite(void *toxav_inst, MSICall *call)

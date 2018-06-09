@@ -58,15 +58,6 @@ deadline parameter analogous to VPx BEST QUALITY mode.
 #define VIDEO_BITRATE_INITIAL_VALUE 400
 #define VIDEO_BITRATE_INITIAL_VALUE_VP9 400
 
-// H264 settings -----------
-#define x264_param_profile_str "high"
-#define VIDEO_BITRATE_INITIAL_VALUE_H264 6000
-#define VIDEO_MAX_KF_H264 50
-#define VIDEO_BUF_FACTOR_H264 4
-#define VIDEO_F_RATE_TOLERANCE_H264 1.2
-#define VIDEO_BITRATE_FACTOR_H264 0.7
-// H264 settings -----------
-
 struct vpx_frame_user_data {
     uint64_t record_timestamp;
 };
@@ -1577,6 +1568,8 @@ int vc_reconfigure_encoder_h264(Logger *log, VCSession *vc, uint32_t bit_rate, u
         param.i_timebase_den = 1000;   // 1 ms = timebase units = (1/1000)s
         param.b_repeat_headers = 1;
         param.b_annexb = 1;
+
+        LOGGER_ERROR(log, "vc_reconfigure_encoder_h264:vb=%d", (int)(bit_rate / 1000));
 
         param.rc.f_rate_tolerance = VIDEO_F_RATE_TOLERANCE_H264;
         param.rc.i_vbv_buffer_size = (bit_rate / 1000) * VIDEO_BUF_FACTOR_H264;

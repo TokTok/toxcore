@@ -1,4 +1,20 @@
 
+// H264 settings -----------
+#define x264_param_profile_str "high"
+#define VIDEO_BITRATE_INITIAL_VALUE_H264 2000
+#define VIDEO_BITRATE_MIN_AUTO_VALUE_H264 50
+#define VIDEO_BITRATE_MAX_AUTO_VALUE_H264 50000
+#define VIDEO_BITRATE_AUTO_INC_THRESHOLD 2.0
+#define VIDEO_BITRATE_AUTO_DEC_THRESHOLD 8.0
+// increase video bitrate by 2%
+#define VIDEO_BITRATE_AUTO_INC_TO 1.02
+#define VIDEO_MAX_KF_H264 50
+#define VIDEO_BUF_FACTOR_H264 1
+#define VIDEO_F_RATE_TOLERANCE_H264 1.2
+#define VIDEO_BITRATE_FACTOR_H264 0.7
+// H264 settings -----------
+
+
 typedef struct ToxAVCall_s {
     ToxAV *av;
 

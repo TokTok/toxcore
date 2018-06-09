@@ -330,8 +330,8 @@ static void update_bwc_values(Logger *log, RTPSession *session, const struct RTP
         bwc_add_recv(session->bwc, data_length_full);
 
         if (received_length_full < data_length_full) {
-            LOGGER_DEBUG(log, "BWC: full length=%u received length=%d", data_length_full, received_length_full);
-            bwc_add_lost(session->bwc, (data_length_full - received_length_full));
+            LOGGER_ERROR(log, "BWC: full length=%u received length=%d", data_length_full, received_length_full);
+            bwc_add_lost_v3(session->bwc, (data_length_full - received_length_full));
         }
     }
 }
