@@ -706,7 +706,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
             cmi = TOXAV_CALL_COMM_DECODER_IN_USE_H264;
         }
 
-        av->call_comm_cb.first(av, friend_number, cmi, av->call_comm_cb.second);
+        av->call_comm_cb.first(av, friend_number, cmi, 0, av->call_comm_cb.second);
 
 
         cmi = TOXAV_CALL_COMM_ENCODER_IN_USE_VP8;
@@ -715,7 +715,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
             cmi = TOXAV_CALL_COMM_ENCODER_IN_USE_H264;
         }
 
-        av->call_comm_cb.first(av, friend_number, cmi, av->call_comm_cb.second);
+        av->call_comm_cb.first(av, friend_number, cmi, 0, av->call_comm_cb.second);
     }
 
     // HINT: tell client what encoder and decoder are in use now -----------
@@ -900,7 +900,7 @@ void video_switch_decoder_vpx(VCSession *vc, TOXAV_ENCODER_CODEC_USED_VALUE deco
 
 void video_switch_decoder(VCSession *vc, TOXAV_ENCODER_CODEC_USED_VALUE decoder_to_use)
 {
-    if (vc->video_decoder_codec_used != decoder_to_use) {
+    if (vc->video_decoder_codec_used != (int32_t)decoder_to_use) {
         if ((decoder_to_use == TOXAV_ENCODER_CODEC_USED_VP8)
                 || (decoder_to_use == TOXAV_ENCODER_CODEC_USED_VP9)
                 || (decoder_to_use == TOXAV_ENCODER_CODEC_USED_H264)) {
@@ -909,6 +909,24 @@ void video_switch_decoder(VCSession *vc, TOXAV_ENCODER_CODEC_USED_VALUE decoder_
             vc->video_decoder_codec_used = decoder_to_use;
             LOGGER_ERROR(vc->log, "**switching DECODER to **:%d",
                          (int)vc->video_decoder_codec_used);
+
+
+            if (vc->av) {
+                if (vc->av->call_comm_cb.first) {
+
+                    TOXAV_CALL_COMM_INFO cmi;
+                    cmi = TOXAV_CALL_COMM_DECODER_IN_USE_VP8;
+
+                    if (vc->video_decoder_codec_used == TOXAV_ENCODER_CODEC_USED_H264) {
+                        cmi = TOXAV_CALL_COMM_DECODER_IN_USE_H264;
+                    }
+
+                    vc->av->call_comm_cb.first(vc->av, vc->friend_number,
+                                               cmi, 0, vc->av->call_comm_cb.second);
+
+                }
+            }
+
 
         }
     }
@@ -1494,6 +1512,20 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
     if ((header->flags & RTP_LARGE_FRAME) && header->pt == rtp_TypeVideo % 128) {
 
         LOGGER_DEBUG(vc->log, "VIDEO_incoming_bitrate=%d", (int)header->encoder_bit_rate_used);
+
+        if (vc->incoming_video_bitrate_last_changed != header->encoder_bit_rate_used) {
+            if (vc->av) {
+                if (vc->av->call_comm_cb.first) {
+                    vc->av->call_comm_cb.first(vc->av, vc->friend_number,
+                                               TOXAV_CALL_COMM_DECODER_CURRENT_BITRATE,
+                                               header->encoder_bit_rate_used,
+                                               vc->av->call_comm_cb.second);
+                }
+
+            }
+
+            vc->incoming_video_bitrate_last_changed = header->encoder_bit_rate_used;
+        }
 
         // LOGGER_WARNING(vc->log, "rb_write msg->len=%d b0=%d b1=%d rb_size=%d", (int)msg->len, (int)msg->data[0], (int)msg->data[1], (int)rb_size((RingBuffer *)vc->vbuf_raw));
         free(rb_write((RingBuffer *)vc->vbuf_raw, msg, (uint64_t)header->flags));

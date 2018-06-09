@@ -1099,6 +1099,12 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 
         call->video.second->video_encoder_coded_used = TOXAV_ENCODER_CODEC_USED_H264;
         LOGGER_ERROR(av->m->log, "TOXAV_ENCODER_CODEC_USED_H264");
+
+        if (av->call_comm_cb.first) {
+            av->call_comm_cb.first(av, friend_number, TOXAV_CALL_COMM_ENCODER_IN_USE_H264,
+                                   0, av->call_comm_cb.second);
+        }
+
     }
 
     // HINT: auto switch encoder, if we got capabilities packet from friend ------
@@ -1121,6 +1127,19 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
             goto END;
         }
     }
+
+
+    if (call->video_bit_rate_last_last_changed != call->video_bit_rate) {
+        if (av->call_comm_cb.first) {
+            av->call_comm_cb.first(av, friend_number,
+                                   TOXAV_CALL_COMM_ENCODER_CURRENT_BITRATE,
+                                   call->video_bit_rate,
+                                   av->call_comm_cb.second);
+        }
+
+        call->video_bit_rate_last_last_changed = call->video_bit_rate;
+    }
+
 
     int vpx_encode_flags = 0;
     unsigned long max_encode_time_in_us = MAX_ENCODE_TIME_US;

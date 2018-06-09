@@ -311,6 +311,8 @@ typedef enum TOXAV_CALL_COMM_INFO {
     TOXAV_CALL_COMM_DECODER_IN_USE_H264 = 1,
     TOXAV_CALL_COMM_ENCODER_IN_USE_VP8 = 2,
     TOXAV_CALL_COMM_ENCODER_IN_USE_H264 = 3,
+    TOXAV_CALL_COMM_DECODER_CURRENT_BITRATE = 4,
+    TOXAV_CALL_COMM_ENCODER_CURRENT_BITRATE = 5,
 } TOXAV_CALL_COMM_INFO;
 
 
@@ -322,7 +324,7 @@ typedef enum TOXAV_CALL_COMM_INFO {
  * @param comm_value enum value of for the information.
  */
 typedef void toxav_call_comm_cb(ToxAV *av, uint32_t friend_number, TOXAV_CALL_COMM_INFO comm_value,
-                                void *user_data);
+                                int64_t comm_number, void *user_data);
 
 
 /**

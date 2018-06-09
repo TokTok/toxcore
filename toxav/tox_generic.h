@@ -39,6 +39,7 @@ typedef struct ToxAVCall_s {
 
     uint32_t audio_bit_rate; /* Sending audio bit rate */
     uint32_t video_bit_rate; /* Sending video bit rate */
+    uint32_t video_bit_rate_last_last_changed; // only for callback info
 
     uint64_t last_incoming_video_frame_rtimestamp;
     uint64_t last_incoming_video_frame_ltimestamp;
