@@ -658,6 +658,7 @@ size_t rtp_header_pack(uint8_t *const rdata, const struct RTPHeader *header)
     p += net_pack_u64(p, header->frame_record_timestamp);
     p += net_pack_u32(p, header->fragment_num);
     p += net_pack_u32(p, header->real_frame_num);
+    p += net_pack_u32(p, header->encoder_bit_rate_used);
     // ---------------------------- //
     //      custom fields here      //
     // ---------------------------- //
@@ -699,6 +700,7 @@ size_t rtp_header_unpack(const uint8_t *data, struct RTPHeader *header)
     p += net_unpack_u64(p, &header->frame_record_timestamp);
     p += net_unpack_u32(p, &header->fragment_num);
     p += net_unpack_u32(p, &header->real_frame_num);
+    p += net_unpack_u32(p, &header->encoder_bit_rate_used);
     // ---------------------------- //
     //      custom fields here      //
     // ---------------------------- //
@@ -836,7 +838,7 @@ int rtp_stop_receiving(RTPSession *session)
  */
 int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length, bool is_keyframe,
                   uint64_t frame_record_timestamp, int32_t fragment_num,
-                  uint32_t codec_used,
+                  uint32_t codec_used, uint32_t bit_rate_used,
                   Logger *log)
 {
     if (!session) {
@@ -887,6 +889,8 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length, boo
     header.fragment_num = fragment_num;
 
     header.real_frame_num = 0; // not yet used
+
+    header.encoder_bit_rate_used = bit_rate_used;
 
     uint16_t length_safe = (uint16_t)length;
 

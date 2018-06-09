@@ -999,6 +999,7 @@ bool toxav_audio_send_frame(ToxAV *av, uint32_t friend_number, const int16_t *pc
                               audio_frame_record_timestamp,
                               VIDEO_FRAGMENT_NUM_NO_FRAG,
                               0,
+                              call->audio_bit_rate,
                               av->m->log) != 0) {
                 LOGGER_WARNING(av->m->log, "Failed to send audio packet");
                 rc = TOXAV_ERR_SEND_FRAME_RTP_FAILED;
@@ -1391,6 +1392,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
                                   video_frame_record_timestamp,
                                   (int32_t)pkt->data.frame.partition_id,
                                   TOXAV_ENCODER_CODEC_USED_VP8,
+                                  call->video_bit_rate,
                                   av->m->log
                               );
 
@@ -1430,6 +1432,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
                               video_frame_record_timestamp,
                               (int32_t)0,
                               TOXAV_ENCODER_CODEC_USED_H264,
+                              call->video_bit_rate,
                               av->m->log
                           );
 
@@ -1503,12 +1506,20 @@ void callback_bwc(BWController *bwc, uint32_t friend_number, float loss, void *u
 
         if ((loss * 100) < VIDEO_BITRATE_AUTO_INC_THRESHOLD) {
             if (call->video_bit_rate < VIDEO_BITRATE_MAX_AUTO_VALUE_H264) {
-                call->video_bit_rate = (uint32_t)((float)call->video_bit_rate * (float)VIDEO_BITRATE_AUTO_INC_TO);
+
+                if (call->video_bit_rate < VIDEO_BITRATE_SCALAR_AUTO_VALUE_H264) {
+                    call->video_bit_rate = call->video_bit_rate + VIDEO_BITRATE_SCALAR_INC_BY_AUTO_VALUE_H264;
+                } else if (call->video_bit_rate > VIDEO_BITRATE_SCALAR2_AUTO_VALUE_H264) {
+                    call->video_bit_rate = call->video_bit_rate + VIDEO_BITRATE_SCALAR2_INC_BY_AUTO_VALUE_H264;
+                } else {
+                    call->video_bit_rate = (uint32_t)((float)call->video_bit_rate * (float)VIDEO_BITRATE_AUTO_INC_TO);
+                }
+
                 LOGGER_ERROR(call->av->m->log, "callback_bwc:INC:vb=%d", (int)call->video_bit_rate);
             }
         } else if ((loss * 100) > VIDEO_BITRATE_AUTO_DEC_THRESHOLD) {
             if (call->video_bit_rate > VIDEO_BITRATE_MIN_AUTO_VALUE_H264) {
-                call->video_bit_rate = (uint32_t)((float)call->video_bit_rate * (1.0f - loss));
+                call->video_bit_rate = (uint32_t)((float)call->video_bit_rate * ((1.0f - loss) * VIDEO_BITRATE_AUTO_DEC_FACTOR));
                 LOGGER_ERROR(call->av->m->log, "callback_bwc:DEC:vb=%d", (int)call->video_bit_rate);
             }
         }
