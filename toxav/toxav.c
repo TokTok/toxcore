@@ -1117,6 +1117,14 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 
     }
 
+    // --- STAY on VP8 ENCODE !! ----
+    // --- STAY on VP8 ENCODE !! ----
+    // --- STAY on VP8 ENCODE !! ----
+    // call->video.second->video_encoder_coded_used = TOXAV_ENCODER_CODEC_USED_VP8;
+    // --- STAY on VP8 ENCODE !! ----
+    // --- STAY on VP8 ENCODE !! ----
+    // --- STAY on VP8 ENCODE !! ----
+
     // HINT: auto switch encoder, if we got capabilities packet from friend ------
 
     if ((call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP8)
@@ -1290,11 +1298,13 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 
         if ((call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP8)
                 || (call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP9)) {
-
+            // HINT: vp8
             uint32_t result = encode_frame_vpx(av, friend_number, width, height,
                                                y, u, v, call,
                                                &video_frame_record_timestamp,
                                                vpx_encode_flags,
+                                               &nal,
+                                               &i_frame_size,
                                                error);
 
             if (result != 0) {
@@ -1303,48 +1313,22 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
                 goto END;
             }
 
-
         } else {
             // HINT: H264
+            uint32_t result = encode_frame_h264(av, friend_number, width, height,
+                                                y, u, v, call,
+                                                &video_frame_record_timestamp,
+                                                vpx_encode_flags,
+                                                &nal,
+                                                &i_frame_size,
+                                                error);
 
-            memcpy(call->video.second->h264_in_pic.img.plane[0], y, width * height);
-            memcpy(call->video.second->h264_in_pic.img.plane[1], u, (width / 2) * (height / 2));
-            memcpy(call->video.second->h264_in_pic.img.plane[2], v, (width / 2) * (height / 2));
-
-            int i_nal;
-
-            call->video.second->h264_in_pic.i_pts = (int64_t)video_frame_record_timestamp;
-            i_frame_size = x264_encoder_encode(call->video.second->h264_encoder,
-                                               &nal,
-                                               &i_nal,
-                                               &(call->video.second->h264_in_pic),
-                                               &(call->video.second->h264_out_pic));
-
-            if (i_frame_size < 0) {
-                // some error
-            } else if (i_frame_size == 0) {
-                // zero size output
-            } else {
-                // nal->p_payload --> outbuf
-                // i_frame_size --> out size in bytes
-
-                // LOGGER_ERROR(av->m->log, "H264: i_frame_size=%d nal_buf=%p KF=%d\n",
-                //             (int)i_frame_size,
-                //             nal->p_payload,
-                //             (int)call->video.second->h264_out_pic.b_keyframe
-                //            );
-
-            }
-
-            if (nal == NULL) {
+            if (result != 0) {
                 pthread_mutex_unlock(call->mutex_video);
+                rc = TOXAV_ERR_SEND_FRAME_INVALID;
                 goto END;
             }
 
-            if (nal->p_payload == NULL) {
-                pthread_mutex_unlock(call->mutex_video);
-                goto END;
-            }
         }
     }
 

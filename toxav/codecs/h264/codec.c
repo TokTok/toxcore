@@ -138,7 +138,8 @@ VCSession *vc_new_h264(Logger *log, ToxAV *av, uint32_t friend_number, toxav_vid
     return vc;
 }
 
-int vc_reconfigure_encoder_h264(Logger *log, VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height,
+int vc_reconfigure_encoder_h264(Logger *log, VCSession *vc, uint32_t bit_rate,
+                                uint16_t width, uint16_t height,
                                 int16_t kf_max_dist)
 {
     if (!vc) {
@@ -151,6 +152,7 @@ int vc_reconfigure_encoder_h264(Logger *log, VCSession *vc, uint32_t bit_rate, u
             (kf_max_dist != -2)
        ) {
         // only bit rate changed
+
         if (vc->h264_encoder) {
             x264_param_t param;
 
@@ -165,7 +167,7 @@ int vc_reconfigure_encoder_h264(Logger *log, VCSession *vc, uint32_t bit_rate, u
             // param.rc.i_bitrate = (bit_rate / 1000) * VIDEO_BITRATE_FACTOR_H264;
             vc->h264_enc_bitrate = bit_rate;
 
-            int  res =   x264_encoder_reconfig(vc->h264_encoder, &param);
+            int res = x264_encoder_reconfig(vc->h264_encoder, &param);
         }
     } else {
         if ((vc->h264_enc_width != width) ||
@@ -222,7 +224,7 @@ int vc_reconfigure_encoder_h264(Logger *log, VCSession *vc, uint32_t bit_rate, u
                 // goto fail;
             }
 
-            LOGGER_DEBUG(log, "H264: reconfigure encoder:001: w:%d h:%d w_new:%d h_new:%d BR:%d\n",
+            LOGGER_ERROR(log, "H264: reconfigure encoder:001: w:%d h:%d w_new:%d h_new:%d BR:%d\n",
                          vc->h264_enc_width,
                          vc->h264_enc_height,
                          width,
@@ -350,6 +352,63 @@ void decode_frame_h264(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uin
     free(p);
 
 }
+
+uint32_t encode_frame_h264(ToxAV *av, uint32_t friend_number, uint16_t width, uint16_t height,
+                           const uint8_t *y,
+                           const uint8_t *u, const uint8_t *v, ToxAVCall *call,
+                           uint64_t *video_frame_record_timestamp,
+                           int vpx_encode_flags,
+                           x264_nal_t **nal,
+                           int *i_frame_size,
+                           TOXAV_ERR_SEND_FRAME *error)
+{
+
+    memcpy(call->video.second->h264_in_pic.img.plane[0], y, width * height);
+    memcpy(call->video.second->h264_in_pic.img.plane[1], u, (width / 2) * (height / 2));
+    memcpy(call->video.second->h264_in_pic.img.plane[2], v, (width / 2) * (height / 2));
+
+    int i_nal;
+
+    call->video.second->h264_in_pic.i_pts = (int64_t)(*video_frame_record_timestamp);
+    *i_frame_size = x264_encoder_encode(call->video.second->h264_encoder,
+                                        nal,
+                                        &i_nal,
+                                        &(call->video.second->h264_in_pic),
+                                        &(call->video.second->h264_out_pic));
+
+    if (*i_frame_size < 0) {
+        // some error
+    } else if (*i_frame_size == 0) {
+        // zero size output
+    } else {
+        // *nal->p_payload --> outbuf
+        // *i_frame_size --> out size in bytes
+
+        // -- WARN -- : this could crash !! ----
+        // LOGGER_ERROR(av->m->log, "H264: i_frame_size=%d nal_buf=%p KF=%d\n",
+        //             (int)*i_frame_size,
+        //             (*nal)->p_payload,
+        //             (int)call->video.second->h264_out_pic.b_keyframe
+        //            );
+        // -- WARN -- : this could crash !! ----
+
+    }
+
+    if (*nal == NULL) {
+        //pthread_mutex_unlock(call->mutex_video);
+        //goto END;
+        return 1;
+    }
+
+    if ((*nal)->p_payload == NULL) {
+        //pthread_mutex_unlock(call->mutex_video);
+        //goto END;
+        return 1;
+    }
+
+    return 0;
+}
+
 
 void vc_kill_h264(VCSession *vc)
 {

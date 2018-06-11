@@ -511,7 +511,8 @@ BASE_CLEANUP:
 }
 
 
-int vc_reconfigure_encoder_vpx(Logger *log, VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height,
+int vc_reconfigure_encoder_vpx(Logger *log, VCSession *vc, uint32_t bit_rate,
+                               uint16_t width, uint16_t height,
                                int16_t kf_max_dist)
 {
     if (!vc) {
@@ -978,6 +979,8 @@ uint32_t encode_frame_vpx(ToxAV *av, uint32_t friend_number, uint16_t width, uin
                           const uint8_t *u, const uint8_t *v, ToxAVCall *call,
                           uint64_t *video_frame_record_timestamp,
                           int vpx_encode_flags,
+                          x264_nal_t **nal,
+                          int *i_frame_size,
                           TOXAV_ERR_SEND_FRAME *error)
 {
 
