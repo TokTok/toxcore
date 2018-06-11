@@ -1526,6 +1526,17 @@ void callback_bwc(BWController *bwc, uint32_t friend_number, float loss, void *u
     if (call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_H264) {
         pthread_mutex_lock(call->av->mutex);
 
+        // HINT: on high bitrates we lower the bitrate even on small data loss
+        if (call->video_bit_rate > VIDEO_BITRATE_SCALAR3_AUTO_VALUE_H264) {
+            if ((loss * 100) > VIDEO_BITRATE_AUTO_INC_THRESHOLD) {
+                call->video_bit_rate = (uint32_t)((float)call->video_bit_rate * ((1.0f - loss) * VIDEO_BITRATE_AUTO_DEC_FACTOR));
+                LOGGER_ERROR(call->av->m->log, "callback_bwc:DEC:H:vb=%d", (int)call->video_bit_rate);
+
+                pthread_mutex_unlock(call->av->mutex);
+                return;
+            }
+        }
+
         if ((loss * 100) < VIDEO_BITRATE_AUTO_INC_THRESHOLD) {
             if (call->video_bit_rate < VIDEO_BITRATE_MAX_AUTO_VALUE_H264) {
 
