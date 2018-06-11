@@ -255,6 +255,102 @@ int vc_reconfigure_encoder_h264(Logger *log, VCSession *vc, uint32_t bit_rate, u
     return 0;
 }
 
+void decode_frame_h264(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_t *a_r_timestamp,
+                       uint64_t *a_l_timestamp,
+                       uint64_t *v_r_timestamp, uint64_t *v_l_timestamp,
+                       const struct RTPHeader *header_v3,
+                       struct RTPMessage *p, vpx_codec_err_t rc,
+                       uint32_t full_data_len,
+                       uint8_t *ret_value)
+{
+
+
+    /*
+     For decoding, call avcodec_send_packet() to give the decoder raw
+          compressed data in an AVPacket.
+
+
+          For decoding, call avcodec_receive_frame(). On success, it will return
+          an AVFrame containing uncompressed audio or video data.
+
+
+     *   Repeat this call until it returns AVERROR(EAGAIN) or an error. The
+     *   AVERROR(EAGAIN) return value means that new input data is required to
+     *   return new output. In this case, continue with sending input. For each
+     *   input frame/packet, the codec will typically return 1 output frame/packet,
+     *   but it can also be 0 or more than 1.
+
+     */
+
+    AVPacket *compr_data;
+    compr_data = av_packet_alloc();
+
+#if 0
+    compr_data->pts = AV_NOPTS_VALUE;
+    compr_data->dts = AV_NOPTS_VALUE;
+
+    compr_data->duration = 0;
+    compr_data->post = -1;
+#endif
+
+    // HINT: dirty hack to add FF_INPUT_BUFFER_PADDING_SIZE bytes!! ----------
+    uint8_t *tmp_buf = calloc(1, full_data_len + FF_INPUT_BUFFER_PADDING_SIZE);
+    memcpy(tmp_buf, p->data, full_data_len);
+    // HINT: dirty hack to add FF_INPUT_BUFFER_PADDING_SIZE bytes!! ----------
+
+    compr_data->data = tmp_buf; // p->data;
+    compr_data->size = (int)full_data_len; // hmm, "int" again
+
+    avcodec_send_packet(vc->h264_decoder, compr_data);
+
+
+    int ret_ = 0;
+
+    while (ret_ >= 0) {
+
+        AVFrame *frame = av_frame_alloc();
+        ret_ = avcodec_receive_frame(vc->h264_decoder, frame);
+
+        // LOGGER_ERROR(vc->log, "H264:decoder:ret_=%d\n", (int)ret_);
+
+
+        if (ret_ == AVERROR(EAGAIN) || ret_ == AVERROR_EOF) {
+            // error
+            break;
+        } else if (ret_ < 0) {
+            // Error during decoding
+            break;
+        } else if (ret_ == 0) {
+
+            // LOGGER_ERROR(vc->log, "H264:decoder:fnum=%d\n", (int)vc->h264_decoder->frame_number);
+            // LOGGER_ERROR(vc->log, "H264:decoder:linesize=%d\n", (int)frame->linesize[0]);
+            // LOGGER_ERROR(vc->log, "H264:decoder:w=%d\n", (int)frame->width);
+            // LOGGER_ERROR(vc->log, "H264:decoder:h=%d\n", (int)frame->height);
+
+            vc->vcb.first(vc->av, vc->friend_number, frame->width, frame->height,
+                          (const uint8_t *)frame->data[0],
+                          (const uint8_t *)frame->data[1],
+                          (const uint8_t *)frame->data[2],
+                          frame->linesize[0], frame->linesize[1],
+                          frame->linesize[2], vc->vcb.second);
+
+        } else {
+            // some other error
+        }
+
+        av_frame_free(&frame);
+    }
+
+    av_packet_free(&compr_data);
+
+    // HINT: dirty hack to add FF_INPUT_BUFFER_PADDING_SIZE bytes!! ----------
+    free(tmp_buf);
+    // HINT: dirty hack to add FF_INPUT_BUFFER_PADDING_SIZE bytes!! ----------
+
+    free(p);
+
+}
+
 void vc_kill_h264(VCSession *vc)
 {
     x264_encoder_close(vc->h264_encoder);

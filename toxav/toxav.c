@@ -34,6 +34,8 @@
 
 #include "tox_generic.h"
 
+#include "codecs/toxav_codecs.h"
+
 #include <assert.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -1289,42 +1291,18 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         if ((call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP8)
                 || (call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP9)) {
 
-            vpx_image_t img;
-            img.w = img.h = img.d_w = img.d_h = 0;
-            vpx_img_alloc(&img, VPX_IMG_FMT_I420, width, height, 0);
+            uint32_t result = encode_frame_vpx(av, friend_number, width, height,
+                                               y, u, v, call,
+                                               &video_frame_record_timestamp,
+                                               vpx_encode_flags,
+                                               error);
 
-            /* I420 "It comprises an NxM Y plane followed by (N/2)x(M/2) V and U planes."
-             * http://fourcc.org/yuv.php#IYUV
-             */
-            memcpy(img.planes[VPX_PLANE_Y], y, width * height);
-            memcpy(img.planes[VPX_PLANE_U], u, (width / 2) * (height / 2));
-            memcpy(img.planes[VPX_PLANE_V], v, (width / 2) * (height / 2));
-
-#if 0
-            uint32_t duration = (ms_to_last_frame * 10) + 1;
-
-            if (duration > 10000) {
-                duration = 10000;
-            }
-
-#else
-            // set to hardcoded 24fps (this is only for vpx internal calculations!!)
-            uint32_t duration = (41 * 10); // HINT: 24fps ~= 41ms
-#endif
-
-            vpx_codec_err_t vrc = vpx_codec_encode(call->video.second->encoder, &img,
-                                                   (int64_t)video_frame_record_timestamp, duration,
-                                                   vpx_encode_flags,
-                                                   VPX_DL_REALTIME);
-
-            vpx_img_free(&img);
-
-            if (vrc != VPX_CODEC_OK) {
+            if (result != 0) {
                 pthread_mutex_unlock(call->mutex_video);
-                LOGGER_ERROR(av->m->log, "Could not encode video frame: %s\n", vpx_codec_err_to_string(vrc));
                 rc = TOXAV_ERR_SEND_FRAME_INVALID;
                 goto END;
             }
+
 
         } else {
             // HINT: H264
