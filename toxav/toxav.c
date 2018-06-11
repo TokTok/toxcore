@@ -489,6 +489,7 @@ END:
 
     return rc == TOXAV_ERR_ANSWER_OK;
 }
+
 void toxav_callback_call_state(ToxAV *av, toxav_call_state_cb *callback, void *user_data)
 {
     pthread_mutex_lock(av->mutex);
@@ -496,6 +497,7 @@ void toxav_callback_call_state(ToxAV *av, toxav_call_state_cb *callback, void *u
     av->scb.second = user_data;
     pthread_mutex_unlock(av->mutex);
 }
+
 bool toxav_call_control(ToxAV *av, uint32_t friend_number, TOXAV_CALL_CONTROL control, TOXAV_ERR_CALL_CONTROL *error)
 {
     pthread_mutex_lock(av->mutex);
@@ -1488,6 +1490,11 @@ END:
 
     return rc == TOXAV_ERR_SEND_FRAME_OK;
 }
+/* --- VIDEO EN-CODING happens here --- */
+/* --- VIDEO EN-CODING happens here --- */
+/* --- VIDEO EN-CODING happens here --- */
+
+
 
 
 
@@ -1498,6 +1505,7 @@ void toxav_callback_audio_receive_frame(ToxAV *av, toxav_audio_receive_frame_cb 
     av->acb.second = user_data;
     pthread_mutex_unlock(av->mutex);
 }
+
 void toxav_callback_video_receive_frame(ToxAV *av, toxav_video_receive_frame_cb *callback, void *user_data)
 {
     pthread_mutex_lock(av->mutex);
@@ -1733,12 +1741,14 @@ bool audio_bit_rate_invalid(uint32_t bit_rate)
      */
     return bit_rate < 6 || bit_rate > 510;
 }
+
 bool video_bit_rate_invalid(uint32_t bit_rate)
 {
     (void) bit_rate;
     /* TODO(mannol): If anyone knows the answer to this one please fill it up */
     return false;
 }
+
 bool invoke_call_state_callback(ToxAV *av, uint32_t friend_number, uint32_t state)
 {
     if (av->scb.first) {
@@ -1749,7 +1759,6 @@ bool invoke_call_state_callback(ToxAV *av, uint32_t friend_number, uint32_t stat
 
     return true;
 }
-
 
 ToxAVCall *call_new(ToxAV *av, uint32_t friend_number, TOXAV_ERR_CALL *error)
 {
