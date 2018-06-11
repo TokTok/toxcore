@@ -1494,7 +1494,7 @@ void callback_bwc(BWController *bwc, uint32_t friend_number, float loss, void *u
     ToxAVCall *call = (ToxAVCall *)user_data;
     assert(call);
 
-    LOGGER_ERROR(call->av->m->log, "Reported loss of %f%% : %f", loss * 100, loss);
+    LOGGER_DEBUG(call->av->m->log, "Reported loss of %f%% : %f", loss * 100, loss);
 
     if (call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_H264) {
         pthread_mutex_lock(call->av->mutex);
@@ -1521,12 +1521,12 @@ void callback_bwc(BWController *bwc, uint32_t friend_number, float loss, void *u
                     call->video_bit_rate = (uint32_t)((float)call->video_bit_rate * (float)VIDEO_BITRATE_AUTO_INC_TO);
                 }
 
-                LOGGER_ERROR(call->av->m->log, "callback_bwc:INC:vb=%d", (int)call->video_bit_rate);
+                LOGGER_DEBUG(call->av->m->log, "callback_bwc:INC:vb=%d", (int)call->video_bit_rate);
             }
         } else if ((loss * 100) > VIDEO_BITRATE_AUTO_DEC_THRESHOLD) {
             if (call->video_bit_rate > VIDEO_BITRATE_MIN_AUTO_VALUE_H264) {
                 call->video_bit_rate = (uint32_t)((float)call->video_bit_rate * ((1.0f - loss) * VIDEO_BITRATE_AUTO_DEC_FACTOR));
-                LOGGER_ERROR(call->av->m->log, "callback_bwc:DEC:vb=%d", (int)call->video_bit_rate);
+                LOGGER_DEBUG(call->av->m->log, "callback_bwc:DEC:vb=%d", (int)call->video_bit_rate);
             }
         }
 

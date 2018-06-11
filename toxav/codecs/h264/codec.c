@@ -146,11 +146,10 @@ int vc_reconfigure_encoder_h264(Logger *log, VCSession *vc, uint32_t bit_rate,
         return -1;
     }
 
-    if ((vc->h264_enc_width == width) ||
-            (vc->h264_enc_height == height) ||
-            (vc->h264_enc_bitrate != bit_rate) ||
-            (kf_max_dist != -2)
-       ) {
+    if ((vc->h264_enc_width == width) &&
+            (vc->h264_enc_height == height) &&
+            (vc->h264_enc_bitrate != bit_rate) &&
+            (kf_max_dist != -2)) {
         // only bit rate changed
 
         if (vc->h264_encoder) {
@@ -158,7 +157,7 @@ int vc_reconfigure_encoder_h264(Logger *log, VCSession *vc, uint32_t bit_rate,
 
             x264_encoder_parameters(vc->h264_encoder, &param);
 
-            LOGGER_ERROR(log, "vc_reconfigure_encoder_h264:vb=%d [bitrate only]", (int)(bit_rate / 1000));
+            LOGGER_DEBUG(log, "vc_reconfigure_encoder_h264:vb=%d [bitrate only]", (int)(bit_rate / 1000));
 
             param.rc.f_rate_tolerance = VIDEO_F_RATE_TOLERANCE_H264;
             param.rc.i_vbv_buffer_size = (bit_rate / 1000) * VIDEO_BUF_FACTOR_H264;

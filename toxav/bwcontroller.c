@@ -209,8 +209,8 @@ static int on_update(BWController *bwc, const struct BWCMessage *msg)
     if (bwc->mcb) {
 
         if ((recv + lost) > 0) {
-            LOGGER_INFO(bwc->m->log, "recved: %u lost: %u percentage: %f %%", recv, lost,
-                        (float)(((float) lost / (recv + lost)) * 100.0f));
+            LOGGER_DEBUG(bwc->m->log, "recved: %u lost: %u percentage: %f %%", recv, lost,
+                         (float)(((float) lost / (recv + lost)) * 100.0f));
 
             bwc->mcb(bwc, bwc->friend_number,
                      ((float) lost / (recv + lost)),
