@@ -753,3 +753,18 @@ int vc_reconfigure_encoder_vpx(Logger *log, VCSession *vc, uint32_t bit_rate, ui
     return 0;
 }
 
+void vc_kill_vpx(VCSession *vc)
+{
+    int jk;
+
+    for (jk = 0; jk < vc->fragment_buf_counter; jk++) {
+        free(vc->vpx_frames_buf_list[jk]);
+        vc->vpx_frames_buf_list[jk] = NULL;
+    }
+
+    vc->fragment_buf_counter = 0;
+
+    vpx_codec_destroy(vc->encoder);
+    vpx_codec_destroy(vc->decoder);
+}
+

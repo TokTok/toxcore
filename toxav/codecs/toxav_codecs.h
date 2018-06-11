@@ -58,6 +58,7 @@ VCSession *vc_new_vpx(Logger *log, ToxAV *av, uint32_t friend_number, toxav_vide
 int vc_reconfigure_encoder_vpx(Logger *log, VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height,
                                int16_t kf_max_dist);
 
+void vc_kill_vpx(VCSession *vc);
 
 
 // ----------- H264 -----------
@@ -66,6 +67,8 @@ VCSession *vc_new_h264(Logger *log, ToxAV *av, uint32_t friend_number, toxav_vid
 
 int vc_reconfigure_encoder_h264(Logger *log, VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height,
                                 int16_t kf_max_dist);
+
+void vc_kill_h264(VCSession *vc);
 
 
 

@@ -101,7 +101,11 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     // HINT: tell client what encoder and decoder are in use now -----------
 
     // HINT: initialize the H264 encoder
+#ifdef RASPBERRY_PI_OMX
+    vc = vc_new_h264_omx_raspi(log, av, friend_number, cb, cb_data, vc);
+#else
     vc = vc_new_h264(log, av, friend_number, cb, cb_data, vc);
+#endif
 
     // HINT: initialize VP8 encoder
     return vc_new_vpx(log, av, friend_number, cb, cb_data, vc);
@@ -114,28 +118,6 @@ BASE_CLEANUP:
 }
 
 
-void vc_kill_vpx(VCSession *vc)
-{
-    int jk;
-
-    for (jk = 0; jk < vc->fragment_buf_counter; jk++) {
-        free(vc->vpx_frames_buf_list[jk]);
-        vc->vpx_frames_buf_list[jk] = NULL;
-    }
-
-    vc->fragment_buf_counter = 0;
-
-    vpx_codec_destroy(vc->encoder);
-    vpx_codec_destroy(vc->decoder);
-}
-
-
-void vc_kill_h264(VCSession *vc)
-{
-    x264_encoder_close(vc->h264_encoder);
-    x264_picture_clean(&(vc->h264_in_pic));
-    avcodec_free_context(&vc->h264_decoder);
-}
 
 void vc_kill(VCSession *vc)
 {
@@ -143,7 +125,11 @@ void vc_kill(VCSession *vc)
         return;
     }
 
+#ifdef RASPBERRY_PI_OMX
+    vc_kill_h264_omx_raspi(vc);
+#else
     vc_kill_h264(vc);
+#endif
     vc_kill_vpx(vc);
 
     void *p;
@@ -161,122 +147,6 @@ void vc_kill(VCSession *vc)
     free(vc);
 }
 
-void video_switch_decoder_vpx(VCSession *vc, TOXAV_ENCODER_CODEC_USED_VALUE decoder_to_use)
-{
-
-    /*
-    vpx_codec_err_t vpx_codec_peek_stream_info  (   vpx_codec_iface_t *     iface,
-            const uint8_t *     data,
-            unsigned int    data_sz,
-            vpx_codec_stream_info_t *   si
-        )
-
-    Parse stream info from a buffer.
-    Performs high level parsing of the bitstream. Construction of a decoder context is not necessary.
-    Can be used to determine if the bitstream is of the proper format, and to extract information from the stream.
-    */
-
-
-    // toggle decoder codec between VP8 and VP9
-    // TODO: put codec into header flags at encoder side, then use this at decoder side!
-    if (vc->video_decoder_codec_used == TOXAV_ENCODER_CODEC_USED_VP8) {
-        vc->video_decoder_codec_used = TOXAV_ENCODER_CODEC_USED_VP9;
-    } else {
-        vc->video_decoder_codec_used = TOXAV_ENCODER_CODEC_USED_VP8;
-    }
-
-    vpx_codec_err_t rc;
-    vpx_codec_ctx_t new_d;
-
-    LOGGER_WARNING(vc->log, "Switch:Re-initializing DEcoder to: %d", (int)vc->video_decoder_codec_used);
-
-    vpx_codec_dec_cfg_t dec_cfg;
-    dec_cfg.threads = VPX_MAX_DECODER_THREADS; // Maximum number of threads to use
-    dec_cfg.w = VIDEO_CODEC_DECODER_MAX_WIDTH;
-    dec_cfg.h = VIDEO_CODEC_DECODER_MAX_HEIGHT;
-
-    if (vc->video_decoder_codec_used != TOXAV_ENCODER_CODEC_USED_VP9) {
-
-        vpx_codec_flags_t dec_flags_ = 0;
-
-        if (vc->video_decoder_error_concealment == 1) {
-            vpx_codec_caps_t decoder_caps = vpx_codec_get_caps(VIDEO_CODEC_DECODER_INTERFACE_VP8);
-
-            if (decoder_caps & VPX_CODEC_CAP_ERROR_CONCEALMENT) {
-                dec_flags_ = VPX_CODEC_USE_ERROR_CONCEALMENT;
-                LOGGER_WARNING(vc->log, "Using VP8 VPX_CODEC_USE_ERROR_CONCEALMENT (1)");
-            }
-        }
-
-#ifdef VIDEO_CODEC_ENCODER_USE_FRAGMENTS
-        rc = vpx_codec_dec_init(&new_d, VIDEO_CODEC_DECODER_INTERFACE_VP8, &dec_cfg,
-                                dec_flags_ | VPX_CODEC_USE_FRAME_THREADING
-                                | VPX_CODEC_USE_POSTPROC | VPX_CODEC_USE_INPUT_FRAGMENTS);
-        LOGGER_WARNING(vc->log, "Using VP8 using input fragments (1) rc=%d", (int)rc);
-#else
-        rc = vpx_codec_dec_init(&new_d, VIDEO_CODEC_DECODER_INTERFACE_VP8, &dec_cfg,
-                                dec_flags_ | VPX_CODEC_USE_FRAME_THREADING
-                                | VPX_CODEC_USE_POSTPROC);
-#endif
-
-        if (rc == VPX_CODEC_INCAPABLE) {
-            LOGGER_WARNING(vc->log, "Postproc not supported by this decoder");
-            rc = vpx_codec_dec_init(&new_d, VIDEO_CODEC_DECODER_INTERFACE_VP8, &dec_cfg,
-                                    dec_flags_ | VPX_CODEC_USE_FRAME_THREADING);
-        }
-
-    } else {
-        rc = vpx_codec_dec_init(&new_d, VIDEO_CODEC_DECODER_INTERFACE_VP9, &dec_cfg,
-                                VPX_CODEC_USE_FRAME_THREADING);
-    }
-
-    if (rc != VPX_CODEC_OK) {
-        LOGGER_ERROR(vc->log, "Failed to Re-initialize decoder: %s", vpx_codec_err_to_string(rc));
-        vpx_codec_destroy(&new_d);
-        return;
-    }
-
-
-    if (vc->video_decoder_codec_used != TOXAV_ENCODER_CODEC_USED_VP9) {
-        if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 1) {
-            LOGGER_WARNING(vc->log, "turn on postproc: OK");
-        } else if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 2) {
-            vp8_postproc_cfg_t pp = {VP8_DEBLOCK, 1, 0};
-            vpx_codec_err_t cc_res = vpx_codec_control(&new_d, VP8_SET_POSTPROC, &pp);
-
-            if (cc_res != VPX_CODEC_OK) {
-                LOGGER_WARNING(vc->log, "Failed to turn on postproc");
-            } else {
-                LOGGER_WARNING(vc->log, "turn on postproc: OK");
-            }
-        } else if (VIDEO__VP8_DECODER_POST_PROCESSING_ENABLED == 3) {
-            vp8_postproc_cfg_t pp = {VP8_DEBLOCK | VP8_DEMACROBLOCK | VP8_MFQE, 1, 0};
-            vpx_codec_err_t cc_res = vpx_codec_control(&new_d, VP8_SET_POSTPROC, &pp);
-
-            if (cc_res != VPX_CODEC_OK) {
-                LOGGER_WARNING(vc->log, "Failed to turn on postproc");
-            } else {
-                LOGGER_WARNING(vc->log, "turn on postproc: OK");
-            }
-        } else {
-            vp8_postproc_cfg_t pp = {0, 0, 0};
-            vpx_codec_err_t cc_res = vpx_codec_control(&new_d, VP8_SET_POSTPROC, &pp);
-
-            if (cc_res != VPX_CODEC_OK) {
-                LOGGER_WARNING(vc->log, "Failed to turn OFF postproc");
-            } else {
-                LOGGER_WARNING(vc->log, "Disable postproc: OK");
-            }
-        }
-    }
-
-    // now replace the current decoder
-    vpx_codec_destroy(vc->decoder);
-    memcpy(vc->decoder, &new_d, sizeof(new_d));
-
-    LOGGER_ERROR(vc->log, "Re-initialize decoder OK: %s", vpx_codec_err_to_string(rc));
-
-}
 
 void video_switch_decoder(VCSession *vc, TOXAV_ENCODER_CODEC_USED_VALUE decoder_to_use)
 {
@@ -285,7 +155,6 @@ void video_switch_decoder(VCSession *vc, TOXAV_ENCODER_CODEC_USED_VALUE decoder_
                 || (decoder_to_use == TOXAV_ENCODER_CODEC_USED_VP9)
                 || (decoder_to_use == TOXAV_ENCODER_CODEC_USED_H264)) {
 
-            // ** DISABLED ** // video_switch_decoder_vpx(vc, decoder_to_use);
             vc->video_decoder_codec_used = decoder_to_use;
             LOGGER_ERROR(vc->log, "**switching DECODER to **:%d",
                          (int)vc->video_decoder_codec_used);
@@ -859,6 +728,9 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
     return ret_value;
 }
+/* --- VIDEO DECODING happens here --- */
+/* --- VIDEO DECODING happens here --- */
+/* --- VIDEO DECODING happens here --- */
 
 
 int vc_queue_message(void *vcp, struct RTPMessage *msg)

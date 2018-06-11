@@ -255,4 +255,11 @@ int vc_reconfigure_encoder_h264(Logger *log, VCSession *vc, uint32_t bit_rate, u
     return 0;
 }
 
+void vc_kill_h264(VCSession *vc)
+{
+    x264_encoder_close(vc->h264_encoder);
+    x264_picture_clean(&(vc->h264_in_pic));
+    avcodec_free_context(&vc->h264_decoder);
+}
+
 

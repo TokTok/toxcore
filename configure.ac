@@ -186,6 +186,14 @@ AC_ARG_ENABLE([raspi],
     ]
 )
 
+if test "x$ON_RASPI" = "xyes"; then
+    CFLAGS="$CFLAGS -DRASPBERRY_PI_OMX -DOMX_SKIP64BIT -DUSE_VCHIQ_ARM -I/opt/vc/include -I/opt/vc/interface/vmcs_host/linux -I/opt/vc/interface/vcos/pthreads"
+    CPPFLAGS="$CPPFLAGS  -DRASPBERRY_PI_OMX -DOMX_SKIP64BIT -DUSE_VCHIQ_ARM -I/opt/vc/include -I/opt/vc/interface/vmcs_host/linux -I/opt/vc/interface/vcos/pthreads"
+    LDFLAGS="$LDFLAGS -L/opt/vc/lib -lbcm_host -lvcos -lopenmaxil"
+fi
+
+
+
 AC_ARG_ENABLE([[epoll]],
   [AS_HELP_STRING([[--enable-epoll[=ARG]]], [enable epoll support (yes, no, auto) [auto]])],
     [enable_epoll=${enableval}],
