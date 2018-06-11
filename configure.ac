@@ -22,6 +22,7 @@ BUILD_TESTS="yes"
 BUILD_AV="yes"
 BUILD_TESTING="yes"
 
+ON_RASPI="no"
 TOX_LOGGER="no"
 
 NCURSES_FOUND="no"
@@ -170,6 +171,17 @@ AC_ARG_ENABLE([testing],
             BUILD_TESTING="no"
         elif test "x$enableval" = "xyes"; then
             BUILD_TESTING="yes"
+        fi
+    ]
+)
+
+AC_ARG_ENABLE([raspi],
+    [AC_HELP_STRING([--enable-raspi], [build for raspberry PI OMX (default: no)]) ],
+    [
+        if test "x$enableval" = "xno"; then
+            ON_RASPI="no"
+        elif test "x$enableval" = "xyes"; then
+            ON_RASPI="yes"
         fi
     ]
 )
@@ -608,6 +620,7 @@ AM_CONDITIONAL(BUILD_DHT_BOOTSTRAP_DAEMON, test "x$BUILD_DHT_BOOTSTRAP_DAEMON" =
 AM_CONDITIONAL(BUILD_DHT_BOOTSTRAP, test "x$BUILD_DHT_BOOTSTRAP" = "xyes")
 AM_CONDITIONAL(BUILD_TESTS, test "x$BUILD_TESTS" = "xyes")
 AM_CONDITIONAL(BUILD_AV, test "x$BUILD_AV" = "xyes")
+AM_CONDITIONAL(ON_RASPI, test "x$ON_RASPI" = "xyes")
 AM_CONDITIONAL(BUILD_TESTING, test "x$BUILD_TESTING" = "xyes")
 AM_CONDITIONAL(WITH_NACL, test "x$WANT_NACL" = "xyes")
 AM_CONDITIONAL(WIN32, test "x$WIN32" = "xyes")
