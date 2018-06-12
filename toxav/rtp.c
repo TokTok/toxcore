@@ -320,6 +320,7 @@ static bool fill_data_into_slot(Logger *log, struct RTPWorkBufferList *wkbl, con
     return slot->received_len == header->data_length_full;
 }
 
+#if 0
 static void update_bwc_values(Logger *log, RTPSession *session, const struct RTPMessage *msg)
 {
     if (session->first_packets_counter < DISMISS_FIRST_LOST_VIDEO_PACKET_COUNT) {
@@ -335,6 +336,7 @@ static void update_bwc_values(Logger *log, RTPSession *session, const struct RTP
         }
     }
 }
+#endif
 
 /**
  * Handle a single RTP video packet.
@@ -549,7 +551,7 @@ static int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t 
         /* Message is not late; pick up the latest parameters */
         session->rsequnum = header.sequnum;
         session->rtimestamp = header.timestamp;
-        bwc_add_recv(session->bwc, length);
+        // bwc_add_recv(session->bwc, length);
 
         /* Invoke processing of active multiparted message */
         if (session->mp) {
@@ -590,7 +592,7 @@ static int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t 
             memcpy(session->mp->data + header.offset_lower, data + RTP_HEADER_SIZE,
                    length - RTP_HEADER_SIZE);
             session->mp->len += length - RTP_HEADER_SIZE;
-            bwc_add_recv(session->bwc, length);
+            // bwc_add_recv(session->bwc, length);
 
             if (session->mp->len == session->mp->header.data_length_lower) {
                 /* Received a full message; now push it for the further
@@ -623,7 +625,7 @@ NEW_MULTIPARTED:
         /* Message is not late; pick up the latest parameters */
         session->rsequnum = header.sequnum;
         session->rtimestamp = header.timestamp;
-        bwc_add_recv(session->bwc, length);
+        // bwc_add_recv(session->bwc, length);
 
         /* Store message.
          */

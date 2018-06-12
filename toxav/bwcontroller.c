@@ -136,18 +136,16 @@ void bwc_add_lost_v3(BWController *bwc, uint32_t bytes_lost)
         return;
     }
 
-    if (bytes_lost > 0) {
-        LOGGER_DEBUG(bwc->m->log, "BWC lost(1): %d", (int)bytes_lost);
+    LOGGER_DEBUG(bwc->m->log, "BWC lost(1): %d", (int)bytes_lost);
 
-        bwc->cycle.lost = bwc->cycle.lost + bytes_lost;
-        send_update(bwc);
-    }
+    bwc->cycle.lost = bwc->cycle.lost + bytes_lost;
+    send_update(bwc);
 }
 
 
 void bwc_add_recv(BWController *bwc, uint32_t recv_bytes)
 {
-    if (!bwc || !recv_bytes) {
+    if (!bwc) {
         return;
     }
 
@@ -166,7 +164,7 @@ void send_update(BWController *bwc)
         bwc->packet_loss_counted_cycles = 0;
 
         if ((bwc->cycle.recv + bwc->cycle.lost) > 0) {
-            LOGGER_DEBUG(bwc->m->log, "%p Sent update rcv: %u lost: %u percent: %f %%",
+            LOGGER_ERROR(bwc->m->log, "%p Sent update rcv: %u lost: %u percent: %f %%",
                          bwc, bwc->cycle.recv, bwc->cycle.lost,
                          (float)(((float) bwc->cycle.lost / (bwc->cycle.recv + bwc->cycle.lost)) * 100.0f));
         }
@@ -204,7 +202,7 @@ static int on_update(BWController *bwc, const struct BWCMessage *msg)
     uint32_t recv = net_ntohl(msg->recv);
     uint32_t lost = net_ntohl(msg->lost);
 
-    // LOGGER_INFO(bwc->m->log, "recved: %u lost: %u", recv, lost);
+    LOGGER_ERROR(bwc->m->log, "recved: %u lost: %u", recv, lost);
 
     if (bwc->mcb) {
 

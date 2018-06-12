@@ -215,6 +215,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
         data_type = (uint8_t)((frame_flags & RTP_KEY_FRAME) != 0);
         h264_encoded_video_frame = (uint8_t)((frame_flags & RTP_ENCODER_IS_H264) != 0);
 
+        bwc_add_recv(bwc, header_v3_0->data_length_full);
 
         if ((int32_t)header_v3_0->sequnum < (int32_t)vc->last_seen_fragment_seqnum) {
             // drop frame with too old sequence number
@@ -225,8 +226,8 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
             vc->count_old_video_frames_seen++;
 
-            // HINT: give feedback that we lost some bytes (its a average number)
-            bwc_add_lost_v3(bwc, 1000);
+            // HINT: give feedback that we lost some bytes
+            bwc_add_lost_v3(bwc, header_v3_0->data_length_full);
             LOGGER_ERROR(vc->log, "BWC:lost:001");
 
             if (vc->count_old_video_frames_seen > 6) {
@@ -254,8 +255,8 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
                 rc = vpx_codec_decode(vc->decoder, NULL, 0, NULL, VPX_DL_REALTIME);
             }
 
-            // HINT: give feedback that we lost some bytes (its a average number)
-            bwc_add_lost_v3(bwc, (uint32_t)(500 * missing_frames_count));
+            // HINT: give feedback that we lost some bytes (based on the size of this frame)
+            bwc_add_lost_v3(bwc, (uint32_t)(header_v3_0->data_length_full * missing_frames_count));
             LOGGER_ERROR(vc->log, "BWC:lost:002:missing count=%d", (int)missing_frames_count);
 
 
@@ -296,8 +297,8 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
                     rc = vpx_codec_decode(vc->decoder, NULL, 0, NULL, VPX_DL_REALTIME);
                 }
 
-                // HINT: give feedback that we lost some bytes (its a average number)
-                bwc_add_lost_v3(bwc, 2000);
+                // HINT: give feedback that we lost some bytes (based on the size of this frame)
+                bwc_add_lost_v3(bwc, header_v3_0->data_length_full);
                 LOGGER_ERROR(vc->log, "BWC:lost:003");
 
                 pthread_mutex_unlock(vc->queue_mutex);
