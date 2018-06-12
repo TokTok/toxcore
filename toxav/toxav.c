@@ -187,7 +187,8 @@ static void *video_play_bg(void *data)
                                                  &(call->last_incoming_audio_frame_rtimestamp),
                                                  &(call->last_incoming_audio_frame_ltimestamp),
                                                  &(call->last_incoming_video_frame_rtimestamp),
-                                                 &(call->last_incoming_video_frame_ltimestamp)
+                                                 &(call->last_incoming_video_frame_ltimestamp),
+                                                 call->bwc
                                                 );
         }
     }
@@ -1304,8 +1305,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
                                                &video_frame_record_timestamp,
                                                vpx_encode_flags,
                                                &nal,
-                                               &i_frame_size,
-                                               error);
+                                               &i_frame_size);
 
             if (result != 0) {
                 pthread_mutex_unlock(call->mutex_video);
@@ -1315,13 +1315,21 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 
         } else {
             // HINT: H264
+#ifdef RASPBERRY_PI_OMX
+            uint32_t result = encode_frame_h264_omx_raspi(av, friend_number, width, height,
+                              y, u, v, call,
+                              &video_frame_record_timestamp,
+                              vpx_encode_flags,
+                              &nal,
+                              &i_frame_size);
+#else
             uint32_t result = encode_frame_h264(av, friend_number, width, height,
                                                 y, u, v, call,
                                                 &video_frame_record_timestamp,
                                                 vpx_encode_flags,
                                                 &nal,
-                                                &i_frame_size,
-                                                error);
+                                                &i_frame_size);
+#endif
 
             if (result != 0) {
                 pthread_mutex_unlock(call->mutex_video);
@@ -1343,103 +1351,44 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         if ((call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP8)
                 || (call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP9)) {
 
+            uint32_t result = send_frames_vpx(av, friend_number, width, height,
+                                              y, u, v, call,
+                                              &video_frame_record_timestamp,
+                                              vpx_encode_flags,
+                                              &nal,
+                                              &i_frame_size,
+                                              &rc);
 
-            vpx_codec_iter_t iter = NULL;
-            const vpx_codec_cx_pkt_t *pkt;
-
-            while ((pkt = vpx_codec_get_cx_data(call->video.second->encoder, &iter)) != NULL) {
-                if (pkt->kind == VPX_CODEC_CX_FRAME_PKT) {
-                    const int keyframe = (pkt->data.frame.flags & VPX_FRAME_IS_KEY) != 0;
-
-                    if (keyframe) {
-                        call->video.second->last_sent_keyframe_ts = current_time_monotonic();
-                    }
-
-                    if ((pkt->data.frame.flags & VPX_FRAME_IS_FRAGMENT) != 0) {
-                        LOGGER_DEBUG(av->m->log, "VPXENC:VPX_FRAME_IS_FRAGMENT:*yes* size=%lld pid=%d\n",
-                                     (long long)pkt->data.frame.sz, (int)pkt->data.frame.partition_id);
-                    } else {
-                        LOGGER_DEBUG(av->m->log, "VPXENC:VPX_FRAME_IS_FRAGMENT:-no- size=%lld pid=%d\n",
-                                     (long long)pkt->data.frame.sz, (int)pkt->data.frame.partition_id);
-                    }
-
-                    // use the record timestamp that was actually used for this frame
-                    video_frame_record_timestamp = (uint64_t)pkt->data.frame.pts;
-                    // LOGGER_DEBUG(av->m->log, "video packet record time: %llu", video_frame_record_timestamp);
-
-                    // https://www.webmproject.org/docs/webm-sdk/structvpx__codec__cx__pkt.html
-                    // pkt->data.frame.sz -> size_t
-                    const uint32_t frame_length_in_bytes = pkt->data.frame.sz;
-
-
-                    int res = rtp_send_data
-                              (
-                                  call->video.first,
-                                  (const uint8_t *)pkt->data.frame.buf,
-                                  frame_length_in_bytes,
-                                  keyframe,
-                                  video_frame_record_timestamp,
-                                  (int32_t)pkt->data.frame.partition_id,
-                                  TOXAV_ENCODER_CODEC_USED_VP8,
-                                  call->video_bit_rate,
-                                  av->m->log
-                              );
-
-                    LOGGER_DEBUG(av->m->log, "+ _sending_FRAME_TYPE_==%s bytes=%d frame_len=%d", keyframe ? "K" : ".",
-                                 (int)pkt->data.frame.sz, (int)frame_length_in_bytes);
-                    LOGGER_DEBUG(av->m->log, "+ _sending_FRAME_ b0=%d b1=%d", ((const uint8_t *)pkt->data.frame.buf)[0] ,
-                                 ((const uint8_t *)pkt->data.frame.buf)[1]);
-
-                    video_frame_record_timestamp++;
-
-                    if (res < 0) {
-                        pthread_mutex_unlock(call->mutex_video);
-                        LOGGER_WARNING(av->m->log, "Could not send video frame: %s", strerror(errno));
-                        rc = TOXAV_ERR_SEND_FRAME_RTP_FAILED;
-                        goto END;
-                    } else {
-                    }
-                }
+            if (result != 0) {
+                pthread_mutex_unlock(call->mutex_video);
+                goto END;
             }
 
         } else {
             // HINT: H264
+#ifdef RASPBERRY_PI_OMX
+            uint32_t result = send_frames_h264_omx_raspi(av, friend_number, width, height,
+                              y, u, v, call,
+                              &video_frame_record_timestamp,
+                              vpx_encode_flags,
+                              &nal,
+                              &i_frame_size,
+                              &rc);
+#else
+            uint32_t result = send_frames_h264(av, friend_number, width, height,
+                                               y, u, v, call,
+                                               &video_frame_record_timestamp,
+                                               vpx_encode_flags,
+                                               &nal,
+                                               &i_frame_size,
+                                               &rc);
+#endif
 
-            if (i_frame_size > 0) {
-
-                // use the record timestamp that was actually used for this frame
-                video_frame_record_timestamp = (uint64_t)call->video.second->h264_in_pic.i_pts;
-                const uint32_t frame_length_in_bytes = i_frame_size;
-                const int keyframe = (int)call->video.second->h264_out_pic.b_keyframe;
-
-                int res = rtp_send_data
-                          (
-                              call->video.first,
-                              (const uint8_t *)nal->p_payload,
-                              frame_length_in_bytes,
-                              keyframe,
-                              video_frame_record_timestamp,
-                              (int32_t)0,
-                              TOXAV_ENCODER_CODEC_USED_H264,
-                              call->video_bit_rate,
-                              av->m->log
-                          );
-
-                video_frame_record_timestamp++;
-
-                if (res < 0) {
-                    pthread_mutex_unlock(call->mutex_video);
-                    LOGGER_WARNING(av->m->log, "Could not send video frame: %s", strerror(errno));
-                    rc = TOXAV_ERR_SEND_FRAME_RTP_FAILED;
-                    goto END;
-                } else {
-
-
-                }
-
+            if (result != 0) {
+                pthread_mutex_unlock(call->mutex_video);
+                goto END;
             }
         }
-
     }
 
     pthread_mutex_unlock(call->mutex_video);
@@ -1497,6 +1446,12 @@ void callback_bwc(BWController *bwc, uint32_t friend_number, float loss, void *u
     LOGGER_DEBUG(call->av->m->log, "Reported loss of %f%% : %f", loss * 100, loss);
 
     if (call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_H264) {
+
+        if (call->video_bit_rate == 0) {
+            // HINT: video is turned off -> just do nothing
+            return;
+        }
+
         pthread_mutex_lock(call->av->mutex);
 
         // HINT: on high bitrates we lower the bitrate even on small data loss
@@ -1528,6 +1483,11 @@ void callback_bwc(BWController *bwc, uint32_t friend_number, float loss, void *u
                 call->video_bit_rate = (uint32_t)((float)call->video_bit_rate * ((1.0f - loss) * VIDEO_BITRATE_AUTO_DEC_FACTOR));
                 LOGGER_DEBUG(call->av->m->log, "callback_bwc:DEC:vb=%d", (int)call->video_bit_rate);
             }
+        }
+
+        // HINT: sanity check
+        if (call->video_bit_rate < VIDEO_BITRATE_MIN_AUTO_VALUE_H264) {
+            call->video_bit_rate = VIDEO_BITRATE_MIN_AUTO_VALUE_H264;
         }
 
         pthread_mutex_unlock(call->av->mutex);

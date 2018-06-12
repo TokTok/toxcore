@@ -187,7 +187,7 @@ void video_switch_decoder(VCSession *vc, TOXAV_ENCODER_CODEC_USED_VALUE decoder_
 /* --- VIDEO DECODING happens here --- */
 uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_t *a_r_timestamp,
                    uint64_t *a_l_timestamp,
-                   uint64_t *v_r_timestamp, uint64_t *v_l_timestamp)
+                   uint64_t *v_r_timestamp, uint64_t *v_l_timestamp, BWController *bwc)
 {
 
     if (!vc) {
@@ -225,6 +225,10 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
             vc->count_old_video_frames_seen++;
 
+            // HINT: give feedback that we lost some bytes (its a average number)
+            bwc_add_lost_v3(bwc, 1000);
+            LOGGER_ERROR(vc->log, "BWC:lost:001");
+
             if (vc->count_old_video_frames_seen > 6) {
                 // if we see more than 6 old video frames in a row, then either there was
                 // a seqnum rollover or something else. just play those frames then
@@ -249,6 +253,11 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
             if (vc->video_decoder_codec_used != TOXAV_ENCODER_CODEC_USED_H264) {
                 rc = vpx_codec_decode(vc->decoder, NULL, 0, NULL, VPX_DL_REALTIME);
             }
+
+            // HINT: give feedback that we lost some bytes (its a average number)
+            bwc_add_lost_v3(bwc, (uint32_t)(500 * missing_frames_count));
+            LOGGER_ERROR(vc->log, "BWC:lost:002:missing count=%d", (int)missing_frames_count);
+
 
             if (missing_frames_count > 5) {
                 if ((vc->last_requested_keyframe_ts + VIDEO_MIN_REQUEST_KEYFRAME_INTERVAL_MS_FOR_NF)
@@ -286,6 +295,10 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
                 if (vc->video_decoder_codec_used != TOXAV_ENCODER_CODEC_USED_H264) {
                     rc = vpx_codec_decode(vc->decoder, NULL, 0, NULL, VPX_DL_REALTIME);
                 }
+
+                // HINT: give feedback that we lost some bytes (its a average number)
+                bwc_add_lost_v3(bwc, 2000);
+                LOGGER_ERROR(vc->log, "BWC:lost:003");
 
                 pthread_mutex_unlock(vc->queue_mutex);
                 return 0;
@@ -330,6 +343,13 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
         // LOGGER_DEBUG(vc->log, "vc_iterate: rb_read rb size=%d", (int)rb_size((RingBuffer *)vc->vbuf_raw));
 
 #if 1
+
+        // HINT: give feedback that we lost some bytes
+        if (header_v3->received_length_full < full_data_len) {
+            bwc_add_lost_v3(bwc, (header_v3->received_length_full - full_data_len));
+            LOGGER_ERROR(vc->log, "BWC:lost:004");
+        }
+
 
         if ((int)data_type == (int)video_frame_type_KEYFRAME) {
             int percent_recvd = (int)(((float)header_v3->received_length_full / (float)full_data_len) * 100.0f);
@@ -407,12 +427,21 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
                              &ret_value);
         } else {
             // LOGGER_ERROR(vc->log, "DEC:H264------------");
+#ifdef RASPBERRY_PI_OMX
+            decode_frame_h264_omx_raspi(vc, m, skip_video_flag, a_r_timestamp,
+                                        a_l_timestamp,
+                                        v_r_timestamp, v_l_timestamp,
+                                        header_v3, p,
+                                        rc, full_data_len,
+                                        &ret_value);
+#else
             decode_frame_h264(vc, m, skip_video_flag, a_r_timestamp,
                               a_l_timestamp,
                               v_r_timestamp, v_l_timestamp,
                               header_v3, p,
                               rc, full_data_len,
                               &ret_value);
+#endif
         }
 
         return ret_value;
@@ -529,7 +558,11 @@ int vc_reconfigure_encoder(Logger *log, VCSession *vc, uint32_t bit_rate, uint16
     if (vc->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP8) {
         return vc_reconfigure_encoder_vpx(log, vc, bit_rate, width, height, kf_max_dist);
     } else {
+#ifdef RASPBERRY_PI_OMX
+        return vc_reconfigure_encoder_h264_omx_raspi(log, vc, bit_rate, width, height, kf_max_dist);
+#else
         return vc_reconfigure_encoder_h264(log, vc, bit_rate, width, height, kf_max_dist);
+#endif
     }
 }
 

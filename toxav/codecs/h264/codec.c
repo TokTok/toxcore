@@ -358,8 +358,7 @@ uint32_t encode_frame_h264(ToxAV *av, uint32_t friend_number, uint16_t width, ui
                            uint64_t *video_frame_record_timestamp,
                            int vpx_encode_flags,
                            x264_nal_t **nal,
-                           int *i_frame_size,
-                           TOXAV_ERR_SEND_FRAME *error)
+                           int *i_frame_size)
 {
 
     memcpy(call->video.second->h264_in_pic.img.plane[0], y, width * height);
@@ -408,6 +407,50 @@ uint32_t encode_frame_h264(ToxAV *av, uint32_t friend_number, uint16_t width, ui
     return 0;
 }
 
+uint32_t send_frames_h264(ToxAV *av, uint32_t friend_number, uint16_t width, uint16_t height,
+                          const uint8_t *y,
+                          const uint8_t *u, const uint8_t *v, ToxAVCall *call,
+                          uint64_t *video_frame_record_timestamp,
+                          int vpx_encode_flags,
+                          x264_nal_t **nal,
+                          int *i_frame_size,
+                          TOXAV_ERR_SEND_FRAME *rc)
+{
+
+    if (*i_frame_size > 0) {
+
+        // use the record timestamp that was actually used for this frame
+        *video_frame_record_timestamp = (uint64_t)call->video.second->h264_in_pic.i_pts;
+        const uint32_t frame_length_in_bytes = *i_frame_size;
+        const int keyframe = (int)call->video.second->h264_out_pic.b_keyframe;
+
+        int res = rtp_send_data
+                  (
+                      call->video.first,
+                      (const uint8_t *)((*nal)->p_payload),
+                      frame_length_in_bytes,
+                      keyframe,
+                      *video_frame_record_timestamp,
+                      (int32_t)0,
+                      TOXAV_ENCODER_CODEC_USED_H264,
+                      call->video_bit_rate,
+                      av->m->log
+                  );
+
+        (*video_frame_record_timestamp)++;
+
+        if (res < 0) {
+            LOGGER_WARNING(av->m->log, "Could not send video frame: %s", strerror(errno));
+            *rc = TOXAV_ERR_SEND_FRAME_RTP_FAILED;
+            return 1;
+        }
+
+        return 0;
+    } else {
+        *rc = TOXAV_ERR_SEND_FRAME_RTP_FAILED;
+        return 1;
+    }
+}
 
 void vc_kill_h264(VCSession *vc)
 {

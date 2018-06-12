@@ -980,8 +980,7 @@ uint32_t encode_frame_vpx(ToxAV *av, uint32_t friend_number, uint16_t width, uin
                           uint64_t *video_frame_record_timestamp,
                           int vpx_encode_flags,
                           x264_nal_t **nal,
-                          int *i_frame_size,
-                          TOXAV_ERR_SEND_FRAME *error)
+                          int *i_frame_size)
 {
 
     vpx_image_t img;
@@ -1023,6 +1022,73 @@ uint32_t encode_frame_vpx(ToxAV *av, uint32_t friend_number, uint16_t width, uin
 
 }
 
+uint32_t send_frames_vpx(ToxAV *av, uint32_t friend_number, uint16_t width, uint16_t height,
+                         const uint8_t *y,
+                         const uint8_t *u, const uint8_t *v, ToxAVCall *call,
+                         uint64_t *video_frame_record_timestamp,
+                         int vpx_encode_flags,
+                         x264_nal_t **nal,
+                         int *i_frame_size,
+                         TOXAV_ERR_SEND_FRAME *rc)
+{
+    vpx_codec_iter_t iter = NULL;
+    const vpx_codec_cx_pkt_t *pkt;
+
+    while ((pkt = vpx_codec_get_cx_data(call->video.second->encoder, &iter)) != NULL) {
+        if (pkt->kind == VPX_CODEC_CX_FRAME_PKT) {
+            const int keyframe = (pkt->data.frame.flags & VPX_FRAME_IS_KEY) != 0;
+
+            if (keyframe) {
+                call->video.second->last_sent_keyframe_ts = current_time_monotonic();
+            }
+
+            if ((pkt->data.frame.flags & VPX_FRAME_IS_FRAGMENT) != 0) {
+                LOGGER_DEBUG(av->m->log, "VPXENC:VPX_FRAME_IS_FRAGMENT:*yes* size=%lld pid=%d\n",
+                             (long long)pkt->data.frame.sz, (int)pkt->data.frame.partition_id);
+            } else {
+                LOGGER_DEBUG(av->m->log, "VPXENC:VPX_FRAME_IS_FRAGMENT:-no- size=%lld pid=%d\n",
+                             (long long)pkt->data.frame.sz, (int)pkt->data.frame.partition_id);
+            }
+
+            // use the record timestamp that was actually used for this frame
+            *video_frame_record_timestamp = (uint64_t)pkt->data.frame.pts;
+            // LOGGER_DEBUG(av->m->log, "video packet record time: %llu", *video_frame_record_timestamp);
+
+            // https://www.webmproject.org/docs/webm-sdk/structvpx__codec__cx__pkt.html
+            // pkt->data.frame.sz -> size_t
+            const uint32_t frame_length_in_bytes = pkt->data.frame.sz;
+
+
+            int res = rtp_send_data
+                      (
+                          call->video.first,
+                          (const uint8_t *)pkt->data.frame.buf,
+                          frame_length_in_bytes,
+                          keyframe,
+                          *video_frame_record_timestamp,
+                          (int32_t)pkt->data.frame.partition_id,
+                          TOXAV_ENCODER_CODEC_USED_VP8,
+                          call->video_bit_rate,
+                          av->m->log
+                      );
+
+            LOGGER_DEBUG(av->m->log, "+ _sending_FRAME_TYPE_==%s bytes=%d frame_len=%d", keyframe ? "K" : ".",
+                         (int)pkt->data.frame.sz, (int)frame_length_in_bytes);
+            LOGGER_DEBUG(av->m->log, "+ _sending_FRAME_ b0=%d b1=%d", ((const uint8_t *)pkt->data.frame.buf)[0] ,
+                         ((const uint8_t *)pkt->data.frame.buf)[1]);
+
+            (*video_frame_record_timestamp)++;
+
+            if (res < 0) {
+                LOGGER_WARNING(av->m->log, "Could not send video frame: %s", strerror(errno));
+                *rc = TOXAV_ERR_SEND_FRAME_RTP_FAILED;
+                return 1;
+            }
+        }
+    }
+
+    return 0;
+}
 
 
 void vc_kill_vpx(VCSession *vc)

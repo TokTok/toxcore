@@ -27,6 +27,8 @@
 #include "../toxcore/util.h"
 #include "../toxcore/Messenger.h"
 
+#include "bwcontroller.h"
+
 // for VPX ----------
 #include <vpx/vpx_decoder.h>
 #include <vpx/vpx_encoder.h>
@@ -203,7 +205,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
 void vc_kill(VCSession *vc);
 uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_t *a_r_timestamp,
                    uint64_t *a_l_timestamp,
-                   uint64_t *v_r_timestamp, uint64_t *v_l_timestamp);
+                   uint64_t *v_r_timestamp, uint64_t *v_l_timestamp, BWController *bwc);
 int vc_queue_message(void *vcp, struct RTPMessage *msg);
 int vc_reconfigure_encoder(Logger *log, VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height,
                            int16_t kf_max_dist);

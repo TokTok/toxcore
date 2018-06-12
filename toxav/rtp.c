@@ -410,8 +410,8 @@ static int handle_video_packet(RTPSession *session, const struct RTPHeader *head
         // get_slot just told us it's full, so process_frame must return non-null.
         assert(m_new != NULL);
 
-        LOGGER_DEBUG(log, "-- handle_video_packet -- CALLBACK-001a b0=%d b1=%d", (int)m_new->data[0], (int)m_new->data[1]);
-        update_bwc_values(log, session, m_new);
+        // LOGGER_DEBUG(log, "-- handle_video_packet -- CALLBACK-001a b0=%d b1=%d", (int)m_new->data[0], (int)m_new->data[1]);
+        //**// update_bwc_values(log, session, m_new);
         // Pass ownership of m_new to the callback.
         session->mcb(session->cs, m_new);
         // Now we no longer own m_new.
@@ -448,8 +448,8 @@ static int handle_video_packet(RTPSession *session, const struct RTPHeader *head
     struct RTPMessage *m_new = process_frame(log, session->work_buffer_list, slot_id);
 
     if (m_new) {
-        LOGGER_DEBUG(log, "-- handle_video_packet -- CALLBACK-003a b0=%d b1=%d", (int)m_new->data[0], (int)m_new->data[1]);
-        update_bwc_values(log, session, m_new);
+        // LOGGER_DEBUG(log, "-- handle_video_packet -- CALLBACK-003a b0=%d b1=%d", (int)m_new->data[0], (int)m_new->data[1]);
+        //**//update_bwc_values(log, session, m_new);
         session->mcb(session->cs, m_new);
 
         m_new = NULL;
