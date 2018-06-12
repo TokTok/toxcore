@@ -257,7 +257,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
             // HINT: give feedback that we lost some bytes (based on the size of this frame)
             bwc_add_lost_v3(bwc, (uint32_t)(header_v3_0->data_length_full * missing_frames_count));
-            LOGGER_ERROR(vc->log, "BWC:lost:002:missing count=%d", (int)missing_frames_count);
+            // LOGGER_ERROR(vc->log, "BWC:lost:002:missing count=%d", (int)missing_frames_count);
 
 
             if (missing_frames_count > 5) {
