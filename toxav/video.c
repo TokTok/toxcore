@@ -228,7 +228,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
             // HINT: give feedback that we lost some bytes
             bwc_add_lost_v3(bwc, header_v3_0->data_length_full);
-            LOGGER_ERROR(vc->log, "BWC:lost:001");
+            // LOGGER_ERROR(vc->log, "BWC:lost:001");
 
             if (vc->count_old_video_frames_seen > 6) {
                 // if we see more than 6 old video frames in a row, then either there was
@@ -299,7 +299,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
                 // HINT: give feedback that we lost some bytes (based on the size of this frame)
                 bwc_add_lost_v3(bwc, header_v3_0->data_length_full);
-                LOGGER_ERROR(vc->log, "BWC:lost:003");
+                // LOGGER_ERROR(vc->log, "BWC:lost:003");
 
                 pthread_mutex_unlock(vc->queue_mutex);
                 return 0;

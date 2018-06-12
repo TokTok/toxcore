@@ -1485,10 +1485,14 @@ void callback_bwc(BWController *bwc, uint32_t friend_number, float loss, void *u
             }
         }
 
-        // HINT: sanity check
+        // HINT: sanity check --------------
         if (call->video_bit_rate < VIDEO_BITRATE_MIN_AUTO_VALUE_H264) {
             call->video_bit_rate = VIDEO_BITRATE_MIN_AUTO_VALUE_H264;
+        } else if (call->video_bit_rate > VIDEO_BITRATE_MAX_AUTO_VALUE_H264) {
+            call->video_bit_rate = VIDEO_BITRATE_MAX_AUTO_VALUE_H264;
         }
+
+        // HINT: sanity check --------------
 
         pthread_mutex_unlock(call->av->mutex);
     } else {
@@ -1888,6 +1892,7 @@ bool call_prepare_transmission(ToxAVCall *call)
             goto FAILURE;
         }
     }
+
     { /* Prepare video */
         call->video.second = vc_new(av->m->log, av, call->friend_number, av->vcb.first, av->vcb.second);
 
