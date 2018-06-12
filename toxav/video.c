@@ -64,6 +64,11 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc->video_rc_min_quantizer_prev = vc->video_rc_min_quantizer;
     vc->video_encoder_coded_used = TOXAV_ENCODER_CODEC_USED_VP8; // DEBUG: H264 !!
     vc->video_encoder_coded_used_prev = vc->video_encoder_coded_used;
+#ifdef RASPBERRY_PI_OMX
+    vc->video_encoder_coded_used_hw_accel = TOXAV_ENCODER_CODEC_HW_ACCEL_OMX_PI;
+#else
+    vc->video_encoder_coded_used_hw_accel = TOXAV_ENCODER_CODEC_HW_ACCEL_NONE;
+#endif
     vc->video_keyframe_method = TOXAV_ENCODER_KF_METHOD_NORMAL;
     vc->video_keyframe_method_prev = vc->video_keyframe_method;
     vc->video_decoder_error_concealment = VIDEO__VP8_DECODER_ERROR_CONCEALMENT;
@@ -83,6 +88,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
         cmi = TOXAV_CALL_COMM_DECODER_IN_USE_VP8;
 
         if (vc->video_decoder_codec_used == TOXAV_ENCODER_CODEC_USED_H264) {
+            // don't the the friend if we have HW accel, since it would reveal HW and platform info
             cmi = TOXAV_CALL_COMM_DECODER_IN_USE_H264;
         }
 
@@ -92,7 +98,11 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
         cmi = TOXAV_CALL_COMM_ENCODER_IN_USE_VP8;
 
         if (vc->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_H264) {
-            cmi = TOXAV_CALL_COMM_ENCODER_IN_USE_H264;
+            if (vc->video_encoder_coded_used_hw_accel == TOXAV_ENCODER_CODEC_HW_ACCEL_OMX_PI) {
+                cmi = TOXAV_CALL_COMM_ENCODER_IN_USE_H264_OMX_PI;
+            } else {
+                cmi = TOXAV_CALL_COMM_ENCODER_IN_USE_H264;
+            }
         }
 
         av->call_comm_cb.first(av, friend_number, cmi, 0, av->call_comm_cb.second);
@@ -101,8 +111,12 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     // HINT: tell client what encoder and decoder are in use now -----------
 
     // HINT: initialize the H264 encoder
+
+
 #ifdef RASPBERRY_PI_OMX
+    LOGGER_WARNING(log, "OMX:002");
     vc = vc_new_h264_omx_raspi(log, av, friend_number, cb, cb_data, vc);
+    LOGGER_WARNING(log, "OMX:003");
 #else
     vc = vc_new_h264(log, av, friend_number, cb, cb_data, vc);
 #endif

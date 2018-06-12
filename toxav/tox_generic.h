@@ -43,6 +43,9 @@
 // H264 settings -----------
 
 
+#define TOXAV_ENCODER_CODEC_HW_ACCEL_NONE 0
+#define TOXAV_ENCODER_CODEC_HW_ACCEL_OMX_PI 1
+
 typedef struct ToxAVCall_s {
     ToxAV *av;
 

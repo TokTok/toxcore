@@ -185,6 +185,7 @@ typedef struct VCSession_s {
     int32_t video_keyframe_method;
     int32_t video_keyframe_method_prev;
     int32_t video_encoder_coded_used;
+    int32_t video_encoder_coded_used_hw_accel;
     int32_t video_encoder_coded_used_prev;
     int32_t video_decoder_error_concealment;
     int32_t video_decoder_error_concealment_prev;

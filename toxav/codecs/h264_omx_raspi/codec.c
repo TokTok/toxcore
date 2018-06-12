@@ -88,6 +88,10 @@
 static int frame_in = 0;
 static int frame_out = 0;
 
+static void shutdown_h264_omx_raspi_encoder(VCSession *vc);
+static void startup_h264_omx_raspi_encoder(VCSession *vc, uint16_t width, uint16_t height,
+        uint32_t bit_rate);
+
 // Hard coded parameters
 #define VIDEO_WIDTH                     640
 #define VIDEO_HEIGHT                    480
@@ -809,13 +813,14 @@ print_def(OMX_PARAM_PORTDEFINITIONTYPE def)
 // ---------------------------------
 
 
-static i420_frame_info frame_info, buf_info;
+static i420_frame_info frame_info;
+static i420_frame_info buf_info;
 
 
-VCSession *vc_new_h264_omx_raspi(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_receive_frame_cb *cb,
-                                 void *cb_data,
-                                 VCSession *vc)
+static void startup_h264_omx_raspi_encoder(VCSession *vc, uint16_t width, uint16_t height,
+        uint32_t bit_rate)
 {
+    LOGGER_WARNING(vc->log, "H264_OMX_PI:new");
 
     bcm_host_init();
 
@@ -845,6 +850,8 @@ VCSession *vc_new_h264_omx_raspi(Logger *log, ToxAV *av, uint32_t friend_number,
 
     init_component_handle("video_encode", &vc->omx_ctx->encoder, vc->omx_ctx, &callbacks);
 
+    LOGGER_ERROR(vc->log, "H264_OMX_PI:Configuring encoder...");
+
     say("Configuring encoder...");
 
     say("Default port definition for encoder input port 200");
@@ -860,8 +867,8 @@ VCSession *vc_new_h264_omx_raspi(Logger *log, ToxAV *av, uint32_t friend_number,
         omx_die(r, "Failed to get port definition for encoder input port 200");
     }
 
-    encoder_portdef.format.video.nFrameWidth  = VIDEO_WIDTH;
-    encoder_portdef.format.video.nFrameHeight = VIDEO_HEIGHT;
+    encoder_portdef.format.video.nFrameWidth  = width;
+    encoder_portdef.format.video.nFrameHeight = height;
     encoder_portdef.format.video.xFramerate   = VIDEO_FRAMERATE << 16;
     // Stolen from gstomxvideodec.c of gst-omx
     encoder_portdef.format.video.nStride      = (encoder_portdef.format.video.nFrameWidth + encoder_portdef.nBufferAlignment
@@ -884,7 +891,7 @@ VCSession *vc_new_h264_omx_raspi(Logger *log, ToxAV *av, uint32_t friend_number,
     encoder_portdef.format.video.eColorFormat = OMX_COLOR_FormatUnused;
     encoder_portdef.format.video.eCompressionFormat = OMX_VIDEO_CodingAVC;
     // Which one is effective, this or the configuration just below?
-    encoder_portdef.format.video.nBitrate     = VIDEO_BITRATE;
+    encoder_portdef.format.video.nBitrate     = bit_rate;
 
     if ((r = OMX_SetParameter(vc->omx_ctx->encoder, OMX_IndexParamPortDefinition, &encoder_portdef)) != OMX_ErrorNone) {
         omx_die(r, "Failed to set port definition for encoder output port 201");
@@ -992,10 +999,13 @@ VCSession *vc_new_h264_omx_raspi(Logger *log, ToxAV *av, uint32_t friend_number,
 
     say("vc_new_h264_omx finished!");
 
+}
 
-
-
-
+VCSession *vc_new_h264_omx_raspi(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_receive_frame_cb *cb,
+                                 void *cb_data,
+                                 VCSession *vc)
+{
+    startup_h264_omx_raspi_encoder(vc, VIDEO_WIDTH, VIDEO_HEIGHT, VIDEO_BITRATE);
     // ---------
 
 
@@ -1046,7 +1056,42 @@ int vc_reconfigure_encoder_h264_omx_raspi(Logger *log, VCSession *vc, uint32_t b
         uint16_t width, uint16_t height,
         int16_t kf_max_dist)
 {
-    return -1;
+
+    if (!vc) {
+        return -1;
+    }
+
+    if ((vc->h264_enc_width == width) &&
+            (vc->h264_enc_height == height) &&
+            (vc->h264_enc_bitrate != bit_rate) &&
+            (kf_max_dist != -2)) {
+        // only bit rate changed
+
+        // TODO: write me !!!!!!!!!!!!!!!
+
+        vc->h264_enc_bitrate = bit_rate;
+
+    } else {
+        if ((vc->h264_enc_width != width) ||
+                (vc->h264_enc_height != height) ||
+                (vc->h264_enc_bitrate != bit_rate) ||
+                (kf_max_dist == -2)
+           ) {
+            // input image size changed
+
+            vc->h264_enc_width = width;
+            vc->h264_enc_height = height;
+            vc->h264_enc_bitrate = bit_rate;
+
+
+            // full shutdown
+            shutdown_h264_omx_raspi_encoder(vc);
+            // startup again
+            startup_h264_omx_raspi_encoder(vc, width, height, bit_rate);
+        }
+    }
+
+    return 0;
 }
 
 void decode_frame_h264_omx_raspi(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_t *a_r_timestamp,
@@ -1153,51 +1198,59 @@ uint32_t encode_frame_h264_omx_raspi(ToxAV *av, uint32_t friend_number, uint16_t
                                      x264_nal_t **nal,
                                      int *i_frame_size)
 {
+    LOGGER_WARNING(av->m->log, "H264_OMX_PI:encode frame");
 
-    memcpy(call->video.second->h264_in_pic.img.plane[0], y, width * height);
-    memcpy(call->video.second->h264_in_pic.img.plane[1], u, (width / 2) * (height / 2));
-    memcpy(call->video.second->h264_in_pic.img.plane[2], v, (width / 2) * (height / 2));
+    // get sessions object ---
+    VCSession *vc = call->video.second;
+    // get sessions object ---
 
-    int i_nal;
+    OMX_ERRORTYPE r = 0;
+    struct OMXContext *ctx = vc->omx_ctx;
 
-    call->video.second->h264_in_pic.i_pts = (int64_t)(*video_frame_record_timestamp);
-    *i_frame_size = x264_encoder_encode(call->video.second->h264_encoder,
-                                        nal,
-                                        &i_nal,
-                                        &(call->video.second->h264_in_pic),
-                                        &(call->video.second->h264_out_pic));
+    LOGGER_WARNING(av->m->log, "!!! vc_encode_frame_h264_omx ctx=%p", ctx);
 
-    if (*i_frame_size < 0) {
-        // some error
-    } else if (*i_frame_size == 0) {
-        // zero size output
-    } else {
-        // *nal->p_payload --> outbuf
-        // *i_frame_size --> out size in bytes
+    // input buffer should be available with our synchronous scheme
+    assert(ctx->encoder_input_buffer_needed);
+    // output buffer should be empty
+    assert(!ctx->encoder_output_buffer_available);
 
-        // -- WARN -- : this could crash !! ----
-        // LOGGER_ERROR(av->m->log, "H264: i_frame_size=%d nal_buf=%p KF=%d\n",
-        //             (int)*i_frame_size,
-        //             (*nal)->p_payload,
-        //             (int)call->video.second->h264_out_pic.b_keyframe
-        //            );
-        // -- WARN -- : this could crash !! ----
+    // Dump new YUV frame into OMX
+    {
+        LOGGER_WARNING(av->m->log, "!!! sending new frame to omx\n");
+        //memset(ctx.encoder_ppBuffer_in->pBuffer, 0, ctx.encoder_ppBuffer_in->nAllocLen);
 
-    }
+        size_t input_total_read = 0;
 
-    if (*nal == NULL) {
-        //pthread_mutex_unlock(call->mutex_video);
-        //goto END;
-        return 1;
-    }
+        // Pack Y, U, and V plane spans read from input file to the buffer
+        const void *yuv[3] = {y, u, v};
+        int i;
 
-    if ((*nal)->p_payload == NULL) {
-        //pthread_mutex_unlock(call->mutex_video);
-        //goto END;
-        return 1;
+        for (i = 0; i < 3; i++) {
+
+            int plane_span_y = ROUND_UP_2(height);
+            int plane_span_uv = plane_span_y / 2;
+            int want_read = frame_info.p_stride[i] * (i == 0 ? plane_span_y : plane_span_uv);
+
+            memcpy(
+                ctx->encoder_ppBuffer_in->pBuffer + buf_info.p_offset[i],
+                yuv[i],
+                want_read);
+
+            input_total_read += want_read;
+        }
+
+        ctx->encoder_ppBuffer_in->nOffset = 0;
+        ctx->encoder_ppBuffer_in->nFilledLen = (buf_info.size - frame_info.size) + input_total_read;
+
+        ctx->encoder_input_buffer_needed = 0;
+
+        if ((r = OMX_EmptyThisBuffer(ctx->encoder, ctx->encoder_ppBuffer_in)) != OMX_ErrorNone) {
+            omx_die(r, "Failed to request emptying of the input buffer on encoder input port 200");
+        }
     }
 
     return 0;
+
 }
 
 uint32_t send_frames_h264_omx_raspi(ToxAV *av, uint32_t friend_number, uint16_t width, uint16_t height,
@@ -1209,19 +1262,68 @@ uint32_t send_frames_h264_omx_raspi(ToxAV *av, uint32_t friend_number, uint16_t 
                                     int *i_frame_size,
                                     TOXAV_ERR_SEND_FRAME *rc)
 {
+    LOGGER_WARNING(av->m->log, "H264_OMX_PI:send frames");
 
-    if (*i_frame_size > 0) {
+    // get sessions object ---
+    VCSession *vc = call->video.second;
+    // get sessions object ---
 
-        // use the record timestamp that was actually used for this frame
-        *video_frame_record_timestamp = (uint64_t)call->video.second->h264_in_pic.i_pts;
-        const uint32_t frame_length_in_bytes = *i_frame_size;
-        const int keyframe = (int)call->video.second->h264_out_pic.b_keyframe;
+    OMX_ERRORTYPE r = 0;
+    struct OMXContext *ctx = vc->omx_ctx;
+
+    bool wait_for_eof = true;
+
+    while (wait_for_eof) {
+        // Request a new buffer form the encoder
+        if ((r = OMX_FillThisBuffer(ctx->encoder, ctx->encoder_ppBuffer_out)) != OMX_ErrorNone) {
+            omx_die(r, "Failed to request filling of the output buffer on encoder output port 201");
+        }
+
+        bool wait_for_buffer = true;
+
+        while (wait_for_buffer) {
+            vcos_semaphore_wait(&ctx->handler_lock);
+            wait_for_buffer = !ctx->encoder_output_buffer_available;
+            vcos_semaphore_post(&ctx->handler_lock);
+
+            if (wait_for_buffer) {
+                usleep(10);
+            } else {
+                ctx->encoder_output_buffer_available = 0;
+            }
+        }
+
+        if (ctx->encoder_ppBuffer_out->nFlags & OMX_BUFFERFLAG_ENDOFFRAME) {
+            wait_for_eof = false;
+        }
+
+        // TODO: use the record timestamp that was actually used for this frame
+        *video_frame_record_timestamp = current_time_monotonic();
+
+        const int keyframe = ctx->encoder_ppBuffer_out->nFlags & OMX_BUFFERFLAG_SYNCFRAME;
+        const int spspps = ctx->encoder_ppBuffer_out->nFlags & OMX_BUFFERFLAG_CODECCONFIG;
+        const int eof  = ctx->encoder_ppBuffer_out->nFlags & OMX_BUFFERFLAG_ENDOFFRAME;
+        size_t frame_bytes = ctx->encoder_ppBuffer_out->nFilledLen;
+
+        LOGGER_WARNING(av->m->log, "!   omx h264 packet: keyframe=%d sps/pps=%d eof=%d size=%d\n", keyframe, spspps, eof,
+                       frame_bytes);
+        LOGGER_WARNING(av->m->log, "H264_OMX_PI:packet");
+
+
+        // prepend a faked Annex-B header
+        uint8_t *buf = malloc(frame_bytes + 4);
+        memcpy(buf + 4, ctx->encoder_ppBuffer_out->pBuffer + ctx->encoder_ppBuffer_out->nOffset, frame_bytes);
+
+        buf[0] = 0;
+        buf[1] = 0;
+        buf[2] = 0;
+        buf[3] = 1;
 
         int res = rtp_send_data
                   (
                       call->video.first,
-                      (const uint8_t *)((*nal)->p_payload),
-                      frame_length_in_bytes,
+                      (const uint8_t *)buf,
+                      (uint32_t)frame_bytes + 4,
                       keyframe,
                       *video_frame_record_timestamp,
                       (int32_t)0,
@@ -1230,31 +1332,28 @@ uint32_t send_frames_h264_omx_raspi(ToxAV *av, uint32_t friend_number, uint16_t 
                       av->m->log
                   );
 
-        (*video_frame_record_timestamp)++;
+        free(buf);
 
         if (res < 0) {
             LOGGER_WARNING(av->m->log, "Could not send video frame: %s", strerror(errno));
             *rc = TOXAV_ERR_SEND_FRAME_RTP_FAILED;
             return 1;
         }
-
-        return 0;
-    } else {
-        *rc = TOXAV_ERR_SEND_FRAME_RTP_FAILED;
-        return 1;
     }
+
+    return 0;
 }
 
-void vc_kill_h264_omx_raspi(VCSession *vc)
+static void shutdown_h264_omx_raspi_encoder(VCSession *vc)
 {
+    //**// vc->omx_ctx->encoder_input_buffer_needed = 0;
 
     struct OMXContext ctx;
     memcpy(&ctx, vc->omx_ctx, sizeof(struct OMXContext));
 
-
     OMX_ERRORTYPE r;
 
-    say("Cleaning up...");
+    LOGGER_WARNING(vc->log, "H264_OMX_PI:kill");
 
     // Flush the buffers on each component
     if ((r = OMX_SendCommand(ctx.encoder, OMX_CommandFlush, 200, NULL)) != OMX_ErrorNone) {
@@ -1314,9 +1413,12 @@ void vc_kill_h264_omx_raspi(VCSession *vc)
     if ((r = OMX_Deinit()) != OMX_ErrorNone) {
         omx_die(r, "OMX de-initalization failed");
     }
+}
 
-    say("Exit!");
 
+void vc_kill_h264_omx_raspi(VCSession *vc)
+{
+    shutdown_h264_omx_raspi_encoder(vc);
 
     // -- DECODER --
     avcodec_free_context(&vc->h264_decoder);

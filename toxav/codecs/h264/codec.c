@@ -67,7 +67,7 @@ VCSession *vc_new_h264(Logger *log, ToxAV *av, uint32_t friend_number, toxav_vid
     vc->h264_enc_bitrate = VIDEO_BITRATE_INITIAL_VALUE_H264 * 1000;
 
     param.rc.b_stat_read = 0;
-    param.rc.b_stat_write = 1;
+    param.rc.b_stat_write = 0;
     x264_param_apply_fastfirstpass(&param);
 
     /* Apply profile restrictions. */
@@ -214,7 +214,7 @@ int vc_reconfigure_encoder_h264(Logger *log, VCSession *vc, uint32_t bit_rate,
             vc->h264_enc_bitrate = bit_rate;
 
             param.rc.b_stat_read = 0;
-            param.rc.b_stat_write = 1;
+            param.rc.b_stat_write = 0;
             x264_param_apply_fastfirstpass(&param);
 
             /* Apply profile restrictions. */
