@@ -1198,7 +1198,7 @@ uint32_t encode_frame_h264_omx_raspi(ToxAV *av, uint32_t friend_number, uint16_t
                                      x264_nal_t **nal,
                                      int *i_frame_size)
 {
-    LOGGER_WARNING(av->m->log, "H264_OMX_PI:encode frame");
+    // LOGGER_WARNING(av->m->log, "H264_OMX_PI:encode frame");
 
     // get sessions object ---
     VCSession *vc = call->video.second;
@@ -1207,7 +1207,7 @@ uint32_t encode_frame_h264_omx_raspi(ToxAV *av, uint32_t friend_number, uint16_t
     OMX_ERRORTYPE r = 0;
     struct OMXContext *ctx = vc->omx_ctx;
 
-    LOGGER_WARNING(av->m->log, "!!! vc_encode_frame_h264_omx ctx=%p", ctx);
+    // LOGGER_WARNING(av->m->log, "!!! vc_encode_frame_h264_omx ctx=%p", ctx);
 
     // input buffer should be available with our synchronous scheme
     assert(ctx->encoder_input_buffer_needed);
@@ -1216,7 +1216,7 @@ uint32_t encode_frame_h264_omx_raspi(ToxAV *av, uint32_t friend_number, uint16_t
 
     // Dump new YUV frame into OMX
     {
-        LOGGER_WARNING(av->m->log, "!!! sending new frame to omx\n");
+        // LOGGER_WARNING(av->m->log, "!!! sending new frame to omx\n");
         //memset(ctx.encoder_ppBuffer_in->pBuffer, 0, ctx.encoder_ppBuffer_in->nAllocLen);
 
         size_t input_total_read = 0;
@@ -1262,7 +1262,7 @@ uint32_t send_frames_h264_omx_raspi(ToxAV *av, uint32_t friend_number, uint16_t 
                                     int *i_frame_size,
                                     TOXAV_ERR_SEND_FRAME *rc)
 {
-    LOGGER_WARNING(av->m->log, "H264_OMX_PI:send frames");
+    // LOGGER_WARNING(av->m->log, "H264_OMX_PI:send frames");
 
     // get sessions object ---
     VCSession *vc = call->video.second;
@@ -1305,9 +1305,9 @@ uint32_t send_frames_h264_omx_raspi(ToxAV *av, uint32_t friend_number, uint16_t 
         const int eof  = ctx->encoder_ppBuffer_out->nFlags & OMX_BUFFERFLAG_ENDOFFRAME;
         size_t frame_bytes = ctx->encoder_ppBuffer_out->nFilledLen;
 
-        LOGGER_WARNING(av->m->log, "!   omx h264 packet: keyframe=%d sps/pps=%d eof=%d size=%d\n", keyframe, spspps, eof,
-                       frame_bytes);
-        LOGGER_WARNING(av->m->log, "H264_OMX_PI:packet");
+        //LOGGER_WARNING(av->m->log, "!   omx h264 packet: keyframe=%d sps/pps=%d eof=%d size=%d\n", keyframe, spspps, eof,
+        //               frame_bytes);
+        // LOGGER_WARNING(av->m->log, "H264_OMX_PI:packet");
 
 
         // prepend a faked Annex-B header
@@ -1425,4 +1425,37 @@ void vc_kill_h264_omx_raspi(VCSession *vc)
 
 }
 
+void vc_restart_h264_decoder(VCSession *vc, Logger *log)
+{
+    // -- SHUTDOWN --
+    avcodec_free_context(&vc->h264_decoder);
+    
+    // -- STARTUP --
+
+    AVCodec *codec;
+    vc->h264_decoder = NULL;
+
+    avcodec_register_all();
+
+    codec = avcodec_find_decoder(AV_CODEC_ID_H264);
+
+    if (!codec) {
+        LOGGER_WARNING(log, "codec not found H264 on decoder");
+    }
+
+    vc->h264_decoder = avcodec_alloc_context3(codec);
+
+    if (codec->capabilities & CODEC_CAP_TRUNCATED) {
+        vc->h264_decoder->flags |= CODEC_FLAG_TRUNCATED; /* we do not send complete frames */
+    }
+
+    vc->h264_decoder->refcounted_frames = 0;
+
+    if (avcodec_open2(vc->h264_decoder, codec, NULL) < 0) {
+        LOGGER_WARNING(log, "could not open codec H264 on decoder");
+    }
+
+    vc->h264_decoder->refcounted_frames = 0;
+
+}
 
