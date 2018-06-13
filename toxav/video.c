@@ -417,11 +417,9 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 #endif
 
 
-
-
-        LOGGER_ERROR(vc->log, "h264_encoded_video_frame=%d vc->video_decoder_codec_used=%d", 
-                    (int)h264_encoded_video_frame,
-                    (int)vc->video_decoder_codec_used);
+        // LOGGER_ERROR(vc->log, "h264_encoded_video_frame=%d vc->video_decoder_codec_used=%d",
+        //             (int)h264_encoded_video_frame,
+        //             (int)vc->video_decoder_codec_used);
 
         if ((vc->video_decoder_codec_used != TOXAV_ENCODER_CODEC_USED_H264)
                 && (h264_encoded_video_frame == 1)) {
@@ -435,18 +433,9 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
             // video_switch_decoder(vc, TOXAV_ENCODER_CODEC_USED_VP8);
         }
 
-        if (header_v3_0->sequnum < 20)
-        {
-            if (vc->video_decoder_codec_used == TOXAV_ENCODER_CODEC_USED_H264)
-            {
-                LOGGER_ERROR(vc->log, "h264:restart_decode:%d", (int)header_v3_0->sequnum);
-                vc_restart_h264_decoder(vc, vc->log);
-            }
-        }
-
 
         if (vc->video_decoder_codec_used != TOXAV_ENCODER_CODEC_USED_H264) {
-            LOGGER_ERROR(vc->log, "DEC:VP8------------");
+            // LOGGER_ERROR(vc->log, "DEC:VP8------------");
             decode_frame_vpx(vc, m, skip_video_flag, a_r_timestamp,
                              a_l_timestamp,
                              v_r_timestamp, v_l_timestamp,
@@ -454,7 +443,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
                              rc, full_data_len,
                              &ret_value);
         } else {
-            LOGGER_ERROR(vc->log, "DEC:H264------------");
+            // LOGGER_ERROR(vc->log, "DEC:H264------------");
 #ifdef RASPBERRY_PI_OMX
             decode_frame_h264_omx_raspi(vc, m, skip_video_flag, a_r_timestamp,
                                         a_l_timestamp,
