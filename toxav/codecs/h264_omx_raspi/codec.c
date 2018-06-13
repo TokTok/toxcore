@@ -918,6 +918,18 @@ static void startup_h264_omx_raspi_encoder(VCSession *vc, uint16_t width, uint16
         omx_die(r, "Failed to set video format for encoder output port 201");
     }
 
+#ifdef RASPBERRY_PI_OMX
+    // Configure Intra Frame Period via Broadcom Extension
+    OMX_PARAM_U32TYPE intra_period;
+    OMX_INIT_STRUCTURE(intra_period);
+    bitrate.nPortIndex = 201;
+    bitrate.nU32 = 50; // Refresh every 50th frame
+
+    if ((r = OMX_SetParameter(vc->omx_ctx->encoder, OMX_IndexConfigBrcmVideoIntraPeriod, &intra_period)) != OMX_ErrorNone) {
+        omx_die(r, "Failed to set intra frame refresh period for encoder output port 201");
+    }
+#endif
+
     // Switch components to idle state
     say("Switching state of the encoder component to idle...");
 
