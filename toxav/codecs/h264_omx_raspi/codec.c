@@ -1068,6 +1068,18 @@ int vc_reconfigure_encoder_h264_omx_raspi(Logger *log, VCSession *vc, uint32_t b
         // only bit rate changed
 
         // TODO: write me !!!!!!!!!!!!!!!
+        LOGGER_ERROR(log, "OMX set bitrate to %d", bit_rate);
+
+        // Configure bitrate
+        OMX_VIDEO_CONFIG_BITRATETYPE bitrate;
+        OMX_INIT_STRUCTURE(bitrate);
+        bitrate.nPortIndex = 201;
+        bitrate.nEncodeBitrate = bit_rate;
+
+        int r;
+        if ((r = OMX_SetParameter(vc->omx_ctx->encoder, OMX_IndexConfigVideoBitrate, &bitrate)) != OMX_ErrorNone) {
+            omx_die(r, "Failed to set bitrate for encoder output port 201");
+        }
 
         vc->h264_enc_bitrate = bit_rate;
 
