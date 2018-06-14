@@ -996,7 +996,7 @@ Networking_Core *new_networking_ex(Logger *log, IP ip, uint16_t port_from, uint1
     return nullptr;
 }
 
-Networking_Core *new_networking_no_udp(Logger *log)
+Networking_Core *new_networking_no_udp(Logger *log, IP ip)
 {
     /* this is the easiest way to completely disable UDP without changing too much code. */
     Networking_Core *net = (Networking_Core *)calloc(1, sizeof(Networking_Core));
@@ -1005,7 +1005,13 @@ Networking_Core *new_networking_no_udp(Logger *log)
         return nullptr;
     }
 
+    if (ip.family != TOX_AF_INET && ip.family != TOX_AF_INET6) {
+        LOGGER_ERROR(log, "Invalid address family: %u\n", ip.family);
+        return nullptr;
+    }
+
     net->log = log;
+    net->family = ip.family;
 
     return net;
 }

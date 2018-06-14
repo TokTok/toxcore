@@ -1993,11 +1993,12 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
 
     unsigned int net_err = 0;
 
+    IP ip;
+    ip_init(&ip, options->ipv6enabled);
+
     if (options->udp_disabled) {
-        m->net = new_networking_no_udp(m->log);
+        m->net = new_networking_no_udp(m->log, ip);
     } else {
-        IP ip;
-        ip_init(&ip, options->ipv6enabled);
         m->net = new_networking_ex(m->log, ip, options->port_range[0], options->port_range[1], &net_err);
     }
 
