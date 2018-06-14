@@ -961,6 +961,11 @@ typedef enum TOX_CONNECTION {
      * particular friend was built using direct UDP packets.
      */
     TOX_CONNECTION_UDP,
+    
+    /**
+     * For a friend, this means that friend is offline
+     */
+    TOX_CONNECTION_UNKNOWN,
 
 } TOX_CONNECTION;
 
