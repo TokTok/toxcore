@@ -348,10 +348,10 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
         if (header_v3->flags & RTP_LARGE_FRAME) {
             full_data_len = header_v3->data_length_full;
-            LOGGER_ERROR(vc->log, "vc_iterate:001:full_data_len=%d", (int)full_data_len);
+            // LOGGER_ERROR(vc->log, "vc_iterate:001:full_data_len=%d", (int)full_data_len);
         } else {
             full_data_len = p->len;
-            LOGGER_DEBUG(vc->log, "vc_iterate:002");
+            // LOGGER_DEBUG(vc->log, "vc_iterate:002");
         }
 
         // LOGGER_DEBUG(vc->log, "vc_iterate: rb_read p->len=%d data_type=%d", (int)full_data_len, (int)data_type);

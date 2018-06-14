@@ -1169,13 +1169,17 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         call->video_bit_rate_last_last_changed = call->video_bit_rate;
     }
 
-
     int vpx_encode_flags = 0;
     unsigned long max_encode_time_in_us = MAX_ENCODE_TIME_US;
 
+    int h264_iframe_factor = 1;
+
+    if (call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_H264) {
+        h264_iframe_factor = 4;
+    }
 
     if (call->video.second->video_keyframe_method == TOXAV_ENCODER_KF_METHOD_NORMAL) {
-        if (call->video.first->ssrc < VIDEO_SEND_X_KEYFRAMES_FIRST) {
+        if (call->video.first->ssrc < (VIDEO_SEND_X_KEYFRAMES_FIRST * h264_iframe_factor)) {
 
             if (call->video.second->video_encoder_coded_used != TOXAV_ENCODER_CODEC_USED_VP9) {
                 // Key frame flag for first frames
@@ -1191,20 +1195,13 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
                 // LOGGER_ERROR(av->m->log, "I_FRAME_FLAG:%d only-i-frame mode", call->video.first->ssrc);
             }
 
-#if 0
-
-            if (call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_H264) {
-                // HINT: don't know yet how else to force real I-Frames on H264
-                vc_reconfigure_encoder(av->m->log, call->video.second,
-                                       call->video_bit_rate * 1000,
-                                       width, height, -2);
-                // LOGGER_ERROR(av->m->log, "I_FRAME_FLAG:%d only-i-frame mode", call->video.first->ssrc);
-            }
-
+#ifdef RASPBERRY_PI_OMX
+            LOGGER_ERROR(av->m->log, "H264: force i-frame");
+            h264_omx_raspi_force_i_frame(av->m->log, call->video.second);
 #endif
 
             call->video.first->ssrc++;
-        } else if (call->video.first->ssrc == VIDEO_SEND_X_KEYFRAMES_FIRST) {
+        } else if (call->video.first->ssrc == (VIDEO_SEND_X_KEYFRAMES_FIRST * h264_iframe_factor)) {
             if (call->video.second->video_encoder_coded_used != TOXAV_ENCODER_CODEC_USED_VP9) {
                 // normal keyframe placement
                 vpx_encode_flags = 0;

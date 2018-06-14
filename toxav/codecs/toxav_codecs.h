@@ -158,6 +158,8 @@ uint32_t send_frames_h264_omx_raspi(ToxAV *av, uint32_t friend_number, uint16_t 
                                     int *i_frame_size,
                                     TOXAV_ERR_SEND_FRAME *rc);
 
+void h264_omx_raspi_force_i_frame(Logger *log, VCSession *vc);
+
 void vc_kill_h264_omx_raspi(VCSession *vc);
 
 
