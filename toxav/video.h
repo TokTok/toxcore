@@ -157,6 +157,7 @@ typedef struct VCSession_s {
     uint64_t linfts; /* Last received frame time stamp */
     uint32_t lcfd; /* Last calculated frame duration for incoming video payload */
 
+    uint8_t show_own_video;
     uint64_t last_decoded_frame_ts;
     uint64_t last_encoded_frame_ts;
     uint8_t  flag_end_video_fragment;

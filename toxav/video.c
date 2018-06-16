@@ -74,6 +74,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc->video_decoder_error_concealment = VIDEO__VP8_DECODER_ERROR_CONCEALMENT;
     vc->video_decoder_error_concealment_prev = vc->video_decoder_error_concealment;
     vc->video_decoder_codec_used = TOXAV_ENCODER_CODEC_USED_VP8; // DEBUG: H264 !!
+    vc->show_own_video = 1; // DEBUG: 0 !!
     // options ---
 
 
@@ -526,8 +527,14 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
             vc->incoming_video_bitrate_last_changed = header->encoder_bit_rate_used;
         }
 
-        // LOGGER_WARNING(vc->log, "rb_write msg->len=%d b0=%d b1=%d rb_size=%d", (int)msg->len, (int)msg->data[0], (int)msg->data[1], (int)rb_size((RingBuffer *)vc->vbuf_raw));
-        free(rb_write((RingBuffer *)vc->vbuf_raw, msg, (uint64_t)header->flags));
+        if (vc->show_own_video == 0) {
+            free(rb_write((RingBuffer *)vc->vbuf_raw, msg, (uint64_t)header->flags));
+        } else {
+            // discard incoming frame, we want to see our outgoing frames instead
+            if (msg) {
+                free(msg);
+            }
+        }
     } else {
         free(rb_write((RingBuffer *)vc->vbuf_raw, msg, 0));
     }
