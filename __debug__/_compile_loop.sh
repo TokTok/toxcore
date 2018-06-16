@@ -1,7 +1,7 @@
 #! /bin/bash
 
 
-cd
+cd # goto current users home directory
 
 
 
@@ -37,6 +37,14 @@ export ASAN=0
 
 export _HOME_=$(pwd)
 echo $_HOME_
+
+
+if [ "$FULL""x" == "1x" ]; then
+    # check out TBW aswell
+    cd $_HOME_
+    git clone https://github.com/zoff99/ToxBlinkenwall
+fi
+
 cd $_HOME_/ToxBlinkenwall/toxblinkenwall/
 
 ./initscript.sh stop
