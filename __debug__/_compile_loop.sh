@@ -32,7 +32,14 @@ export CF2=" -O3 -g -marm -march=armv8-a+crc -mtune=cortex-a53 -mfpu=neon-fp-arm
 export CF3=" -funsafe-math-optimizations "
 export VV1=" VERBOSE=1 V=1 "
 
+## ---- settings ----
+## ---- settings ----
 export FULL=1
+export FASTER=0
+## ---- settings ----
+## ---- settings ----
+
+
 export ASAN=0
 
 export _HOME_=$(pwd)
@@ -172,15 +179,19 @@ else
     cd c-toxcore
 fi
 
-./autogen.sh
-
 
 export CFLAGS=" $CF2 -D_GNU_SOURCE -I$_INST_/include/ -O3 -g -fstack-protector-all "
 export LDFLAGS=-L$_INST_/lib
-./configure \
---prefix=$_INST_ \
---disable-soname-versions --disable-testing --disable-shared --enable-raspi
-make clean
+
+if [ "$FASTER""x" == "0x" ]; then
+    ./autogen.sh
+
+    ./configure \
+    --prefix=$_INST_ \
+    --disable-soname-versions --disable-testing --disable-shared --enable-raspi
+    make clean
+fi
+
 make -j 4 && make install
 res=$?
 
