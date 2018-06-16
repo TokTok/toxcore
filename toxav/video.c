@@ -74,6 +74,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc->video_decoder_error_concealment = VIDEO__VP8_DECODER_ERROR_CONCEALMENT;
     vc->video_decoder_error_concealment_prev = vc->video_decoder_error_concealment;
     vc->video_decoder_codec_used = TOXAV_ENCODER_CODEC_USED_VP8; // DEBUG: H264 !!
+    vc->h264_video_capabilities_received = 0; // DEBUG: set to zero (0) !!
     vc->show_own_video = 0; // DEBUG: set to zero (0) !!
     // options ---
 
