@@ -171,12 +171,12 @@ git checkout zoff99/toxcore_v1.0.10__toxav_h264_001
 ./autogen.sh
 
 
-make clean
 export CFLAGS=" $CF2 -D_GNU_SOURCE -I$_INST_/include/ -O3 -g -fstack-protector-all "
 export LDFLAGS=-L$_INST_/lib
 ./configure \
 --prefix=$_INST_ \
 --disable-soname-versions --disable-testing --disable-shared --enable-raspi
+make clean
 make -j 4 && make install
 res=$?
 
