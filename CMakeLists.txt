@@ -30,7 +30,7 @@ set(CMAKE_MODULE_PATH ${toxcore_SOURCE_DIR}/cmake)
 # versions in a synchronised way.
 set(PROJECT_VERSION_MAJOR "0")
 set(PROJECT_VERSION_MINOR "2")
-set(PROJECT_VERSION_PATCH "1")
+set(PROJECT_VERSION_PATCH "2")
 set(PROJECT_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
 
 # set .so library version / following libtool scheme
@@ -62,6 +62,18 @@ if(APPLE)
   include(MacRpath)
 endif()
 
+if(UNIX)
+    if(CMAKE_SYSTEM_NAME MATCHES ".*Linux")
+        set(LINUX TRUE)
+    elseif(CMAKE_SYSTEM_NAME MATCHES "kOpenBSD.*|OpenBSD.*")
+        set(OPENBSD TRUE)
+    elseif(CMAKE_SYSTEM_NAME MATCHES "kNetBSD.*|NetBSD.*")
+        set(NETBSD TRUE)
+    elseif(CMAKE_SYSTEM_NAME MATCHES "kFreeBSD.*|FreeBSD")
+        set(FREEBSD TRUE)
+    endif()
+endif()
+
 enable_testing()
 
 set(CMAKE_MACOSX_RPATH ON)
@@ -89,6 +101,12 @@ if(NOT MSVC)
     add_flag("-Werror")
   endif()
 
+  option(COVERAGE "Track code coverage" OFF)
+  if(COVERAGE)
+    add_flag("-fprofile-instr-generate")
+    add_flag("-fcoverage-mapping")
+  endif()
+
   option(DEBUG "Enable assertions and other debugging facilities" OFF)
   if(DEBUG)
     set(MIN_LOGGER_LEVEL DEBUG)
@@ -97,6 +115,8 @@ if(NOT MSVC)
       # Allows wine to display source code file names and line numbers on crash in its backtrace
       add_flag("-gdwarf-2")
     endif()
+    # Crash on signed integer overflow.
+    add_flag("-ftrapv")
   endif()
 
   option(WARNINGS "Enable additional compiler warnings" ON)
@@ -178,12 +198,21 @@ if(ASAN)
 else()
   # Forbid undefined symbols in shared libraries. This is incompatible with
   # asan, so it's in the else branch here.
-  add_dllflag("-Wl,-z,defs")
+  if(LINUX)
+    add_dllflag("-Wl,-z,defs")
+  else()
+    add_dllflag("-undefined error")
+  endif()
 endif()
 
 option(USE_IPV6 "Use IPv6 in tests" ON)
 if(NOT USE_IPV6)
   add_definitions(-DUSE_IPV6=0)
+endif()
+
+option(USE_STDERR_LOGGER "Enable logging to stderr when the logger is NULL" OFF)
+if(USE_STDERR_LOGGER)
+  add_definitions(-DUSE_STDERR_LOGGER=1)
 endif()
 
 option(BUILD_TOXAV "Whether to build the tox AV library" ON)
@@ -457,6 +486,7 @@ function(auto_test target)
     if(NOT ARGV1 STREQUAL "DONT_RUN")
       add_test(NAME ${target} COMMAND ${CROSSCOMPILING_EMULATOR} auto_${target}_test)
       set_tests_properties(${target} PROPERTIES TIMEOUT "${TEST_TIMEOUT_SECONDS}")
+      set_property(TEST ${target} PROPERTY ENVIRONMENT "LLVM_PROFILE_FILE=${target}.profraw")
     endif()
   endif()
 endfunction()
@@ -528,7 +558,10 @@ if(BOOTSTRAP_DAEMON AND WIN32)
   set(BOOTSTRAP_DAEMON OFF)
 endif()
 if(BOOTSTRAP_DAEMON)
-  if(LIBCONFIG_FOUND)
+  if(NOT LIBCONFIG_FOUND)
+    message(WARNING "Option BOOTSTRAP_DAEMON is enabled but required library LIBCONFIG was not found.")
+    set(BOOTSTRAP_DAEMON OFF)
+  else()
     add_executable(tox-bootstrapd ${CPUFEATURES}
       other/bootstrap_daemon/src/command_line_arguments.c
       other/bootstrap_daemon/src/command_line_arguments.h

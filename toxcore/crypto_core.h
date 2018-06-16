@@ -25,8 +25,8 @@
 #define CRYPTO_CORE_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
-#include <stdlib.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -125,6 +125,11 @@ void crypto_sha512(uint8_t *hash, const uint8_t *data, size_t length);
  * @return 0 if both mem locations of length are equal, -1 if they are not.
  */
 int32_t public_key_cmp(const uint8_t *pk1, const uint8_t *pk2);
+
+/**
+ * Return a random 8 bit integer.
+ */
+uint8_t random_u08(void);
 
 /**
  * Return a random 16 bit integer.

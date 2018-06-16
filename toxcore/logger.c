@@ -27,9 +27,11 @@
 
 #include "logger.h"
 
+#include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 
 struct Logger {
@@ -38,6 +40,42 @@ struct Logger {
     void *userdata;
 };
 
+#ifdef USE_STDERR_LOGGER
+static const char *logger_level_name(LOGGER_LEVEL level)
+{
+    switch (level) {
+        case LOG_TRACE:
+            return "TRACE";
+
+        case LOG_DEBUG:
+            return "DEBUG";
+
+        case LOG_INFO:
+            return "INFO";
+
+        case LOG_WARNING:
+            return "WARNING";
+
+        case LOG_ERROR:
+            return "ERROR";
+    }
+
+    return "<unknown>";
+}
+
+static void logger_stderr_handler(void *context, LOGGER_LEVEL level, const char *file, int line, const char *func,
+                                  const char *message, void *userdata)
+{
+    // GL stands for "global logger".
+    fprintf(stderr, "[GL] %s %s:%d(%s): %s\n", logger_level_name(level), file, line, func, message);
+}
+
+static const Logger logger_stderr = {
+    logger_stderr_handler,
+    nullptr,
+    nullptr,
+};
+#endif
 
 /**
  * Public Functions
@@ -59,14 +97,34 @@ void logger_callback_log(Logger *log, logger_cb *function, void *context, void *
     log->userdata = userdata;
 }
 
-void logger_write(Logger *log, LOGGER_LEVEL level, const char *file, int line, const char *func, const char *format,
-                  ...)
+void logger_write(const Logger *log, LOGGER_LEVEL level, const char *file, int line, const char *func,
+                  const char *format, ...)
 {
-    if (!log || !log->callback) {
+    if (!log) {
+#ifdef USE_STDERR_LOGGER
+        log = &logger_stderr;
+#else
+        assert(!"NULL logger not permitted");
+#endif
+    }
+
+    if (!log->callback) {
         return;
     }
 
-    /* Format message */
+    // Only pass the file name, not the entire file path, for privacy reasons.
+    // The full path may contain PII of the person compiling toxcore (their
+    // username and directory layout).
+    const char *filename = strrchr(file, '/');
+    file = filename ? filename + 1 : file;
+#if defined(_WIN32) || defined(__CYGWIN__)
+    // On Windows, the path separator *may* be a backslash, so we look for that
+    // one too.
+    const char *windows_filename = strrchr(file, '\\');
+    file = windows_filename ? windows_filename + 1 : file;
+#endif
+
+    // Format message
     char msg[1024];
     va_list args;
     va_start(args, format);

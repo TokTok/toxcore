@@ -3,7 +3,7 @@
  */
 
 /*
- * Copyright © 2016-2017 The TokTok team.
+ * Copyright © 2016-2018 The TokTok team.
  * Copyright © 2013 Tox project.
  *
  * This file is part of Tox, the free peer to peer instant messenger.
@@ -26,6 +26,9 @@
 #endif
 
 #include "onion.h"
+
+#include <stdlib.h>
+#include <string.h>
 
 #include "util.h"
 
@@ -51,9 +54,9 @@ static void change_symmetric_key(Onion *onion)
 /* packing and unpacking functions */
 static void ip_pack(uint8_t *data, IP source)
 {
-    data[0] = source.family;
+    data[0] = source.family.value;
 
-    if (source.family == TOX_AF_INET || source.family == TOX_TCP_INET) {
+    if (net_family_is_ipv4(source.family) || net_family_is_tox_tcp_ipv4(source.family)) {
         memset(data + 1, 0, SIZE_IP6);
         memcpy(data + 1, source.ip.v4.uint8, SIZE_IP4);
     } else {
@@ -68,17 +71,18 @@ static int ip_unpack(IP *target, const uint8_t *data, unsigned int data_size, bo
         return -1;
     }
 
-    target->family = data[0];
+    // TODO(iphydf): Validate input.
+    target->family.value = data[0];
 
-    if (target->family == TOX_AF_INET || target->family == TOX_TCP_INET) {
+    if (net_family_is_ipv4(target->family) || net_family_is_tox_tcp_ipv4(target->family)) {
         memcpy(target->ip.v4.uint8, data + 1, SIZE_IP4);
     } else {
         memcpy(target->ip.v6.uint8, data + 1, SIZE_IP6);
     }
 
     bool valid = disable_family_check ||
-                 target->family == TOX_AF_INET ||
-                 target->family == TOX_AF_INET6;
+                 net_family_is_ipv4(target->family) ||
+                 net_family_is_ipv6(target->family);
 
     return valid ? 0 : -1;
 }
@@ -471,6 +475,15 @@ static int handle_send_2(void *object, IP_Port source, const uint8_t *packet, ui
         return 1;
     }
 
+    if (len <= SIZE_IPPORT) {
+        return 1;
+    }
+
+    if (plain[SIZE_IPPORT] != NET_PACKET_ANNOUNCE_REQUEST &&
+            plain[SIZE_IPPORT] != NET_PACKET_ONION_DATA_REQUEST) {
+        return 1;
+    }
+
     IP_Port send_to;
 
     if (ipport_unpack(&send_to, plain, len, 0) == -1) {
@@ -511,6 +524,11 @@ static int handle_recv_3(void *object, IP_Port source, const uint8_t *packet, ui
     }
 
     if (length <= 1 + RETURN_3) {
+        return 1;
+    }
+
+    if (packet[1 + RETURN_3] != NET_PACKET_ANNOUNCE_RESPONSE &&
+            packet[1 + RETURN_3] != NET_PACKET_ONION_DATA_RESPONSE) {
         return 1;
     }
 
@@ -555,6 +573,11 @@ static int handle_recv_2(void *object, IP_Port source, const uint8_t *packet, ui
         return 1;
     }
 
+    if (packet[1 + RETURN_2] != NET_PACKET_ANNOUNCE_RESPONSE &&
+            packet[1 + RETURN_2] != NET_PACKET_ONION_DATA_RESPONSE) {
+        return 1;
+    }
+
     change_symmetric_key(onion);
 
     uint8_t plain[SIZE_IPPORT + RETURN_1];
@@ -596,6 +619,11 @@ static int handle_recv_1(void *object, IP_Port source, const uint8_t *packet, ui
         return 1;
     }
 
+    if (packet[1 + RETURN_1] != NET_PACKET_ANNOUNCE_RESPONSE &&
+            packet[1 + RETURN_1] != NET_PACKET_ONION_DATA_RESPONSE) {
+        return 1;
+    }
+
     change_symmetric_key(onion);
 
     uint8_t plain[SIZE_IPPORT];
@@ -615,8 +643,8 @@ static int handle_recv_1(void *object, IP_Port source, const uint8_t *packet, ui
     uint16_t data_len = length - (1 + RETURN_1);
 
     if (onion->recv_1_function &&
-            send_to.ip.family != TOX_AF_INET &&
-            send_to.ip.family != TOX_AF_INET6) {
+            !net_family_is_ipv4(send_to.ip.family) &&
+            !net_family_is_ipv6(send_to.ip.family)) {
         return onion->recv_1_function(onion->callback_object, send_to, packet + (1 + RETURN_1), data_len);
     }
 

@@ -29,12 +29,13 @@
 
 #include "ping.h"
 
+#include <stdlib.h>
+#include <string.h>
+
 #include "DHT.h"
 #include "network.h"
 #include "ping_array.h"
 #include "util.h"
-
-#include <stdint.h>
 
 #define PING_NUM_MAX 512
 
@@ -249,7 +250,7 @@ static int in_list(const Client_data *list, uint16_t length, const uint8_t *publ
         if (id_equal(list[i].public_key, public_key)) {
             const IPPTsPng *ipptp;
 
-            if (ip_port.ip.family == TOX_AF_INET) {
+            if (net_family_is_ipv4(ip_port.ip.family)) {
                 ipptp = &list[i].assoc4;
             } else {
                 ipptp = &list[i].assoc6;

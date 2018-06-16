@@ -27,11 +27,15 @@
 
 #include "Messenger.h"
 
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
 #include "logger.h"
 #include "network.h"
 #include "util.h"
-
-#include <assert.h>
 
 static int write_cryptpacket_id(const Messenger *m, int32_t friendnumber, uint8_t packet_id, const uint8_t *data,
                                 uint32_t length, uint8_t congestion_control);
@@ -1977,26 +1981,24 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
         return nullptr;
     }
 
-    Logger *log = nullptr;
+    m->log = logger_new();
 
-    if (options->log_callback) {
-        log = logger_new();
-
-        if (log != nullptr) {
-            logger_callback_log(log, options->log_callback, m, options->log_user_data);
-        }
+    if (m->log == nullptr) {
+        friendreq_kill(m->fr);
+        free(m);
+        return nullptr;
     }
 
-    m->log = log;
+    logger_callback_log(m->log, options->log_callback, m, options->log_user_data);
 
     unsigned int net_err = 0;
 
     if (options->udp_disabled) {
-        m->net = new_networking_no_udp(log);
+        m->net = new_networking_no_udp(m->log);
     } else {
         IP ip;
         ip_init(&ip, options->ipv6enabled);
-        m->net = new_networking_ex(log, ip, options->port_range[0], options->port_range[1], &net_err);
+        m->net = new_networking_ex(m->log, ip, options->port_range[0], options->port_range[1], &net_err);
     }
 
     if (m->net == nullptr) {
@@ -2597,7 +2599,7 @@ void do_messenger(Messenger *m, void *userdata)
             /* Add self tcp server. */
             IP_Port local_ip_port;
             local_ip_port.port = m->options.tcp_server_port;
-            local_ip_port.ip.family = TOX_AF_INET;
+            local_ip_port.ip.family = net_family_ipv4;
             local_ip_port.ip.ip.v4 = get_ip4_loopback();
             add_tcp_relay(m->net_crypto, local_ip_port,
                           tcp_server_public_key(m->tcp_server));
@@ -2968,8 +2970,8 @@ uint32_t messenger_size(const Messenger *m)
              + sizesubhead + m->name_length                    // Own nickname.
              + sizesubhead + m->statusmessage_length           // status message
              + sizesubhead + 1                                 // status
-             + sizesubhead + NUM_SAVED_TCP_RELAYS * packed_node_size(TCP_INET6) //TCP relays
-             + sizesubhead + NUM_SAVED_PATH_NODES * packed_node_size(TCP_INET6) //saved path nodes
+             + sizesubhead + NUM_SAVED_TCP_RELAYS * packed_node_size(net_family_tcp_ipv6) //TCP relays
+             + sizesubhead + NUM_SAVED_PATH_NODES * packed_node_size(net_family_tcp_ipv6) //saved path nodes
              + sizesubhead;
 }
 
@@ -3039,7 +3041,7 @@ void messenger_save(const Messenger *m, uint8_t *data)
     uint8_t *temp_data = data;
     data = messenger_save_subheader(temp_data, 0, type);
     unsigned int num = copy_connected_tcp_relays(m->net_crypto, relays, NUM_SAVED_TCP_RELAYS);
-    int l = pack_nodes(data, NUM_SAVED_TCP_RELAYS * packed_node_size(TCP_INET6), relays, num);
+    int l = pack_nodes(data, NUM_SAVED_TCP_RELAYS * packed_node_size(net_family_tcp_ipv6), relays, num);
 
     if (l > 0) {
         len = l;
@@ -3053,7 +3055,7 @@ void messenger_save(const Messenger *m, uint8_t *data)
     data = messenger_save_subheader(data, 0, type);
     memset(nodes, 0, sizeof(nodes));
     num = onion_backup_nodes(m->onion_c, nodes, NUM_SAVED_PATH_NODES);
-    l = pack_nodes(data, NUM_SAVED_PATH_NODES * packed_node_size(TCP_INET6), nodes, num);
+    l = pack_nodes(data, NUM_SAVED_PATH_NODES * packed_node_size(net_family_tcp_ipv6), nodes, num);
 
     if (l > 0) {
         len = l;

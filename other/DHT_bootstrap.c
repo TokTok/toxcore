@@ -30,8 +30,9 @@
 #endif
 
 #include "../toxcore/DHT.h"
-#include "../toxcore/friend_requests.h"
 #include "../toxcore/LAN_discovery.h"
+#include "../toxcore/friend_requests.h"
+#include "../toxcore/logger.h"
 #include "../toxcore/tox.h"
 #include "../toxcore/util.h"
 
@@ -71,7 +72,7 @@ static void manage_keys(DHT *dht)
         }
 
         dht_set_self_public_key(dht, keys);
-        dht_set_self_public_key(dht, keys + CRYPTO_PUBLIC_KEY_SIZE);
+        dht_set_self_secret_key(dht, keys + CRYPTO_PUBLIC_KEY_SIZE);
         printf("Keys loaded successfully.\n");
     } else {
         memcpy(keys, dht_get_self_public_key(dht), CRYPTO_PUBLIC_KEY_SIZE);
@@ -115,7 +116,8 @@ int main(int argc, char *argv[])
     IP ip;
     ip_init(&ip, ipv6enabled);
 
-    DHT *dht = new_DHT(nullptr, new_networking(nullptr, ip, PORT), true);
+    Logger *logger = logger_new();
+    DHT *dht = new_DHT(logger, new_networking(logger, ip, PORT), true);
     Onion *onion = new_onion(dht);
     Onion_Announce *onion_a = new_onion_announce(dht);
 

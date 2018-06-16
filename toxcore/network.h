@@ -24,54 +24,77 @@
 #ifndef NETWORK_H
 #define NETWORK_H
 
-#ifdef PLAN9
-#include <u.h> // Plan 9 requires this is imported first
-// Comment line here to avoid reordering by source code formatters.
-#include <libc.h>
-#endif
-
-#include "ccompat.h"
 #include "logger.h"
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-
-#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32) /* Put win32 includes here */
-#ifndef WINVER
-//Windows XP
-#define WINVER 0x0501
-#endif
-
-// The mingw32/64 Windows library warns about including winsock2.h after
-// windows.h even though with the above it's a valid thing to do. So, to make
-// mingw32 headers happy, we include winsock2.h first.
-#include <winsock2.h>
-
-#include <windows.h>
-#include <ws2tcpip.h>
-
-#else // UNIX includes
-
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <unistd.h>
-
-#endif
+#include <stdbool.h>    // bool
+#include <stddef.h>     // size_t
+#include <stdint.h>     // uint*_t
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef short Family;
+typedef struct Family {
+    uint8_t value;
+} Family;
 
-typedef int Socket;
-Socket net_socket(int domain, int type, int protocol);
+bool net_family_is_unspec(Family family);
+bool net_family_is_ipv4(Family family);
+bool net_family_is_ipv6(Family family);
+bool net_family_is_tcp_family(Family family);
+bool net_family_is_tcp_onion(Family family);
+bool net_family_is_tcp_ipv4(Family family);
+bool net_family_is_tcp_ipv6(Family family);
+bool net_family_is_tox_tcp_ipv4(Family family);
+bool net_family_is_tox_tcp_ipv6(Family family);
+
+extern const Family net_family_unspec;
+extern const Family net_family_ipv4;
+extern const Family net_family_ipv6;
+extern const Family net_family_tcp_family;
+extern const Family net_family_tcp_onion;
+extern const Family net_family_tcp_ipv4;
+extern const Family net_family_tcp_ipv6;
+extern const Family net_family_tox_tcp_ipv4;
+extern const Family net_family_tox_tcp_ipv6;
+
+typedef struct Socket {
+    int socket;
+} Socket;
+
+Socket net_socket(Family domain, int type, int protocol);
+
+/* Check if socket is valid.
+ *
+ * return 1 if valid
+ * return 0 if not valid
+ */
+int sock_valid(Socket sock);
+
+extern const Socket net_invalid_socket;
+
+/**
+ * Calls send(sockfd, buf, len, MSG_NOSIGNAL).
+ */
+int net_send(Socket sockfd, const void *buf, size_t len);
+/**
+ * Calls recv(sockfd, buf, len, MSG_NOSIGNAL).
+ */
+int net_recv(Socket sockfd, void *buf, size_t len);
+/**
+ * Calls listen(sockfd, backlog).
+ */
+int net_listen(Socket sockfd, int backlog);
+/**
+ * Calls accept(sockfd, nullptr, nullptr).
+ */
+Socket net_accept(Socket sockfd);
+
+/**
+ * return the amount of data in the tcp recv buffer.
+ * return 0 on failure.
+ */
+size_t net_socket_data_recv_buffer(Socket sock);
 
 #define MAX_UDP_PACKET_SIZE 2048
 
@@ -151,7 +174,7 @@ extern const IP6 IP6_BROADCAST;
 
 #define IP_DEFINED
 typedef struct IP {
-    uint8_t family;
+    Family family;
     union {
         IP4 v4;
         IP6 v6;
@@ -263,9 +286,9 @@ void ip_reset(IP *ip);
 /* nulls out ip, sets family according to flag */
 void ip_init(IP *ip, bool ipv6enabled);
 /* checks if ip is valid */
-int ip_isset(const IP *ip);
+bool ip_isset(const IP *ip);
 /* checks if ip is valid */
-int ipport_isset(const IP_Port *ipport);
+bool ipport_isset(const IP_Port *ipport);
 /* copies an ip structure */
 void ip_copy(IP *target, const IP *source);
 /* copies an ip_port structure */
@@ -325,13 +348,6 @@ uint16_t net_port(const Networking_Core *net);
  * return -1 on failure
  */
 int networking_at_startup(void);
-
-/* Check if socket is valid.
- *
- * return 1 if valid
- * return 0 if not valid
- */
-int sock_valid(Socket sock);
 
 /* Close the socket.
  */
@@ -402,7 +418,35 @@ void net_freeipport(IP_Port *ip_ports);
 /* return 1 on success
  * return 0 on failure
  */
-int bind_to_port(Socket sock, int family, uint16_t port);
+int bind_to_port(Socket sock, Family family, uint16_t port);
+
+/* Get the last networking error code.
+ *
+ * Similar to Unix's errno, but cross-platform, as not all platforms use errno
+ * to indicate networking errors.
+ *
+ * Note that different platforms may return different codes for the same error,
+ * so you likely shouldn't be checking the value returned by this function
+ * unless you know what you are doing, you likely just want to use it in
+ * combination with net_new_strerror() to print the error.
+ *
+ * return platform-dependent network error code, if any.
+ */
+int net_error(void);
+
+/* Get a text explanation for the error code from net_error().
+ *
+ * return NULL on failure.
+ * return pointer to a NULL-terminated string describing the error code on
+ * success. The returned string must be freed using net_kill_strerror().
+ */
+const char *net_new_strerror(int error);
+
+/* Frees the string returned by net_new_strerror().
+ * It's valid to pass NULL as the argument, the function does nothing in this
+ * case.
+ */
+void net_kill_strerror(const char *strerror);
 
 /* Initialize networking.
  * bind to ip and port.

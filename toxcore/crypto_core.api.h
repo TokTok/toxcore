@@ -26,8 +26,8 @@
 #define CRYPTO_CORE_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
-#include <stdlib.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -115,6 +115,11 @@ static int32_t public_key_cmp(
     const uint8_t[CRYPTO_PUBLIC_KEY_SIZE] pk2);
 
 namespace random {
+
+/**
+ * Return a random 8 bit integer.
+ */
+static uint8_t u08();
 
 /**
  * Return a random 16 bit integer.
