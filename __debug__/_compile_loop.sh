@@ -162,11 +162,15 @@ fi
 
 
 cd $_SRC_
-git clone https://github.com/zoff99/c-toxcore_team c-toxcore
-cd c-toxcore
 
-git checkout zoff99/toxcore_v1.0.10__toxav_h264_001
-## ** ## git pull
+if [ "$FULL""x" == "1x" ]; then
+    git clone https://github.com/zoff99/c-toxcore_team c-toxcore
+    cd c-toxcore
+    git checkout zoff99/toxcore_v1.0.10__toxav_h264_001
+    ## ** ## git pull
+else
+    cd c-toxcore
+fi
 
 ./autogen.sh
 
