@@ -168,7 +168,7 @@ export CFLAGS=" $CF2 -D_GNU_SOURCE -I$_INST_/include/ -O3 -g -fstack-protector-a
 export LDFLAGS=-L$_INST_/lib
 ./configure \
 --prefix=$_INST_ \
---disable-soname-versions --disable-testing --disable-shared
+--disable-soname-versions --disable-testing --disable-shared --enable-raspi
 make -j 4 && make install
 res=$?
 
@@ -186,6 +186,8 @@ if [ "$ASAN""x" == "1x" ]; then
 fi
 
 gcc $_OO_ \
+-DRASPBERRY_PI -DOMX_SKIP64BIT -DUSE_VCHIQ_ARM \
+-I/opt/vc/include -I/opt/vc/interface/vmcs_host/linux -I/opt/vc/interface/vcos/pthreads \
 $CF2 $CF3 \
 $LL1 \
 -fstack-protector-all \
@@ -208,7 +210,8 @@ $_INST_/lib/libavutil.a \
 $_INST_/lib/libsodium.a \
 -lasound \
 -lpthread -lv4lconvert \
--lmmal -lmmal_core -lmmal_vc_client -lmmal_components -lmmal_util
+-lmmal -lmmal_core -lmmal_vc_client -lmmal_components -lmmal_util \
+-L/opt/vc/lib -lbcm_host -lvcos -lopenmaxil
 
 res2=$?
 
