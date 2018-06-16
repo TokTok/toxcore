@@ -992,6 +992,6 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length, boo
         }
     }
 
-    session->sequnum ++;
+    session->sequnum++;
     return 0;
 }

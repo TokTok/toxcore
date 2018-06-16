@@ -818,7 +818,7 @@ void decode_frame_h264_omx_raspi(VCSession *vc, Messenger *m, uint8_t skip_video
     compr_data->post = -1;
 #endif
 
-    LOGGER_ERROR(vc->log, "H264:decoder:full_data_len=%d p->data=%p\n", (int)full_data_len, p->data);
+    LOGGER_DEBUG(vc->log, "H264:decoder:full_data_len=%d p->data=%p\n", (int)full_data_len, p->data);
 
     // HINT: dirty hack to add FF_INPUT_BUFFER_PADDING_SIZE bytes!! ----------
     uint8_t *tmp_buf = calloc(1, full_data_len + FF_INPUT_BUFFER_PADDING_SIZE);
@@ -1024,71 +1024,71 @@ uint32_t send_frames_h264_omx_raspi(ToxAV *av, uint32_t friend_number, uint16_t 
             free(buf);
         } else {
 
-            LOGGER_WARNING(av->m->log, "OMX:show_own_video:001");
+            if (buf) {
 
-            // push outgoing video frame into incoming video frame queue
-            // dirty hack to construct an RTPMessage struct
-            uint8_t *msg2 = calloc(1, (frame_bytes + 4) + RTP_HEADER_SIZE + 1);
-            LOGGER_WARNING(av->m->log, "OMX:show_own_video:002");
+                // push outgoing video frame into incoming video frame queue
+                // dirty hack to construct an RTPMessage struct
 
-            msg2[0] = 193; // video type
-            LOGGER_WARNING(av->m->log, "OMX:show_own_video:003");
+                LOGGER_DEBUG(av->m->log, "OMX:own_video:malloc size=%d", (int)sizeof(uint16_t)
+                             + sizeof(struct RTPHeader)
+                             + (frame_bytes + 4));
 
-            memcpy(msg2 + 1 + RTP_HEADER_SIZE, (const uint8_t *)buf, (frame_bytes + 4));
-            LOGGER_WARNING(av->m->log, "OMX:show_own_video:004");
+                struct RTPMessage *msg2 = (struct RTPMessage *)calloc(1, sizeof(uint16_t)
+                                          + sizeof(struct RTPHeader)
+                                          + (frame_bytes + 4) + 200000); // HINT: +200000 is for safety reason, otherwise something crashes. fix me!!!
 
-            struct RTPHeader *header = (void *)(msg2 + 1);
+                if (msg2) {
+
+                    memcpy(msg2->data, (const uint8_t *)buf, (frame_bytes + 4));
+
+                    msg2->len = (frame_bytes + 4);
+
+                    struct RTPHeader *header = & (msg2->header);
+                    header->ve = 2;  // this is unused in toxav
+                    header->pe = 0;
+                    header->xe = 0;
+                    header->cc = 0;
+                    header->ma = 0;
+                    header->pt = rtp_TypeVideo % 128;
+                    header->sequnum = fake_sequnum;
+                    header->timestamp = current_time_monotonic();
+                    header->ssrc = 0;
+                    header->offset_lower = 0;
+                    header->data_length_lower = (frame_bytes + 4);
+                    header->flags = RTP_LARGE_FRAME | RTP_ENCODER_IS_H264;
+                    header->frame_record_timestamp = (*video_frame_record_timestamp);
+                    header->fragment_num = 0;
+                    header->real_frame_num = fake_sequnum; // not yet used
+                    header->encoder_bit_rate_used = call->video_bit_rate;
+                    uint16_t length_safe = (uint16_t)(frame_bytes + 4);
+
+                    if ((frame_bytes + 4) > UINT16_MAX) {
+                        length_safe = UINT16_MAX;
+                    }
+
+                    header->data_length_lower = length_safe;
+                    header->data_length_full = (frame_bytes + 4); // without header
+                    header->received_length_full = header->data_length_full;
+                    header->offset_lower = 0;
+                    header->offset_full = 0;
+
+                    fake_sequnum++;
+
+                    LOGGER_DEBUG(av->m->log, "OMX:own_video:video frame:1len=%d", (int)header->data_length_full);
+                    LOGGER_DEBUG(av->m->log, "OMX:own_video:video frame:2len=%d", (int)msg2->header.data_length_full);
 
 
+                    if ((vc) && (vc->vbuf_raw)) {
+                        free(rb_write((RingBuffer *)vc->vbuf_raw, msg2,
+                                      (uint64_t)header->flags));
+                    } else {
+                        free(msg2);
+                    }
 
+                }
 
-            header->ve = 2;  // this is unused in toxav
-            header->pe = 0;
-            header->xe = 0;
-            header->cc = 0;
-            header->ma = 0;
-            header->pt = 193 % 128;
-            header->sequnum = fake_sequnum;
-            header->timestamp = current_time_monotonic();
-            header->ssrc = 0;
-            header->offset_lower = 0;
-            header->data_length_lower = frame_bytes + 4;
-            header->flags = RTP_LARGE_FRAME;
-            header->flags = header->flags | RTP_ENCODER_IS_H264;
-            header->frame_record_timestamp = 0;
-            header->fragment_num = 0;
-            header->real_frame_num = 0; // not yet used
-            header->encoder_bit_rate_used = 1500;
-            uint16_t length_safe = (uint16_t)(frame_bytes + 4);
-
-            fake_sequnum++;
-
-
-            if ((frame_bytes + 4) > UINT16_MAX) {
-                length_safe = UINT16_MAX;
+                free(buf);
             }
-
-            header->data_length_lower = length_safe;
-            header->data_length_full = (frame_bytes + 4); // without header
-            header->offset_lower = 0;
-            header->offset_full = 0;
-
-
-#if 1
-
-            if ((vc) && (vc->vbuf_raw)) {
-                LOGGER_WARNING(av->m->log, "OMX:show_own_video:008");
-                free(rb_write((RingBuffer *)vc->vbuf_raw, (uint8_t *)msg2,
-                              RTP_ENCODER_IS_H264));
-                LOGGER_WARNING(av->m->log, "OMX:show_own_video:009");
-            }
-
-#endif
-
-            LOGGER_WARNING(av->m->log, "OMX:show_own_video:001");
-
-            free(buf);
-            LOGGER_WARNING(av->m->log, "OMX:show_own_video:001");
         }
 
 

@@ -74,7 +74,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc->video_decoder_error_concealment = VIDEO__VP8_DECODER_ERROR_CONCEALMENT;
     vc->video_decoder_error_concealment_prev = vc->video_decoder_error_concealment;
     vc->video_decoder_codec_used = TOXAV_ENCODER_CODEC_USED_VP8; // DEBUG: H264 !!
-    vc->show_own_video = 1; // DEBUG: 0 !!
+    vc->show_own_video = 0; // DEBUG: set to zero (0) !!
     // options ---
 
 
@@ -349,10 +349,10 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
         if (header_v3->flags & RTP_LARGE_FRAME) {
             full_data_len = header_v3->data_length_full;
-            // LOGGER_ERROR(vc->log, "vc_iterate:001:full_data_len=%d", (int)full_data_len);
+            LOGGER_DEBUG(vc->log, "vc_iterate:001:full_data_len=%d", (int)full_data_len);
         } else {
             full_data_len = p->len;
-            // LOGGER_DEBUG(vc->log, "vc_iterate:002");
+            LOGGER_DEBUG(vc->log, "vc_iterate:002");
         }
 
         // LOGGER_DEBUG(vc->log, "vc_iterate: rb_read p->len=%d data_type=%d", (int)full_data_len, (int)data_type);
@@ -490,7 +490,7 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
     VCSession *vc = (VCSession *)vcp;
 
     const struct RTPHeader *header_v3 = (void *) & (msg->header);
-    const struct RTPHeader *const header = &msg->header;
+    const struct RTPHeader *header = &msg->header;
 
     if (msg->header.pt == (rtp_TypeVideo + 2) % 128) {
         LOGGER_WARNING(vc->log, "Got dummy!");
