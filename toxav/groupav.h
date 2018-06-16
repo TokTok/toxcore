@@ -50,3 +50,8 @@ int join_av_groupchat(Logger *log, Group_Chats *g_c, uint32_t friendnumber, cons
 int group_send_audio(Group_Chats *g_c, uint32_t groupnumber, const int16_t *pcm, unsigned int samples, uint8_t channels,
                      uint32_t sample_rate);
 
+int group_bit_rate_set(Group_Chats *g_c, int groupnumber, uint32_t audio_bit_rate);
+
+bool group_bit_rate_valid(uint32_t audio_bit_rate);
+uint32_t group_min_bit_rate(void);
+uint32_t group_max_bit_rate(void);

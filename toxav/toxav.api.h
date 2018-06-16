@@ -648,6 +648,17 @@ int toxav_join_av_groupchat(Tox *tox, uint32_t friendnumber, const uint8_t *data
 int toxav_group_send_audio(Tox *tox, uint32_t groupnumber, const int16_t *pcm, unsigned int samples, uint8_t channels,
                            uint32_t sample_rate);
 
+
+/**
+ * Sets the Opus bit rate for a group call.
+ *
+ * return 0 on success.
+ * return -1 on failure.
+ */
+int toxav_group_bit_rate_set(Tox *tox, int groupnumber, uint32_t audio_bit_rate);
+
+bool toxav_audio_bit_rate_valid(uint32_t bit_rate);
+
 #ifdef __cplusplus
 }
 #endif
