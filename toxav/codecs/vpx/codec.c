@@ -166,8 +166,6 @@ VCSession *vc_new_vpx(Logger *log, ToxAV *av, uint32_t friend_number, toxav_vide
 {
 
     vpx_codec_err_t rc;
-    vc->send_keyframe_request_received = 0;
-    vc->h264_video_capabilities_received = 0;
 
     /*
     VPX_CODEC_USE_FRAME_THREADING
