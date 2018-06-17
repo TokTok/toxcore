@@ -5641,6 +5641,8 @@ int gc_group_load(GC_Session *c, struct Saved_Group *save)
             continue;
         }
 
+        add_tcp_relay_global(chat->tcp_conn, save->addrs[i].tcp_relay.ip_port, save->addrs[i].tcp_relay.public_key);
+
         int add_tcp_result = add_tcp_relay_connection(chat->tcp_conn, gconn->tcp_connection_num,
                                                       save->addrs[i].tcp_relay.ip_port,
                                                       save->addrs[i].tcp_relay.public_key);
@@ -5653,8 +5655,6 @@ int gc_group_load(GC_Session *c, struct Saved_Group *save)
         if (save_tcp_result < 0) {
             continue;
         }
-
-        add_tcp_relay_global(chat->tcp_conn, save->addrs[i].tcp_relay.ip_port, save->addrs[i].tcp_relay.public_key);
 
         memcpy(gconn->oob_relay_pk, save->addrs[i].tcp_relay.public_key, ENC_PUBLIC_KEY);
         gconn->is_oob_handshake = true;
@@ -5675,8 +5675,8 @@ int gc_group_load(GC_Session *c, struct Saved_Group *save)
  * Return -4 if the the group object fails to initialize.
  * Return -5 if the group state fails to initialize.
  * Return -6 if the self peer info is invalid
- * Return -7 if the announce was unsuccessfull
- */
+ * Return -7 if the announce was unsuccessful
+*/
 int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name, uint16_t group_name_length,
                  const GC_SelfPeerInfo *peer_info)
 {
