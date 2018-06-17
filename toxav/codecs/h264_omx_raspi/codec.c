@@ -452,9 +452,47 @@ static i420_frame_info frame_info;
 static i420_frame_info buf_info;
 
 
+
+static void h264_omx_set_bool(VCSession *vc, OMX_INDEXTYPE i, bool value)
+{
+    OMX_CONFIG_PORTBOOLEANTYPE bool_type;
+    bool_type.nSize = sizeof(bool_type);
+    bool_type.nVersion.nVersion = OMX_VERSION;
+    bool_type.nPortIndex = 201;
+
+    if (value == true) {
+        bool_type.bEnabled = OMX_TRUE;
+    } else {
+        bool_type.bEnabled = OMX_FALSE;
+    }
+
+    LOGGER_ERROR(vc->log, "OMX: setting bool param to: %d", (int)value);
+
+    if (OMX_SetParameter(vc->omx_ctx->encoder, i, &bool_type) != OMX_ErrorNone) {
+        LOGGER_ERROR(vc->log, "OMX: failed to param!");
+    }
+}
+
+
+static void h264_omx_set_u32(VCSession *vc, OMX_INDEXTYPE i, uint32_t value)
+{
+
+    OMX_PARAM_U32TYPE p;
+    OMX_INIT_STRUCTURE(p);
+    p.nPortIndex = 201;
+    p.nU32 = value;
+
+    LOGGER_ERROR(vc->log, "OMX: setting uint32 param to: %d", (int)value);
+
+    if (OMX_SetParameter(vc->omx_ctx->encoder, i, &p) != OMX_ErrorNone) {
+        LOGGER_ERROR(vc->log, "OMX: failed to param!");
+    }
+}
+
 void h264_omx_raspi_force_i_frame(Logger *log, VCSession *vc)
 {
 
+#if 0
     OMX_CONFIG_PORTBOOLEANTYPE bool_type;
     bool_type.nSize = sizeof(bool_type);
     bool_type.nVersion.nVersion = OMX_VERSION;
@@ -467,6 +505,9 @@ void h264_omx_raspi_force_i_frame(Logger *log, VCSession *vc)
         LOGGER_ERROR(log, "Failed to request I-FRAME output port 201");
     }
 
+#endif
+
+    h264_omx_set_bool(vc, OMX_IndexConfigBrcmVideoRequestIFrame, true);
 }
 
 static void startup_h264_omx_raspi_encoder(VCSession *vc, uint16_t width, uint16_t height,
@@ -569,27 +610,12 @@ static void startup_h264_omx_raspi_encoder(VCSession *vc, uint16_t width, uint16
         omx_die(r, "Failed to set video format for encoder output port 201");
     }
 
-    // Configure Intra Frame Period via Broadcom Extension
-    OMX_PARAM_U32TYPE intra_period;
-    OMX_INIT_STRUCTURE(intra_period);
-    intra_period.nPortIndex = 201;
-    intra_period.nU32 = 50; // Refresh every 50th frame
 
-    if ((r = OMX_SetParameter(vc->omx_ctx->encoder, OMX_IndexConfigBrcmVideoIntraPeriod, &intra_period)) != OMX_ErrorNone) {
-        omx_die(r, "Failed to set intra frame refresh period for encoder output port 201");
-    }
+    h264_omx_set_u32(vc, OMX_IndexConfigBrcmVideoIntraPeriod, 50);
+    h264_omx_set_bool(vc, OMX_IndexParamBrcmVideoAVCInlineHeaderEnable, true);
+    h264_omx_set_u32(vc, OMX_IndexParamBrcmVideoEncodeMaxQuant, 48); // max. 48
+    h264_omx_set_u32(vc, OMX_IndexParamBrcmVideoEncodeMinQuant, 15); // min. 10
 
-    OMX_CONFIG_PORTBOOLEANTYPE bool_type;
-    bool_type.nSize = sizeof(bool_type);
-    bool_type.nVersion.nVersion = OMX_VERSION;
-    bool_type.nPortIndex = 201;
-    bool_type.bEnabled = OMX_TRUE;
-
-    if (OMX_SetParameter(vc->omx_ctx->encoder,
-                         OMX_IndexParamBrcmVideoAVCInlineHeaderEnable,
-                         &bool_type) != OMX_ErrorNone) {
-        LOGGER_ERROR(vc->log, "OMX: Oops - failed to set inline header");
-    }
 
     // Switch components to idle state
     // say("Switching state of the encoder component to idle...");
@@ -660,8 +686,8 @@ static void startup_h264_omx_raspi_encoder(VCSession *vc, uint16_t width, uint16
                         encoder_portdef.format.image.nStride, encoder_portdef.format.video.nSliceHeight, &frame_info);
     get_i420_frame_info(frame_info.buf_stride, frame_info.buf_slice_height, -1, -1, &buf_info);
 
-    dump_frame_info("Destination frame", &frame_info);
-    dump_frame_info("Source buffer", &buf_info);
+    // dump_frame_info("Destination frame", &frame_info);
+    // dump_frame_info("Source buffer", &buf_info);
 
     if (vc->omx_ctx->encoder_ppBuffer_in->nAllocLen != buf_info.size) {
         die("Allocated encoder input port 200 buffer size %d doesn't equal to the expected buffer size %d",
