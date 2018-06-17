@@ -497,10 +497,12 @@ static int handle_gc_announce_request(Onion_Announce *onion_a, IP_Port source, c
     GC_Announces_List *gc_announces_list = onion_a->gc_announces_list;
     const int offset = ONION_PING_ID_SIZE + ENC_PUBLIC_KEY * 2 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH;
     uint8_t *chat_id = plain + offset + sizeof(Node_format) + ENC_PUBLIC_KEY;
-    GC_Peer_Announce *new_announce = add_gc_announce(onion_a->mono_time, gc_announces_list,
-                                                     (const Node_format *)(plain + offset),
-                                                     chat_id,
-                                                     plain + offset + sizeof(Node_format));
+    GC_Public_Announce public_announce;
+    bool unpack_result = unpack_public_announce(plain + offset, length - offset, &public_announce);
+    if (!unpack_result) {
+        return -1;
+    }
+    GC_Peer_Announce *new_announce = add_gc_announce(onion_a->mono_time, gc_announces_list, &public_announce);
     if (!new_announce) {
         return 1;
     }
