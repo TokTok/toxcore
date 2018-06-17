@@ -377,12 +377,12 @@ static int udp_handle_cookie_request(void *object, IP_Port source, const uint8_t
     uint8_t data[COOKIE_RESPONSE_LENGTH];
 
     if (create_cookie_response(c, data, request_plain, shared_key, dht_public_key) != sizeof(data)) {
-        LOGGER_ERROR(c->log, "Could not create cookie response");
+        LOGGER_ERROR(c->log, "Could not create cookie response in UDP");
         return 1;
     }
 
     if ((uint32_t)sendpacket(dht_get_net(c->dht), source, data, sizeof(data)) != sizeof(data)) {
-        LOGGER_ERROR(c->log, "Could not send cookie response");
+        LOGGER_ERROR(c->log, "Could not send cookie response in UDP");
         return 1;
     }
 
@@ -405,7 +405,7 @@ static int tcp_handle_cookie_request(Net_Crypto *c, int connections_number, cons
     uint8_t data[COOKIE_RESPONSE_LENGTH];
 
     if (create_cookie_response(c, data, request_plain, shared_key, dht_public_key) != sizeof(data)) {
-        LOGGER_ERROR(c->log, "Could not create cookie response");
+        LOGGER_ERROR(c->log, "Could not create cookie response in TCP");
         return -1;
     }
 
@@ -428,14 +428,14 @@ static int tcp_oob_handle_cookie_request(const Net_Crypto *c, unsigned int tcp_c
     }
 
     if (public_key_cmp(dht_public_key, dht_public_key_temp) != 0) {
-        LOGGER_ERROR(c->log, "Cookie DHT PK did not match expected DHT PK");
+        LOGGER_ERROR(c->log, "Cookie DHT PK from TCP OOB did not match expected DHT PK");
         return -1;
     }
 
     uint8_t data[COOKIE_RESPONSE_LENGTH];
 
     if (create_cookie_response(c, data, request_plain, shared_key, dht_public_key) != sizeof(data)) {
-        LOGGER_ERROR(c->log, "Could not create cookie response");
+        LOGGER_ERROR(c->log, "Could not create cookie response in TCP OOB");
         return -1;
     }
 
@@ -498,7 +498,7 @@ static int create_crypto_handshake(const Net_Crypto *c, uint8_t *packet, const u
 
     if (create_cookie(c->log, plain + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_SHA512_SIZE, cookie_plain,
                       c->secret_symmetric_key) != 0) {
-        LOGGER_ERROR(c->log, "Could not create cookie");
+        LOGGER_ERROR(c->log, "Could not create cookie for crypto handshake");
         return -1;
     }
 
@@ -548,13 +548,13 @@ static int handle_crypto_handshake(const Net_Crypto *c, uint8_t *nonce, uint8_t 
     uint8_t cookie_plain[COOKIE_DATA_LENGTH];
 
     if (open_cookie(c->log, cookie_plain, packet + 1, c->secret_symmetric_key) != 0) {
-        LOGGER_ERROR(c->log, "Unable to open cookie");
+        LOGGER_ERROR(c->log, "Unable to open cookie when handling crypto handshake");
         return -1;
     }
 
     if (expected_real_pk) {
         if (public_key_cmp(cookie_plain, expected_real_pk) != 0) {
-            LOGGER_ERROR(c->log, "Cookie PK did not match expected PK");
+            LOGGER_ERROR(c->log, "Cookie PK from handshake did not match expected PK");
             return -1;
         }
     }
@@ -636,7 +636,7 @@ static int add_ip_port_connection(Net_Crypto *c, int crypt_connection_id, IP_Por
         }
     }
 
-    LOGGER_ERROR(c->log, "Invalid network family");
+    LOGGER_ERROR(c->log, "Invalid network family: %d", ip_port.ip.family.value);
     return -1;
 }
 
@@ -805,10 +805,10 @@ static int add_data_to_buffer(const Logger *log, Packets_Array *array, uint32_t 
  */
 static int get_data_pointer(const Logger *log, const Packets_Array *array, Packet_Data **data, uint32_t number)
 {
-    uint32_t num_spots = array->buffer_end - array->buffer_start;
+    const uint32_t num_spots = num_packets_array(array);
 
     if (array->buffer_end - number > num_spots || number - array->buffer_start >= num_spots) {
-        LOGGER_ERROR(log, "number=%d outside of buffer range: buffers=%d", number, num_spots);
+        LOGGER_ERROR(log, "Packet number %d outside of buffer range (buffer size: %d)", number, num_spots);
         return -1;
     }
 
@@ -829,8 +829,11 @@ static int get_data_pointer(const Logger *log, const Packets_Array *array, Packe
  */
 static int64_t add_data_end_of_buffer(const Logger *log, Packets_Array *array, const Packet_Data *data)
 {
-    if (num_packets_array(array) >= CRYPTO_PACKET_BUFFER_SIZE) {
-        LOGGER_ERROR(log, "num_packets_array(array) >= CRYPTO_PACKET_BUFFER_SIZE : %d >= %ld", num_packets_array(array), CRYPTO_PACKET_BUFFER_SIZE);
+    const uint32_t num_spots = num_packets_array(array);
+
+    if (num_spots >= CRYPTO_PACKET_BUFFER_SIZE) {
+        LOGGER_ERROR(log, "Cannot expand packet buffer (size %d) beyond max size (%d)",
+                     num_spots, CRYPTO_PACKET_BUFFER_SIZE);
         return -1;
     }
 
@@ -848,7 +851,7 @@ static int64_t add_data_end_of_buffer(const Logger *log, Packets_Array *array, c
     return id;
 }
 
-/* Read data from begginning of array.
+/* Read data from beginning of array.
  *
  * return -1 on failure.
  * return packet number on success.
@@ -860,10 +863,10 @@ static int64_t read_data_beg_buffer(const Logger *log, Packets_Array *array, Pac
         return -1;
     }
 
-    uint32_t num = array->buffer_start % CRYPTO_PACKET_BUFFER_SIZE;
+    const uint32_t num = array->buffer_start % CRYPTO_PACKET_BUFFER_SIZE;
 
     if (!array->buffer[num]) {
-        LOGGER_ERROR(log, "array->buffer[num] == NULL : num=%d", num);
+        LOGGER_ERROR(log, "Packet at beginning of buffer (number %d) is NULL", num);
         return -1;
     }
 
@@ -882,10 +885,10 @@ static int64_t read_data_beg_buffer(const Logger *log, Packets_Array *array, Pac
  */
 static int clear_buffer_until(const Logger *log, Packets_Array *array, uint32_t number)
 {
-    uint32_t num_spots = array->buffer_end - array->buffer_start;
+    const uint32_t num_spots = num_packets_array(array);
 
     if (array->buffer_end - number >= num_spots || number - array->buffer_start > num_spots) {
-        LOGGER_ERROR(log, "number=%d outside of buffer range: buffers=%d", number, num_spots);
+        LOGGER_ERROR(log, "Packet number %d outside of buffer range (buffer size: %d)", number, num_spots);
         return -1;
     }
 
@@ -951,7 +954,7 @@ static int set_buffer_end(const Logger *log, Packets_Array *array, uint32_t numb
 static int generate_request_packet(const Logger *log, uint8_t *data, uint16_t length, const Packets_Array *recv_array)
 {
     if (length == 0) {
-        LOGGER_ERROR(log, "length == 0");
+        LOGGER_ERROR(log, "Cannot create zero-length request packet");
         return -1;
     }
 
@@ -1005,13 +1008,14 @@ static int generate_request_packet(const Logger *log, uint8_t *data, uint16_t le
 static int handle_request_packet(const Logger *log, Packets_Array *send_array, const uint8_t *data, uint16_t length,
                                  uint64_t *latest_send_time, uint64_t rtt_time)
 {
-    if (length < 1) {
-        LOGGER_ERROR(log, "length < 1");
+    if (length == 0) {
+        LOGGER_ERROR(log, "Cannot handle zero-length request packet");
         return -1;
     }
 
     if (data[0] != PACKET_ID_REQUEST) {
-        LOGGER_ERROR(log, "data packet type != PACKET_ID_REQUEST : %ld", PACKET_ID_REQUEST);
+        LOGGER_ERROR(log, "Received invalid request packet type: %d (expected %d)",
+                     data[0], PACKET_ID_REQUEST);
         return -1;
     }
 
@@ -1022,13 +1026,13 @@ static int handle_request_packet(const Logger *log, Packets_Array *send_array, c
     ++data;
     --length;
 
-    uint32_t i, n = 1;
+    uint32_t n = 1;
     uint32_t requested = 0;
 
-    uint64_t temp_time = current_time_monotonic();
+    const uint64_t temp_time = current_time_monotonic();
     uint64_t l_sent_time = ~0;
 
-    for (i = send_array->buffer_start; i != send_array->buffer_end; ++i) {
+    for (uint32_t i = send_array->buffer_start; i != send_array->buffer_end; ++i) {
         if (length == 0) {
             break;
         }
@@ -1065,7 +1069,7 @@ static int handle_request_packet(const Logger *log, Packets_Array *send_array, c
             n = 1;
 
             if (data[0] != 0) {
-                LOGGER_ERROR(log, "current data byte != 0");
+                LOGGER_ERROR(log, "TODO");
                 return -1;
             }
 
@@ -1094,8 +1098,15 @@ static int handle_request_packet(const Logger *log, Packets_Array *send_array, c
  */
 static int send_data_packet(Net_Crypto *c, int crypt_connection_id, const uint8_t *data, uint16_t length)
 {
-    if (length == 0 || length + (1 + sizeof(uint16_t) + CRYPTO_MAC_SIZE) > MAX_CRYPTO_PACKET_SIZE) {
-        LOGGER_ERROR(c->log, "TODO");
+    if (length == 0) {
+        LOGGER_ERROR(c->log, "Cannot send empty data packet");
+        return -1;
+    }
+
+    const uint16_t max_length = MAX_CRYPTO_PACKET_SIZE - (1 + sizeof(uint16_t) + CRYPTO_MAC_SIZE);
+
+    if (length > max_length) {
+        LOGGER_ERROR(c->log, "Data packet too large: %d > %d", length, max_length);
         return -1;
     }
 
@@ -1109,11 +1120,13 @@ static int send_data_packet(Net_Crypto *c, int crypt_connection_id, const uint8_
     VLA(uint8_t, packet, 1 + sizeof(uint16_t) + length + CRYPTO_MAC_SIZE);
     packet[0] = NET_PACKET_CRYPTO_DATA;
     memcpy(packet + 1, conn->sent_nonce + (CRYPTO_NONCE_SIZE - sizeof(uint16_t)), sizeof(uint16_t));
-    int len = encrypt_data_symmetric(conn->shared_key, conn->sent_nonce, data, length, packet + 1 + sizeof(uint16_t));
+    const int len = encrypt_data_symmetric(conn->shared_key, conn->sent_nonce, data, length, packet + 1 + sizeof(uint16_t));
 
     if (len + 1 + sizeof(uint16_t) != SIZEOF_VLA(packet)) {
         pthread_mutex_unlock(&conn->mutex);
-        LOGGER_ERROR(c->log, "TODO");
+        // TODO(iphydf): This can never happen, thus can never be tested. Should it be an assertion?
+        LOGGER_ERROR(c->log, "Unexpected encrypted length: %d (expected %d)",
+                     len, length + CRYPTO_MAC_SIZE);
         return -1;
     }
 
@@ -1131,8 +1144,13 @@ static int send_data_packet(Net_Crypto *c, int crypt_connection_id, const uint8_
 static int send_data_packet_helper(Net_Crypto *c, int crypt_connection_id, uint32_t buffer_start, uint32_t num,
                                    const uint8_t *data, uint16_t length)
 {
-    if (length == 0 || length > MAX_CRYPTO_DATA_SIZE) {
-        LOGGER_ERROR(c->log, "TODO");
+    if (length == 0) {
+        LOGGER_ERROR(c->log, "Cannot send empty data packet");
+        return -1;
+    }
+
+    if (length > MAX_CRYPTO_DATA_SIZE) {
+        LOGGER_ERROR(c->log, "Data packet too long: %d > %d", length, MAX_CRYPTO_DATA_SIZE);
         return -1;
     }
 
@@ -1160,28 +1178,26 @@ static int reset_max_speed_reached(Net_Crypto *c, int crypt_connection_id)
        If sending it fails we won't be able to send the new packet. */
     if (conn->maximum_speed_reached) {
         Packet_Data *dt = nullptr;
-        uint32_t packet_num = conn->send_array.buffer_end - 1;
-        int ret = get_data_pointer(c->log, &conn->send_array, &dt, packet_num);
+        const uint32_t packet_num = conn->send_array.buffer_end - 1;
+        const int ret = get_data_pointer(c->log, &conn->send_array, &dt, packet_num);
 
         uint8_t send_failed = 0;
 
-        if (ret == 1) {
-            if (!dt->sent_time) {
-                if (send_data_packet_helper(c, crypt_connection_id, conn->recv_array.buffer_start, packet_num, dt->data,
-                                            dt->length) != 0) {
-                    send_failed = 1;
-                } else {
-                    dt->sent_time = current_time_monotonic();
-                }
+        if (ret == 1 && dt->sent_time == 0) {
+            if (send_data_packet_helper(c, crypt_connection_id, conn->recv_array.buffer_start, packet_num, dt->data,
+                                        dt->length) != 0) {
+                send_failed = 1;
+            } else {
+                dt->sent_time = current_time_monotonic();
             }
         }
 
-        if (!send_failed) {
-            conn->maximum_speed_reached = 0;
-        } else {
-            LOGGER_ERROR(c->log, "TODO");
+        if (send_failed) {
+            LOGGER_ERROR(c->log, "Sending data packet failed");
             return -1;
         }
+
+        conn->maximum_speed_reached = 0;
     }
 
     return 0;
@@ -1193,8 +1209,13 @@ static int reset_max_speed_reached(Net_Crypto *c, int crypt_connection_id)
 static int64_t send_lossless_packet(Net_Crypto *c, int crypt_connection_id, const uint8_t *data, uint16_t length,
                                     uint8_t congestion_control)
 {
-    if (length == 0 || length > MAX_CRYPTO_DATA_SIZE) {
-        LOGGER_ERROR(c->log, "TODO");
+    if (length == 0) {
+        LOGGER_ERROR(c->log, "Cannot send empty lossless packet");
+        return -1;
+    }
+
+    if (length > MAX_CRYPTO_DATA_SIZE) {
+        LOGGER_ERROR(c->log, "Lossless packet too large: %d > %d", length, MAX_CRYPTO_DATA_SIZE);
         return -1;
     }
 
@@ -1209,7 +1230,7 @@ static int64_t send_lossless_packet(Net_Crypto *c, int crypt_connection_id, cons
     reset_max_speed_reached(c, crypt_connection_id);
 
     if (conn->maximum_speed_reached && congestion_control) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Maximum speed reached; congestion control is active");
         return -1;
     }
 
@@ -1222,7 +1243,7 @@ static int64_t send_lossless_packet(Net_Crypto *c, int crypt_connection_id, cons
     pthread_mutex_unlock(&conn->mutex);
 
     if (packet_num == -1) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Appending packet to buffer failed");
         return -1;
     }
 
@@ -1238,7 +1259,8 @@ static int64_t send_lossless_packet(Net_Crypto *c, int crypt_connection_id, cons
         }
     } else {
         conn->maximum_speed_reached = 1;
-        LOGGER_ERROR(c->log, "send_data_packet failed\n");
+        // TODO(iphydf): It failed, but we're not telling the caller?
+        LOGGER_ERROR(c->log, "send_data_packet failed");
     }
 
     return packet_num;
@@ -1266,8 +1288,11 @@ static uint16_t get_nonce_uint16(const uint8_t *nonce)
 static int handle_data_packet(const Net_Crypto *c, int crypt_connection_id, uint8_t *data, const uint8_t *packet,
                               uint16_t length)
 {
-    if (length <= (1 + sizeof(uint16_t) + CRYPTO_MAC_SIZE) || length > MAX_CRYPTO_PACKET_SIZE) {
-        LOGGER_ERROR(c->log, "TODO");
+    const uint16_t CRYPTO_PACKET_OVERHEAD = 1 + sizeof(uint16_t) + CRYPTO_MAC_SIZE;
+
+    if (length <= CRYPTO_PACKET_OVERHEAD || length > MAX_CRYPTO_PACKET_SIZE) {
+        LOGGER_ERROR(c->log, "Received data packet of invalid length %d; valid range is [%d, %d]",
+                     length, CRYPTO_PACKET_OVERHEAD, MAX_CRYPTO_PACKET_SIZE);
         return -1;
     }
 
@@ -1281,15 +1306,15 @@ static int handle_data_packet(const Net_Crypto *c, int crypt_connection_id, uint
     memcpy(nonce, conn->recv_nonce, CRYPTO_NONCE_SIZE);
     uint16_t num_cur_nonce = get_nonce_uint16(nonce);
     uint16_t num;
-    memcpy(&num, packet + 1, sizeof(uint16_t));
-    num = net_ntohs(num);
+    net_unpack_u16(packet + 1, &num);
     uint16_t diff = num - num_cur_nonce;
     increment_nonce_number(nonce, diff);
     int len = decrypt_data_symmetric(conn->shared_key, nonce, packet + 1 + sizeof(uint16_t),
                                      length - (1 + sizeof(uint16_t)), data);
 
-    if ((unsigned int)len != length - (1 + sizeof(uint16_t) + CRYPTO_MAC_SIZE)) {
-        LOGGER_ERROR(c->log, "TODO");
+    if ((unsigned int)len != length - CRYPTO_PACKET_OVERHEAD) {
+        LOGGER_ERROR(c->log, "Unexpected decrypted packet length: %d (expected %d)",
+                     len, length - CRYPTO_PACKET_OVERHEAD);
         return -1;
     }
 
@@ -1317,7 +1342,7 @@ static int send_request_packet(Net_Crypto *c, int crypt_connection_id)
     int len = generate_request_packet(c->log, data, sizeof(data), &conn->recv_array);
 
     if (len == -1) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Failed to generate request packet");
         return -1;
     }
 
@@ -1333,7 +1358,9 @@ static int send_request_packet(Net_Crypto *c, int crypt_connection_id)
 static int send_requested_packets(Net_Crypto *c, int crypt_connection_id, uint32_t max_num)
 {
     if (max_num == 0) {
-        LOGGER_ERROR(c->log, "TODO");
+        // TODO(iphydf): Maybe this shouldn't be an error. Sending 0 packets can
+        // be done successfully by doing nothing.
+        LOGGER_ERROR(c->log, "Must send at least 1 requested data packet");
         return -1;
     }
 
@@ -1348,11 +1375,11 @@ static int send_requested_packets(Net_Crypto *c, int crypt_connection_id, uint32
 
     for (i = 0; i < array_size; ++i) {
         Packet_Data *dt;
-        uint32_t packet_num = (i + conn->send_array.buffer_start);
+        const uint32_t packet_num = i + conn->send_array.buffer_start;
         int ret = get_data_pointer(c->log, &conn->send_array, &dt, packet_num);
 
         if (ret == -1) {
-            LOGGER_ERROR(c->log, "TODO");
+            LOGGER_ERROR(c->log, "Could not get data pointer for packet number %d", packet_num);
             return -1;
         }
 
@@ -1387,7 +1414,8 @@ static int send_requested_packets(Net_Crypto *c, int crypt_connection_id, uint32
 static int new_temp_packet(const Net_Crypto *c, int crypt_connection_id, const uint8_t *packet, uint16_t length)
 {
     if (length == 0 || length > MAX_CRYPTO_PACKET_SIZE) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Temp packet size %d out of range; valid range is [0, %d]",
+                     length, MAX_CRYPTO_PACKET_SIZE);
         return -1;
     }
 
@@ -1400,7 +1428,7 @@ static int new_temp_packet(const Net_Crypto *c, int crypt_connection_id, const u
     uint8_t *temp_packet = (uint8_t *)malloc(length);
 
     if (temp_packet == nullptr) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Temp packet allocation of length %d failed", length);
         return -1;
     }
 
@@ -1460,7 +1488,7 @@ static int send_temp_packet(Net_Crypto *c, int crypt_connection_id)
     }
 
     if (send_packet_to(c, crypt_connection_id, conn->temp_packet, conn->temp_packet_length) != 0) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Sending temp packet failed");
         return -1;
     }
 
@@ -1488,12 +1516,12 @@ static int create_send_handshake(Net_Crypto *c, int crypt_connection_id, const u
 
     if (create_crypto_handshake(c, handshake_packet, cookie, conn->sent_nonce, conn->sessionpublic_key,
                                 conn->public_key, dht_public_key) != sizeof(handshake_packet)) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Creating crypto packet for handshake failed");
         return -1;
     }
 
     if (new_temp_packet(c, crypt_connection_id, handshake_packet, sizeof(handshake_packet)) != 0) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Creating temp packet for handshake failed");
         return -1;
     }
 
@@ -1544,7 +1572,8 @@ static int handle_data_packet_core(Net_Crypto *c, int crypt_connection_id, const
                                    bool udp, void *userdata)
 {
     if (length > MAX_CRYPTO_PACKET_SIZE || length <= CRYPTO_DATA_PACKET_MIN_SIZE) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Received data packet of invalid length %d; valid range: (%d, %d]",
+                     length, CRYPTO_DATA_PACKET_MIN_SIZE, MAX_CRYPTO_PACKET_SIZE);
         return -1;
     }
 
@@ -1558,7 +1587,7 @@ static int handle_data_packet_core(Net_Crypto *c, int crypt_connection_id, const
     int len = handle_data_packet(c, crypt_connection_id, data, packet, length);
 
     if (len <= (int)(sizeof(uint32_t) * 2)) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Decrypted data packet too small: %d has no room for buffer start and num", len);
         return -1;
     }
 
@@ -1578,7 +1607,7 @@ static int handle_data_packet_core(Net_Crypto *c, int crypt_connection_id, const
         }
 
         if (clear_buffer_until(c->log, &conn->send_array, buffer_start) != 0) {
-            LOGGER_ERROR(c->log, "TODO");
+            LOGGER_ERROR(c->log, "Clearing buffer until %d failed", buffer_start);
             return -1;
         }
     }
@@ -1591,7 +1620,8 @@ static int handle_data_packet_core(Net_Crypto *c, int crypt_connection_id, const
         --real_length;
 
         if (real_length == 0) {
-            LOGGER_ERROR(c->log, "TODO");
+            LOGGER_ERROR(c->log, "Unexpected padding in data packet at position %ld",
+                         real_data - data);
             return -1;
         }
     }
@@ -1623,18 +1653,18 @@ static int handle_data_packet_core(Net_Crypto *c, int crypt_connection_id, const
         int requested = handle_request_packet(c->log, &conn->send_array, real_data, real_length, &rtt_calc_time, rtt_time);
 
         if (requested == -1) {
-            LOGGER_ERROR(c->log, "TODO");
+            LOGGER_ERROR(c->log, "Failed to handle request packet");
             return -1;
         }
 
         set_buffer_end(c->log, &conn->recv_array, num);
     } else if (real_data[0] >= CRYPTO_RESERVED_PACKETS && real_data[0] < PACKET_ID_LOSSY_RANGE_START) {
-        Packet_Data dt;
+        Packet_Data dt = {0};
         dt.length = real_length;
         memcpy(dt.data, real_data, real_length);
 
         if (add_data_to_buffer(c->log, &conn->recv_array, num, &dt) != 0) {
-            LOGGER_ERROR(c->log, "TODO");
+            LOGGER_ERROR(c->log, "Failed to add data packet %d to buffer", num);
             return -1;
         }
 
@@ -1656,7 +1686,7 @@ static int handle_data_packet_core(Net_Crypto *c, int crypt_connection_id, const
             conn = get_crypto_connection(c, crypt_connection_id);
 
             if (conn == nullptr) {
-                LOGGER_ERROR(c->log, "TODO");
+                LOGGER_ERROR(c->log, "Crypto connection was killed in connection data callback");
                 return -1;
             }
         }
@@ -1673,7 +1703,7 @@ static int handle_data_packet_core(Net_Crypto *c, int crypt_connection_id, const
                                                  conn->connection_lossy_data_callback_id, real_data, real_length, userdata);
         }
     } else {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Unknown data packet type: %d", real_data[0]);
         return -1;
     }
 

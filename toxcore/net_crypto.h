@@ -47,12 +47,12 @@
 #define CRYPTO_MIN_QUEUE_LENGTH 64
 
 /* Maximum total size of packets that net_crypto sends. */
-#define MAX_CRYPTO_PACKET_SIZE 1400
+#define MAX_CRYPTO_PACKET_SIZE (uint16_t)1400
 
-#define CRYPTO_DATA_PACKET_MIN_SIZE (1 + sizeof(uint16_t) + (sizeof(uint32_t) + sizeof(uint32_t)) + CRYPTO_MAC_SIZE)
+#define CRYPTO_DATA_PACKET_MIN_SIZE (uint16_t)(1 + sizeof(uint16_t) + (sizeof(uint32_t) + sizeof(uint32_t)) + CRYPTO_MAC_SIZE)
 
 /* Max size of data in packets */
-#define MAX_CRYPTO_DATA_SIZE (MAX_CRYPTO_PACKET_SIZE - CRYPTO_DATA_PACKET_MIN_SIZE)
+#define MAX_CRYPTO_DATA_SIZE (uint16_t)(MAX_CRYPTO_PACKET_SIZE - CRYPTO_DATA_PACKET_MIN_SIZE)
 
 /* Interval in ms between sending cookie request/handshake packets. */
 #define CRYPTO_SEND_PACKET_INTERVAL 1000
