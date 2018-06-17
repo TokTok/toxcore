@@ -783,7 +783,7 @@ static int add_data_to_buffer(const Logger *log, Packets_Array *array, uint32_t 
     Packet_Data *new_d = (Packet_Data *)malloc(sizeof(Packet_Data));
 
     if (new_d == nullptr) {
-        LOGGER_ERROR(log, "TODO");
+        LOGGER_ERROR(log, "Could not allocate memory for Packet_Data");
         return -1;
     }
 
@@ -808,7 +808,7 @@ static int get_data_pointer(const Logger *log, const Packets_Array *array, Packe
     uint32_t num_spots = array->buffer_end - array->buffer_start;
 
     if (array->buffer_end - number > num_spots || number - array->buffer_start >= num_spots) {
-        LOGGER_ERROR(log, "TODO");
+        LOGGER_ERROR(log, "number=%d outside of buffer range: buffers=%d", number, num_spots);
         return -1;
     }
 
@@ -830,14 +830,14 @@ static int get_data_pointer(const Logger *log, const Packets_Array *array, Packe
 static int64_t add_data_end_of_buffer(const Logger *log, Packets_Array *array, const Packet_Data *data)
 {
     if (num_packets_array(array) >= CRYPTO_PACKET_BUFFER_SIZE) {
-        LOGGER_ERROR(log, "TODO");
+        LOGGER_ERROR(log, "num_packets_array(array) >= CRYPTO_PACKET_BUFFER_SIZE : %d >= %ld", num_packets_array(array), CRYPTO_PACKET_BUFFER_SIZE);
         return -1;
     }
 
     Packet_Data *new_d = (Packet_Data *)malloc(sizeof(Packet_Data));
 
     if (new_d == nullptr) {
-        LOGGER_ERROR(log, "TODO");
+        LOGGER_ERROR(log, "Can not allocate memory for Packet_Data");
         return -1;
     }
 
@@ -863,7 +863,7 @@ static int64_t read_data_beg_buffer(const Logger *log, Packets_Array *array, Pac
     uint32_t num = array->buffer_start % CRYPTO_PACKET_BUFFER_SIZE;
 
     if (!array->buffer[num]) {
-        LOGGER_ERROR(log, "TODO");
+        LOGGER_ERROR(log, "array->buffer[num] == NULL : num=%d", num);
         return -1;
     }
 
@@ -885,7 +885,7 @@ static int clear_buffer_until(const Logger *log, Packets_Array *array, uint32_t 
     uint32_t num_spots = array->buffer_end - array->buffer_start;
 
     if (array->buffer_end - number >= num_spots || number - array->buffer_start > num_spots) {
-        LOGGER_ERROR(log, "TODO");
+        LOGGER_ERROR(log, "number=%d outside of buffer range: buffers=%d", number, num_spots);
         return -1;
     }
 
@@ -951,7 +951,7 @@ static int set_buffer_end(const Logger *log, Packets_Array *array, uint32_t numb
 static int generate_request_packet(const Logger *log, uint8_t *data, uint16_t length, const Packets_Array *recv_array)
 {
     if (length == 0) {
-        LOGGER_ERROR(log, "TODO");
+        LOGGER_ERROR(log, "length == 0");
         return -1;
     }
 
@@ -1006,12 +1006,12 @@ static int handle_request_packet(const Logger *log, Packets_Array *send_array, c
                                  uint64_t *latest_send_time, uint64_t rtt_time)
 {
     if (length < 1) {
-        LOGGER_ERROR(log, "TODO");
+        LOGGER_ERROR(log, "length < 1");
         return -1;
     }
 
     if (data[0] != PACKET_ID_REQUEST) {
-        LOGGER_ERROR(log, "TODO");
+        LOGGER_ERROR(log, "data packet type != PACKET_ID_REQUEST : %ld", PACKET_ID_REQUEST);
         return -1;
     }
 
@@ -1065,7 +1065,7 @@ static int handle_request_packet(const Logger *log, Packets_Array *send_array, c
             n = 1;
 
             if (data[0] != 0) {
-                LOGGER_ERROR(log, "TODO");
+                LOGGER_ERROR(log, "current data byte != 0");
                 return -1;
             }
 
