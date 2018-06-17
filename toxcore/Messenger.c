@@ -310,6 +310,8 @@ int32_t m_addfriend_norequest(Messenger *m, const uint8_t *real_pk)
     return m_add_contact_no_request(m, real_pk);
 }
 
+static void try_pack_gc_data(const Messenger *m, const GC_Chat *chat, Onion_Friend *onion_friend);
+
 int32_t m_add_friend_gc(Messenger *m, GC_Chat *chat)
 {
     uint8_t tmp_public_key[ENC_PUBLIC_KEY];
@@ -328,21 +330,7 @@ int32_t m_add_friend_gc(Messenger *m, GC_Chat *chat)
         Onion_Friend *onion_friend = &m->onion_c->friends_list[onion_friend_number];
         memcpy(onion_friend->gc_public_key, get_chat_id(chat->chat_public_key), ENC_PUBLIC_KEY);
 
-        Node_format tcp_relay[1]; // TODO: send > 1 relay?
-        int tcp_num = tcp_copy_connected_relays(chat->tcp_conn, tcp_relay, 1);
-
-        if (tcp_num == 1) {
-            memcpy(onion_friend->gc_data, tcp_relay, sizeof(Node_format));
-            memcpy(onion_friend->gc_data + sizeof(Node_format), chat->self_public_key, ENC_PUBLIC_KEY);
-            memcpy(onion_friend->gc_data + sizeof(Node_format) + ENC_PUBLIC_KEY,
-                   get_chat_id(chat->chat_public_key), ENC_PUBLIC_KEY);
-            onion_friend->gc_data_length = GC_MAX_DATA_LENGTH;
-            memcpy(&chat->announced_node, tcp_relay, sizeof(Node_format));
-            add_self_announce(m->mono_time, m->group_announce, get_chat_id(chat->chat_public_key), &chat->announced_node);
-
-        } else {
-            onion_friend->gc_data_length = -1;  // new gc - no connected relays yet
-        }
+        try_pack_gc_data(m, chat, onion_friend);
     }
 
     return friend_number;
@@ -2691,26 +2679,36 @@ uint32_t messenger_run_interval(const Messenger *m)
     return crypto_interval;
 }
 
+static void try_pack_gc_data(const Messenger *m, const GC_Chat *chat, Onion_Friend *onion_friend)
+{
+    GC_Public_Announce announce;
+    int tcp_num = tcp_copy_connected_relays(chat->tcp_conn, announce.tcp_relays, MAX_ANNOUNCED_TCP_RELAYS);
+
+    if (tcp_num >= 0) {
+        announce.tcp_relays_count = (uint8_t)tcp_num;
+        memcpy(announce.peer_public_key, chat->self_public_key, ENC_PUBLIC_KEY);
+        memcpy(announce.chat_public_key, get_chat_id(chat->chat_public_key), ENC_PUBLIC_KEY);
+        int length = pack_public_announce(onion_friend->gc_data, GC_MAX_DATA_LENGTH, &announce);
+        onion_friend->gc_data_length = (short)length;
+        memcpy((void*)&chat->announced_node, &announce.tcp_relays[0], sizeof(Node_format));
+        add_gc_announce(m->mono_time, m->group_announce, &announce);
+    } else {
+        onion_friend->gc_data_length = -1;  // new gc - no connected relays yet
+    }
+}
+
+// TODO: to callback
 static void update_gc_friends_data(const Messenger *m)
 {
     int i;
-    Node_format tcp_relay[MAX_SENT_GC_NODES]; // TODO: send > 1 relay?
     for (i = 0; i < m->onion_c->num_friends; i++) {
         Onion_Friend *onion_friend = &m->onion_c->friends_list[i];
         if (onion_friend->gc_data_length != -1) {
             continue;
         }
         GC_Chat *chat = gc_get_group_by_public_key(m->group_handler, onion_friend->gc_public_key);
-        int tcp_num = tcp_copy_connected_relays(chat->tcp_conn, tcp_relay, 1);
-        if (tcp_num == 1) {
-            memcpy(onion_friend->gc_data, tcp_relay, sizeof(Node_format));
-            memcpy(onion_friend->gc_data + sizeof(Node_format), chat->self_public_key, ENC_PUBLIC_KEY);
-            memcpy(onion_friend->gc_data + sizeof(Node_format) + ENC_PUBLIC_KEY,
-                   get_chat_id(chat->chat_public_key), ENC_PUBLIC_KEY);
-            onion_friend->gc_data_length = GC_MAX_DATA_LENGTH;
-            memcpy(&chat->announced_node, tcp_relay, sizeof(Node_format));
-            add_self_announce(m->mono_time, m->group_announce, get_chat_id(chat->chat_public_key), &chat->announced_node);
-        }
+
+        try_pack_gc_data(m, chat, onion_friend);
     }
 }
 
