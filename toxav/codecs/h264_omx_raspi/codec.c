@@ -140,6 +140,7 @@ typedef struct {
 // Stolen from video-info.c of gstreamer-plugins-base
 #define ROUND_UP_2(num) (((num)+1)&~1)
 #define ROUND_UP_4(num) (((num)+3)&~3)
+
 static void get_i420_frame_info(int width, int height, int buf_stride, int buf_slice_height, i420_frame_info *info)
 {
     info->p_stride[0] = ROUND_UP_4(width);
@@ -164,65 +165,10 @@ static void get_i420_frame_info(int width, int height, int buf_stride, int buf_s
 
 static void die(const char *message, ...)
 {
-#if 0
-    va_list args;
-    char str[1024];
-    memset(str, 0, sizeof(str));
-    va_start(args, message);
-    vsnprintf(str, sizeof(str), message, args);
-    va_end(args);
-    // say(str);
-    exit(1);
-#endif
 }
 
 static void omx_die(OMX_ERRORTYPE error, const char *message, ...)
 {
-#if 0
-    va_list args;
-    char str[1024];
-    char *e;
-    memset(str, 0, sizeof(str));
-    va_start(args, message);
-    vsnprintf(str, sizeof(str), message, args);
-    va_end(args);
-
-    switch (error) {
-        case OMX_ErrorNone:
-            e = "no error";
-            break;
-
-        case OMX_ErrorBadParameter:
-            e = "bad parameter";
-            break;
-
-        case OMX_ErrorIncorrectStateOperation:
-            e = "invalid state while trying to perform command";
-            break;
-
-        case OMX_ErrorIncorrectStateTransition:
-            e = "unallowed state transition";
-            break;
-
-        case OMX_ErrorInsufficientResources:
-            e = "insufficient resource";
-            break;
-
-        case OMX_ErrorBadPortIndex:
-            e = "bad port index, i.e. incorrect port";
-            break;
-
-        case OMX_ErrorHardware:
-            e = "hardware error";
-            break;
-
-        /* That's all I've encountered during hacking so let's not bother with the rest... */
-        default:
-            e = "(no description)";
-    }
-
-    die("OMX error: %s: 0x%08x %s", str, error, e);
-#endif
 }
 
 static void dump_frame_info(const char *message, const i420_frame_info *info)
@@ -466,7 +412,7 @@ static void h264_omx_set_bool(VCSession *vc, OMX_INDEXTYPE i, bool value)
         bool_type.bEnabled = OMX_FALSE;
     }
 
-    LOGGER_ERROR(vc->log, "OMX: setting bool param to: %d", (int)value);
+    // LOGGER_ERROR(vc->log, "OMX: setting bool param to: %d", (int)value);
 
     if (OMX_SetParameter(vc->omx_ctx->encoder, i, &bool_type) != OMX_ErrorNone) {
         LOGGER_ERROR(vc->log, "OMX: failed to param!");
@@ -482,7 +428,7 @@ static void h264_omx_set_u32(VCSession *vc, OMX_INDEXTYPE i, uint32_t value)
     p.nPortIndex = 201;
     p.nU32 = value;
 
-    LOGGER_ERROR(vc->log, "OMX: setting uint32 param to: %d", (int)value);
+    // LOGGER_ERROR(vc->log, "OMX: setting uint32 param to: %d", (int)value);
 
     if (OMX_SetParameter(vc->omx_ctx->encoder, i, &p) != OMX_ErrorNone) {
         LOGGER_ERROR(vc->log, "OMX: failed to param!");
@@ -613,8 +559,8 @@ static void startup_h264_omx_raspi_encoder(VCSession *vc, uint16_t width, uint16
 
     h264_omx_set_u32(vc, OMX_IndexConfigBrcmVideoIntraPeriod, 50);
     h264_omx_set_bool(vc, OMX_IndexParamBrcmVideoAVCInlineHeaderEnable, true);
-    h264_omx_set_u32(vc, OMX_IndexParamBrcmVideoEncodeMaxQuant, 48); // max. 48
-    h264_omx_set_u32(vc, OMX_IndexParamBrcmVideoEncodeMinQuant, 15); // min. 10
+    h264_omx_set_u32(vc, OMX_IndexParamBrcmVideoEncodeMaxQuant, 18); // max. 48
+    h264_omx_set_u32(vc, OMX_IndexParamBrcmVideoEncodeMinQuant, 14); // min. 10 (10 causes crash, 14 seems to work)
 
 
     // Switch components to idle state
@@ -1102,6 +1048,21 @@ uint32_t send_frames_h264_omx_raspi(ToxAV *av, uint32_t friend_number, uint16_t 
 
                     LOGGER_DEBUG(av->m->log, "OMX:own_video:video frame:1len=%d", (int)header->data_length_full);
                     LOGGER_DEBUG(av->m->log, "OMX:own_video:video frame:2len=%d", (int)msg2->header.data_length_full);
+
+
+                    if (vc->incoming_video_bitrate_last_changed != header->encoder_bit_rate_used) {
+                        if (vc->av) {
+                            if (vc->av->call_comm_cb.first) {
+                                vc->av->call_comm_cb.first(vc->av, vc->friend_number,
+                                                           TOXAV_CALL_COMM_DECODER_CURRENT_BITRATE,
+                                                           (int64_t)header->encoder_bit_rate_used,
+                                                           vc->av->call_comm_cb.second);
+                            }
+
+                        }
+
+                        vc->incoming_video_bitrate_last_changed = header->encoder_bit_rate_used;
+                    }
 
 
                     if ((vc) && (vc->vbuf_raw)) {

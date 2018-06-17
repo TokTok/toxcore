@@ -62,7 +62,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc->video_rc_max_quantizer_prev = vc->video_rc_max_quantizer;
     vc->video_rc_min_quantizer = TOXAV_ENCODER_VP8_RC_MIN_QUANTIZER_NORMAL;
     vc->video_rc_min_quantizer_prev = vc->video_rc_min_quantizer;
-    vc->video_encoder_coded_used = TOXAV_ENCODER_CODEC_USED_VP8; // DEBUG: H264 !!
+    vc->video_encoder_coded_used = TOXAV_ENCODER_CODEC_USED_VP8; // DEFAULT: VP8 !!
     vc->video_encoder_coded_used_prev = vc->video_encoder_coded_used;
 #ifdef RASPBERRY_PI_OMX
     vc->video_encoder_coded_used_hw_accel = TOXAV_ENCODER_CODEC_HW_ACCEL_OMX_PI;
@@ -73,10 +73,10 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc->video_keyframe_method_prev = vc->video_keyframe_method;
     vc->video_decoder_error_concealment = VIDEO__VP8_DECODER_ERROR_CONCEALMENT;
     vc->video_decoder_error_concealment_prev = vc->video_decoder_error_concealment;
-    vc->video_decoder_codec_used = TOXAV_ENCODER_CODEC_USED_VP8; // DEBUG: H264 !!
+    vc->video_decoder_codec_used = TOXAV_ENCODER_CODEC_USED_VP8; // DEFAULT: VP8 !!
     vc->send_keyframe_request_received = 0;
-    vc->h264_video_capabilities_received = 0; // DEBUG: set to zero (0) !!
-    vc->show_own_video = 0; // DEBUG: set to zero (0) !!
+    vc->h264_video_capabilities_received = 0; // WARNING: always set to zero (0) !!
+    vc->show_own_video = 0; // WARNING: always set to zero (0) !!
     // options ---
 
 
@@ -513,23 +513,23 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
 
     if ((header->flags & RTP_LARGE_FRAME) && header->pt == rtp_TypeVideo % 128) {
 
-        LOGGER_DEBUG(vc->log, "VIDEO_incoming_bitrate=%d", (int)header->encoder_bit_rate_used);
+        if (vc->show_own_video == 0) {
+            LOGGER_DEBUG(vc->log, "VIDEO_incoming_bitrate=%d", (int)header->encoder_bit_rate_used);
 
-        if (vc->incoming_video_bitrate_last_changed != header->encoder_bit_rate_used) {
-            if (vc->av) {
-                if (vc->av->call_comm_cb.first) {
-                    vc->av->call_comm_cb.first(vc->av, vc->friend_number,
-                                               TOXAV_CALL_COMM_DECODER_CURRENT_BITRATE,
-                                               (int64_t)header->encoder_bit_rate_used,
-                                               vc->av->call_comm_cb.second);
+            if (vc->incoming_video_bitrate_last_changed != header->encoder_bit_rate_used) {
+                if (vc->av) {
+                    if (vc->av->call_comm_cb.first) {
+                        vc->av->call_comm_cb.first(vc->av, vc->friend_number,
+                                                   TOXAV_CALL_COMM_DECODER_CURRENT_BITRATE,
+                                                   (int64_t)header->encoder_bit_rate_used,
+                                                   vc->av->call_comm_cb.second);
+                    }
+
                 }
 
+                vc->incoming_video_bitrate_last_changed = header->encoder_bit_rate_used;
             }
 
-            vc->incoming_video_bitrate_last_changed = header->encoder_bit_rate_used;
-        }
-
-        if (vc->show_own_video == 0) {
             free(rb_write((RingBuffer *)vc->vbuf_raw, msg, (uint64_t)header->flags));
         } else {
             // discard incoming frame, we want to see our outgoing frames instead
