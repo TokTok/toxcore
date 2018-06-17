@@ -27,6 +27,7 @@
 #define MAX_GCA_SAVED_ANNOUNCES_PER_GC 100
 #define GC_ANNOUNCE_PACKED_SIZE (sizeof(GC_Peer_Announce))
 #define GC_ANNOUNCE_SAVING_TIMEOUT 30
+#define MAX_ANNOUNCED_TCP_RELAYS 1
 
 typedef struct {
     uint8_t public_key[ENC_PUBLIC_KEY];
@@ -36,10 +37,20 @@ typedef struct {
 typedef struct GC_Peer_Announce GC_Peer_Announce;
 typedef struct GC_Announces GC_Announces;
 typedef struct GC_Announces_List GC_Announces_List;
+typedef struct GC_Public_Announce GC_Public_Announce;
 
 struct GC_Peer_Announce {
     uint64_t timestamp;
-    Node_format node;
+    Node_format node; // TODO: array?
+    IP_Port peer_ip_port;
+    uint8_t peer_public_key[ENC_PUBLIC_KEY];
+};
+
+// Used for announces in public groups
+struct GC_Public_Announce {
+    Node_format tcp_relays[MAX_ANNOUNCED_TCP_RELAYS];
+    uint8_t tcp_relays_count;
+    uint8_t chat_public_key[ENC_PUBLIC_KEY];
     uint8_t peer_public_key[ENC_PUBLIC_KEY];
 };
 
@@ -96,11 +107,10 @@ int make_self_gca_node(const DHT *dht, GC_Announce_Node *node, const uint8_t *cl
 int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Peer_Announce *gc_announces, uint8_t max_nodes,
                      const uint8_t *chat_id, const uint8_t *except_public_key);
 
-GC_Peer_Announce* add_gc_announce(GC_Announces_List *gc_announces_list, const Node_format *node,
-                             const uint8_t *chat_id, const uint8_t *peer_id);
+GC_Peer_Announce* add_gc_announce(GC_Announces_List *gc_announces_list, const GC_Public_Announce *announce);
 
-GC_Peer_Announce* add_self_announce(GC_Announces_List *gc_announces_list, const uint8_t *chat_id, Node_format *node);
+int pack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce *announce);
 
-//TODO: pack && unpack announces?
+bool unpack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce *announce);
 
 #endif /* GROUP_ANNOUNCE_H */
