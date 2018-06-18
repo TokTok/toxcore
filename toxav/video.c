@@ -436,6 +436,22 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
             // video_switch_decoder(vc, TOXAV_ENCODER_CODEC_USED_VP8);
         }
 
+        // HINT: somtimes the singaling of H264 capability does not work
+        //       as workaround send it again on the first 30 frames
+        if ((vc->video_decoder_codec_used != TOXAV_ENCODER_CODEC_USED_H264)
+                && ((long)header_v3->sequnum < 30)) {
+
+            // HINT: tell friend that we have H264 decoder capabilities (3) -------
+            uint32_t pkg_buf_len = 2;
+            uint8_t pkg_buf[pkg_buf_len];
+            pkg_buf[0] = PACKET_TOXAV_COMM_CHANNEL;
+            pkg_buf[1] = PACKET_TOXAV_COMM_CHANNEL_HAVE_H264_VIDEO;
+
+            int result = send_custom_lossless_packet(m, vc->friend_number, pkg_buf, pkg_buf_len);
+            LOGGER_ERROR(vc->log, "PACKET_TOXAV_COMM_CHANNEL_HAVE_H264_VIDEO=%d\n", (int)result);
+            // HINT: tell friend that we have H264 decoder capabilities -------
+
+        }
 
         if (vc->video_decoder_codec_used != TOXAV_ENCODER_CODEC_USED_H264) {
             // LOGGER_ERROR(vc->log, "DEC:VP8------------");
