@@ -1306,6 +1306,9 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 
         if ((call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP8)
                 || (call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP9)) {
+
+            LOGGER_DEBUG(av->m->log, "++++++ encoding VP8 frame ++++++");
+
             // HINT: vp8
             uint32_t result = encode_frame_vpx(av, friend_number, width, height,
                                                y, u, v, call,
@@ -1321,6 +1324,8 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
             }
 
         } else {
+
+            LOGGER_DEBUG(av->m->log, "**##** encoding H264 frame **##**");
 
             // HINT: H264
 #ifdef RASPBERRY_PI_OMX
