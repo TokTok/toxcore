@@ -58,8 +58,8 @@ START_TEST(test_basic)
     ck_assert_msg(tcp_server_listen_count(tcp_s) == NUM_PORTS, "Failed to bind a TCP relay server to all %d attempted ports", NUM_PORTS);
 
     //Check all opened ports for connectivity.
+    Socket sock = net_socket(net_family_ipv6, TOX_SOCK_STREAM, TOX_PROTO_TCP);
     for (uint8_t i = 0; i < NUM_PORTS; i++) {
-        Socket sock = net_socket(net_family_ipv6, TOX_SOCK_STREAM, TOX_PROTO_TCP);
         IP_Port ip_port_loopback;
         ip_port_loopback.ip = get_loopback();
         ip_port_loopback.port = net_htons(ports[i]);
