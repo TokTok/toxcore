@@ -55,10 +55,12 @@ START_TEST(test_basic)
     crypto_new_keypair(self_public_key, self_secret_key);
     TCP_Server *tcp_s = new_TCP_server(USE_IPV6, NUM_PORTS, ports, self_secret_key, nullptr);
     ck_assert_msg(tcp_s != nullptr, "Failed to create a TCP relay server");
-    ck_assert_msg(tcp_server_listen_count(tcp_s) == NUM_PORTS, "Failed to bind a TCP relay server to all %d attempted ports", NUM_PORTS);
+    ck_assert_msg(tcp_server_listen_count(tcp_s) == NUM_PORTS, 
+            "Failed to bind a TCP relay server to all %d attempted ports", NUM_PORTS);
 
-    //Check all opened ports for connectivity.
     Socket sock;
+    
+    //Check all opened ports for connectivity.
     for (uint8_t i = 0; i < NUM_PORTS; i++) {
         sock = net_socket(net_family_ipv6, TOX_SOCK_STREAM, TOX_PROTO_TCP);
         IP_Port ip_port_loopback;
@@ -68,8 +70,9 @@ START_TEST(test_basic)
         ck_assert_msg(ret == 0, "Failed to connect to created TCP relay server on port %d", ports[i]);
         
         //Leave open one connection for the next test.
-        if (i + 1 < NUM_PORTS)
+        if (i + 1 < NUM_PORTS) {
             kill_sock(sock);
+        }
     }
 
     uint8_t f_public_key[CRYPTO_PUBLIC_KEY_SIZE];
@@ -87,7 +90,7 @@ START_TEST(test_basic)
     random_nonce(handshake + CRYPTO_PUBLIC_KEY_SIZE);
 
     int ret = encrypt_data(self_public_key, f_secret_key, handshake + CRYPTO_PUBLIC_KEY_SIZE, handshake_plain,
-                       TCP_HANDSHAKE_PLAIN_SIZE, handshake + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE);
+                           TCP_HANDSHAKE_PLAIN_SIZE, handshake + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE);
     ck_assert_msg(ret == TCP_CLIENT_HANDSHAKE_SIZE - (CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE),
                   "Encrypt failed.");
     ck_assert_msg(net_send(sock, handshake, TCP_CLIENT_HANDSHAKE_SIZE - 1) == TCP_CLIENT_HANDSHAKE_SIZE - 1,
