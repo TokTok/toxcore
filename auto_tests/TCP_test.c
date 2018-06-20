@@ -56,10 +56,10 @@ START_TEST(test_basic)
     TCP_Server *tcp_s = new_TCP_server(USE_IPV6, NUM_PORTS, ports, self_secret_key, nullptr);
     ck_assert_msg(tcp_s != nullptr, "Failed to create a TCP relay server");
     ck_assert_msg(tcp_server_listen_count(tcp_s) == NUM_PORTS, 
-            "Failed to bind a TCP relay server to all %d attempted ports", NUM_PORTS);
+                  "Failed to bind a TCP relay server to all %d attempted ports", NUM_PORTS);
 
     Socket sock;
-    
+
     //Check all opened ports for connectivity.
     for (uint8_t i = 0; i < NUM_PORTS; i++) {
         sock = net_socket(net_family_ipv6, TOX_SOCK_STREAM, TOX_PROTO_TCP);
@@ -68,7 +68,7 @@ START_TEST(test_basic)
         ip_port_loopback.port = net_htons(ports[i]);
         int ret = net_connect(sock, ip_port_loopback);
         ck_assert_msg(ret == 0, "Failed to connect to created TCP relay server on port %d", ports[i]);
-        
+
         //Leave open one connection for the next test.
         if (i + 1 < NUM_PORTS) {
             kill_sock(sock);
