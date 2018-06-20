@@ -158,7 +158,6 @@ typedef struct VCSession_s {
     uint32_t lcfd; /* Last calculated frame duration for incoming video payload */
 
     uint8_t show_own_video;
-    uint64_t last_incoming_frame_ts;
     uint64_t last_decoded_frame_ts;
     uint64_t last_encoded_frame_ts;
     uint8_t  flag_end_video_fragment;
@@ -174,6 +173,9 @@ typedef struct VCSession_s {
 
     uint8_t send_keyframe_request_received;
     uint8_t h264_video_capabilities_received;
+
+    int64_t timestamp_difference_to_sender;
+    uint64_t last_incoming_frame_ts;
 
     // options ---
     int32_t video_encoder_cpu_used;

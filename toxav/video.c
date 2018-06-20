@@ -54,7 +54,6 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     }
 
     // options ---
-    vc->last_incoming_frame_ts = 0;
     vc->video_encoder_cpu_used = VP8E_SET_CPUUSED_VALUE;
     vc->video_encoder_cpu_used_prev = vc->video_encoder_cpu_used;
     vc->video_encoder_vp8_quality = TOXAV_ENCODER_VP8_QUALITY_NORMAL;
@@ -78,6 +77,9 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc->send_keyframe_request_received = 0;
     vc->h264_video_capabilities_received = 0; // WARNING: always set to zero (0) !!
     vc->show_own_video = 0; // WARNING: always set to zero (0) !!
+
+    vc->last_incoming_frame_ts = 0;
+    vc->timestamp_difference_to_sender = 0;
     // options ---
 
 
@@ -527,13 +529,6 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
 
     LOGGER_DEBUG(vc->log, "TT:queue:V:fragnum=%ld", (long)header_v3->fragment_num);
 
-    LOGGER_DEBUG(vc->log, "VVDEBUG:seqnum=%d dt=%d ts:%llu", (int)header_v3->sequnum,
-                 (int)((uint64_t)header_v3->frame_record_timestamp - (uint64_t)vc->last_incoming_frame_ts),
-                 header_v3->frame_record_timestamp);
-
-    vc->last_incoming_frame_ts = header_v3->frame_record_timestamp;
-
-
 
     if ((header->flags & RTP_LARGE_FRAME) && header->pt == rtp_TypeVideo % 128) {
 
@@ -553,6 +548,18 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
 
                 vc->incoming_video_bitrate_last_changed = header->encoder_bit_rate_used;
             }
+
+            vc->last_incoming_frame_ts = header_v3->frame_record_timestamp;
+
+            int64_t cur_diff_in_ms = (int64_t)(current_time_monotonic() - vc->last_incoming_frame_ts);
+            vc->timestamp_difference_to_sender = vc->timestamp_difference_to_sender
+                                                 + ((cur_diff_in_ms - vc->timestamp_difference_to_sender) / 2); // go half way in that direction
+            LOGGER_DEBUG(vc->log, "VVDEBUG:diff_ms:%lld", (int64_t)vc->timestamp_difference_to_sender);
+            LOGGER_DEBUG(vc->log, "VVDEBUG:ts_corr:%llu dt=%d",
+                         (uint64_t)(current_time_monotonic() - vc->timestamp_difference_to_sender),
+                         (int)((uint64_t)(current_time_monotonic() - vc->timestamp_difference_to_sender) -
+                               (uint64_t)vc->last_incoming_frame_ts));
+
 
             free(rb_write((RingBuffer *)vc->vbuf_raw, msg, (uint64_t)header->flags));
         } else {

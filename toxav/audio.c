@@ -347,8 +347,8 @@ int ac_queue_message(void *acp, struct RTPMessage *msg)
         LOGGER_DEBUG(ac->log, "AADEBUG:diff_ms:%lld", (int64_t)ac->timestamp_difference_to_sender);
         LOGGER_DEBUG(ac->log, "AADEBUG:ts_corr:%llu dt=%d",
                      (uint64_t)(current_time_monotonic() - ac->timestamp_difference_to_sender),
-                     (int)((uint64_t)(current_time_monotonic() - ac->timestamp_difference_to_sender) - (uint64_t)
-                           ac->last_incoming_frame_ts));
+                     (int)((uint64_t)(current_time_monotonic() - ac->timestamp_difference_to_sender) -
+                           (uint64_t)ac->last_incoming_frame_ts));
     }
 
     return 0;

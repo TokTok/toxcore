@@ -222,6 +222,24 @@ void toxav_iterate(ToxAV *av)
 
 
 
+
+
+            VCSession *vc1 = (VCSession *)i->video.second;
+            // LOGGER_ERROR(av->m->log, "video-ts=%d",
+            //             (int)vc1->timestamp_difference_to_sender);
+
+            ACSession *ac1 = (ACSession *)i->audio.second;
+            // LOGGER_ERROR(av->m->log, "audio-ts=%d",
+            //             (int)ac1->timestamp_difference_to_sender);
+
+            const int diff_streams = (int)(vc1->timestamp_difference_to_sender - ac1->timestamp_difference_to_sender);
+
+            if ((diff_streams < -40) || (diff_streams > 40)) {
+                LOGGER_ERROR(av->m->log, "video (to audio) delay in ms=%d", diff_streams);
+            }
+
+
+
 #if !defined(_GNU_SOURCE)
             video_play_bg((void *)(i));
 #else
