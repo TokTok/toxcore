@@ -39,6 +39,7 @@
 #include "LAN_discovery.h"
 #include "util.h"
 #include "Messenger.h"
+#include "friend_connection.h"
 
 #include <sodium.h>
 
@@ -113,6 +114,11 @@ void print_peer(const GC_GroupPeer *peer, const GC_Connection *gconn)
     fprintf(stderr, "Status: %u\n", peer->status);
     fprintf(stderr, "Role: %u\n", peer->role);
     fprintf(stderr, "Ignore: %d\n", peer->ignore);
+}
+
+static bool is_tcp_only_mode(const GC_Session *session)
+{
+    return !dht_isconnected(session->messenger->dht);  // TODO: get self connection status?
 }
 
 static bool is_peer_confirmed(const GC_Chat *chat, const uint8_t *peer_pk)
@@ -4428,9 +4434,12 @@ static int handle_gc_handshake_request(Messenger *m, int groupnumber, IP_Port *i
     }
 
     GC_Connection *gconn = gcc_get_connection(chat, peer_number);
-
     if (gconn == nullptr) {
         return -1;
+    }
+
+    if (ipp) {
+        memcpy(&gconn->addr.ip_port, ipp, sizeof(IP_Port));
     }
 
     Node_format node[1];
@@ -4446,7 +4455,7 @@ static int handle_gc_handshake_request(Messenger *m, int groupnumber, IP_Port *i
 
     int add_tcp_result = add_tcp_relay_connection(chat->tcp_conn, gconn->tcp_connection_num,
                                                   node->ip_port, node->public_key);
-    if (add_tcp_result < 0 && is_new_peer) {
+    if (add_tcp_result < 0 && is_new_peer && !ipp) {
         fprintf(stderr, "broken tcp relay for new peer\n");
         gc_peer_delete(m, groupnumber, peer_number, NULL, 0);
         return -1;
@@ -4472,12 +4481,17 @@ static int handle_gc_handshake_request(Messenger *m, int groupnumber, IP_Port *i
         return -1;
     }
 
-    ++gconn->recv_message_id;
+    gconn->recv_message_id++;
 
-    gconn->pending_handshake_type = request_type;
-    gconn->is_oob_handshake = false;
-    gconn->is_pending_handshake_response = true;
-    gconn->pending_handshake = gconn->last_rcvd_ping = mono_time_get(chat->mono_time) + HANDSHAKE_SENDING_TIMEOUT;
+    if (!ipp) {
+        gconn->pending_handshake_type = request_type;
+        gconn->is_oob_handshake = false;
+        gconn->is_pending_handshake_response = true;
+        gconn->pending_handshake = gconn->last_rcvd_ping = mono_time_get(chat->mono_time) + HANDSHAKE_SENDING_TIMEOUT;
+    } else {
+        send_gc_handshake_response(chat, peer_number, request_type);
+    }
+
 
     fprintf(stderr, "in handle_gc_handshake_request success\n");
 
@@ -5817,10 +5831,10 @@ bool check_group_invite(GC_Session *c, const uint8_t *data, uint32_t length)
  * Return -1 if friendnumber does not exist.
  * Return -2 if the packet fails to send.
  */
-int gc_invite_friend(GC_Session *c, GC_Chat *chat, int32_t friendnumber,
+int gc_invite_friend(GC_Session *c, GC_Chat *chat, int32_t friend_number,
                      int send_group_invite_packet(const Messenger *m, uint32_t friendnumber, const uint8_t *packet, size_t length))
 {
-    if (friend_not_valid(c->messenger, friendnumber)) {
+    if (friend_not_valid(c->messenger, friend_number)) {
         return -1;
     }
 
@@ -5836,11 +5850,11 @@ int gc_invite_friend(GC_Session *c, GC_Chat *chat, int32_t friendnumber,
 
     length += ENC_PUBLIC_KEY;
 
-    if (send_group_invite_packet(c->messenger, friendnumber, packet, length) == -1) {
+    if (send_group_invite_packet(c->messenger, friend_number, packet, length) == -1) {
         return -2;
     }
 
-    chat->saved_invites[chat->saved_invites_index] = friendnumber;
+    chat->saved_invites[chat->saved_invites_index] = friend_number;
     chat->saved_invites_index = (chat->saved_invites_index + 1) % MAX_GC_SAVED_INVITES;
 
     return 0;
@@ -5899,6 +5913,13 @@ static int send_gc_invite_confirmed_packet(Messenger *m, GC_Chat *chat, uint32_t
     return 0;
 }
 
+static void copy_ip_port(Messenger *m, int friend_number, GC_Connection *gconn)
+{
+    Friend *f = &m->friendlist[friend_number];
+    int friend_connection_id = f->friendcon_id;
+    Friend_Conn *connection = &m->fr_c->conns[friend_connection_id];
+    memcpy(&gconn->addr.ip_port, &connection->dht_ip_port, sizeof(IP_Port));
+}
 
 int handle_gc_invite_confirmed_packet(GC_Session *c, int friend_number, const uint8_t *data,
                                       uint32_t length)
@@ -5923,34 +5944,39 @@ int handle_gc_invite_confirmed_packet(GC_Session *c, int friend_number, const ui
         return -2;
     }
 
-    int peernumber = get_peernum_of_enc_pk(chat, invite_chat_pk);
-
-    if (peernumber < 0) {
+    int peer_number = get_peernum_of_enc_pk(chat, invite_chat_pk);
+    if (peer_number < 0) {
         return -3;
     }
 
-    GC_Connection *gconn = gcc_get_connection(chat, peernumber);
+    GC_Connection *gconn = gcc_get_connection(chat, peer_number);
 
     Node_format tcp_relays[GCC_MAX_TCP_SHARED_RELAYS];
     int num_nodes = unpack_nodes(tcp_relays, GCC_MAX_TCP_SHARED_RELAYS,
                                  NULL, data + ENC_PUBLIC_KEY + CHAT_ID_SIZE,
                                  length - ENC_PUBLIC_KEY - CHAT_ID_SIZE, 1);
 
-    if (num_nodes <= 0) {
+    bool is_tcp_only = is_tcp_only_mode(c);
+    if (num_nodes <= 0 && is_tcp_only) {
         return -1;
     }
 
-    int i;
+    copy_ip_port(c->messenger, friend_number, gconn);
 
+    int i;
     for (i = 0; i < num_nodes; ++i) {
         add_tcp_relay_connection(chat->tcp_conn, gconn->tcp_connection_num, tcp_relays[i].ip_port,
                                  tcp_relays[i].public_key);
         save_tcp_relay(gconn, &tcp_relays[i]);
     }
 
-    gconn->pending_handshake_type = HS_INVITE_REQUEST;
-    gconn->is_pending_handshake_response = gconn->is_oob_handshake = false;
-    gconn->pending_handshake = mono_time_get(chat->mono_time) + HANDSHAKE_SENDING_TIMEOUT;
+    if (!is_tcp_only && !num_nodes) {
+        send_gc_handshake_packet(chat, peer_number, GH_REQUEST, HS_INVITE_REQUEST, chat->join_type);
+    } else {
+        gconn->pending_handshake_type = HS_INVITE_REQUEST;
+        gconn->is_pending_handshake_response = gconn->is_oob_handshake = false;
+        gconn->pending_handshake = mono_time_get(chat->mono_time) + HANDSHAKE_SENDING_TIMEOUT;
+    }
 
     return 0;
 }
@@ -5997,39 +6023,43 @@ int handle_gc_invite_accepted_packet(GC_Session *c, int friend_number, const uin
         return -2;
     }
 
-    int peernumber = peer_add(m, chat->groupnumber, NULL, invite_chat_pk);
+    int peer_number = peer_add(m, chat->groupnumber, NULL, invite_chat_pk);
 
-    if (peernumber < 0) {
+    if (peer_number < 0) {
         return -3;
     }
 
-    GC_Connection *gconn = gcc_get_connection(chat, peernumber);
+    GC_Connection *gconn = gcc_get_connection(chat, peer_number);
+    bool is_tcp_only = is_tcp_only_mode(c);
 
     Node_format tcp_relays[GCC_MAX_TCP_SHARED_RELAYS];
     unsigned int i, num = tcp_copy_connected_relays(chat->tcp_conn, tcp_relays, GCC_MAX_TCP_SHARED_RELAYS);
-
-    if (num <= 0) {
-        return 0;
+    if (num <= 0 && is_tcp_only) {
+        return -1;
     }
+
+    copy_ip_port(m, friend_number, gconn);
 
     uint32_t len = CHAT_ID_SIZE + ENC_PUBLIC_KEY;
     uint8_t send_data[MAX_GC_PACKET_SIZE];
     memcpy(send_data, chat_id, CHAT_ID_SIZE);
     memcpy(send_data + CHAT_ID_SIZE, chat->self_public_key, ENC_PUBLIC_KEY);
 
-    for (i = 0; i < num; ++i) {
-        add_tcp_relay_connection(chat->tcp_conn, gconn->tcp_connection_num, tcp_relays[i].ip_port,
-                                 tcp_relays[i].public_key);
-        save_tcp_relay(gconn, &tcp_relays[i]);
+    if (num > 0) {
+        for (i = 0; i < num; ++i) {
+            add_tcp_relay_connection(chat->tcp_conn, gconn->tcp_connection_num, tcp_relays[i].ip_port,
+                                     tcp_relays[i].public_key);
+            save_tcp_relay(gconn, &tcp_relays[i]);
+        }
+
+        int nodes_len = pack_nodes(send_data + len, sizeof(send_data) - len, tcp_relays, num);
+
+        if (nodes_len <= 0 && is_tcp_only) {
+            return -1;
+        }
+
+        len += nodes_len;
     }
-
-    int nodes_len = pack_nodes(send_data + len, sizeof(send_data) - len, tcp_relays, num);
-
-    if (nodes_len <= 0) {
-        return -1;
-    }
-
-    len += nodes_len;
 
     if (send_gc_invite_confirmed_packet(m, chat, friend_number, send_data, len)) {
         return -4;
