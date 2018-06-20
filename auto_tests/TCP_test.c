@@ -69,11 +69,11 @@ START_TEST(test_basic)
     int ret;
     for(uint8_t i = 0; i < NUM_PORTS; i++)
     {
-	ip_port_loopback.port = net_htons(ports[i]);
+        ip_port_loopback.port = net_htons(ports[i]);
 
-	ret = net_connect(sock, ip_port_loopback);	
-	snprintf(err_msg, ERR_MSG_LENGTH, "Failed to connect to created TCP relay server on port %d", ports[i]);
-	ck_assert_msg(ret == 0, err_msg);
+        ret = net_connect(sock, ip_port_loopback);	
+        snprintf(err_msg, ERR_MSG_LENGTH, "Failed to connect to created TCP relay server on port %d", ports[i]);
+        ck_assert_msg(ret == 0, err_msg);
     }
 
     uint8_t f_public_key[CRYPTO_PUBLIC_KEY_SIZE];
