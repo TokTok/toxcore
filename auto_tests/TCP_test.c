@@ -81,7 +81,7 @@ START_TEST(test_basic)
     memcpy(handshake, f_public_key, CRYPTO_PUBLIC_KEY_SIZE);
     random_nonce(handshake + CRYPTO_PUBLIC_KEY_SIZE);
 
-    ret = encrypt_data(self_public_key, f_secret_key, handshake + CRYPTO_PUBLIC_KEY_SIZE, handshake_plain,
+    int ret = encrypt_data(self_public_key, f_secret_key, handshake + CRYPTO_PUBLIC_KEY_SIZE, handshake_plain,
                        TCP_HANDSHAKE_PLAIN_SIZE, handshake + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE);
     ck_assert_msg(ret == TCP_CLIENT_HANDSHAKE_SIZE - (CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE),
                   "Encrypt failed.");
