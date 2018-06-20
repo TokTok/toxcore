@@ -61,11 +61,9 @@ START_TEST(test_basic)
     Socket sock = net_socket(net_family_ipv6, TOX_SOCK_STREAM, TOX_PROTO_TCP);
     IP_Port ip_port_loopback;
     ip_port_loopback.ip = get_loopback();
-    int ret;
-    for(uint8_t i = 0; i < NUM_PORTS; i++)
-    {
+    for (uint8_t i = 0; i < NUM_PORTS; i++) {
         ip_port_loopback.port = net_htons(ports[i]);
-        ret = net_connect(sock, ip_port_loopback);	
+        int ret = net_connect(sock, ip_port_loopback);
         ck_assert_msg(ret == 0, "Failed to connect to created TCP relay server on port %d", ports[i]);
     }
 
