@@ -2652,6 +2652,7 @@ uint32_t messenger_run_interval(const Messenger *m)
 
 static void try_pack_gc_data(const Messenger *m, const GC_Chat *chat, Onion_Friend *onion_friend)
 {
+    // TODO: pack ip
     GC_Public_Announce announce;
     int tcp_num = tcp_copy_connected_relays(chat->tcp_conn, announce.tcp_relays, MAX_ANNOUNCED_TCP_RELAYS);
 
