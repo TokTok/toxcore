@@ -197,7 +197,7 @@ static uint8_t crypt_connection_id_not_valid(const Net_Crypto *c, int crypt_conn
 #define COOKIE_TIMEOUT 15
 #define COOKIE_DATA_LENGTH (CRYPTO_PUBLIC_KEY_SIZE * 2)
 #define COOKIE_CONTENTS_LENGTH (sizeof(uint64_t) + COOKIE_DATA_LENGTH)
-#define COOKIE_LENGTH (CRYPTO_NONCE_SIZE + COOKIE_CONTENTS_LENGTH + CRYPTO_MAC_SIZE)
+#define COOKIE_LENGTH (uint16_t)(CRYPTO_NONCE_SIZE + COOKIE_CONTENTS_LENGTH + CRYPTO_MAC_SIZE)
 
 #define COOKIE_REQUEST_PLAIN_LENGTH (COOKIE_DATA_LENGTH + sizeof(uint64_t))
 #define COOKIE_REQUEST_LENGTH (1 + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE + COOKIE_REQUEST_PLAIN_LENGTH + CRYPTO_MAC_SIZE)
@@ -254,7 +254,7 @@ static int create_cookie(const Logger *log, uint8_t *cookie, const uint8_t *byte
     int len = encrypt_data_symmetric(encryption_key, cookie, contents, sizeof(contents), cookie + CRYPTO_NONCE_SIZE);
 
     if (len != COOKIE_LENGTH - CRYPTO_NONCE_SIZE) {
-        LOGGER_ERROR(log, "Cookie encryption resulted in wrong length: %d (should be %ld)",
+        LOGGER_ERROR(log, "Cookie encryption resulted in wrong length: %d (should be %d)",
                      len, COOKIE_LENGTH - CRYPTO_NONCE_SIZE);
         return -1;
     }
@@ -507,7 +507,7 @@ static int create_crypto_handshake(const Net_Crypto *c, uint8_t *packet, const u
                            packet + 1 + COOKIE_LENGTH + CRYPTO_NONCE_SIZE);
 
     if (len != HANDSHAKE_PACKET_LENGTH - (1 + COOKIE_LENGTH + CRYPTO_NONCE_SIZE)) {
-        LOGGER_ERROR(c->log, "Handshake packet encryption resulted in wrong size: %d (should be %ld)",
+        LOGGER_ERROR(c->log, "Handshake packet encryption resulted in wrong size: %d (should be %d)",
                      len, HANDSHAKE_PACKET_LENGTH - (1 + COOKIE_LENGTH + CRYPTO_NONCE_SIZE));
         return -1;
     }
@@ -540,7 +540,7 @@ static int handle_crypto_handshake(const Net_Crypto *c, uint8_t *nonce, uint8_t 
                                    uint8_t *dht_public_key, uint8_t *cookie, const uint8_t *packet, uint16_t length, const uint8_t *expected_real_pk)
 {
     if (length != HANDSHAKE_PACKET_LENGTH) {
-        LOGGER_ERROR(c->log, "Received handshake packet of invalid length: %d (should be %ld)",
+        LOGGER_ERROR(c->log, "Received handshake packet of invalid length: %d (should be %d)",
                      length, HANDSHAKE_PACKET_LENGTH);
         return -1;
     }
@@ -609,6 +609,7 @@ static int add_ip_port_connection(Net_Crypto *c, int crypt_connection_id, IP_Por
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return -1;
     }
 
@@ -652,6 +653,7 @@ static IP_Port return_ip_port_connection(Net_Crypto *c, int crypt_connection_id)
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return empty;
     }
 
@@ -692,6 +694,7 @@ static int send_packet_to(Net_Crypto *c, int crypt_connection_id, const uint8_t 
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return -1;
     }
 
@@ -931,13 +934,15 @@ static int clear_buffer(Packets_Array *array)
  */
 static int set_buffer_end(const Logger *log, Packets_Array *array, uint32_t number)
 {
-    if ((number - array->buffer_start) > CRYPTO_PACKET_BUFFER_SIZE) {
-        LOGGER_ERROR(log, "TODO");
+    if (number - array->buffer_start > CRYPTO_PACKET_BUFFER_SIZE) {
+        LOGGER_ERROR(log, "Setting buffer end to %d would increase size to %d, which exceeds the buffer size %d",
+                     number, number - array->buffer_start, CRYPTO_PACKET_BUFFER_SIZE);
         return -1;
     }
 
-    if ((number - array->buffer_end) > CRYPTO_PACKET_BUFFER_SIZE) {
-        LOGGER_ERROR(log, "TODO");
+    if (number - array->buffer_end > CRYPTO_PACKET_BUFFER_SIZE) {
+        LOGGER_ERROR(log, "Setting buffer end to %d would increase size to %d, which exceeds the buffer size %d",
+                     number, number - array->buffer_end, CRYPTO_PACKET_BUFFER_SIZE);
         return -1;
     }
 
@@ -1069,7 +1074,7 @@ static int handle_request_packet(const Logger *log, Packets_Array *send_array, c
             n = 1;
 
             if (data[0] != 0) {
-                LOGGER_ERROR(log, "TODO");
+                LOGGER_ERROR(log, "TODO: why does data[0] need to be 0? (it's %d)", data[0]);
                 return -1;
             }
 
@@ -1113,6 +1118,7 @@ static int send_data_packet(Net_Crypto *c, int crypt_connection_id, const uint8_
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return -1;
     }
 
@@ -1171,6 +1177,7 @@ static int reset_max_speed_reached(Net_Crypto *c, int crypt_connection_id)
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return -1;
     }
 
@@ -1222,6 +1229,7 @@ static int64_t send_lossless_packet(Net_Crypto *c, int crypt_connection_id, cons
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return -1;
     }
 
@@ -1299,6 +1307,7 @@ static int handle_data_packet(const Net_Crypto *c, int crypt_connection_id, uint
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return -1;
     }
 
@@ -1335,6 +1344,7 @@ static int send_request_packet(Net_Crypto *c, int crypt_connection_id)
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return -1;
     }
 
@@ -1367,6 +1377,7 @@ static int send_requested_packets(Net_Crypto *c, int crypt_connection_id, uint32
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return -1;
     }
 
@@ -1422,6 +1433,7 @@ static int new_temp_packet(const Net_Crypto *c, int crypt_connection_id, const u
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return -1;
     }
 
@@ -1454,6 +1466,7 @@ static int clear_temp_packet(const Net_Crypto *c, int crypt_connection_id)
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return -1;
     }
 
@@ -1479,6 +1492,7 @@ static int send_temp_packet(Net_Crypto *c, int crypt_connection_id)
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return -1;
     }
 
@@ -1509,6 +1523,7 @@ static int create_send_handshake(Net_Crypto *c, int crypt_connection_id, const u
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return -1;
     }
 
@@ -1539,6 +1554,7 @@ static int send_kill_packet(Net_Crypto *c, int crypt_connection_id)
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return -1;
     }
 
@@ -1552,6 +1568,7 @@ static void connection_kill(Net_Crypto *c, int crypt_connection_id, void *userda
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return;
     }
 
@@ -1580,6 +1597,7 @@ static int handle_data_packet_core(Net_Crypto *c, int crypt_connection_id, const
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return -1;
     }
 
@@ -1727,20 +1745,22 @@ static int handle_packet_connection(Net_Crypto *c, int crypt_connection_id, cons
                                     bool udp, void *userdata)
 {
     if (length == 0 || length > MAX_CRYPTO_PACKET_SIZE) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Received packet of invalid length: %d (range: [0, %d])", length, MAX_CRYPTO_PACKET_SIZE);
         return -1;
     }
 
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return -1;
     }
 
     switch (packet[0]) {
         case NET_PACKET_COOKIE_RESPONSE: {
             if (conn->status != CRYPTO_CONN_COOKIE_REQUESTING) {
-                LOGGER_ERROR(c->log, "TODO");
+                LOGGER_ERROR(c->log, "Invalid state: connection is in state %d but should be CRYPTO_CONN_COOKIE_REQUESTING",
+                             conn->status);
                 return -1;
             }
 
@@ -1748,17 +1768,18 @@ static int handle_packet_connection(Net_Crypto *c, int crypt_connection_id, cons
             uint64_t number;
 
             if (handle_cookie_response(c->log, cookie, &number, packet, length, conn->shared_key) != sizeof(cookie)) {
-                LOGGER_ERROR(c->log, "TODO");
+                LOGGER_ERROR(c->log, "Failed to handle cookie response");
                 return -1;
             }
 
             if (number != conn->cookie_request_number) {
-                LOGGER_ERROR(c->log, "TODO");
+                LOGGER_ERROR(c->log, "Cookie response has incorrect number: %lld (expected %lld)",
+                             (unsigned long long)number, (unsigned long long)conn->cookie_request_number);
                 return -1;
             }
 
             if (create_send_handshake(c, crypt_connection_id, cookie, conn->dht_public_key) != 0) {
-                LOGGER_ERROR(c->log, "TODO");
+                LOGGER_ERROR(c->log, "Failed to create and send a handshake packet");
                 return -1;
             }
 
@@ -1767,53 +1788,54 @@ static int handle_packet_connection(Net_Crypto *c, int crypt_connection_id, cons
         }
 
         case NET_PACKET_CRYPTO_HS: {
-            if (conn->status == CRYPTO_CONN_COOKIE_REQUESTING || conn->status == CRYPTO_CONN_HANDSHAKE_SENT
-                    || conn->status == CRYPTO_CONN_NOT_CONFIRMED) {
-                uint8_t peer_real_pk[CRYPTO_PUBLIC_KEY_SIZE];
-                uint8_t dht_public_key[CRYPTO_PUBLIC_KEY_SIZE];
-                uint8_t cookie[COOKIE_LENGTH];
-
-                if (handle_crypto_handshake(c, conn->recv_nonce, conn->peersessionpublic_key, peer_real_pk, dht_public_key, cookie,
-                                            packet, length, conn->public_key) != 0) {
-                    LOGGER_ERROR(c->log, "TODO");
-                    return -1;
-                }
-
-                if (public_key_cmp(dht_public_key, conn->dht_public_key) == 0) {
-                    encrypt_precompute(conn->peersessionpublic_key, conn->sessionsecret_key, conn->shared_key);
-
-                    if (conn->status == CRYPTO_CONN_COOKIE_REQUESTING) {
-                        if (create_send_handshake(c, crypt_connection_id, cookie, dht_public_key) != 0) {
-                            LOGGER_ERROR(c->log, "TODO");
-                            return -1;
-                        }
-                    }
-
-                    conn->status = CRYPTO_CONN_NOT_CONFIRMED;
-                } else {
-                    if (conn->dht_pk_callback) {
-                        conn->dht_pk_callback(conn->dht_pk_callback_object, conn->dht_pk_callback_number, dht_public_key, userdata);
-                    }
-                }
-            } else {
-                LOGGER_ERROR(c->log, "TODO");
+            if (conn->status != CRYPTO_CONN_COOKIE_REQUESTING
+                    && conn->status != CRYPTO_CONN_HANDSHAKE_SENT
+                    && conn->status != CRYPTO_CONN_NOT_CONFIRMED) {
+                LOGGER_ERROR(c->log, "Invalid state: status is %d", conn->status);
                 return -1;
+            }
+
+            uint8_t peer_real_pk[CRYPTO_PUBLIC_KEY_SIZE];
+            uint8_t dht_public_key[CRYPTO_PUBLIC_KEY_SIZE];
+            uint8_t cookie[COOKIE_LENGTH];
+
+            if (handle_crypto_handshake(c, conn->recv_nonce, conn->peersessionpublic_key, peer_real_pk, dht_public_key, cookie,
+                                        packet, length, conn->public_key) != 0) {
+                LOGGER_ERROR(c->log, "Failed to handle crypto handshake");
+                return -1;
+            }
+
+            if (public_key_cmp(dht_public_key, conn->dht_public_key) == 0) {
+                encrypt_precompute(conn->peersessionpublic_key, conn->sessionsecret_key, conn->shared_key);
+
+                if (conn->status == CRYPTO_CONN_COOKIE_REQUESTING) {
+                    if (create_send_handshake(c, crypt_connection_id, cookie, dht_public_key) != 0) {
+                        LOGGER_ERROR(c->log, "Failed to create and send a handshake packet");
+                        return -1;
+                    }
+                }
+
+                conn->status = CRYPTO_CONN_NOT_CONFIRMED;
+            } else {
+                if (conn->dht_pk_callback) {
+                    conn->dht_pk_callback(conn->dht_pk_callback_object, conn->dht_pk_callback_number, dht_public_key, userdata);
+                }
             }
 
             return 0;
         }
 
         case NET_PACKET_CRYPTO_DATA: {
-            if (conn->status == CRYPTO_CONN_NOT_CONFIRMED || conn->status == CRYPTO_CONN_ESTABLISHED) {
-                return handle_data_packet_core(c, crypt_connection_id, packet, length, udp, userdata);
+            if (conn->status != CRYPTO_CONN_NOT_CONFIRMED && conn->status != CRYPTO_CONN_ESTABLISHED) {
+                LOGGER_ERROR(c->log, "Connection status is %d, but should be confirmed or established", conn->status);
+                return -1;
             }
 
-            LOGGER_ERROR(c->log, "TODO");
-            return -1;
+            return handle_data_packet_core(c, crypt_connection_id, packet, length, udp, userdata);
         }
 
         default: {
-            LOGGER_ERROR(c->log, "TODO");
+            LOGGER_ERROR(c->log, "Cannot handle packet type: %d", packet[0]);
             return -1;
         }
     }
@@ -1836,7 +1858,7 @@ static int realloc_cryptoconnection(Net_Crypto *c, uint32_t num)
             num * sizeof(Crypto_Connection));
 
     if (newcrypto_connections == nullptr) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Allocation failure: can't allocate %d crypto connections", num);
         return -1;
     }
 
@@ -1885,7 +1907,7 @@ static int create_crypto_connection(Net_Crypto *c)
 
         if (pthread_mutex_init(&c->crypto_connections[id].mutex, nullptr) != 0) {
             pthread_mutex_unlock(&c->connections_mutex);
-            LOGGER_ERROR(c->log, "TODO");
+            LOGGER_ERROR(c->log, "Failed to initialise crypto connection mutex");
             return -1;
         }
     }
@@ -1902,7 +1924,7 @@ static int create_crypto_connection(Net_Crypto *c)
 static int wipe_crypto_connection(Net_Crypto *c, int crypt_connection_id)
 {
     if (crypt_connection_id_not_valid(c, crypt_connection_id)) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Cannot wipe invalid crypto connection");
         return -1;
     }
 
@@ -1961,12 +1983,13 @@ static int crypto_connection_add_source(Net_Crypto *c, int crypt_connection_id, 
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return -1;
     }
 
     if (net_family_is_ipv4(source.ip.family) || net_family_is_ipv6(source.ip.family)) {
         if (add_ip_port_connection(c, crypt_connection_id, source) != 0) {
-            LOGGER_ERROR(c->log, "TODO");
+            LOGGER_ERROR(c->log, "Failed to add IP/Port connection for source");
             return -1;
         }
 
@@ -1985,7 +2008,7 @@ static int crypto_connection_add_source(Net_Crypto *c, int crypt_connection_id, 
         }
     }
 
-    LOGGER_ERROR(c->log, "TODO");
+    LOGGER_ERROR(c->log, "Invalid network family: %d (should be IPv4, IPv6, or TCP)", source.ip.family.value);
     return -1;
 }
 
@@ -2016,7 +2039,7 @@ static int handle_new_connection_handshake(Net_Crypto *c, IP_Port source, const 
     n_c.cookie = (uint8_t *)malloc(COOKIE_LENGTH);
 
     if (n_c.cookie == nullptr) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Allocation failure: cannot allocate cookie (size %d)", COOKIE_LENGTH);
         return -1;
     }
 
@@ -2026,7 +2049,7 @@ static int handle_new_connection_handshake(Net_Crypto *c, IP_Port source, const 
     if (handle_crypto_handshake(c, n_c.recv_nonce, n_c.peersessionpublic_key, n_c.public_key, n_c.dht_public_key,
                                 n_c.cookie, data, length, nullptr) != 0) {
         free(n_c.cookie);
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Failed to handle crypto handshake in incoming connection");
         return -1;
     }
 
@@ -2035,26 +2058,33 @@ static int handle_new_connection_handshake(Net_Crypto *c, IP_Port source, const 
     if (crypt_connection_id != -1) {
         Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
+        if (conn == nullptr) {
+            LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
+            return -1;
+        }
+
         if (public_key_cmp(n_c.dht_public_key, conn->dht_public_key) != 0) {
             connection_kill(c, crypt_connection_id, userdata);
         } else {
-            int ret = -1;
+            if (conn->status != CRYPTO_CONN_COOKIE_REQUESTING && conn->status != CRYPTO_CONN_HANDSHAKE_SENT) {
+                free(n_c.cookie);
+                return -1;
+            }
 
-            if (conn && (conn->status == CRYPTO_CONN_COOKIE_REQUESTING || conn->status == CRYPTO_CONN_HANDSHAKE_SENT)) {
-                memcpy(conn->recv_nonce, n_c.recv_nonce, CRYPTO_NONCE_SIZE);
-                memcpy(conn->peersessionpublic_key, n_c.peersessionpublic_key, CRYPTO_PUBLIC_KEY_SIZE);
-                encrypt_precompute(conn->peersessionpublic_key, conn->sessionsecret_key, conn->shared_key);
+            memcpy(conn->recv_nonce, n_c.recv_nonce, CRYPTO_NONCE_SIZE);
+            memcpy(conn->peersessionpublic_key, n_c.peersessionpublic_key, CRYPTO_PUBLIC_KEY_SIZE);
+            encrypt_precompute(conn->peersessionpublic_key, conn->sessionsecret_key, conn->shared_key);
 
-                crypto_connection_add_source(c, crypt_connection_id, source);
+            crypto_connection_add_source(c, crypt_connection_id, source);
 
-                if (create_send_handshake(c, crypt_connection_id, n_c.cookie, n_c.dht_public_key) == 0) {
-                    conn->status = CRYPTO_CONN_NOT_CONFIRMED;
-                    ret = 0;
-                }
+            if (create_send_handshake(c, crypt_connection_id, n_c.cookie, n_c.dht_public_key) == 0) {
+                conn->status = CRYPTO_CONN_NOT_CONFIRMED;
+                free(n_c.cookie);
+                return 0;
             }
 
             free(n_c.cookie);
-            return ret;
+            return -1;
         }
     }
 
@@ -2071,21 +2101,22 @@ static int handle_new_connection_handshake(Net_Crypto *c, IP_Port source, const 
 int accept_crypto_connection(Net_Crypto *c, New_Connection *n_c)
 {
     if (getcryptconnection_id(c, n_c->public_key) != -1) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Cannot accept invalid crypto connection");
         return -1;
     }
 
-    int crypt_connection_id = create_crypto_connection(c);
+    const int crypt_connection_id = create_crypto_connection(c);
 
     if (crypt_connection_id == -1) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Could not create new crypto connection");
         return -1;
     }
 
     Crypto_Connection *conn = &c->crypto_connections[crypt_connection_id];
 
     if (n_c->cookie_length != COOKIE_LENGTH) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Received invalid cookie length: %d (should be %d)",
+                     n_c->cookie_length, COOKIE_LENGTH);
         return -1;
     }
 
@@ -2094,7 +2125,7 @@ int accept_crypto_connection(Net_Crypto *c, New_Connection *n_c)
     pthread_mutex_unlock(&c->tcp_mutex);
 
     if (connection_number_tcp == -1) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Failed to create new TCP connection");
         return -1;
     }
 
@@ -2112,7 +2143,7 @@ int accept_crypto_connection(Net_Crypto *c, New_Connection *n_c)
         kill_tcp_connection_to(c->tcp_c, conn->connection_number_tcp);
         pthread_mutex_unlock(&c->tcp_mutex);
         conn->status = CRYPTO_CONN_NO_CONNECTION;
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Failed to create and send a handshake packet");
         return -1;
     }
 
@@ -2141,15 +2172,10 @@ int new_crypto_connection(Net_Crypto *c, const uint8_t *real_public_key, const u
 
     crypt_connection_id = create_crypto_connection(c);
 
-    if (crypt_connection_id == -1) {
-        LOGGER_ERROR(c->log, "TODO");
-        return -1;
-    }
-
-    Crypto_Connection *conn = &c->crypto_connections[crypt_connection_id];
+    Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return -1;
     }
 
@@ -2158,7 +2184,7 @@ int new_crypto_connection(Net_Crypto *c, const uint8_t *real_public_key, const u
     pthread_mutex_unlock(&c->tcp_mutex);
 
     if (connection_number_tcp == -1) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Failed to create new TCP connection");
         return -1;
     }
 
@@ -2183,7 +2209,7 @@ int new_crypto_connection(Net_Crypto *c, const uint8_t *real_public_key, const u
         kill_tcp_connection_to(c->tcp_c, conn->connection_number_tcp);
         pthread_mutex_unlock(&c->tcp_mutex);
         conn->status = CRYPTO_CONN_NO_CONNECTION;
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Failed to create cookie request while making a new crypto connection");
         return -1;
     }
 
@@ -2202,6 +2228,7 @@ int set_direct_ip_port(Net_Crypto *c, int crypt_connection_id, IP_Port ip_port, 
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return -1;
     }
 
@@ -2222,18 +2249,20 @@ int set_direct_ip_port(Net_Crypto *c, int crypt_connection_id, IP_Port ip_port, 
 }
 
 
-static int tcp_data_callback(void *object, int id, const uint8_t *data, uint16_t length, void *userdata)
+static int tcp_data_callback(void *object, int crypt_connection_id, const uint8_t *data, uint16_t length,
+                             void *userdata)
 {
     Net_Crypto *c = (Net_Crypto *)object;
 
     if (length == 0 || length > MAX_CRYPTO_PACKET_SIZE) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Invalid length: %d (range: [0, %d])", length, MAX_CRYPTO_PACKET_SIZE);
         return -1;
     }
 
-    Crypto_Connection *conn = get_crypto_connection(c, id);
+    Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return -1;
     }
 
@@ -2244,11 +2273,11 @@ static int tcp_data_callback(void *object, int id, const uint8_t *data, uint16_t
     // This unlocks the mutex that at this point is locked by do_tcp before
     // calling do_tcp_connections.
     pthread_mutex_unlock(&c->tcp_mutex);
-    int ret = handle_packet_connection(c, id, data, length, 0, userdata);
+    int ret = handle_packet_connection(c, crypt_connection_id, data, length, 0, userdata);
     pthread_mutex_lock(&c->tcp_mutex);
 
     if (ret != 0) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Failed to handle packet connection from TCP");
         return -1;
     }
 
@@ -2262,7 +2291,7 @@ static int tcp_oob_callback(void *object, const uint8_t *public_key, unsigned in
     Net_Crypto *c = (Net_Crypto *)object;
 
     if (length == 0 || length > MAX_CRYPTO_PACKET_SIZE) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Invalid length: %d (range: [0, %d])", length, MAX_CRYPTO_PACKET_SIZE);
         return -1;
     }
 
@@ -2277,14 +2306,14 @@ static int tcp_oob_callback(void *object, const uint8_t *public_key, unsigned in
         source.ip.ip.v6.uint32[0] = tcp_connections_number;
 
         if (handle_new_connection_handshake(c, source, data, length, userdata) != 0) {
-            LOGGER_ERROR(c->log, "TODO");
+            LOGGER_ERROR(c->log, "Failed to handle new connection handshake from TCP OOB packet");
             return -1;
         }
 
         return 0;
     }
 
-    LOGGER_ERROR(c->log, "TODO");
+    LOGGER_ERROR(c->log, "Could not handle packet type: %d", data[0]);
     return -1;
 }
 
@@ -2298,6 +2327,7 @@ int add_tcp_relay_peer(Net_Crypto *c, int crypt_connection_id, IP_Port ip_port, 
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return -1;
     }
 
@@ -2382,6 +2412,7 @@ static void do_tcp(Net_Crypto *c, void *userdata)
         Crypto_Connection *conn = get_crypto_connection(c, i);
 
         if (conn == nullptr) {
+            LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", i);
             continue;
         }
 
@@ -2418,6 +2449,7 @@ int connection_status_handler(const Net_Crypto *c, int crypt_connection_id,
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return -1;
     }
 
@@ -2441,6 +2473,7 @@ int connection_data_handler(const Net_Crypto *c, int crypt_connection_id, int (*
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return -1;
     }
 
@@ -2465,6 +2498,7 @@ int connection_lossy_data_handler(Net_Crypto *c, int crypt_connection_id,
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return -1;
     }
 
@@ -2491,6 +2525,7 @@ int nc_dht_pk_callback(Net_Crypto *c, int crypt_connection_id, void (*function)(
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return -1;
     }
 
@@ -2548,6 +2583,7 @@ static int udp_handle_packet(void *object, IP_Port source, const uint8_t *packet
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return -1;
     }
 
@@ -2583,15 +2619,15 @@ static int udp_handle_packet(void *object, IP_Port source, const uint8_t *packet
 
 static void send_crypto_packets(Net_Crypto *c)
 {
-    uint32_t i;
     uint64_t temp_time = current_time_monotonic();
     double total_send_rate = 0;
     uint32_t peak_request_packet_interval = ~0;
 
-    for (i = 0; i < c->crypto_connections_length; ++i) {
+    for (uint32_t i = 0; i < c->crypto_connections_length; ++i) {
         Crypto_Connection *conn = get_crypto_connection(c, i);
 
         if (conn == nullptr) {
+            LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", i);
             continue;
         }
 
@@ -2830,6 +2866,7 @@ uint32_t crypto_num_free_sendqueue_slots(const Net_Crypto *c, int crypt_connecti
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return 0;
     }
 
@@ -2853,40 +2890,44 @@ int64_t write_cryptpacket(Net_Crypto *c, int crypt_connection_id, const uint8_t 
                           uint8_t congestion_control)
 {
     if (length == 0) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Cannot write empty packet (connection id: %d)", crypt_connection_id);
         return -1;
     }
 
     if (data[0] < CRYPTO_RESERVED_PACKETS) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Packet type %d is out of range (must be >= %d)",
+                     data[0], CRYPTO_RESERVED_PACKETS);
         return -1;
     }
 
     if (data[0] >= PACKET_ID_LOSSY_RANGE_START) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Packet type %d is out of range (must be < %d)",
+                     data[0], PACKET_ID_LOSSY_RANGE_START);
         return -1;
     }
 
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return -1;
     }
 
     if (conn->status != CRYPTO_CONN_ESTABLISHED) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Can only send packets on ESTABLISHED connection, but state is %d",
+                     conn->status);
         return -1;
     }
 
     if (congestion_control && conn->packets_left == 0) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Packet queue is full and congestion control is active");
         return -1;
     }
 
     int64_t ret = send_lossless_packet(c, crypt_connection_id, data, length, congestion_control);
 
     if (ret == -1) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Could not send lossless packet");
         return -1;
     }
 
@@ -2918,18 +2959,20 @@ int cryptpacket_received(Net_Crypto *c, int crypt_connection_id, uint32_t packet
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return -1;
     }
 
     uint32_t num = conn->send_array.buffer_end - conn->send_array.buffer_start;
     uint32_t num1 = packet_number - conn->send_array.buffer_start;
 
-    if (num < num1) {
-        return 0;
+    // TODO(iphydf): INSANITY!
+    if (num >= num1) {
+        LOGGER_ERROR(c->log, "TODO: why is this a failure? This function doesn't do anything on success.");
+        return -1;
     }
 
-    LOGGER_ERROR(c->log, "TODO");
-    return -1;
+    return 0;
 }
 
 /* return -1 on failure.
@@ -2940,17 +2983,19 @@ int cryptpacket_received(Net_Crypto *c, int crypt_connection_id, uint32_t packet
 int send_lossy_cryptpacket(Net_Crypto *c, int crypt_connection_id, const uint8_t *data, uint16_t length)
 {
     if (length == 0 || length > MAX_CRYPTO_DATA_SIZE) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Invalid length: %d (range: [0, %d])", length, MAX_CRYPTO_DATA_SIZE);
         return -1;
     }
 
     if (data[0] < PACKET_ID_LOSSY_RANGE_START) {
-        LOGGER_ERROR(c->log, "TODO");
+        LOGGER_ERROR(c->log, "Invalid incoming lossy packet ID: %d < %d",
+                     data[0], PACKET_ID_LOSSY_RANGE_START);
         return -1;
     }
 
-    if (data[0] >= (PACKET_ID_LOSSY_RANGE_START + PACKET_ID_LOSSY_RANGE_SIZE)) {
-        LOGGER_ERROR(c->log, "TODO");
+    if (data[0] >= PACKET_ID_LOSSY_RANGE_START + PACKET_ID_LOSSY_RANGE_SIZE) {
+        LOGGER_ERROR(c->log, "Invalid incoming lossy packet ID: %d >= %d",
+                     data[0], PACKET_ID_LOSSY_RANGE_START + PACKET_ID_LOSSY_RANGE_SIZE);
         return -1;
     }
 
@@ -2968,6 +3013,8 @@ int send_lossy_cryptpacket(Net_Crypto *c, int crypt_connection_id, const uint8_t
         uint32_t buffer_end = conn->send_array.buffer_end;
         pthread_mutex_unlock(&conn->mutex);
         ret = send_data_packet_helper(c, crypt_connection_id, buffer_start, buffer_end, data, length);
+    } else {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
     }
 
     pthread_mutex_lock(&c->connections_mutex);
@@ -2984,7 +3031,9 @@ int send_lossy_cryptpacket(Net_Crypto *c, int crypt_connection_id, const uint8_t
  */
 int crypto_kill(Net_Crypto *c, int crypt_connection_id)
 {
-    while (1) { /* TODO(irungentoo): is this really the best way to do this? */
+    // TODO(irungentoo): is this really the best way to do this?
+    // TODO(iphydf): I don't even know what you're actually trying to do here.
+    while (1) {
         pthread_mutex_lock(&c->connections_mutex);
 
         if (!c->connection_use_counter) {
@@ -3013,6 +3062,8 @@ int crypto_kill(Net_Crypto *c, int crypt_connection_id)
         clear_buffer(&conn->send_array);
         clear_buffer(&conn->recv_array);
         ret = wipe_crypto_connection(c, crypt_connection_id);
+    } else {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
     }
 
     pthread_mutex_unlock(&c->connections_mutex);
@@ -3031,6 +3082,7 @@ unsigned int crypto_connection_status(const Net_Crypto *c, int crypt_connection_
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
+        LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", crypt_connection_id);
         return CRYPTO_CONN_NO_CONNECTION;
     }
 
@@ -3135,13 +3187,11 @@ Net_Crypto *new_net_crypto(Logger *log, DHT *dht, TCP_Proxy_Info *proxy_info)
 
 static void kill_timedout(Net_Crypto *c, void *userdata)
 {
-    uint32_t i;
-    //uint64_t temp_time = current_time_monotonic();
-
-    for (i = 0; i < c->crypto_connections_length; ++i) {
+    for (uint32_t i = 0; i < c->crypto_connections_length; ++i) {
         Crypto_Connection *conn = get_crypto_connection(c, i);
 
         if (conn == nullptr) {
+            LOGGER_ERROR(c->log, "Could not get crypto connection for id: %d", i);
             continue;
         }
 

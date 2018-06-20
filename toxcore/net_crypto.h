@@ -31,11 +31,13 @@
 
 #include <pthread.h>
 
-#define CRYPTO_CONN_NO_CONNECTION 0
-#define CRYPTO_CONN_COOKIE_REQUESTING 1 //send cookie request packets
-#define CRYPTO_CONN_HANDSHAKE_SENT 2 //send handshake packets
-#define CRYPTO_CONN_NOT_CONFIRMED 3 //send handshake packets, we have received one from the other
-#define CRYPTO_CONN_ESTABLISHED 4
+enum CRYPTO_CONN {
+  CRYPTO_CONN_NO_CONNECTION = 0,
+  CRYPTO_CONN_COOKIE_REQUESTING = 1,  // send cookie request packets
+  CRYPTO_CONN_HANDSHAKE_SENT = 2,     // send handshake packets
+  CRYPTO_CONN_NOT_CONFIRMED = 3,      // send handshake packets, we have received one from the other
+  CRYPTO_CONN_ESTABLISHED = 4,
+};
 
 /* Maximum size of receiving and sending packet buffers. */
 #define CRYPTO_PACKET_BUFFER_SIZE 32768 /* Must be a power of 2 */
