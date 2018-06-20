@@ -24,8 +24,6 @@
 
 #define NUM_PORTS 3
 
-#define ERR_MSG_LENGTH 128
-
 #ifndef USE_IPV6
 #define USE_IPV6 1
 #endif
@@ -51,16 +49,13 @@ static uint16_t ports[NUM_PORTS] = {1234, 33445, 25643};
 
 START_TEST(test_basic)
 {
-    char err_msg[ERR_MSG_LENGTH];
-
     //Attempt to create a new TCP_Server instance.
     uint8_t self_public_key[CRYPTO_PUBLIC_KEY_SIZE];
     uint8_t self_secret_key[CRYPTO_SECRET_KEY_SIZE];
     crypto_new_keypair(self_public_key, self_secret_key);
     TCP_Server *tcp_s = new_TCP_server(USE_IPV6, NUM_PORTS, ports, self_secret_key, nullptr);
     ck_assert_msg(tcp_s != nullptr, "Failed to create a TCP relay server");
-    snprintf(err_msg, ERR_MSG_LENGTH, "Failed to bind a TCP relay server to all %d attempted ports", NUM_PORTS); 
-    ck_assert_msg(tcp_server_listen_count(tcp_s) == NUM_PORTS, err_msg);
+    ck_assert_msg(tcp_server_listen_count(tcp_s) == NUM_PORTS, "Failed to bind a TCP relay server to all %d attempted ports", NUM_PORTS);
 
     //Check all opened ports for connectivity.
     Socket sock = net_socket(net_family_ipv6, TOX_SOCK_STREAM, TOX_PROTO_TCP);
@@ -70,10 +65,8 @@ START_TEST(test_basic)
     for(uint8_t i = 0; i < NUM_PORTS; i++)
     {
         ip_port_loopback.port = net_htons(ports[i]);
-
         ret = net_connect(sock, ip_port_loopback);	
-        snprintf(err_msg, ERR_MSG_LENGTH, "Failed to connect to created TCP relay server on port %d", ports[i]);
-        ck_assert_msg(ret == 0, err_msg);
+        ck_assert_msg(ret == 0, "Failed to connect to created TCP relay server on port %d", ports[i]);
     }
 
     uint8_t f_public_key[CRYPTO_PUBLIC_KEY_SIZE];
