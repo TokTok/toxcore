@@ -535,6 +535,9 @@ static int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t 
 
     LOGGER_DEBUG(m->log, "header.pt %d, video %d", (uint8_t)header.pt, (rtp_TypeVideo % 128));
 
+    LOGGER_DEBUG(m->log, "rtp packet record time: %llu", header.frame_record_timestamp);
+
+
     // The sender uses the new large-frame capable protocol and is sending a
     // video packet.
     if ((header.flags & RTP_LARGE_FRAME) && header.pt == (rtp_TypeVideo % 128)) {
@@ -543,7 +546,13 @@ static int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t 
 
     // everything below here is for the old 16 bit protocol ------------------
 
-    // LOGGER_ERROR(m->log, "**** incoming audio packet ****");
+
+
+    if (header.pt == (rtp_TypeAudio % 128)) {
+        // HINT: we have an audio packet
+        // LOGGER_ERROR(m->log, "AADEBUG:**** incoming audio packet ****");
+    }
+
 
     if (header.data_length_lower == length - RTP_HEADER_SIZE) {
         /* The message is sent in single part */

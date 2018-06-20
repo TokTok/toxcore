@@ -82,6 +82,9 @@ typedef struct ACSession_s {
     int32_t lp_seqnum; /* last incoming packet sequence number */
     void *j_buf; /* it's a Ringbuffer now */
 
+    int64_t timestamp_difference_to_sender;
+    uint64_t last_incoming_frame_ts;
+
     pthread_mutex_t queue_mutex[1];
 
     ToxAV *av;

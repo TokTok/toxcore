@@ -90,6 +90,9 @@ ACSession *ac_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_audio_re
 
     ac->lp_seqnum = -1;
 
+    ac->last_incoming_frame_ts = 0;
+    ac->timestamp_difference_to_sender = 0; // no difference to sender as start value
+
     /* These need to be set in order to properly
      * do error correction with opus */
     ac->lp_frame_duration = AUDIO_MAX_FRAME_DURATION_MS;
@@ -322,9 +325,30 @@ int ac_queue_message(void *acp, struct RTPMessage *msg)
 
     if (rc == -1) {
         // TODO: investigate how this can still occur? we take them out faster than they come in
+
+        LOGGER_DEBUG(ac->log, "AADEBUG:ERR:seqnum=%d dt=%d ts:%llu", (int)header_v3->sequnum,
+                     (int)((int64_t)header_v3->frame_record_timestamp - (int64_t)ac->last_incoming_frame_ts),
+                     header_v3->frame_record_timestamp);
+
         LOGGER_DEBUG(ac->log, "Could not queue the incoming audio message!");
         free(msg);
         return -1;
+    } else {
+        LOGGER_DEBUG(ac->log, "AADEBUG:seqnum=%d dt=%d ts:%llu curts:%lld", (int)header_v3->sequnum,
+                     (int)((uint64_t)header_v3->frame_record_timestamp - (uint64_t)ac->last_incoming_frame_ts),
+                     header_v3->frame_record_timestamp,
+                     current_time_monotonic());
+
+        ac->last_incoming_frame_ts = header_v3->frame_record_timestamp;
+
+        int64_t cur_diff_in_ms = (int64_t)(current_time_monotonic() - ac->last_incoming_frame_ts);
+        ac->timestamp_difference_to_sender = ac->timestamp_difference_to_sender
+                                             + ((cur_diff_in_ms - ac->timestamp_difference_to_sender) / 2); // go half way in that direction
+        LOGGER_DEBUG(ac->log, "AADEBUG:diff_ms:%lld", (int64_t)ac->timestamp_difference_to_sender);
+        LOGGER_DEBUG(ac->log, "AADEBUG:ts_corr:%llu dt=%d",
+                     (uint64_t)(current_time_monotonic() - ac->timestamp_difference_to_sender),
+                     (int)((uint64_t)(current_time_monotonic() - ac->timestamp_difference_to_sender) - (uint64_t)
+                           ac->last_incoming_frame_ts));
     }
 
     return 0;
@@ -387,7 +411,7 @@ static struct RTPMessage *new_empty_message(size_t allocate_len, const uint8_t *
 static int jbuf_write(Logger *log, ACSession *ac, struct RingBuffer *q, struct RTPMessage *m)
 {
     if (rb_full(q)) {
-        LOGGER_DEBUG(log, "AudioFramesIN: jitter buffer full: %p", q);
+        LOGGER_DEBUG(log, "AADEBUG:AudioFramesIN: jitter buffer full: %p", q);
         return -1;
     }
 
@@ -411,7 +435,12 @@ static int jbuf_write(Logger *log, ACSession *ac, struct RingBuffer *q, struct R
             int64_t diff = (m->header.sequnum - ac->lp_seqnum);
 
             if (diff > 1) {
-                LOGGER_DEBUG(log, "AudioFramesIN: missing %d audio frames, seqnum=%d", (int)(diff - 1), (int)(ac->lp_seqnum + 1));
+                LOGGER_DEBUG(log, "AADEBUG:AudioFramesIN: missing %d audio frames, seqnum=%d", (int)(diff - 1),
+                             (int)(ac->lp_seqnum + 1));
+
+                if (diff > 2) {
+                    diff = 2;
+                }
 
                 int64_t j;
 
@@ -420,24 +449,34 @@ static int jbuf_write(Logger *log, ACSession *ac, struct RingBuffer *q, struct R
                     struct RTPMessage *empty_m = new_empty_message((size_t)lenx, (void *) & (m->header), lenx);
                     empty_m->header.sequnum = (ac->lp_seqnum + 1 + j);
 
-                    if (rb_write(q, (void *)empty_m, 1) != NULL) {
-                        LOGGER_DEBUG(log, "AudioFramesIN: error in rb_write");
-                        // TODO: possible mem leak!!
-                        // free(empty_m);
+                    void *tmp_buf = rb_write(q, (void *)empty_m, 1);
+
+                    if (tmp_buf != NULL) {
+                        LOGGER_DEBUG(log, "AADEBUG:AudioFramesIN: error in rb_write:rb_size=%d", (int)rb_size(q));
+                        free(tmp_buf);
+                    } else {
+                        LOGGER_DEBUG(log, "AADEBUG:write emtpy frame for missing frame");
                     }
                 }
             }
 
             ac->lp_seqnum = m->header.sequnum;
         } else {
-            LOGGER_DEBUG(log, "AudioFramesIN: old audio frames received hseqnum=%d, lpseqnum=%d",
+            LOGGER_DEBUG(log, "AADEBUG:AudioFramesIN: old audio frames received hseqnum=%d, lpseqnum=%d",
                          (int)m->header.sequnum,
                          (int)ac->lp_seqnum);
             return -1;
         }
     }
 
-    rb_write(q, (void *)m, 0);
+    void *tmp_buf2 = rb_write(q, (void *)m, 0);
+
+    if (tmp_buf2 != NULL) {
+        LOGGER_DEBUG(log, "AADEBUG:rb_write: error in rb_write:rb_size=%d", (int)rb_size(q));
+        free(tmp_buf2);
+        return -1;
+    }
+
 
     return 0;
 }

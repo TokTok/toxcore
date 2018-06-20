@@ -54,6 +54,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     }
 
     // options ---
+    vc->last_incoming_frame_ts = 0;
     vc->video_encoder_cpu_used = VP8E_SET_CPUUSED_VALUE;
     vc->video_encoder_cpu_used_prev = vc->video_encoder_cpu_used;
     vc->video_encoder_vp8_quality = TOXAV_ENCODER_VP8_QUALITY_NORMAL;
@@ -525,6 +526,13 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
     pthread_mutex_lock(vc->queue_mutex);
 
     LOGGER_DEBUG(vc->log, "TT:queue:V:fragnum=%ld", (long)header_v3->fragment_num);
+
+    LOGGER_DEBUG(vc->log, "VVDEBUG:seqnum=%d dt=%d ts:%llu", (int)header_v3->sequnum,
+                 (int)((uint64_t)header_v3->frame_record_timestamp - (uint64_t)vc->last_incoming_frame_ts),
+                 header_v3->frame_record_timestamp);
+
+    vc->last_incoming_frame_ts = header_v3->frame_record_timestamp;
+
 
 
     if ((header->flags & RTP_LARGE_FRAME) && header->pt == rtp_TypeVideo % 128) {

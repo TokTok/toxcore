@@ -996,7 +996,8 @@ bool toxav_audio_send_frame(ToxAV *av, uint32_t friend_number, const int16_t *pc
             _debug_count_sent_audio_frames = 0;
         } else {
 #endif
-            // LOGGER_ERROR(av->m->log, "audio packet record time: %llu", audio_frame_record_timestamp);
+            LOGGER_ERROR(av->m->log, "audio packet record time: seqnum=%d %llu", (int)call->audio.first->sequnum,
+                         audio_frame_record_timestamp);
 
             if (rtp_send_data(call->audio.first, dest,
                               vrc + sizeof(sampling_rate),
@@ -1473,6 +1474,15 @@ void callback_bwc(BWController *bwc, uint32_t friend_number, float loss, void *u
             if ((loss * 100) > VIDEO_BITRATE_AUTO_INC_THRESHOLD) {
                 call->video_bit_rate = (uint32_t)((float)call->video_bit_rate * ((1.0f - loss) * VIDEO_BITRATE_AUTO_DEC_FACTOR));
                 LOGGER_ERROR(call->av->m->log, "callback_bwc:DEC:H:vb=%d", (int)call->video_bit_rate);
+
+                // HINT: sanity check --------------
+                if (call->video_bit_rate < VIDEO_BITRATE_MIN_AUTO_VALUE_H264) {
+                    call->video_bit_rate = VIDEO_BITRATE_MIN_AUTO_VALUE_H264;
+                } else if (call->video_bit_rate > VIDEO_BITRATE_MAX_AUTO_VALUE_H264) {
+                    call->video_bit_rate = VIDEO_BITRATE_MAX_AUTO_VALUE_H264;
+                }
+
+                // HINT: sanity check --------------
 
                 pthread_mutex_unlock(call->av->mutex);
                 return;
