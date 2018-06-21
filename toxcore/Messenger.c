@@ -2652,20 +2652,27 @@ uint32_t messenger_run_interval(const Messenger *m)
 
 static void try_pack_gc_data(const Messenger *m, const GC_Chat *chat, Onion_Friend *onion_friend)
 {
-    // TODO: pack ip
     GC_Public_Announce announce;
-    int tcp_num = tcp_copy_connected_relays(chat->tcp_conn, announce.tcp_relays, MAX_ANNOUNCED_TCP_RELAYS);
+    int tcp_num = tcp_copy_connected_relays(chat->tcp_conn, announce.base_announce.tcp_relays,
+                                            MAX_ANNOUNCED_TCP_RELAYS);
+    IP_Port self_ip_port;
+    int copy_ip_port_result = ipport_self_copy(m->dht, &self_ip_port);
+    bool ip_port_is_set = copy_ip_port_result == 0;
 
-    if (tcp_num >= 0) {
-        announce.tcp_relays_count = (uint8_t)tcp_num;
-        memcpy(announce.peer_public_key, chat->self_public_key, ENC_PUBLIC_KEY);
+    if (tcp_num >= 0 || ip_port_is_set) {
+        announce.base_announce.tcp_relays_count = (uint8_t)tcp_num;
+        announce.base_announce.ip_port_is_set = ip_port_is_set ? 1 : 0;
+        if (ip_port_is_set) {
+            memcpy(&announce.base_announce.ip_port, &self_ip_port, sizeof(IP_Port));
+        }
+        memcpy(announce.base_announce.peer_public_key, chat->self_public_key, ENC_PUBLIC_KEY);
         memcpy(announce.chat_public_key, get_chat_id(chat->chat_public_key), ENC_PUBLIC_KEY);
         int length = pack_public_announce(onion_friend->gc_data, GC_MAX_DATA_LENGTH, &announce);
         onion_friend->gc_data_length = (short)length;
-        memcpy((void*)&chat->announced_node, &announce.tcp_relays[0], sizeof(Node_format));
+        memcpy((void*)&chat->announced_node, &announce.base_announce.tcp_relays[0], sizeof(Node_format));
         add_gc_announce(m->mono_time, m->group_announce, &announce);
     } else {
-        onion_friend->gc_data_length = -1;  // new gc - no connected relays yet
+        onion_friend->gc_data_length = -1;  // new gc - no connected relays yet and no ip/port
     }
 }
 
