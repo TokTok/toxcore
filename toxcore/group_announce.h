@@ -34,24 +34,31 @@ typedef struct {
     IP_Port ip_port;
 } GC_Announce_Node;
 
+typedef struct GC_Base_Announce GC_Base_Announce;
 typedef struct GC_Peer_Announce GC_Peer_Announce;
 typedef struct GC_Announces GC_Announces;
 typedef struct GC_Announces_List GC_Announces_List;
 typedef struct GC_Public_Announce GC_Public_Announce;
 
-struct GC_Peer_Announce {
-    uint64_t timestamp;
-    Node_format node; // TODO: array?
-    IP_Port peer_ip_port;
+struct GC_Base_Announce {
+    Node_format tcp_relays[MAX_ANNOUNCED_TCP_RELAYS];
+    uint8_t tcp_relays_count;
+    uint8_t ip_port_is_set;
+    IP_Port ip_port;
     uint8_t peer_public_key[ENC_PUBLIC_KEY];
+};
+
+struct GC_Peer_Announce {
+    GC_Base_Announce base_announce;
+
+    uint64_t timestamp;
 };
 
 // Used for announces in public groups
 struct GC_Public_Announce {
-    Node_format tcp_relays[MAX_ANNOUNCED_TCP_RELAYS];
-    uint8_t tcp_relays_count;
+    GC_Base_Announce base_announce;
+
     uint8_t chat_public_key[ENC_PUBLIC_KEY];
-    uint8_t peer_public_key[ENC_PUBLIC_KEY];
 };
 
 struct GC_Announces {
