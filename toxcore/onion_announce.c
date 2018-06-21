@@ -500,14 +500,14 @@ static int handle_gc_announce_request(Onion_Announce *onion_a, IP_Port source, c
     GC_Public_Announce public_announce;
     bool unpack_result = unpack_public_announce(plain + offset, length - offset, &public_announce);
     if (!unpack_result) {
-        return -1;
+        return 1;
     }
     GC_Peer_Announce *new_announce = add_gc_announce(onion_a->mono_time, gc_announces_list, &public_announce);
     if (!new_announce) {
         return 1;
     }
     uint8_t num_ann = (uint8_t)get_gc_announces(gc_announces_list, gc_announces, MAX_SENT_NODES,
-                                                chat_id, new_announce->peer_public_key);
+                                                chat_id, new_announce->base_announce.peer_public_key);
     pl[2 + ONION_PING_ID_SIZE + nodes_length] = num_ann;
     size_t announces_length = num_ann * sizeof(GC_Peer_Announce);
 

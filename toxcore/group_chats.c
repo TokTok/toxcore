@@ -6328,17 +6328,19 @@ static bool group_exists(const GC_Session *c, const uint8_t *chat_id) {
     return false;
 }
 
-int add_peers_from_announces(const GC_Session *gc_session, const GC_Chat *chat, GC_Peer_Announce *announces, uint8_t gc_announces_count)
+int add_peers_from_announces(const GC_Session *gc_session, GC_Chat *chat, GC_Peer_Announce *announces, uint8_t gc_announces_count)
 {
     if (!chat || !announces || !gc_session) {
         return -1;
     }
 
-    int i, added_peers = 0;
+    int i, j, added_peers = 0;
     for (i = 0; i < gc_announces_count; i++) {
         GC_Peer_Announce *curr_announce = &announces[i];
 
-        int peer_number = peer_add(gc_session->messenger, chat->groupnumber, NULL, curr_announce->peer_public_key);
+        IP_Port *ip_port = curr_announce->base_announce.ip_port_is_set ? &curr_announce->base_announce.ip_port : NULL;
+        int peer_number = peer_add(gc_session->messenger, chat->groupnumber,
+                                   ip_port, curr_announce->base_announce.peer_public_key);
         if (peer_number < 0) {
             continue;
         }
@@ -6348,25 +6350,34 @@ int add_peers_from_announces(const GC_Session *gc_session, const GC_Chat *chat, 
             continue;
         }
 
-        int add_tcp_result = add_tcp_relay_connection(chat->tcp_conn, gconn->tcp_connection_num,
-                                                      curr_announce->node.ip_port, curr_announce->node.public_key);
-        if (add_tcp_result < 0) {
-            continue;
+        for (j = 0; j < curr_announce->base_announce.tcp_relays_count; j++) {
+            int add_tcp_result = add_tcp_relay_connection(chat->tcp_conn, gconn->tcp_connection_num,
+                                                          curr_announce->base_announce.tcp_relays[j].ip_port,
+                                                          curr_announce->base_announce.tcp_relays[j].public_key);
+            if (add_tcp_result < 0) {
+                continue;
+            }
+
+            int save_tcp_result = save_tcp_relay(gconn, &curr_announce->base_announce.tcp_relays[j]);
+            if (save_tcp_result) {
+                continue;
+            }
+
+            memcpy(gconn->oob_relay_pk, curr_announce->base_announce.tcp_relays[j].public_key, ENC_PUBLIC_KEY);
         }
 
-        int save_tcp_result = save_tcp_relay(gconn, &curr_announce->node);
-        if (save_tcp_result) {
-            continue;
+        if (curr_announce->base_announce.ip_port_is_set && !curr_announce->base_announce.tcp_relays_count) {
+            send_gc_handshake_packet(chat, peer_number, GH_REQUEST, HS_INVITE_REQUEST, chat->join_type);
+            // TODO: proper check how to send handshake
+        } else {
+            gconn->is_oob_handshake = true;
+            gconn->is_pending_handshake_response = false;
+            gconn->pending_handshake_type = HS_INVITE_REQUEST;
+            gconn->pending_handshake = gconn->last_rcvd_ping = mono_time_get(chat->mono_time) + HANDSHAKE_SENDING_TIMEOUT;
         }
-
-        memcpy(gconn->oob_relay_pk, curr_announce->node.public_key, ENC_PUBLIC_KEY);
-        gconn->is_oob_handshake = true;
-        gconn->is_pending_handshake_response = false;
-        gconn->pending_handshake_type = HS_INVITE_REQUEST;
-        gconn->pending_handshake = gconn->last_rcvd_ping = mono_time_get(chat->mono_time) + HANDSHAKE_SENDING_TIMEOUT;
 
         added_peers++;
-        fprintf(stderr, "Added peers %s\n", id_toa(curr_announce->peer_public_key));
+        fprintf(stderr, "Added peers %s\n", id_toa(curr_announce->base_announce.peer_public_key));
     }
 
     return added_peers;
