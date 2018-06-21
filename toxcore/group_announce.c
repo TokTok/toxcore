@@ -187,14 +187,14 @@ int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Peer_Announce *gc_
     int gc_announces_count = 0, i, j;
     for (i = 0; i < announces->index && i < MAX_GCA_SAVED_ANNOUNCES_PER_GC && gc_announces_count < max_nodes; i++) {
         int index = i % MAX_GCA_SAVED_ANNOUNCES_PER_GC;
-        if (!memcmp(except_public_key, &announces->announces[index].peer_public_key, ENC_PUBLIC_KEY)) {
+        if (!memcmp(except_public_key, &announces->announces[index].base_announce.peer_public_key, ENC_PUBLIC_KEY)) {
             continue;
         }
 
         bool already_added = false;
         for (j = 0; j < gc_announces_count; j++) {
-            if (!memcmp(&gc_announces[j].peer_public_key,
-                        &announces->announces[index].peer_public_key,
+            if (!memcmp(&gc_announces[j].base_announce.peer_public_key,
+                        &announces->announces[index].base_announce.peer_public_key,
                         ENC_PUBLIC_KEY)) {
                 already_added = true;
                 break;
@@ -218,13 +218,23 @@ bool unpack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce *
 
     uint16_t offset = ENC_PUBLIC_KEY;
     memcpy(announce->chat_public_key, data, ENC_PUBLIC_KEY);
-    memcpy(announce->peer_public_key, data + offset, ENC_PUBLIC_KEY);
+    memcpy(announce->base_announce.peer_public_key, data + offset, ENC_PUBLIC_KEY);
     offset += ENC_PUBLIC_KEY;
 
-    int nodes_count = unpack_nodes(announce->tcp_relays, MAX_ANNOUNCED_TCP_RELAYS, NULL, data + offset, length, 0);
-    announce->tcp_relays_count = (uint8_t)nodes_count;
+    announce->base_announce.ip_port_is_set = data[offset];
+    offset++;
 
-    return nodes_count >= 0;
+    if (announce->base_announce.ip_port_is_set) {
+        int unpack_ip_port_result = unpack_ip_port(&announce->base_announce.ip_port, data + offset, length - offset, 0);
+        if (unpack_ip_port_result == -1) {
+            return false;
+        }
+    }
+
+    int nodes_count = unpack_nodes(announce->base_announce.tcp_relays, MAX_ANNOUNCED_TCP_RELAYS, NULL, data + offset, length, 0);
+    announce->base_announce.tcp_relays_count = (uint8_t)nodes_count;
+
+    return announce->base_announce.ip_port_is_set || nodes_count > 0;
 }
 
 int pack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce *announce)
@@ -235,10 +245,22 @@ int pack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce *ann
 
     uint16_t offset = ENC_PUBLIC_KEY;
     memcpy(data, announce->chat_public_key, ENC_PUBLIC_KEY);
-    memcpy(data + offset, announce->peer_public_key, ENC_PUBLIC_KEY);
+    memcpy(data + offset, announce->base_announce.peer_public_key, ENC_PUBLIC_KEY);
     offset += ENC_PUBLIC_KEY;
 
-    int nodes_length = pack_nodes(data + offset, length - offset, announce->tcp_relays, announce->tcp_relays_count);
+    data[offset] = announce->base_announce.ip_port_is_set;
+    offset++;
+
+    if (announce->base_announce.ip_port_is_set) {
+        int ip_port_length = pack_ip_port(data + offset, length - offset, &announce->base_announce.ip_port);
+        if (ip_port_length == -1) {
+            return -1;
+        }
+        offset += ip_port_length;
+    }
+
+    int nodes_length = pack_nodes(data + offset, length - offset, announce->base_announce.tcp_relays,
+                                  announce->base_announce.tcp_relays_count);
     if (nodes_length == -1) {
         return -1;
     }
@@ -269,10 +291,7 @@ GC_Peer_Announce* add_gc_announce(const Mono_Time *mono_time, GC_Announces_List 
     uint64_t index = announces->index % MAX_GCA_SAVED_ANNOUNCES_PER_GC;
     announces->last_announce_received_timestamp = mono_time_get(mono_time);
     GC_Peer_Announce *gc_peer_announce = &announces->announces[index];
-    memcpy(&gc_peer_announce->peer_public_key, announce->peer_public_key, ENC_PUBLIC_KEY);
-    if (announce->tcp_relays_count > 0) {
-        memcpy(&gc_peer_announce->node, &announce->tcp_relays[0], sizeof(Node_format));
-    }
+    memcpy(&gc_peer_announce->base_announce, &announce->base_announce, sizeof(GC_Base_Announce));
     gc_peer_announce->timestamp = mono_time_get(mono_time);
     announces->index++;
     // TODO; lock
