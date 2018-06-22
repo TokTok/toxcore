@@ -4447,7 +4447,7 @@ uint32_t tox_group_invite_accept(Tox *tox, uint32_t friend_number, const uint8_t
  * @param length The length of invite_data.
  */
 typedef void tox_group_invite_cb(Tox *tox, uint32_t friend_number, const uint8_t *invite_data, size_t length,
-                                 void *user_data);
+                                 const uint8_t *group_name, size_t group_name_length, void *user_data);
 
 
 /**
