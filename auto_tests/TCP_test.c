@@ -146,7 +146,7 @@ START_TEST(test_basic)
                       "Failed to send request after completing the handshake.");
         i += msg_length;
 
-        c_sleep(50); 
+        c_sleep(50);
         do_TCP_server(tcp_s);
     }
 
