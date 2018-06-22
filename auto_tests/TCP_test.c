@@ -100,22 +100,22 @@ START_TEST(test_basic)
     // Sending the handshake
     ck_assert_msg(net_send(sock, handshake, TCP_CLIENT_HANDSHAKE_SIZE - 1) == TCP_CLIENT_HANDSHAKE_SIZE - 1,
                   "An attempt to send the initial handshake minus last byte failed.");
-    c_sleep(100);
+    c_sleep(50);
     do_TCP_server(tcp_s);
-    c_sleep(100);
+    c_sleep(50);
 
     ck_assert_msg(net_send(sock, handshake + (TCP_CLIENT_HANDSHAKE_SIZE - 1), 1) == 1,
                   "The attempt to send the last byte of handshake failed.");
 
-    c_sleep(100);
+    c_sleep(50);
     do_TCP_server(tcp_s);
-    c_sleep(100);
+    c_sleep(50);
 
     // Receiving server response and decrypting it
     uint8_t response[TCP_SERVER_HANDSHAKE_SIZE];
     uint8_t response_plain[TCP_HANDSHAKE_PLAIN_SIZE];
     ck_assert_msg(net_recv(sock, response, TCP_SERVER_HANDSHAKE_SIZE) == TCP_SERVER_HANDSHAKE_SIZE,
-                  "Could/Did not receive a server response to the initial handshake.");
+                  "Could/did not receive a server response to the initial handshake.");
     ret = decrypt_data(self_public_key, f_secret_key, response, response + CRYPTO_NONCE_SIZE,
                        TCP_SERVER_HANDSHAKE_SIZE - CRYPTO_NONCE_SIZE, response_plain);
     ck_assert_msg(ret == TCP_HANDSHAKE_PLAIN_SIZE, "Failed to decrypt handshake response.");
@@ -135,10 +135,8 @@ START_TEST(test_basic)
     memcpy(r_req, &size, 2);
 
     // Sending the request at random intervals in random pieces.
-    uint32_t i = 0;
-
-    while (i < sizeof(r_req)) {
-        uint8_t msg_length = rand() % 5 + 1; // msg_length = 1-5
+    for (uint32_t i = 0; i < sizeof(r_req);) {
+        uint8_t msg_length = rand() % 5 + 1; // msg_length = 1 to 5
 
         if (i + msg_length >= sizeof(r_req)) {
             msg_length = sizeof(r_req) - i;
@@ -148,11 +146,11 @@ START_TEST(test_basic)
                       "Failed to send request after completing the handshake.");
         i += msg_length;
 
-        c_sleep(rand() % 10 + 45); // Wait 45-55 milliseconds
+        c_sleep(50); 
         do_TCP_server(tcp_s);
     }
 
-    // Receiving the second resonse and verifying its validity
+    // Receiving the second response and verifying its validity
     uint8_t packet_resp[4096];
     int recv_data_len = net_recv(sock, packet_resp, 2 + 2 + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_MAC_SIZE);
     ck_assert_msg(recv_data_len == 2 + 2 + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_MAC_SIZE,
@@ -170,7 +168,7 @@ START_TEST(test_basic)
     ck_assert_msg(packet_resp_plain[1] == 0, "Server did not refuse the connection.");
     ck_assert_msg(public_key_cmp(packet_resp_plain + 2, f_public_key) == 0, "Server sent the wrong public key.");
 
-    //Closing connections.
+    // Closing connections.
     kill_sock(sock);
     kill_TCP_server(tcp_s);
 }
