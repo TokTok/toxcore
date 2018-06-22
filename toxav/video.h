@@ -58,6 +58,7 @@ VPX_DL_BEST_QUALITY   (0)       deadline parameter analogous to VPx BEST QUALITY
 typedef enum PACKET_TOXAV_COMM_CHANNEL_FUNCTION {
     PACKET_TOXAV_COMM_CHANNEL_REQUEST_KEYFRAME = 0,
     PACKET_TOXAV_COMM_CHANNEL_HAVE_H264_VIDEO = 1,
+    PACKET_TOXAV_COMM_CHANNEL_LESS_VIDEO_FPS = 2,
 } PACKET_TOXAV_COMM_CHANNEL_FUNCTION;
 
 
@@ -173,6 +174,8 @@ typedef struct VCSession_s {
 
     uint8_t send_keyframe_request_received;
     uint8_t h264_video_capabilities_received;
+    uint8_t skip_fps;
+    uint8_t skip_fps_counter;
 
     int64_t timestamp_difference_to_sender;
     uint64_t last_incoming_frame_ts;

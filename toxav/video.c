@@ -77,6 +77,8 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc->send_keyframe_request_received = 0;
     vc->h264_video_capabilities_received = 0; // WARNING: always set to zero (0) !!
     vc->show_own_video = 0; // WARNING: always set to zero (0) !!
+    vc->skip_fps = 0;
+    vc->skip_fps_counter = 0;
 
     vc->last_incoming_frame_ts = 0;
     vc->timestamp_difference_to_sender = 0;
@@ -232,6 +234,8 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
     if (rb_read((RingBuffer *)vc->vbuf_raw, (void **)&p, &frame_flags)) {
         const struct RTPHeader *header_v3_0 = (void *) & (p->header);
 
+        LOGGER_DEBUG(vc->log, "--VSEQ:%d", (int)header_v3_0->sequnum);
+
         data_type = (uint8_t)((frame_flags & RTP_KEY_FRAME) != 0);
         h264_encoded_video_frame = (uint8_t)((frame_flags & RTP_ENCODER_IS_H264) != 0);
 
@@ -269,33 +273,46 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
         if ((int32_t)header_v3_0->sequnum != (int32_t)(vc->last_seen_fragment_seqnum + 1)) {
             int32_t missing_frames_count = (int32_t)header_v3_0->sequnum -
                                            (int32_t)(vc->last_seen_fragment_seqnum + 1);
-            LOGGER_DEBUG(vc->log, "missing %d video frames (m1)", (int)missing_frames_count);
 
-            if (vc->video_decoder_codec_used != TOXAV_ENCODER_CODEC_USED_H264) {
-                rc = vpx_codec_decode(vc->decoder, NULL, 0, NULL, VPX_DL_REALTIME);
-            }
+            if (missing_frames_count > 2) {
 
-            // HINT: give feedback that we lost some bytes (based on the size of this frame)
-            bwc_add_lost_v3(bwc, (uint32_t)(header_v3_0->data_length_full * missing_frames_count));
-            // LOGGER_ERROR(vc->log, "BWC:lost:002:missing count=%d", (int)missing_frames_count);
+                // HINT: if whole video frames are missing here, they most likely have been
+                //       kicked out of the ringbuffer because the sender is sending at too much FPS
+                //       which out client cant handle. so in the future signal sender to send less FPS!
+
+                LOGGER_WARNING(vc->log, "missing? sn=%d lastseen=%d",
+                               (int)header_v3_0->sequnum,
+                               (int)vc->last_seen_fragment_seqnum);
 
 
-            if (missing_frames_count > 5) {
-                if ((vc->last_requested_keyframe_ts + VIDEO_MIN_REQUEST_KEYFRAME_INTERVAL_MS_FOR_NF)
-                        < current_time_monotonic()) {
-                    uint32_t pkg_buf_len = 2;
-                    uint8_t pkg_buf[pkg_buf_len];
-                    pkg_buf[0] = PACKET_TOXAV_COMM_CHANNEL;
-                    pkg_buf[1] = PACKET_TOXAV_COMM_CHANNEL_REQUEST_KEYFRAME;
+                LOGGER_DEBUG(vc->log, "missing %d video frames (m1)", (int)missing_frames_count);
 
-                    if (-1 == send_custom_lossless_packet(m, vc->friend_number, pkg_buf, pkg_buf_len)) {
-                        LOGGER_WARNING(vc->log,
-                                       "PACKET_TOXAV_COMM_CHANNEL:RTP send failed (2)");
-                    } else {
-                        LOGGER_WARNING(vc->log,
-                                       "PACKET_TOXAV_COMM_CHANNEL:RTP Sent. (2)");
-                        have_requested_index_frame = true;
-                        vc->last_requested_keyframe_ts = current_time_monotonic();
+                if (vc->video_decoder_codec_used != TOXAV_ENCODER_CODEC_USED_H264) {
+                    rc = vpx_codec_decode(vc->decoder, NULL, 0, NULL, VPX_DL_REALTIME);
+                }
+
+                // HINT: give feedback that we lost some bytes (based on the size of this frame)
+                bwc_add_lost_v3(bwc, (uint32_t)(header_v3_0->data_length_full * missing_frames_count));
+                LOGGER_ERROR(vc->log, "BWC:lost:002:missing count=%d", (int)missing_frames_count);
+
+
+                if (missing_frames_count > 5) {
+                    if ((vc->last_requested_keyframe_ts + VIDEO_MIN_REQUEST_KEYFRAME_INTERVAL_MS_FOR_NF)
+                            < current_time_monotonic()) {
+                        uint32_t pkg_buf_len = 2;
+                        uint8_t pkg_buf[pkg_buf_len];
+                        pkg_buf[0] = PACKET_TOXAV_COMM_CHANNEL;
+                        pkg_buf[1] = PACKET_TOXAV_COMM_CHANNEL_REQUEST_KEYFRAME;
+
+                        if (-1 == send_custom_lossless_packet(m, vc->friend_number, pkg_buf, pkg_buf_len)) {
+                            LOGGER_WARNING(vc->log,
+                                           "PACKET_TOXAV_COMM_CHANNEL:RTP send failed (2)");
+                        } else {
+                            LOGGER_WARNING(vc->log,
+                                           "PACKET_TOXAV_COMM_CHANNEL:RTP Sent. (2)");
+                            have_requested_index_frame = true;
+                            vc->last_requested_keyframe_ts = current_time_monotonic();
+                        }
                     }
                 }
             }
@@ -311,7 +328,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
             if ((int)data_type != (int)video_frame_type_KEYFRAME) {
                 free(p);
-                LOGGER_DEBUG(vc->log, "skipping incoming video frame (1)");
+                LOGGER_ERROR(vc->log, "skipping incoming video frame (1)");
 
                 if (vc->video_decoder_codec_used != TOXAV_ENCODER_CODEC_USED_H264) {
                     rc = vpx_codec_decode(vc->decoder, NULL, 0, NULL, VPX_DL_REALTIME);
@@ -319,7 +336,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
                 // HINT: give feedback that we lost some bytes (based on the size of this frame)
                 bwc_add_lost_v3(bwc, header_v3_0->data_length_full);
-                // LOGGER_ERROR(vc->log, "BWC:lost:003");
+                LOGGER_ERROR(vc->log, "BWC:lost:003");
 
                 pthread_mutex_unlock(vc->queue_mutex);
                 return 0;
@@ -560,8 +577,26 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
                          (int)((uint64_t)(current_time_monotonic() - vc->timestamp_difference_to_sender) -
                                (uint64_t)vc->last_incoming_frame_ts));
 
+            LOGGER_DEBUG(vc->log, "IIa:1:VSEQ:%d:rb size=%d", (int)header->sequnum, (int)rb_size((RingBuffer *)vc->vbuf_raw));
 
-            free(rb_write((RingBuffer *)vc->vbuf_raw, msg, (uint64_t)header->flags));
+            struct RTPMessage *msg_old = rb_write((RingBuffer *)vc->vbuf_raw, msg, (uint64_t)header->flags);
+
+            if (msg_old) {
+                LOGGER_DEBUG(vc->log, "IIa:2:kicked out:VSEQ:%d:rb size=%d", (int)msg_old->header.sequnum,
+                             (int)rb_size((RingBuffer *)vc->vbuf_raw));
+
+                // HINT: tell sender to turn down video FPS -------------
+                uint32_t pkg_buf_len = 3;
+                uint8_t pkg_buf[pkg_buf_len];
+                pkg_buf[0] = PACKET_TOXAV_COMM_CHANNEL;
+                pkg_buf[1] = PACKET_TOXAV_COMM_CHANNEL_LESS_VIDEO_FPS;
+                pkg_buf[2] = 3; // skip every 3rd video frame and dont encode and dont sent it
+
+                int result = send_custom_lossless_packet(vc->av->m, vc->friend_number, pkg_buf, pkg_buf_len);
+                // HINT: tell sender to turn down video FPS -------------
+
+                free(msg_old);
+            }
         } else {
             // discard incoming frame, we want to see our outgoing frames instead
             if (msg) {

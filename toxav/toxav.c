@@ -44,7 +44,7 @@
 
 
 #define VIDEO_ACCEPTABLE_LOSS (0.08f) /* if loss is less than this (8%), then don't do anything */
-#define AUDIO_ITERATATIONS_WHILE_VIDEO (2)
+#define AUDIO_ITERATATIONS_WHILE_VIDEO (20)
 #define VIDEO_MIN_SEND_KEYFRAME_INTERVAL 5000
 
 #if defined(AUDIO_DEBUGGING_SKIP_FRAMES)
@@ -234,9 +234,9 @@ void toxav_iterate(ToxAV *av)
 
             const int diff_streams = (int)(vc1->timestamp_difference_to_sender - ac1->timestamp_difference_to_sender);
 
-            if ((diff_streams < -40) || (diff_streams > 40)) {
-                LOGGER_ERROR(av->m->log, "video (to audio) delay in ms=%d", diff_streams);
-            }
+            // if ((diff_streams < -40) || (diff_streams > 40)) {
+            //    LOGGER_ERROR(av->m->log, "video (to audio) delay in ms=%d", diff_streams);
+            // }
 
 
 
@@ -293,7 +293,7 @@ void toxav_iterate(ToxAV *av)
                                    &(i->last_incoming_video_frame_ltimestamp)
                                   ) == 0) {
                         // TODO: Zoff: not sure if this sleep is good, or bad??
-                        usleep(200);
+                        usleep(40);
                     } else {
                         LOGGER_TRACE(av->m->log, "did some more audio iterate");
                     }
@@ -1085,6 +1085,21 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         goto END;
     }
 
+
+    if (call->video.second->skip_fps != 0) {
+        call->video.second->skip_fps_counter++;
+
+        if (call->video.second->skip_fps_counter == call->video.second->skip_fps) {
+            LOGGER_ERROR(av->m->log, "VIDEO:Skipping frame, because of too much FPS!!");
+            call->video.second->skip_fps_counter = 0;
+            // skip this video frame, receiver can't handle this many FPS
+            // rc = TOXAV_ERR_SEND_FRAME_INVALID; // should we tell the client? not sure about this
+            //                                     // client may try to resend the frame, which is not what we want
+            pthread_mutex_unlock(av->mutex);
+            goto END;
+        }
+    }
+
     uint64_t ms_to_last_frame = 1;
 
     if (call->video.second) {
@@ -1491,7 +1506,7 @@ void callback_bwc(BWController *bwc, uint32_t friend_number, float loss, void *u
         if (call->video_bit_rate > VIDEO_BITRATE_SCALAR3_AUTO_VALUE_H264) {
             if ((loss * 100) > VIDEO_BITRATE_AUTO_INC_THRESHOLD) {
                 call->video_bit_rate = (uint32_t)((float)call->video_bit_rate * ((1.0f - loss) * VIDEO_BITRATE_AUTO_DEC_FACTOR));
-                LOGGER_ERROR(call->av->m->log, "callback_bwc:DEC:H:vb=%d", (int)call->video_bit_rate);
+                LOGGER_ERROR(call->av->m->log, "callback_bwc:DEC:1:H:vb=%d loss=%d", (int)call->video_bit_rate, (int)(loss * 100));
 
                 // HINT: sanity check --------------
                 if (call->video_bit_rate < VIDEO_BITRATE_MIN_AUTO_VALUE_H264) {
@@ -1518,12 +1533,12 @@ void callback_bwc(BWController *bwc, uint32_t friend_number, float loss, void *u
                     call->video_bit_rate = (uint32_t)((float)call->video_bit_rate * (float)VIDEO_BITRATE_AUTO_INC_TO);
                 }
 
-                LOGGER_DEBUG(call->av->m->log, "callback_bwc:INC:vb=%d", (int)call->video_bit_rate);
+                LOGGER_DEBUG(call->av->m->log, "callback_bwc:INC:vb=%d loss=%d", (int)call->video_bit_rate, (int)(loss * 100));
             }
         } else if ((loss * 100) > VIDEO_BITRATE_AUTO_DEC_THRESHOLD) {
             if (call->video_bit_rate > VIDEO_BITRATE_MIN_AUTO_VALUE_H264) {
                 call->video_bit_rate = (uint32_t)((float)call->video_bit_rate * ((1.0f - loss) * VIDEO_BITRATE_AUTO_DEC_FACTOR));
-                LOGGER_DEBUG(call->av->m->log, "callback_bwc:DEC:vb=%d", (int)call->video_bit_rate);
+                LOGGER_ERROR(call->av->m->log, "callback_bwc:DEC:vb=%d loss=%d", (int)call->video_bit_rate, (int)(loss * 100));
             }
         }
 

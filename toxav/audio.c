@@ -143,7 +143,7 @@ static inline struct RTPMessage *jbuf_read(Logger *log, struct RingBuffer *q, in
 
     bool res = rb_read(q, &ret, &lost_frame);
 
-    LOGGER_TRACE(log, "jbuf_read:lost_frame=%d", (int)lost_frame);
+    LOGGER_DEBUG(log, "jbuf_read:lost_frame=%d", (int)lost_frame);
 
     if (res == true) {
         *success = 1;
@@ -180,8 +180,8 @@ uint8_t ac_iterate(ACSession *ac, uint64_t *a_r_timestamp, uint64_t *a_l_timesta
         return 0;
     } else if (rb_size(jbuffer) > AUDIO_JITTERBUFFER_FILL_THRESHOLD) {
         // audio frames are building up, skip video frames to compensate
-        // LOGGER_INFO(ac->log, "incoming audio frames are piling up");
-        ret_value = 2;
+        LOGGER_INFO(ac->log, "incoming audio frames are piling up. num=%d", (int)rb_size(jbuffer));
+        // ** // disabled, DONT skip video frames // ret_value = 2;
     }
 
 #if 0

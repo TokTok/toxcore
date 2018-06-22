@@ -25,15 +25,15 @@
 #define VIDEO_BITRATE_SCALAR_AUTO_VALUE_H264 1400
 #define VIDEO_BITRATE_SCALAR_INC_BY_AUTO_VALUE_H264 200
 #define VIDEO_BITRATE_SCALAR2_AUTO_VALUE_H264 5000
-#define VIDEO_BITRATE_SCALAR2_INC_BY_AUTO_VALUE_H264 12
+#define VIDEO_BITRATE_SCALAR2_INC_BY_AUTO_VALUE_H264 15
 #define VIDEO_BITRATE_SCALAR3_AUTO_VALUE_H264 7000
 #define VIDEO_BITRATE_MAX_AUTO_VALUE_H264 8000
 
 // -- these control how agressive the bandwidth control is --
-#define VIDEO_BITRATE_AUTO_INC_THRESHOLD 1.7
-#define VIDEO_BITRATE_AUTO_DEC_THRESHOLD 5.0
-#define VIDEO_BITRATE_AUTO_INC_TO 1.05 // increase video bitrate by n%
-#define VIDEO_BITRATE_AUTO_DEC_FACTOR 0.93
+#define VIDEO_BITRATE_AUTO_INC_THRESHOLD 1.9 // threshold loss % to increase bitrate (in %/100)
+#define VIDEO_BITRATE_AUTO_DEC_THRESHOLD 5.2 // threshold loss % to lower the bitrate (in %/100)
+#define VIDEO_BITRATE_AUTO_INC_TO 1.06 // increase video bitrate by n% (in %/100)
+#define VIDEO_BITRATE_AUTO_DEC_FACTOR 0.93 // (in %/100)
 // -- these control how agressive the bandwidth control is --
 
 #define VIDEO_MAX_KF_H264 50
