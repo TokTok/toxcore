@@ -5849,6 +5849,9 @@ int gc_invite_friend(GC_Session *c, GC_Chat *chat, int32_t friend_number,
     memcpy(packet + length, chat->self_public_key, ENC_PUBLIC_KEY);
 
     length += ENC_PUBLIC_KEY;
+    size_t group_name_length = chat->shared_state.group_name_len;
+    memcpy(packet + length, chat->shared_state.group_name, group_name_length);
+    length += group_name_length;
 
     if (send_group_invite_packet(c->messenger, friend_number, packet, length) == -1) {
         return -2;
