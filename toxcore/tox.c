@@ -442,13 +442,13 @@ static void tox_group_custom_packet_handler(Messenger *m, uint32_t groupnumber, 
 }
 
 static void tox_group_invite_handler(Messenger *m, uint32_t friend_number, const uint8_t *invite_data, size_t length,
-                                     void *user_data)
+                                     const uint8_t *group_name, size_t group_name_length, void *user_data)
 {
     puts(__func__);
     Tox *tox = (Tox *)user_data;
 
     if (tox->group_invite_callback != nullptr) {
-        tox->group_invite_callback(tox, friend_number, invite_data, length, tox->non_const_user_data);
+        tox->group_invite_callback(tox, friend_number, invite_data, length, group_name, group_name_length, tox->non_const_user_data);
     }
 }
 
