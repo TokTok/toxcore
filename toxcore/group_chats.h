@@ -34,6 +34,8 @@
 #define GC_UNCONFIRMED_PEER_TIMEOUT (GC_PING_INTERVAL * 2)
 #define MAX_GC_CONFIRMED_PEERS 20
 
+#define GC_JOIN_DATA_LENGTH (ENC_PUBLIC_KEY + CHAT_ID_SIZE)
+
 
 typedef enum Group_Privacy_State {
     GI_PUBLIC,
