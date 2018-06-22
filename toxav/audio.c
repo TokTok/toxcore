@@ -189,9 +189,9 @@ uint8_t ac_iterate(ACSession *ac, uint64_t *a_r_timestamp, uint64_t *a_l_timesta
         // audio frames are still building up, skip audio frames to synchronize again
         int rc_skip = 0;
         LOGGER_DEBUG(ac->log, "skipping some incoming audio frames");
-        jbuf_read(ac->log, jbuffer, &rc_skip);
-        jbuf_read(ac->log, jbuffer, &rc_skip);
-        jbuf_read(ac->log, jbuffer, &rc_skip);
+        free(jbuf_read(ac->log, jbuffer, &rc_skip));
+        free(jbuf_read(ac->log, jbuffer, &rc_skip));
+        free(jbuf_read(ac->log, jbuffer, &rc_skip));
         return 1;
     }
 
@@ -201,7 +201,7 @@ uint8_t ac_iterate(ACSession *ac, uint64_t *a_r_timestamp, uint64_t *a_l_timesta
     int16_t temp_audio_buffer[AUDIO_MAX_BUFFER_SIZE_PCM16_FOR_FRAME_PER_CHANNEL *
                               AUDIO_MAX_CHANNEL_COUNT];
 
-    struct RTPMessage *msg;
+    struct RTPMessage *msg = NULL;
     int rc = 0;
 
     pthread_mutex_lock(ac->queue_mutex);
@@ -211,9 +211,14 @@ uint8_t ac_iterate(ACSession *ac, uint64_t *a_r_timestamp, uint64_t *a_l_timesta
 
         if (rc == AUDIO_LOST_FRAME_INDICATOR) {
             LOGGER_DEBUG(ac->log, "OPUS correction for lost frame (3)");
-            int fs = (ac->lp_sampling_rate * ac->lp_frame_duration) / 1000;
-            rc = opus_decode(ac->decoder, NULL, 0, temp_audio_buffer, fs, 1);
+
+            if (ac->lp_sampling_rate > 0) {
+                int fs = (ac->lp_sampling_rate * ac->lp_frame_duration) / 1000;
+                rc = opus_decode(ac->decoder, NULL, 0, temp_audio_buffer, fs, 1);
+            }
+
             free(msg);
+            msg = NULL;
         } else {
 
             int use_fec = 0;
@@ -223,12 +228,14 @@ uint8_t ac_iterate(ACSession *ac, uint64_t *a_r_timestamp, uint64_t *a_l_timesta
             /* NOTE: This didn't work very well */
 
             /* Pick up sampling rate from packet */
-            memcpy(&ac->lp_sampling_rate, msg->data, 4);
-            ac->lp_sampling_rate = net_ntohl(ac->lp_sampling_rate);
-            ac->lp_channel_count = opus_packet_get_nb_channels(msg->data + 4);
-            /* TODO: msg->data + 4
-             * this should be defined, not hardcoded
-             */
+            if (msg) {
+                memcpy(&ac->lp_sampling_rate, msg->data, 4);
+                ac->lp_sampling_rate = net_ntohl(ac->lp_sampling_rate);
+                ac->lp_channel_count = opus_packet_get_nb_channels(msg->data + 4);
+                /* TODO: msg->data + 4
+                 * this should be defined, not hardcoded
+                 */
+            }
 
 
             /** NOTE: even though OPUS supports decoding mono frames with stereo decoder and vice versa,
@@ -237,6 +244,7 @@ uint8_t ac_iterate(ACSession *ac, uint64_t *a_r_timestamp, uint64_t *a_l_timesta
             if (!reconfigure_audio_decoder(ac, ac->lp_sampling_rate, ac->lp_channel_count)) {
                 LOGGER_WARNING(ac->log, "Failed to reconfigure decoder!");
                 free(msg);
+                msg = NULL;
                 continue;
             }
 
@@ -277,6 +285,7 @@ uint8_t ac_iterate(ACSession *ac, uint64_t *a_r_timestamp, uint64_t *a_l_timesta
 
 
             free(msg);
+            msg = NULL;
         }
 
         if (rc < 0) {
@@ -323,7 +332,7 @@ int ac_queue_message(void *acp, struct RTPMessage *msg)
     int rc = jbuf_write(ac->log, ac, (struct RingBuffer *)ac->j_buf, msg);
     pthread_mutex_unlock(ac->queue_mutex);
 
-    if (rc == -1) {
+    if (rc == -99) {
         // TODO: investigate how this can still occur? we take them out faster than they come in
 
         LOGGER_DEBUG(ac->log, "AADEBUG:ERR:seqnum=%d dt=%d ts:%llu", (int)header_v3->sequnum,
@@ -410,10 +419,14 @@ static struct RTPMessage *new_empty_message(size_t allocate_len, const uint8_t *
 
 static int jbuf_write(Logger *log, ACSession *ac, struct RingBuffer *q, struct RTPMessage *m)
 {
+#if 0
+
     if (rb_full(q)) {
         LOGGER_DEBUG(log, "AADEBUG:AudioFramesIN: jitter buffer full: %p", q);
-        return -1;
+        return -99;
     }
+
+#endif
 
     if (ac->lp_seqnum == -1) {
         ac->lp_seqnum = m->header.sequnum;
@@ -616,6 +629,10 @@ bool reconfigure_audio_encoder(Logger *log, OpusEncoder **e, int32_t new_br, int
 
 bool reconfigure_audio_decoder(ACSession *ac, int32_t sampling_rate, int8_t channels)
 {
+    if (sampling_rate <= 0) {
+        return false;
+    }
+
     if (sampling_rate != ac->ld_sample_rate || channels != ac->ld_channel_count) {
         if (current_time_monotonic() - ac->ldrts < 500) {
             return false;
