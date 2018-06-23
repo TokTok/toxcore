@@ -36,7 +36,7 @@
 #define VIDEO_BITRATE_AUTO_DEC_FACTOR 0.93 // (in %/100)
 // -- these control how agressive the bandwidth control is --
 
-#define VIDEO_MAX_KF_H264 50
+#define VIDEO_MAX_KF_H264 150
 #define VIDEO_BUF_FACTOR_H264 1
 #define VIDEO_F_RATE_TOLERANCE_H264 1.2
 #define VIDEO_BITRATE_FACTOR_H264 0.7

@@ -1014,7 +1014,7 @@ bool toxav_audio_send_frame(ToxAV *av, uint32_t friend_number, const int16_t *pc
             _debug_count_sent_audio_frames = 0;
         } else {
 #endif
-            LOGGER_ERROR(av->m->log, "audio packet record time: seqnum=%d %llu", (int)call->audio.first->sequnum,
+            LOGGER_DEBUG(av->m->log, "audio packet record time: seqnum=%d %llu", (int)call->audio.first->sequnum,
                          audio_frame_record_timestamp);
 
             if (rtp_send_data(call->audio.first, dest,
