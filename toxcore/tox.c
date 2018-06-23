@@ -89,6 +89,11 @@ Tox *tox_new(const struct Tox_Options *options, TOX_ERR_NEW *error)
     if (options == nullptr) {
         m_options.ipv6enabled = TOX_ENABLE_IPV6_DEFAULT;
     } else {
+        if (tox_options_get_udp_enabled(options) && tox_options_get_proxy_type(options) != TOX_PROXY_TYPE_NONE) {
+            SET_ERROR_PARAMETER(error, TOX_ERR_NEW_PROXY_WITH_UDP);
+            return nullptr;
+        }
+
         if (tox_options_get_savedata_type(options) != TOX_SAVEDATA_TYPE_NONE) {
             if (tox_options_get_savedata_data(options) == nullptr || tox_options_get_savedata_length(options) == 0) {
                 SET_ERROR_PARAMETER(error, TOX_ERR_NEW_LOAD_BAD_FORMAT);

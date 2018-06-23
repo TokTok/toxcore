@@ -822,6 +822,13 @@ typedef enum TOX_ERR_NEW {
      */
     TOX_ERR_NEW_LOAD_BAD_FORMAT,
 
+    /**
+     * UDP was enabled together with a proxy. This is a security issue, because
+     * UDP connections are never proxied. You must disable UDP in order to use a
+     * proxy.
+     */
+    TOX_ERR_NEW_PROXY_WITH_UDP,
+
 } TOX_ERR_NEW;
 
 

@@ -697,6 +697,13 @@ static this new(const options_t *options) {
      */
     BAD_FORMAT,
   }
+
+  /**
+   * UDP was enabled together with a proxy. This is a security issue, because
+   * UDP connections are never proxied. You must disable UDP in order to use a
+   * proxy.
+   */
+  PROXY_WITH_UDP,
 }
 
 
