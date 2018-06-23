@@ -29,6 +29,7 @@
 
 #include "../toxcore/logger.h"
 #include "../toxcore/network.h"
+#include "../toxcore/Messenger.h"
 
 #include "tox_generic.h"
 
@@ -252,7 +253,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
             vc->count_old_video_frames_seen++;
 
             // HINT: give feedback that we lost some bytes
-            bwc_add_lost_v3(bwc, header_v3_0->data_length_full);
+            bwc_add_lost_v3(bwc, header_v3_0->data_length_full, false);
             // LOGGER_ERROR(vc->log, "BWC:lost:001");
 
             if (vc->count_old_video_frames_seen > 6) {
@@ -275,44 +276,68 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
             int32_t missing_frames_count = (int32_t)header_v3_0->sequnum -
                                            (int32_t)(vc->last_seen_fragment_seqnum + 1);
 
-            if (missing_frames_count > 2) {
 
-                // HINT: if whole video frames are missing here, they most likely have been
-                //       kicked out of the ringbuffer because the sender is sending at too much FPS
-                //       which out client cant handle. so in the future signal sender to send less FPS!
+            const Messenger *mm = (Messenger *)(vc->av->m);
+            const Messenger_Options *mo = (Messenger_Options *) & (mm->options);
 
-                LOGGER_WARNING(vc->log, "missing? sn=%d lastseen=%d",
-                               (int)header_v3_0->sequnum,
-                               (int)vc->last_seen_fragment_seqnum);
-
-
-                LOGGER_DEBUG(vc->log, "missing %d video frames (m1)", (int)missing_frames_count);
-
-                if (vc->video_decoder_codec_used != TOXAV_ENCODER_CODEC_USED_H264) {
-                    rc = vpx_codec_decode(vc->decoder, NULL, 0, NULL, VPX_DL_REALTIME);
-                }
-
+            if (mo->proxy_info.proxy_type != TCP_PROXY_NONE) {
                 // HINT: give feedback that we lost some bytes (based on the size of this frame)
-                bwc_add_lost_v3(bwc, (uint32_t)(header_v3_0->data_length_full * missing_frames_count));
-                LOGGER_ERROR(vc->log, "BWC:lost:002:missing count=%d", (int)missing_frames_count);
+                //       we are using a PROXY, so make it much more aggressive!!
+                bwc_add_lost_v3(bwc, (uint32_t)(8 * header_v3_0->data_length_full * missing_frames_count), true);
+                LOGGER_ERROR(vc->log, "BWC:lost:002:*PROXY*:missing count=%d", (int)missing_frames_count);
+
+                // HINT: tell sender to turn down video FPS -------------
+                uint32_t pkg_buf_len = 3;
+                uint8_t pkg_buf[pkg_buf_len];
+                pkg_buf[0] = PACKET_TOXAV_COMM_CHANNEL;
+                pkg_buf[1] = PACKET_TOXAV_COMM_CHANNEL_LESS_VIDEO_FPS;
+                pkg_buf[2] = 2; // skip every 2nd video frame and dont encode and dont sent it
+
+                int result = send_custom_lossless_packet(vc->av->m, vc->friend_number, pkg_buf, pkg_buf_len);
+                LOGGER_ERROR(vc->log, "BWC:lost:002:*PROXY*:request half frame rate");
+                // HINT: tell sender to turn down video FPS -------------
+
+            } else {
+
+                if (missing_frames_count > 2) {
+
+                    // HINT: if whole video frames are missing here, they most likely have been
+                    //       kicked out of the ringbuffer because the sender is sending at too much FPS
+                    //       which out client cant handle. so in the future signal sender to send less FPS!
+
+                    LOGGER_WARNING(vc->log, "missing? sn=%d lastseen=%d",
+                                   (int)header_v3_0->sequnum,
+                                   (int)vc->last_seen_fragment_seqnum);
 
 
-                if (missing_frames_count > 5) {
-                    if ((vc->last_requested_keyframe_ts + VIDEO_MIN_REQUEST_KEYFRAME_INTERVAL_MS_FOR_NF)
-                            < current_time_monotonic()) {
-                        uint32_t pkg_buf_len = 2;
-                        uint8_t pkg_buf[pkg_buf_len];
-                        pkg_buf[0] = PACKET_TOXAV_COMM_CHANNEL;
-                        pkg_buf[1] = PACKET_TOXAV_COMM_CHANNEL_REQUEST_KEYFRAME;
+                    LOGGER_DEBUG(vc->log, "missing %d video frames (m1)", (int)missing_frames_count);
 
-                        if (-1 == send_custom_lossless_packet(m, vc->friend_number, pkg_buf, pkg_buf_len)) {
-                            LOGGER_WARNING(vc->log,
-                                           "PACKET_TOXAV_COMM_CHANNEL:RTP send failed (2)");
-                        } else {
-                            LOGGER_WARNING(vc->log,
-                                           "PACKET_TOXAV_COMM_CHANNEL:RTP Sent. (2)");
-                            have_requested_index_frame = true;
-                            vc->last_requested_keyframe_ts = current_time_monotonic();
+                    if (vc->video_decoder_codec_used != TOXAV_ENCODER_CODEC_USED_H264) {
+                        rc = vpx_codec_decode(vc->decoder, NULL, 0, NULL, VPX_DL_REALTIME);
+                    }
+
+                    // HINT: give feedback that we lost some bytes (based on the size of this frame)
+                    bwc_add_lost_v3(bwc, (uint32_t)(header_v3_0->data_length_full * missing_frames_count), false);
+                    LOGGER_ERROR(vc->log, "BWC:lost:002:missing count=%d", (int)missing_frames_count);
+
+
+                    if (missing_frames_count > 5) {
+                        if ((vc->last_requested_keyframe_ts + VIDEO_MIN_REQUEST_KEYFRAME_INTERVAL_MS_FOR_NF)
+                                < current_time_monotonic()) {
+                            uint32_t pkg_buf_len = 2;
+                            uint8_t pkg_buf[pkg_buf_len];
+                            pkg_buf[0] = PACKET_TOXAV_COMM_CHANNEL;
+                            pkg_buf[1] = PACKET_TOXAV_COMM_CHANNEL_REQUEST_KEYFRAME;
+
+                            if (-1 == send_custom_lossless_packet(m, vc->friend_number, pkg_buf, pkg_buf_len)) {
+                                LOGGER_WARNING(vc->log,
+                                               "PACKET_TOXAV_COMM_CHANNEL:RTP send failed (2)");
+                            } else {
+                                LOGGER_WARNING(vc->log,
+                                               "PACKET_TOXAV_COMM_CHANNEL:RTP Sent. (2)");
+                                have_requested_index_frame = true;
+                                vc->last_requested_keyframe_ts = current_time_monotonic();
+                            }
                         }
                     }
                 }
@@ -336,7 +361,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
                 }
 
                 // HINT: give feedback that we lost some bytes (based on the size of this frame)
-                bwc_add_lost_v3(bwc, header_v3_0->data_length_full);
+                bwc_add_lost_v3(bwc, header_v3_0->data_length_full, false);
                 LOGGER_ERROR(vc->log, "BWC:lost:003");
 
                 pthread_mutex_unlock(vc->queue_mutex);
@@ -385,8 +410,18 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
         // HINT: give feedback that we lost some bytes
         if (header_v3->received_length_full < full_data_len) {
-            bwc_add_lost_v3(bwc, (header_v3->received_length_full - full_data_len));
-            LOGGER_ERROR(vc->log, "BWC:lost:004");
+            const Messenger *mm = (Messenger *)(vc->av->m);
+            const Messenger_Options *mo = (Messenger_Options *) & (mm->options);
+
+            if (mo->proxy_info.proxy_type != TCP_PROXY_NONE) {
+                // HINT: we are using a proxy, most likely Tor
+                //       so be much more aggressive on data loss!
+                bwc_add_lost_v3(bwc, full_data_len, true);
+                LOGGER_ERROR(vc->log, "BWC:lost:004:*PROXY*");
+            } else {
+                bwc_add_lost_v3(bwc, (header_v3->received_length_full - full_data_len), false);
+                LOGGER_ERROR(vc->log, "BWC:lost:004");
+            }
         }
 
 
