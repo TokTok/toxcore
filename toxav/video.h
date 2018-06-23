@@ -175,6 +175,7 @@ typedef struct VCSession_s {
     uint8_t send_keyframe_request_received;
     uint8_t h264_video_capabilities_received;
     uint8_t skip_fps;
+    uint8_t skip_fps_release_counter;
     uint8_t skip_fps_counter;
 
     int64_t timestamp_difference_to_sender;

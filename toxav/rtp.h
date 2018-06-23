@@ -31,6 +31,9 @@
 extern "C" {
 #endif
 
+#define TOXAV_SKIP_FPS_RELEASE_AFTER_FRAMES 60
+
+
 /**
  * RTPHeader serialised size in bytes.
  */

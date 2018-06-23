@@ -424,7 +424,7 @@ uint32_t send_frames_h264(ToxAV *av, uint32_t friend_number, uint16_t width, uin
         const uint32_t frame_length_in_bytes = *i_frame_size;
         const int keyframe = (int)call->video.second->h264_out_pic.b_keyframe;
 
-        LOGGER_ERROR(av->m->log, "video packet record time: %llu", (*video_frame_record_timestamp));
+        LOGGER_DEBUG(av->m->log, "video packet record time: %llu", (*video_frame_record_timestamp));
 
         int res = rtp_send_data
                   (

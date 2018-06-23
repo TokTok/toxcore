@@ -358,7 +358,7 @@ static void update_bwc_values(Logger *log, RTPSession *session, const struct RTP
         bwc_add_recv(session->bwc, data_length_full);
 
         if (received_length_full < data_length_full) {
-            LOGGER_ERROR(log, "BWC: full length=%u received length=%d", data_length_full, received_length_full);
+            LOGGER_DEBUG(log, "BWC: full length=%u received length=%d", data_length_full, received_length_full);
             bwc_add_lost_v3(session->bwc, (data_length_full - received_length_full));
         }
     }
@@ -536,7 +536,11 @@ static int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t 
                 }
             } else if (data[1] == PACKET_TOXAV_COMM_CHANNEL_LESS_VIDEO_FPS) {
                 if (session->cs) {
-                    ((VCSession *)(session->cs))->skip_fps = data[2];
+                    if ((data[2] > 1) && (data[2] < 10)) {
+                        ((VCSession *)(session->cs))->skip_fps = data[2];
+                    }
+
+                    ((VCSession *)(session->cs))->skip_fps_release_counter = TOXAV_SKIP_FPS_RELEASE_AFTER_FRAMES;
                 }
             }
         }
