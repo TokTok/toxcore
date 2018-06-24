@@ -30,7 +30,7 @@ endfunction()
 function(add_dllflag flag)
   string(REGEX REPLACE "[^a-zA-Z0-9_]" "_" var ${flag})
   if(NOT DEFINED HAVE_LD${var})
-    message(STATUS "checking for C++ compiler flag: ${flag}")
+    message(STATUS "checking for C linker flag: ${flag}")
   endif()
   set(CMAKE_REQUIRED_QUIET TRUE)
 

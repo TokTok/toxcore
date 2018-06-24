@@ -192,8 +192,13 @@ endif()
 
 option(ASAN "Enable address-sanitizer to detect invalid memory accesses" OFF)
 if(ASAN)
+  set(SAFE_CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS})
+  set(CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address)
   add_cflag("-fsanitize=address")
   add_dllflag("-fsanitize=address")
+  if(NOT HAVE_C_fsanitize_address)
+    set(CMAKE_EXE_LINKER_FLAGS ${SAFE_CMAKE_EXE_LINKER_FLAGS})
+  endif()
 endif()
 
 if(LINUX)

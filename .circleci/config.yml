@@ -10,7 +10,7 @@ jobs:
   x86_64:
     working_directory: ~/work
     docker:
-    - image: circleci/builder-base:latest
+    - image: circleci/builder-base
 
     steps:
     - checkout
@@ -18,5 +18,6 @@ jobs:
     - run: apt update
     - run: apt install -y clang cmake libgtest-dev libopus-dev libsodium-dev libvpx-dev pkg-config
     - run: cmake -H. -B_build -DDEBUG=ON -DTRACE=ON -DERROR_ON_WARNING=ON -DASAN=ON -DMUST_BUILD_TOXAV=ON -DSTRICT_ABI=ON -DTEST_TIMEOUT_SECONDS=90 -DUSE_IPV6=OFF
+    - run: cat _build/CMakeFiles/CMakeError.log
     - run: make -C _build -j$(nproc)
     - run: make -C _build test ARGS="-j50 --rerun-failed" CTEST_OUTPUT_ON_FAILURE=1 || make -C _build test ARGS="-j50 --rerun-failed" CTEST_OUTPUT_ON_FAILURE=1
