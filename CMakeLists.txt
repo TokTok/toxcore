@@ -176,6 +176,7 @@ if(NOT MSVC)
     add_cxxflag("-Wno-old-style-cast")
 
     # Downgrade to warning so we still see it.
+    add_flag("-Wno-error=unreachable-code")
     add_flag("-Wno-error=unused-variable")
   endif()
 endif()
@@ -449,19 +450,6 @@ unit_test(toxcore util)
 
 set(TEST_TIMEOUT_SECONDS "" CACHE STRING "Limit runtime of each test to the number of seconds specified")
 
-option(FORMAT_TEST "Require the format_test to be executed; fail cmake if it can't" OFF)
-
-if(ASTYLE)
-  add_test(
-    NAME format_test
-    COMMAND ${toxcore_SOURCE_DIR}/other/astyle/format-source
-      "${toxcore_SOURCE_DIR}"
-      "${ASTYLE}")
-  set_tests_properties(format_test PROPERTIES TIMEOUT "${TEST_TIMEOUT_SECONDS}")
-elseif(FORMAT_TEST)
-  message(FATAL_ERROR "format_test can not be run, because ASTYLE (${ASTYLE}) could not be found")
-endif()
-
 if(ANDROID_CPU_FEATURES)
   # We need to compile cpufeatures.c as many times as there are executables,
   # because libvpx doesn't include it although it depends on it. We can't get
@@ -490,7 +478,7 @@ endfunction()
 if(BUILD_TOXAV)
   add_definitions(-D__STDC_LIMIT_MACROS=1)
   add_executable(auto_monolith_test ${CPUFEATURES}
-    auto_tests/monolith_test.cpp)
+    auto_tests/monolith_test.cc)
   target_link_libraries(auto_monolith_test ${toxcore_LINK_MODULES})
   add_test(NAME monolith COMMAND ${CROSSCOMPILING_EMULATOR} auto_monolith_test)
 endif()
@@ -499,11 +487,14 @@ auto_test(TCP)
 auto_test(bootstrap)
 auto_test(conference)
 auto_test(conference_two)
+auto_test(conference_double_invite)
 auto_test(crypto                        MSVC_DONT_BUILD)
 auto_test(dht                           MSVC_DONT_BUILD)
 auto_test(encryptsave)
 auto_test(file_transfer)
 auto_test(friend_request)
+auto_test(invalid_proxy)
+auto_test(invalid_tcp_proxy)
 auto_test(lan_discovery)
 auto_test(lossless_packet)
 auto_test(lossy_packet)
@@ -610,3 +601,7 @@ target_link_modules(DHT_test toxcore)
 add_executable(Messenger_test ${CPUFEATURES}
   testing/Messenger_test.c)
 target_link_modules(Messenger_test toxcore)
+
+add_executable(random_testing ${CPUFEATURES}
+  testing/random_testing.cc)
+target_link_modules(random_testing toxcore)

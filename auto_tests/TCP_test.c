@@ -45,7 +45,7 @@ static inline IP get_loopback()
     return ip;
 }
 
-static uint16_t ports[NUM_PORTS] = {1234, 33445, 25643};
+static uint16_t ports[NUM_PORTS] = {13215, 33445, 25643};
 
 START_TEST(test_basic)
 {
@@ -58,7 +58,7 @@ START_TEST(test_basic)
     ck_assert_msg(tcp_server_listen_count(tcp_s) == NUM_PORTS,
                   "Failed to bind a TCP relay server to all %d attempted ports.", NUM_PORTS);
 
-    Socket sock;
+    Socket sock = {0};
 
     // Check all opened ports for connectivity.
     for (uint8_t i = 0; i < NUM_PORTS; i++) {
@@ -100,6 +100,7 @@ START_TEST(test_basic)
     // Sending the handshake
     ck_assert_msg(net_send(sock, handshake, TCP_CLIENT_HANDSHAKE_SIZE - 1) == TCP_CLIENT_HANDSHAKE_SIZE - 1,
                   "An attempt to send the initial handshake minus last byte failed.");
+
     c_sleep(50);
     do_TCP_server(tcp_s);
     c_sleep(50);
