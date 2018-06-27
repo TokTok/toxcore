@@ -45,7 +45,7 @@ static inline IP get_loopback()
     return ip;
 }
 
-void do_TCP_server_delay(TCP_Server *tcp_s, int delay)
+static void do_TCP_server_delay(TCP_Server *tcp_s, int delay)
 {
     c_sleep(delay);
     do_TCP_server(tcp_s);
@@ -310,7 +310,7 @@ START_TEST(test_some)
     ck_assert_msg(data[1] == 16, "Server didn't refuse connection using wrong public key.");
     ck_assert_msg(public_key_cmp(data + 2, con1->public_key) == 0, "Key in response packet wrong.");
 
-    uint8_t test_packet[512] = {16, 17, 16, 86, 99, 127, 255, 189, 78}; //What is this packet????
+    uint8_t test_packet[512] = {16, 17, 16, 86, 99, 127, 255, 189, 78}; // What is this packet????
 
     write_packet_TCP_secure_connection(con3, test_packet, sizeof(test_packet));
     write_packet_TCP_secure_connection(con3, test_packet, sizeof(test_packet));
@@ -476,29 +476,28 @@ START_TEST(test_client)
     do_TCP_connection(conn, nullptr);
     c_sleep(50);
 
-    //The connection status should be unconfirmed here because we have finished
-    //sending our data and are awaiting a response.
+    // The connection status should be unconfirmed here because we have finished
+    // sending our data and are awaiting a response.
     ck_assert_msg(tcp_con_status(conn) == TCP_CLIENT_UNCONFIRMED, "Wrong connection status. Expected: %d, is: %d.",
                   TCP_CLIENT_UNCONFIRMED, tcp_con_status(conn));
 
-    do_TCP_server_delay(tcp_s, 50); //Now let the server handle requests...
+    do_TCP_server_delay(tcp_s, 50); // Now let the server handle requests...
 
     const uint8_t LOOP_SIZE = 3;
 
     for (uint8_t i = 0; i < LOOP_SIZE; i++) {
-        do_TCP_connection(conn, nullptr); //Run the connection loop.
+        do_TCP_connection(conn, nullptr); // Run the connection loop.
 
-        //The status of the connection should continue to be TCP_CLIENT_CONFIRMED after multiple subsequent do_TCP_connection() calls.
+        // The status of the connection should continue to be TCP_CLIENT_CONFIRMED after multiple subsequent do_TCP_connection() calls.
         ck_assert_msg(tcp_con_status(conn) == TCP_CLIENT_CONFIRMED, "Wrong connection status. Expected: %d, is: %d",
-                      TCP_CLIENT_CONFIRMED,
-                      tcp_con_status(conn));
+                      TCP_CLIENT_CONFIRMED, tcp_con_status(conn));
 
-        c_sleep(i == LOOP_SIZE - 1 ? 0 : 500); //Sleep for 500ms on all except third loop.
+        c_sleep(i == LOOP_SIZE - 1 ? 0 : 500); // Sleep for 500ms on all except third loop.
     }
 
     do_TCP_server_delay(tcp_s, 50);
 
-    //And still after the server runs again.
+    // And still after the server runs again.
     ck_assert_msg(tcp_con_status(conn) == TCP_CLIENT_CONFIRMED, "Wrong status. Expected: %d, is: %d", TCP_CLIENT_CONFIRMED,
                   tcp_con_status(conn));
 
@@ -509,16 +508,16 @@ START_TEST(test_client)
     TCP_Client_Connection *conn2 = new_TCP_connection(
                                        ip_port_tcp_s, self_public_key, f2_public_key, f2_secret_key, nullptr);
 
-    //The client should call this function (defined earlier) during the routing process.
+    // The client should call this function (defined earlier) during the routing process.
     routing_response_handler(conn, response_callback, (char *)conn + 2);
-    //The client should call this function when it receives a connection notification.
+    // The client should call this function when it receives a connection notification.
     routing_status_handler(conn, status_callback, (void *)2);
-    //The client should call this function when
+    // The client should call this function when
     routing_data_handler(conn, data_callback, (void *)3);
-    //The client should call this function when sending out of band packets.
+    // The client should call this function when sending out of band packets.
     oob_data_handler(conn, oob_data_callback, (void *)4);
 
-    //These integers will increment per successful callback.
+    // These integers will increment per successful callback.
     oob_data_callback_good = response_callback_good = status_callback_good = data_callback_good = 0;
 
     do_TCP_connection(conn, nullptr);
@@ -541,7 +540,7 @@ START_TEST(test_client)
     do_TCP_connection(conn, nullptr);
     do_TCP_connection(conn2, nullptr);
 
-    //All callback methods save data should have run during the above network prodding.
+    // All callback methods save data should have run during the above network prodding.
     ck_assert_msg(oob_data_callback_good == 1, "OOB callback not called");
     ck_assert_msg(response_callback_good == 1, "Response callback not called.");
     ck_assert_msg(public_key_cmp(response_callback_public_key, f2_public_key) == 0, "Wrong public key.");
@@ -569,14 +568,14 @@ START_TEST(test_client)
     ck_assert_msg(status_callback_good == 1, "Status callback not called");
     ck_assert_msg(status_callback_status == 1, "Wrong status callback status.");
 
-    //Kill off all connections and servers.
+    // Kill off all connections and servers.
     kill_TCP_server(tcp_s);
     kill_TCP_connection(conn);
     kill_TCP_connection(conn2);
 }
 END_TEST
 
-//Test how the client handles servers that don't respond.
+// Test how the client handles servers that don't respond.
 START_TEST(test_client_invalid)
 {
     unix_time_update();
@@ -593,19 +592,19 @@ START_TEST(test_client_invalid)
     ip_port_tcp_s.ip = get_loopback();
     TCP_Client_Connection *conn = new_TCP_connection(ip_port_tcp_s, self_public_key, f_public_key, f_secret_key, nullptr);
 
-    //Run the client's main loop but not the server.
+    // Run the client's main loop but not the server.
     do_TCP_connection(conn, nullptr);
     c_sleep(50);
 
-    //After 50ms of no response...
+    // After 50ms of no response...
     ck_assert_msg(tcp_con_status(conn) == TCP_CLIENT_CONNECTING, "Wrong status. Expected: %d, is: %d.",
                   TCP_CLIENT_CONNECTING, tcp_con_status(conn));
-    //After 5s...
+    // After 5s...
     c_sleep(5000);
     do_TCP_connection(conn, nullptr);
     ck_assert_msg(tcp_con_status(conn) == TCP_CLIENT_CONNECTING, "Wrong status. Expected: %d, is: %d.",
                   TCP_CLIENT_CONNECTING, tcp_con_status(conn));
-    //11s... (Should wait for 10 before giving up.)
+    // 11s... (Should wait for 10 before giving up.)
     c_sleep(6000);
     do_TCP_connection(conn, nullptr);
     ck_assert_msg(tcp_con_status(conn) == TCP_CLIENT_DISCONNECTED, "Wrong status. Expected: %d, is: %d.",
