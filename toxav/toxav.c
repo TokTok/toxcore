@@ -1217,7 +1217,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
     int h264_iframe_factor = 1;
 
     if (call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_H264) {
-        h264_iframe_factor = 4;
+        h264_iframe_factor = 1;
     }
 
     if (call->video.second->video_keyframe_method == TOXAV_ENCODER_KF_METHOD_NORMAL) {

@@ -371,6 +371,7 @@ uint32_t encode_frame_h264(ToxAV *av, uint32_t friend_number, uint16_t width, ui
 
     if ((vpx_encode_flags & VPX_EFLAG_FORCE_KF) > 0) {
         call->video.second->h264_in_pic.i_type = X264_TYPE_KEYFRAME;
+        call->video.second->last_sent_keyframe_ts = current_time_monotonic();
     } else {
         call->video.second->h264_in_pic.i_type = X264_TYPE_AUTO;
     }
@@ -388,9 +389,8 @@ uint32_t encode_frame_h264(ToxAV *av, uint32_t friend_number, uint16_t width, ui
 
     // LOGGER_ERROR(av->m->log, "X264 out frame type=%d", (int)call->video.second->h264_out_pic.i_type);
 
-    if (IS_X264_TYPE_I(call->video.second->h264_out_pic.i_type)) {
-        call->video.second->last_sent_keyframe_ts = current_time_monotonic();
-    }
+    // if (IS_X264_TYPE_I(call->video.second->h264_out_pic.i_type)) {
+    // }
 
 
     if (*i_frame_size < 0) {
