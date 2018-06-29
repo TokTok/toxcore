@@ -1499,7 +1499,9 @@ void callback_bwc(BWController *bwc, uint32_t friend_number, float loss, void *u
     ToxAVCall *call = (ToxAVCall *)user_data;
     assert(call);
 
-    LOGGER_ERROR(call->av->m->log, "Reported loss of %f%% : %f", loss * 100, loss);
+    if (loss > 0) {
+        LOGGER_ERROR(call->av->m->log, "Reported loss of %f%% : %f", loss * 100, loss);
+    }
 
     if (call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_H264) {
 

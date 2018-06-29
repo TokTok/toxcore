@@ -368,11 +368,30 @@ uint32_t encode_frame_h264(ToxAV *av, uint32_t friend_number, uint16_t width, ui
     int i_nal;
 
     call->video.second->h264_in_pic.i_pts = (int64_t)(*video_frame_record_timestamp);
+
+    if ((vpx_encode_flags & VPX_EFLAG_FORCE_KF) > 0) {
+        call->video.second->h264_in_pic.i_type = X264_TYPE_KEYFRAME;
+    } else {
+        call->video.second->h264_in_pic.i_type = X264_TYPE_AUTO;
+    }
+
+    // LOGGER_ERROR(av->m->log, "X264 IN frame type=%d", (int)call->video.second->h264_in_pic.i_type);
+
     *i_frame_size = x264_encoder_encode(call->video.second->h264_encoder,
                                         nal,
                                         &i_nal,
                                         &(call->video.second->h264_in_pic),
                                         &(call->video.second->h264_out_pic));
+
+    *video_frame_record_timestamp = (uint64_t)call->video.second->h264_out_pic.i_pts;
+
+
+    // LOGGER_ERROR(av->m->log, "X264 out frame type=%d", (int)call->video.second->h264_out_pic.i_type);
+
+    if (IS_X264_TYPE_I(call->video.second->h264_out_pic.i_type)) {
+        call->video.second->last_sent_keyframe_ts = current_time_monotonic();
+    }
+
 
     if (*i_frame_size < 0) {
         // some error
