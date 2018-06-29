@@ -1097,7 +1097,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         } else {
 
             if (call->video.second->skip_fps_counter == call->video.second->skip_fps) {
-                LOGGER_ERROR(av->m->log, "VIDEO:Skipping frame, because of too much FPS!!");
+                LOGGER_DEBUG(av->m->log, "VIDEO:Skipping frame, because of too much FPS!!");
                 call->video.second->skip_fps_counter = 0;
                 // skip this video frame, receiver can't handle this many FPS
                 // rc = TOXAV_ERR_SEND_FRAME_INVALID; // should we tell the client? not sure about this
