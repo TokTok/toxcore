@@ -203,6 +203,7 @@ struct RTPWorkBufferList {
 };
 
 #define DISMISS_FIRST_LOST_VIDEO_PACKET_COUNT 10
+#define INCOMING_PACKETS_TS_ENTRIES 10
 
 /**
  * RTP control session.
@@ -216,6 +217,10 @@ typedef struct RTPSession {
     struct RTPMessage *mp; /* Expected parted message */
     struct RTPWorkBufferList *work_buffer_list;
     uint8_t  first_packets_counter; /* dismiss first few lost video packets */
+    uint32_t incoming_packets_ts[INCOMING_PACKETS_TS_ENTRIES];
+    int64_t incoming_packets_ts_last_ts;
+    uint16_t incoming_packets_ts_index;
+    uint32_t incoming_packets_ts_average;
     Messenger *m;
     uint32_t friend_number;
     BWController *bwc;

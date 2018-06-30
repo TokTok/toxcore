@@ -599,6 +599,40 @@ static int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t 
     // The sender uses the new large-frame capable protocol and is sending a
     // video packet.
     if ((header.flags & RTP_LARGE_FRAME) && header.pt == (rtp_TypeVideo % 128)) {
+
+        if (session->incoming_packets_ts_last_ts == -1) {
+            session->incoming_packets_ts[session->incoming_packets_ts_index] = 0;
+            session->incoming_packets_ts_average = 0;
+        } else {
+            session->incoming_packets_ts[session->incoming_packets_ts_index] = current_time_monotonic() -
+                    session->incoming_packets_ts_last_ts;
+        }
+
+        session->incoming_packets_ts_last_ts = current_time_monotonic();
+        session->incoming_packets_ts_index++;
+
+        if (session->incoming_packets_ts_index >= INCOMING_PACKETS_TS_ENTRIES) {
+            session->incoming_packets_ts_index = 0;
+        }
+
+        uint32_t incoming_rtp_packets_delta_average = 0;
+
+        for (int ii = 0; ii < INCOMING_PACKETS_TS_ENTRIES; ii++) {
+            incoming_rtp_packets_delta_average = incoming_rtp_packets_delta_average + session->incoming_packets_ts[ii];
+            // LOGGER_WARNING(m->log, "%d=%d", ii, (int)session->incoming_packets_ts[ii]);
+        }
+
+        incoming_rtp_packets_delta_average = incoming_rtp_packets_delta_average / INCOMING_PACKETS_TS_ENTRIES;
+
+        if ((incoming_rtp_packets_delta_average > (2 * session->incoming_packets_ts_average))
+                && (incoming_rtp_packets_delta_average > 15)) {
+            // LOGGER_WARNING(m->log, "rtp_video_delta=%d", (int)incoming_rtp_packets_delta_average);
+        }
+
+        session->incoming_packets_ts_average = incoming_rtp_packets_delta_average;
+
+        LOGGER_DEBUG(m->log, "rtp_video_delta=%d", (int)incoming_rtp_packets_delta_average);
+
         return handle_video_packet(session, &header, data + RTP_HEADER_SIZE, length - RTP_HEADER_SIZE, m->log);
     }
 
@@ -822,6 +856,14 @@ RTPSession *rtp_new(int payload_type, Messenger *m, uint32_t friendnumber,
     session->bwc = bwc;
     session->cs = cs;
     session->mcb = mcb;
+
+    for (int ii = 0; ii < INCOMING_PACKETS_TS_ENTRIES; ii++) {
+        session->incoming_packets_ts[ii] = 0;
+    }
+
+    session->incoming_packets_ts_index = 0;
+    session->incoming_packets_ts_last_ts = -1;
+    session->incoming_packets_ts_average = 0;
 
     if (-1 == rtp_allow_receiving(session)) {
         LOGGER_WARNING(m->log, "Failed to start rtp receiving mode");

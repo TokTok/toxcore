@@ -54,6 +54,8 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
         return NULL;
     }
 
+    LOGGER_WARNING(log, "vc_new ...");
+
     // options ---
     vc->video_encoder_cpu_used = VP8E_SET_CPUUSED_VALUE;
     vc->video_encoder_cpu_used_prev = vc->video_encoder_cpu_used;
@@ -88,8 +90,12 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
 
 
     if (!(vc->vbuf_raw = rb_new(VIDEO_RINGBUFFER_BUFFER_ELEMENTS))) {
+        LOGGER_WARNING(log, "vc_new:rb_new FAILED");
+        vc->vbuf_raw = NULL;
         goto BASE_CLEANUP;
     }
+
+    LOGGER_WARNING(log, "vc_new:rb_new OK");
 
     // HINT: tell client what encoder and decoder are in use now -----------
     if (av->call_comm_cb.first) {
@@ -137,6 +143,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
 BASE_CLEANUP:
     pthread_mutex_destroy(vc->queue_mutex);
     rb_kill((RingBuffer *)vc->vbuf_raw);
+    vc->vbuf_raw = NULL;
     free(vc);
     return NULL;
 }
@@ -164,6 +171,7 @@ void vc_kill(VCSession *vc)
     }
 
     rb_kill((RingBuffer *)vc->vbuf_raw);
+    vc->vbuf_raw = NULL;
 
     pthread_mutex_destroy(vc->queue_mutex);
 
@@ -245,16 +253,22 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
         if ((int32_t)header_v3_0->sequnum < (int32_t)vc->last_seen_fragment_seqnum) {
             // drop frame with too old sequence number
-            LOGGER_WARNING(vc->log, "skipping incoming video frame (0) with sn=%d lastseen=%d old_frames_count=%d",
-                           (int)header_v3_0->sequnum,
-                           (int)vc->last_seen_fragment_seqnum,
-                           (int)vc->count_old_video_frames_seen);
+            LOGGER_DEBUG(vc->log, "skipping incoming video frame (0) with sn=%d lastseen=%d old_frames_count=%d",
+                         (int)header_v3_0->sequnum,
+                         (int)vc->last_seen_fragment_seqnum,
+                         (int)vc->count_old_video_frames_seen);
 
             vc->count_old_video_frames_seen++;
 
-            // HINT: give feedback that we lost some bytes
-            bwc_add_lost_v3(bwc, header_v3_0->data_length_full, false);
-            // LOGGER_ERROR(vc->log, "BWC:lost:001");
+            if ((int32_t)(header_v3_0->sequnum + 1) != (int32_t)vc->last_seen_fragment_seqnum) {
+                // TODO: check why we often get exactly the previous video frame here?!?!
+
+#if 0
+                // HINT: give feedback that we lost some bytes
+                bwc_add_lost_v3(bwc, header_v3_0->data_length_full, false);
+                // LOGGER_ERROR(vc->log, "BWC:lost:001");
+#endif
+            }
 
             if (vc->count_old_video_frames_seen > 6) {
                 // if we see more than 6 old video frames in a row, then either there was
