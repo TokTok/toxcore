@@ -4186,12 +4186,10 @@ int make_gc_handshake_packet(GC_Chat *chat, GC_Connection *gconn, uint8_t handsh
     net_pack_u32(data + length, state);
     length += sizeof(uint32_t);
 
-    int nodes_size = pack_nodes(data + length, sizeof(Node_format), node, 1);
-    if (nodes_size == -1) {
-        fprintf(stderr, "nodes size\n");
-        return -1;
+    int nodes_size = pack_nodes(data + length, sizeof(Node_format), node, MAX_SENT_GC_NODES);
+    if (nodes_size != -1) {
+        length += nodes_size;
     }
-    length += nodes_size;
 
     int enc_len = wrap_group_handshake_packet(chat->self_public_key, chat->self_secret_key,
                                               gconn->addr.public_key, packet, packet_size,
@@ -4361,6 +4359,7 @@ static int peer_reconnect(Messenger *m, const GC_Chat *chat, const uint8_t *peer
     }
 
     gc_peer_delete(m, chat->groupnumber, peer_number, NULL, 0);
+    // TODO: copy ip?
 
     return peer_add(m, chat->groupnumber, NULL, peer_pk);
 }
@@ -4445,7 +4444,7 @@ static int handle_gc_handshake_request(Messenger *m, int groupnumber, IP_Port *i
     Node_format node[1];
     int processed = ENC_PUBLIC_KEY + SIG_PUBLIC_KEY + 6;
     int nodes_count = unpack_nodes(node, 1, NULL, data + processed, length - processed, 1);
-    if (nodes_count != 1) {
+    if (nodes_count <= 0 && !ipp) {
         if (is_new_peer) {
             fprintf(stderr, "broken tcp relay for new peer\n");
             gc_peer_delete(m, chat->groupnumber, peer_number, NULL, 0);
@@ -5885,7 +5884,10 @@ static int send_gc_invite_accepted_packet(Messenger *m, GC_Chat *chat, uint32_t 
 
     length += ENC_PUBLIC_KEY;
 
+    fprintf(stderr, "send_gc_invite_accepted_packet\n");
+
     if (send_group_invite_packet(m, friend_number, packet, length) == -1) {
+        fprintf(stderr, "send_gc_invite_accepted_packet error\n");
         return -3;
     }
 
@@ -5909,6 +5911,8 @@ static int send_gc_invite_confirmed_packet(Messenger *m, GC_Chat *chat, uint32_t
 
     memcpy(packet + 2, data, length);
 
+    fprintf(stderr, "send_gc_invite_confirmed_packet\n");
+
     if (send_group_invite_packet(m, friend_number, packet, length + 2) == -1) {
         return -3;
     }
@@ -5927,6 +5931,7 @@ static void copy_ip_port(Messenger *m, int friend_number, GC_Connection *gconn)
 int handle_gc_invite_confirmed_packet(GC_Session *c, int friend_number, const uint8_t *data,
                                       uint32_t length)
 {
+    fprintf(stderr, "handle_gc_invite_confirmed_packet\n");
     if (length <= CHAT_ID_SIZE + ENC_PUBLIC_KEY) {
         return -1;
     }
@@ -5934,6 +5939,8 @@ int handle_gc_invite_confirmed_packet(GC_Session *c, int friend_number, const ui
     if (friend_not_valid(c->messenger, friend_number)) {
         return -4;
     }
+
+    fprintf(stderr, "handle_gc_invite_confirmed_packet1\n");
 
     uint8_t chat_id[CHAT_ID_SIZE];
     uint8_t invite_chat_pk[ENC_PUBLIC_KEY];
@@ -5974,6 +5981,7 @@ int handle_gc_invite_confirmed_packet(GC_Session *c, int friend_number, const ui
     }
 
     if (!is_tcp_only && !num_nodes) {
+        fprintf(stderr, "sending handshake to hell\n");
         send_gc_handshake_packet(chat, peer_number, GH_REQUEST, HS_INVITE_REQUEST, chat->join_type);
     } else {
         gconn->pending_handshake_type = HS_INVITE_REQUEST;
@@ -6001,7 +6009,8 @@ bool friend_was_invited(GC_Chat *chat, int friend_number)
 int handle_gc_invite_accepted_packet(GC_Session *c, int friend_number, const uint8_t *data,
                                      uint32_t length)
 {
-    if (length < CHAT_ID_SIZE + ENC_PUBLIC_KEY) {
+    fprintf(stderr, "handle_gc_invite_accepted_packet1\n");
+    if (length < GC_JOIN_DATA_LENGTH) {
         return -1;
     }
     Messenger *m = c->messenger;
@@ -6009,6 +6018,7 @@ int handle_gc_invite_accepted_packet(GC_Session *c, int friend_number, const uin
     if (friend_not_valid(m, friend_number)) {
         return -4;
     }
+    fprintf(stderr, "handle_gc_invite_accepted_packet2\n");
 
     uint8_t chat_id[CHAT_ID_SIZE];
     uint8_t invite_chat_pk[ENC_PUBLIC_KEY];
@@ -6043,7 +6053,7 @@ int handle_gc_invite_accepted_packet(GC_Session *c, int friend_number, const uin
 
     copy_ip_port(m, friend_number, gconn);
 
-    uint32_t len = CHAT_ID_SIZE + ENC_PUBLIC_KEY;
+    uint32_t len = GC_JOIN_DATA_LENGTH;
     uint8_t send_data[MAX_GC_PACKET_SIZE];
     memcpy(send_data, chat_id, CHAT_ID_SIZE);
     memcpy(send_data + CHAT_ID_SIZE, chat->self_public_key, ENC_PUBLIC_KEY);
@@ -6063,7 +6073,7 @@ int handle_gc_invite_accepted_packet(GC_Session *c, int friend_number, const uin
 
         len += nodes_len;
     }
-
+    fprintf(stderr, "send_gc_invite_confirmed_packet\n");
     if (send_gc_invite_confirmed_packet(m, chat, friend_number, send_data, len)) {
         return -4;
     }
