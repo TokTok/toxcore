@@ -751,6 +751,15 @@ bool toxav_option_set(ToxAV *av, uint32_t friend_number, TOXAV_OPTIONS_OPTION op
             vc->video_rc_max_quantizer = (int32_t)value;
             LOGGER_WARNING(av->m->log, "video encoder setting rc_max_quantizer to: %d", (int)value);
         }
+    } else if (option == TOXAV_ENCODER_VIDEO_BITRATE_AUTOSET) {
+        VCSession *vc = (VCSession *)call->video.second;
+
+        if (vc->video_bitrate_autoset == (uint8_t)value) {
+            LOGGER_WARNING(av->m->log, "video encoder video_bitrate_autoset already set to: %d", (int)value);
+        } else {
+            vc->video_bitrate_autoset = (uint8_t)value;
+            LOGGER_WARNING(av->m->log, "video encoder setting video_bitrate_autoset to: %d", (int)value);
+        }
     } else if (option == TOXAV_ENCODER_KF_METHOD) {
         VCSession *vc = (VCSession *)call->video.second;
 
@@ -792,6 +801,14 @@ END:
     }
 
     return rc == TOXAV_ERR_OPTION_SET_OK;
+}
+
+bool toxav_video_set_bit_rate(ToxAV *av, uint32_t friend_number, int32_t video_bit_rate, TOXAV_ERR_BIT_RATE_SET *error)
+{
+}
+
+bool toxav_audio_set_bit_rate(ToxAV *av, uint32_t friend_number, int32_t audio_bit_rate, TOXAV_ERR_BIT_RATE_SET *error)
+{
 }
 
 bool toxav_bit_rate_set(ToxAV *av, uint32_t friend_number, int32_t audio_bit_rate,
@@ -1017,6 +1034,8 @@ bool toxav_audio_send_frame(ToxAV *av, uint32_t friend_number, const int16_t *pc
             LOGGER_DEBUG(av->m->log, "audio packet record time: seqnum=%d %llu", (int)call->audio.first->sequnum,
                          audio_frame_record_timestamp);
 
+            uint16_t seq_num_save = call->audio.first->sequnum;
+
             if (rtp_send_data(call->audio.first, dest,
                               vrc + sizeof(sampling_rate),
                               false,
@@ -1029,10 +1048,23 @@ bool toxav_audio_send_frame(ToxAV *av, uint32_t friend_number, const int16_t *pc
                 rc = TOXAV_ERR_SEND_FRAME_RTP_FAILED;
             }
 
-            //else
-            //{
-            //    LOGGER_WARNING(av->m->log, "audio packet sent OK");
-            //}
+#if 0
+            // HINT: send audio data 2 times --------------------------
+            ((RTPSession *)call->audio.first)->sequnum = seq_num_save;
+
+            if (rtp_send_data(call->audio.first, dest,
+                              vrc + sizeof(sampling_rate),
+                              false,
+                              audio_frame_record_timestamp,
+                              VIDEO_FRAGMENT_NUM_NO_FRAG,
+                              0,
+                              call->audio_bit_rate,
+                              av->m->log) != 0) {
+            }
+
+            // HINT: send audio data 2 times --------------------------
+#endif
+
 
 #if defined(AUDIO_DEBUGGING_SKIP_FRAMES)
         }
@@ -1507,6 +1539,11 @@ void callback_bwc(BWController *bwc, uint32_t friend_number, float loss, void *u
 
         if (call->video_bit_rate == 0) {
             // HINT: video is turned off -> just do nothing
+            return;
+        }
+
+        if (call->video.second->video_bitrate_autoset == 0) {
+            // HINT: client does not want bitrate autoset
             return;
         }
 

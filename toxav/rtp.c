@@ -979,7 +979,7 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length, boo
 
     header.sequnum = session->sequnum;
 
-    header.timestamp = current_time_monotonic();
+    header.timestamp = frame_record_timestamp; // current_time_monotonic();
 
     header.ssrc = session->ssrc;
 

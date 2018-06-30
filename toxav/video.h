@@ -192,6 +192,7 @@ typedef struct VCSession_s {
     int32_t video_rc_min_quantizer_prev;
     int32_t video_keyframe_method;
     int32_t video_keyframe_method_prev;
+    uint8_t video_bitrate_autoset;
     int32_t video_encoder_coded_used;
     int32_t video_encoder_coded_used_hw_accel;
     int32_t video_encoder_coded_used_prev;

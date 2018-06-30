@@ -83,6 +83,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc->skip_fps = 0;
     vc->skip_fps_counter = 0;
     vc->skip_fps_release_counter = 0;
+    vc->video_bitrate_autoset = 1;
 
     vc->last_incoming_frame_ts = 0;
     vc->timestamp_difference_to_sender = 0;
