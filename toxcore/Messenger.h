@@ -28,6 +28,7 @@
 #include "friend_connection.h"
 #include "friend_requests.h"
 #include "logger.h"
+#include "net_packet.h"
 
 #define MAX_NAME_LENGTH 128
 /* TODO(irungentoo): this must depend on other variable. */
@@ -48,30 +49,6 @@ enum {
     MESSAGE_NORMAL,
     MESSAGE_ACTION
 };
-
-/* NOTE: Packet ids below 24 must never be used. */
-#define PACKET_ID_ONLINE 24
-#define PACKET_ID_OFFLINE 25
-#define PACKET_ID_NICKNAME 48
-#define PACKET_ID_STATUSMESSAGE 49
-#define PACKET_ID_USERSTATUS 50
-#define PACKET_ID_TYPING 51
-#define PACKET_ID_MESSAGE 64
-#define PACKET_ID_ACTION (PACKET_ID_MESSAGE + MESSAGE_ACTION) /* 65 */
-#define PACKET_ID_MSI 69
-#define PACKET_ID_FILE_SENDREQUEST 80
-#define PACKET_ID_FILE_CONTROL 81
-#define PACKET_ID_FILE_DATA 82
-#define PACKET_ID_INVITE_CONFERENCE 96
-#define PACKET_ID_ONLINE_PACKET 97
-#define PACKET_ID_DIRECT_CONFERENCE 98
-#define PACKET_ID_MESSAGE_CONFERENCE 99
-#define PACKET_ID_LOSSY_CONFERENCE 199
-
-/* All packets starting with a byte in this range can be used for anything. */
-#define PACKET_ID_LOSSLESS_RANGE_START 160
-#define PACKET_ID_LOSSLESS_RANGE_SIZE 32
-#define PACKET_LOSSY_AV_RESERVED 8 /* Number of lossy packet types at start of range reserved for A/V. */
 
 typedef struct {
     bool ipv6enabled;
@@ -200,6 +177,11 @@ typedef void m_conference_invite_cb(Messenger *m, uint32_t, const uint8_t *, uin
 typedef void m_msi_packet_cb(Messenger *m, uint32_t, const uint8_t *, uint16_t, void *);
 typedef int m_lossy_rtp_packet_cb(Messenger *m, uint32_t friendnumber, const uint8_t *data, uint16_t len, void *object);
 
+struct RTP_Packet_Hadler {
+    m_lossy_rtp_packet_cb *function;
+    void *object;
+};
+
 typedef struct {
     uint8_t real_pk[CRYPTO_PUBLIC_KEY_SIZE];
     int friendcon_id;
@@ -228,10 +210,7 @@ typedef struct {
     uint32_t num_sending_files;
     struct File_Transfers file_receiving[MAX_CONCURRENT_FILE_PIPES];
 
-    struct {
-        m_lossy_rtp_packet_cb *function;
-        void *object;
-    } lossy_rtp_packethandlers[PACKET_LOSSY_AV_RESERVED];
+    struct RTP_Packet_Hadler lossy_rtp_packethandlers[PACKET_ID_RANGE_LOSSY_AV_SIZE];
 
     struct Receipts *receipts_start;
     struct Receipts *receipts_end;

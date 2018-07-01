@@ -15,6 +15,7 @@ libtoxcore_la_SOURCES = ../toxcore/ccompat.h \
                         ../toxcore/crypto_core_mem.c \
                         ../toxcore/ping_array.h \
                         ../toxcore/ping_array.c \
+                        ../toxcore/net_packet.h \
                         ../toxcore/net_crypto.h \
                         ../toxcore/net_crypto.c \
                         ../toxcore/friend_requests.h \
