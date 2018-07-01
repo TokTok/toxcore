@@ -168,7 +168,10 @@ cc_library(
 cc_library(
     name = "net_crypto",
     srcs = ["net_crypto.c"],
-    hdrs = ["net_crypto.h"],
+    hdrs = [
+        "net_crypto.h",
+        "net_packet.h",
+    ],
     deps = [
         ":DHT",
         ":TCP_connection",
