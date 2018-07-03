@@ -2,7 +2,10 @@
  * TimeStamp Buffer implementation
  */
 
+#include "ts_buffer.h"
+
 #include <stdlib.h>
+#include <stdio.h>
 
 struct TSBuffer {
     uint16_t  size; /* max. number of elements in buffer [ MAX ALLOWED = (UINT16MAX - 1) !! ] */
@@ -18,7 +21,7 @@ bool tsb_full(const TSBuffer *b)
     return (b->end + 1) % b->size == b->start;
 }
 
-bool rb_empty(const TSBuffer *b)
+bool tsb_empty(const TSBuffer *b)
 {
     return b->end == b->start;
 }
@@ -44,7 +47,7 @@ void *tsb_write(TSBuffer *b, void *p, const uint64_t data_type, const uint32_t t
     return rc;
 }
 
-void tsb_move_entry(TSBuffer *b, uint16_t src_index, uint16_t dst_index)
+static void tsb_move_entry(TSBuffer *b, uint16_t src_index, uint16_t dst_index)
 {
     b->data[dst_index] = b->data[src_index];
     b->type[dst_index] = b->type[src_index];
@@ -57,7 +60,7 @@ void tsb_move_entry(TSBuffer *b, uint16_t src_index, uint16_t dst_index)
     // just to be safe ---
 }
 
-void tsb_close_hole(TSBuffer *b, uint16_t start_index, uint16_t hole_index)
+static void tsb_close_hole(TSBuffer *b, uint16_t start_index, uint16_t hole_index)
 {
     int32_t current_index = (int32_t)hole_index;
     while (true)
@@ -86,10 +89,10 @@ void tsb_close_hole(TSBuffer *b, uint16_t start_index, uint16_t hole_index)
     }
 }
 
-void tsb_delete_old_entries(TSBuffer *b, const uint32_t timestamp_threshold)
+static void tsb_delete_old_entries(TSBuffer *b, const uint32_t timestamp_threshold)
 {
     // buffer empty, nothing to delete
-    if (rb_empty(p) == true) {
+    if (tsb_empty(b) == true) {
         return;
     }
 
@@ -97,9 +100,11 @@ void tsb_delete_old_entries(TSBuffer *b, const uint32_t timestamp_threshold)
     uint16_t start_entry = b->start;
     uint16_t current_element;
     // iterate all entries
+    
     for (int i=0;i < tsb_size(b);i++)
     {
         current_element = (start_entry + i) % b->size;
+        //printf("do:2 %d\n", (int)current_element);
         if (b->timestamp[current_element] < timestamp_threshold)
         {
             tsb_close_hole(b, start_entry, current_element);
@@ -110,11 +115,11 @@ void tsb_delete_old_entries(TSBuffer *b, const uint32_t timestamp_threshold)
     b->start = (b->start + removed_entries) % b->size;
 }
 
-bool tsb_return_oldest_entry_in_range(TSBuffer *b, void **p, uint64_t *data_type, uint32_t *timestamp_out,
+static bool tsb_return_oldest_entry_in_range(TSBuffer *b, void **p, uint64_t *data_type, uint32_t *timestamp_out,
               const uint32_t timestamp_in, const uint32_t timestamp_range)
 {
     int32_t found_element = -1;
-    uint32_t found_timestamp = UINT32MAX;
+    uint32_t found_timestamp = UINT32_MAX;
     uint16_t start_entry = b->start;
     uint16_t current_element;
     for (int i=0;i < tsb_size(b);i++)
@@ -169,7 +174,7 @@ bool tsb_return_oldest_entry_in_range(TSBuffer *b, void **p, uint64_t *data_type
 bool tsb_read(TSBuffer *b, void **p, uint64_t *data_type, uint32_t *timestamp_out,
               const uint32_t timestamp_in, const uint32_t timestamp_range)
 {
-    if (rb_empty(p) == true) {
+    if (tsb_empty(b) == true) {
         *p = NULL;
         return false;
     }
@@ -211,6 +216,20 @@ TSBuffer *tsb_new(const int size)
     return buf;
 }
 
+void tsb_drain(TSBuffer *b)
+{
+    if (b)
+    {
+        void *dummy;
+        uint64_t dt;
+        uint32_t to;
+        while (tsb_read(b, &dummy, &dt, &to, UINT32_MAX, 0) == true)
+        {
+            free(dummy);
+        }
+    }
+}
+
 void tsb_kill(TSBuffer *b)
 {
     if (b) {
@@ -233,4 +252,94 @@ uint16_t tsb_size(const TSBuffer *b)
         (b->size - b->start) + b->end;
 }
 
+#if 0
 
+static void tsb_debug_print_entries(const TSBuffer *b)
+{
+    uint16_t current_element;
+    for (int i=0;i < tsb_size(b);i++)
+    {
+        current_element = (b->start + i) % b->size;
+        printf("loop=%d val=%d\n", current_element, b->timestamp[current_element]);
+    }
+}
+
+void unit_test()
+{
+    #include <time.h>
+    
+    printf("ts_buffer:testing ...\n");
+    const int size = 4;
+    const int bytes_per_entry = 200;
+
+    TSBuffer *b1 = tsb_new(size);
+    printf("b1=%p\n", b1);
+
+    uint16_t size_ = tsb_size(b1);
+    printf("size_=%d\n", size_);
+
+    srand(time(NULL));
+
+    for(int j=0;j<size+0;j++)
+    {
+        void *tmp_b = calloc(1, bytes_per_entry);
+        
+        int val = rand() % 4999 + 1000;
+        void *ret_p = tsb_write(b1, tmp_b, 1, val);
+        printf("loop=%d val=%d\n", j, val);
+
+        if (ret_p)
+        {
+            printf("kick oldest\n");
+            free(ret_p);
+        }
+
+        size_ = tsb_size(b1);
+        printf("size_=%d\n", size_);
+
+    }
+
+    size_ = tsb_size(b1);
+    printf("size_=%d\n", size_);
+
+    void *ptr;
+    uint64_t dt;
+    uint32_t to;
+    uint32_t ti = 3000;
+    uint32_t tr = 400;
+    bool res1;
+
+    bool loop = true;
+    while (loop)
+    {
+        loop = false;
+        ti = rand() % 4999 + 1000;
+        tr = rand() % 100 + 1;
+        res1 = tsb_read(b1, &ptr, &dt, &to, ti, tr); 
+        if (res1 == true)
+        {
+            printf("ti=%d,tr=%d,TO=%d\n", (int)ti, (int)tr, (int)to);
+            free(ptr);
+            tsb_debug_print_entries(b1);
+            break;
+        }
+        else if (tsb_size(b1) == 0)
+        {
+            break;
+        }
+        size_ = tsb_size(b1);
+        printf("size_=%d\n", size_);
+    }
+
+    tsb_drain(b1);
+    printf("drain\n");
+
+    size_ = tsb_size(b1);
+    printf("size_=%d\n", size_);
+
+    tsb_kill(b1);
+    b1 = NULL;
+    printf("kill=%p\n", b1);
+}
+
+#endif
