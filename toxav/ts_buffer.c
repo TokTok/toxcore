@@ -47,8 +47,10 @@ void *tsb_write(TSBuffer *b, void *p, const uint64_t data_type, const uint32_t t
     return rc;
 }
 
-static void tsb_move_entry(TSBuffer *b, uint16_t src_index, uint16_t dst_index)
+static void tsb_move_delete_entry(TSBuffer *b, uint16_t src_index, uint16_t dst_index)
 {
+    free(b->data[dst_index]);
+
     b->data[dst_index] = b->data[src_index];
     b->type[dst_index] = b->type[src_index];
     b->timestamp[dst_index] = b->timestamp[src_index];
@@ -69,11 +71,11 @@ static void tsb_close_hole(TSBuffer *b, uint16_t start_index, uint16_t hole_inde
         // don't change start element pointer in this function!
         if (current_index < 1)
         {
-            tsb_move_entry(b, (b->size - 1), current_index);
+            tsb_move_delete_entry(b, (b->size - 1), current_index);
         }
         else
         {
-            tsb_move_entry(b, (uint16_t)(current_index - 1), current_index);
+            tsb_move_delete_entry(b, (uint16_t)(current_index - 1), current_index);
         }
 
         if (current_index == (int32_t)start_index)
@@ -104,7 +106,6 @@ static void tsb_delete_old_entries(TSBuffer *b, const uint32_t timestamp_thresho
     for (int i=0;i < tsb_size(b);i++)
     {
         current_element = (start_entry + i) % b->size;
-        //printf("do:2 %d\n", (int)current_element);
         if (b->timestamp[current_element] < timestamp_threshold)
         {
             tsb_close_hole(b, start_entry, current_element);
@@ -161,6 +162,10 @@ static bool tsb_return_oldest_entry_in_range(TSBuffer *b, void **p, uint64_t *da
         *p = b->data[b->start];
         *data_type = b->type[b->start];
         *timestamp_out = b->timestamp[b->start];
+
+        b->data[b->start] = NULL;
+        b->timestamp[b->start] = 0;
+        b->type[b->start] = 0;
 
         // change start element pointer
         b->start = (b->start + 1) % b->size;
@@ -220,7 +225,7 @@ void tsb_drain(TSBuffer *b)
 {
     if (b)
     {
-        void *dummy;
+        void *dummy = NULL;
         uint64_t dt;
         uint32_t to;
         while (tsb_read(b, &dummy, &dt, &to, UINT32_MAX, 0) == true)
@@ -252,6 +257,7 @@ uint16_t tsb_size(const TSBuffer *b)
         (b->size - b->start) + b->end;
 }
 
+
 #if 0
 
 static void tsb_debug_print_entries(const TSBuffer *b)
@@ -269,7 +275,7 @@ void unit_test()
     #include <time.h>
     
     printf("ts_buffer:testing ...\n");
-    const int size = 4;
+    const int size = 200;
     const int bytes_per_entry = 200;
 
     TSBuffer *b1 = tsb_new(size);
