@@ -51,6 +51,7 @@ uint32_t dntp_calc_roundtrip_delay(uint32_t remote_tstart, uint32_t remote_tend,
     return roundtrip_delay;
 }
 
+#if 0
 
 void unit_test()
 {
@@ -100,4 +101,4 @@ void unit_test()
     }
 }
 
-
+#endif
