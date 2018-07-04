@@ -7,6 +7,34 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#define DRIFT_PERCENTAGE    15
+
+bool dntp_drift(int64_t *current_offset, const int64_t new_offset, const int64_t max_offset_for_drift)
+{
+    bool did_jump = false;
+
+    if (current_offset == NULL)
+    {
+        // HINT: input param is NULL
+        return did_jump;
+    }
+
+    if (abs(new_offset - *current_offset) > max_offset_for_drift)
+    {
+        // HINT: jump
+        *current_offset = new_offset;
+        did_jump = true;
+    }
+    else
+    {
+        // HINT: drift
+        int64_t delta = (new_offset - *current_offset) * DRIFT_PERCENTAGE;
+        *current_offset = *current_offset + (int64_t)(delta / 100.0f);
+    }
+
+    return did_jump;
+}
+
 int64_t dntp_calc_offset(uint32_t remote_tstart, uint32_t remote_tend,
                           uint32_t local_tstart, uint32_t local_tend)
 {
@@ -61,8 +89,9 @@ void unit_test()
     
     printf("dummy_ntp:testing ...\n");
     
-    uint64_t res1;
+    int64_t res1;
     uint32_t res2;
+    bool res3;
     uint32_t rs;
     uint32_t re;
     uint32_t ls;
@@ -70,6 +99,7 @@ void unit_test()
     uint32_t ls_r;
     uint16_t trip1_ms;
     uint16_t trip2_ms;
+    int64_t current_offset;
 
     const uint16_t step = 5;
     int64_t diff;
@@ -84,11 +114,13 @@ void unit_test()
     // TODO: fixme ---
     #endif
 
+    current_offset = 0;
+
     for(int j=0;j<10;j++)
     {
         // ---------------
         lstart = rand() % 9999999 + 10000;
-        rstart = rand() % 9999999 + 10000;
+        rstart = lstart + (rand() % 100);
         diff = rstart - lstart;
         trip1_ms = rand() % 210 + 4;
         trip2_ms = rand() % 210 + 4;
@@ -101,12 +133,17 @@ void unit_test()
         le = ls + trip1_ms + step + trip2_ms;
         res1 = dntp_calc_offset(rs, re,
                               ls, le);
-        printf("offset=%ld ms\n", res1);
-        printf("ERROR=%ld ms\n", (res1 - diff));
+        printf("offset=%lld ms\n", res1);
+        printf("ERROR=%lld ms\n", (res1 - diff));
         res2 = dntp_calc_roundtrip_delay(rs, re,
                               ls, le);
-        printf("round trip=%d ms\n", res2);
+        printf("round trip=%ld ms\n", res2);
+
+        printf("current_offset=%lld offset=%lld ms\n", current_offset, res1);
+        res3 = dntp_drift(&current_offset, res1, 50);
+        printf("current_offset new=%lld ms bool res=%d\n", current_offset, (int)res3);
     }
+
 }
 
 #endif
