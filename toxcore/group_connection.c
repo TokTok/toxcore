@@ -28,6 +28,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "DHT.h"
 #include "mono_time.h"
@@ -166,6 +167,11 @@ int gcc_handle_ack(GC_Connection *gconn, uint64_t message_id)
     return 0;
 }
 
+bool gcc_is_ip_set(GC_Connection *gconn)
+{
+    return gconn->addr.ip_port.ip.family.value != 0;
+}
+
 /* Decides if message need to be put in recv_ary or immediately handled.
  *
  * Return 2 if message is in correct sequence and may be handled immediately.
@@ -177,8 +183,7 @@ int gcc_handle_recv_message(GC_Chat *chat, uint32_t peernumber, const uint8_t *d
                             uint8_t packet_type, uint64_t message_id)
 {
     GC_Connection *gconn = gcc_get_connection(chat, peernumber);
-
-    if (gconn == nullptr) {
+    if (!gconn) {
         return -1;
     }
 
@@ -327,6 +332,7 @@ int gcc_send_group_packet(const GC_Chat *chat, const GC_Connection *gconn, const
     if (!net_family_is_unspec(gconn->addr.ip_port.ip.family)) {
         if (gcc_connection_is_direct(chat->mono_time, gconn)) {
             if ((uint16_t) sendpacket(chat->net, gconn->addr.ip_port, packet, length) == length) {
+                fprintf(stderr, "direct\n");
                 return 0;
             }
 
@@ -336,6 +342,7 @@ int gcc_send_group_packet(const GC_Chat *chat, const GC_Connection *gconn, const
         if (packet_type != GP_BROADCAST && packet_type != GP_MESSAGE_ACK) {
             if ((uint16_t) sendpacket(chat->net, gconn->addr.ip_port, packet, length) == length) {
                 direct_send_attempt = true;
+                fprintf(stderr, "direct attempt\n");
             }
         }
     }
@@ -343,6 +350,7 @@ int gcc_send_group_packet(const GC_Chat *chat, const GC_Connection *gconn, const
     int ret = send_packet_tcp_connection(chat->tcp_conn, gconn->tcp_connection_num, packet, length);
 
     if (ret == 0 || direct_send_attempt) {
+        fprintf(stderr, "both\n");
         return 0;
     }
 

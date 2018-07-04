@@ -3257,8 +3257,8 @@ static uint8_t *groups_save(const Messenger *m, uint8_t *data)
             memcpy(temp.group_name, c->chats[i].shared_state.group_name, MAX_GC_GROUP_NAME_SIZE);
             temp.privacy_state = c->chats[i].shared_state.privacy_state;
             temp.maxpeers = net_htons(c->chats[i].shared_state.maxpeers);
-            temp.passwd_len = net_htons(c->chats[i].shared_state.passwd_len);
-            memcpy(temp.passwd, c->chats[i].shared_state.passwd, MAX_GC_PASSWD_SIZE);
+            temp.passwd_len = net_htons(c->chats[i].shared_state.password_length);
+            memcpy(temp.passwd, c->chats[i].shared_state.password, MAX_GC_PASSWD_SIZE);
             memcpy(temp.mod_list_hash, c->chats[i].shared_state.mod_list_hash, GC_MODERATION_HASH_SIZE);
             temp.sstate_version = net_htonl(c->chats[i].shared_state.version);
             memcpy(temp.sstate_signature, c->chats[i].shared_state_sig, SIGNATURE_SIZE);
