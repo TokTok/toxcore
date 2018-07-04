@@ -74,9 +74,9 @@ struct GC_Connection {
 
     Node_format connected_tcp_relays[MAX_FRIEND_TCP_CONNECTIONS];
     int tcp_relays_index;
+    bool any_tcp_connections;
 
     uint64_t    last_rcvd_ping;
-    uint64_t    time_added;
     bool        pending_sync_request;   /* true if we have sent this peer a sync request and have not received a reply*/
     bool        pending_state_sync;    /* used for group state syncing */
     bool        handshaked; /* true if we've successfully handshaked with this peer */
@@ -121,6 +121,8 @@ uint16_t get_ary_index(uint64_t message_id);
  * Return -1 on failure.
  */
 int gcc_handle_ack(GC_Connection *gconn, uint64_t message_id);
+
+bool gcc_is_ip_set(GC_Connection *gconn);
 
 /* Checks for and handles messages that are in proper sequence in gconn's recv_ary.
  * This should always be called after a new packet is successfully handled.
