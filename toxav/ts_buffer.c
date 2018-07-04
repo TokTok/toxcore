@@ -258,7 +258,7 @@ uint16_t tsb_size(const TSBuffer *b)
 }
 
 
-#if 0
+#ifdef UNIT_TESTING_ENABLED
 
 static void tsb_debug_print_entries(const TSBuffer *b)
 {
@@ -272,19 +272,27 @@ static void tsb_debug_print_entries(const TSBuffer *b)
 
 void unit_test()
 {
+    #ifndef __MINGW32__
     #include <time.h>
-    
+    #endif
+
     printf("ts_buffer:testing ...\n");
-    const int size = 200;
+    const int size = 5;
     const int bytes_per_entry = 200;
 
     TSBuffer *b1 = tsb_new(size);
     printf("b1=%p\n", b1);
 
     uint16_t size_ = tsb_size(b1);
-    printf("size_=%d\n", size_);
+    printf("size_:1=%d\n", size_);
 
+    #ifndef __MINGW32__
     srand(time(NULL));
+    #else
+    // TODO: fixme ---
+    srand(localtime());
+    // TODO: fixme ---
+    #endif
 
     for(int j=0;j<size+0;j++)
     {
@@ -301,12 +309,12 @@ void unit_test()
         }
 
         size_ = tsb_size(b1);
-        printf("size_=%d\n", size_);
+        printf("size_:2=%d\n", size_);
 
     }
 
     size_ = tsb_size(b1);
-    printf("size_=%d\n", size_);
+    printf("size_:3=%d\n", size_);
 
     void *ptr;
     uint64_t dt;
@@ -322,9 +330,10 @@ void unit_test()
         ti = rand() % 4999 + 1000;
         tr = rand() % 100 + 1;
         res1 = tsb_read(b1, &ptr, &dt, &to, ti, tr); 
+        printf("ti=%d,tr=%d\n", (int)ti, (int)tr);
         if (res1 == true)
         {
-            printf("ti=%d,tr=%d,TO=%d\n", (int)ti, (int)tr, (int)to);
+            printf("found:ti=%d,tr=%d,TO=%d\n", (int)ti, (int)tr, (int)to);
             free(ptr);
             tsb_debug_print_entries(b1);
             break;
@@ -334,14 +343,14 @@ void unit_test()
             break;
         }
         size_ = tsb_size(b1);
-        printf("size_=%d\n", size_);
+        printf("size_:4=%d\n", size_);
     }
 
     tsb_drain(b1);
     printf("drain\n");
 
     size_ = tsb_size(b1);
-    printf("size_=%d\n", size_);
+    printf("size_:99=%d\n", size_);
 
     tsb_kill(b1);
     b1 = NULL;
