@@ -51,11 +51,13 @@ uint32_t dntp_calc_roundtrip_delay(uint32_t remote_tstart, uint32_t remote_tend,
     return roundtrip_delay;
 }
 
-#if 0
+#if UNIT_TESTING_ENABLED
 
 void unit_test()
 {
+    #ifndef __MINGW32__
     #include <time.h>
+    #endif
     
     printf("dummy_ntp:testing ...\n");
     
@@ -74,7 +76,13 @@ void unit_test()
     int64_t lstart;
     int64_t rstart;
 
+    #ifndef __MINGW32__
     srand(time(NULL));
+    #else
+    // TODO: fixme ---
+    srand(localtime());
+    // TODO: fixme ---
+    #endif
 
     for(int j=0;j<10;j++)
     {
