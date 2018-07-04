@@ -212,8 +212,8 @@ typedef struct {
     uint16_t    group_name_len;
     uint8_t     group_name[MAX_GC_GROUP_NAME_SIZE];
     uint8_t     privacy_state;   /* GI_PUBLIC (uses DHT) or GI_PRIVATE (invite only) */
-    uint16_t    passwd_len;
-    uint8_t     passwd[MAX_GC_PASSWD_SIZE];
+    uint16_t    password_length;
+    uint8_t     password[MAX_GC_PASSWD_SIZE];
     uint8_t     mod_list_hash[GC_MODERATION_HASH_SIZE];
     uint32_t    version;
 } GC_SharedState;
