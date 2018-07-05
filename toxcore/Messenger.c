@@ -81,7 +81,7 @@ int32_t getfriend_id(const Messenger *m, const uint8_t *real_pk)
 {
     uint32_t i;
 
-    for (i = 0; i < m->numfriends; ++i) {
+    for (i = 0; i < m->numfriends; i++) {
         if (m->friendlist[i].status > 0) {
             if (id_equal(real_pk, m->friendlist[i].real_pk)) {
                 return i;
@@ -129,7 +129,7 @@ static uint16_t address_checksum(const uint8_t *address, uint32_t len)
     uint16_t check;
     uint32_t i;
 
-    for (i = 0; i < len; ++i) {
+    for (i = 0; i < len; i++) {
         checksum[i % 2] ^= address[i];
     }
 
@@ -190,7 +190,7 @@ static int32_t init_new_friend(Messenger *m, const uint8_t *real_pk, uint8_t sta
 
     uint32_t i;
 
-    for (i = 0; i <= m->numfriends; ++i) {
+    for (i = 0; i <= m->numfriends; i++) {
         if (m->friendlist[i].status == NOFRIEND) {
             m->friendlist[i].status = status;
             m->friendlist[i].friendcon_id = friendcon_id;
@@ -204,7 +204,7 @@ static int32_t init_new_friend(Messenger *m, const uint8_t *real_pk, uint8_t sta
                                         &m_handle_custom_lossy_packet, m, i);
 
             if (m->numfriends == i) {
-                ++m->numfriends;
+                m->numfriends++;
             }
 
             if (friend_con_connected(m->fr_c, friendcon_id) == FRIENDCONN_STATUS_CONNECTED) {
@@ -383,7 +383,7 @@ static int do_receipts(Messenger *m, int32_t friendnumber, void *userdata)
         }
 
         if (m->read_receipt) {
-            (*m->read_receipt)(m, friendnumber, receipts->msg_id, userdata);
+            m->read_receipt(m, friendnumber, receipts->msg_id, userdata);
         }
 
         struct Receipts *r_next = receipts->next;
@@ -430,7 +430,7 @@ int m_delfriend(Messenger *m, int32_t friendnumber)
     memset(&m->friendlist[friendnumber], 0, sizeof(Friend));
     uint32_t i;
 
-    for (i = m->numfriends; i != 0; --i) {
+    for (i = m->numfriends; i != 0; i--) {
         if (m->friendlist[i - 1].status != NOFRIEND) {
             break;
         }
@@ -596,7 +596,7 @@ int setname(Messenger *m, const uint8_t *name, uint16_t length)
     m->name_length = length;
     uint32_t i;
 
-    for (i = 0; i < m->numfriends; ++i) {
+    for (i = 0; i < m->numfriends; i++) {
         m->friendlist[i].name_sent = 0;
     }
 
@@ -667,7 +667,7 @@ int m_set_statusmessage(Messenger *m, const uint8_t *status, uint16_t length)
 
     uint32_t i;
 
-    for (i = 0; i < m->numfriends; ++i) {
+    for (i = 0; i < m->numfriends; i++) {
         m->friendlist[i].statusmessage_sent = 0;
     }
 
@@ -684,10 +684,10 @@ int m_set_userstatus(Messenger *m, uint8_t status)
         return 0;
     }
 
-    m->userstatus = (USERSTATUS)status;
+    m->userstatus = (Userstatus)status;
     uint32_t i;
 
-    for (i = 0; i < m->numfriends; ++i) {
+    for (i = 0; i < m->numfriends; i++) {
         m->friendlist[i].userstatus_sent = 0;
     }
 
@@ -830,7 +830,7 @@ static int set_friend_statusmessage(const Messenger *m, int32_t friendnumber, co
 
 static void set_friend_userstatus(const Messenger *m, int32_t friendnumber, uint8_t status)
 {
-    m->friendlist[friendnumber].userstatus = (USERSTATUS)status;
+    m->friendlist[friendnumber].userstatus = (Userstatus)status;
 }
 
 static void set_friend_typing(const Messenger *m, int32_t friendnumber, uint8_t is_typing)
@@ -2025,7 +2025,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
         return nullptr;
     }
 
-    m->dht = new_DHT(m->log, m->net, options->hole_punching_enabled);
+    m->dht = new_dht(m->log, m->net, options->hole_punching_enabled);
 
     if (m->dht == nullptr) {
         kill_networking(m->net);
@@ -2039,7 +2039,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
 
     if (m->net_crypto == nullptr) {
         kill_networking(m->net);
-        kill_DHT(m->dht);
+        kill_dht(m->dht);
         friendreq_kill(m->fr);
         logger_kill(m->log);
         free(m);
@@ -2057,7 +2057,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
         kill_onion_announce(m->onion_a);
         kill_onion_client(m->onion_c);
         kill_net_crypto(m->net_crypto);
-        kill_DHT(m->dht);
+        kill_dht(m->dht);
         kill_networking(m->net);
         friendreq_kill(m->fr);
         logger_kill(m->log);
@@ -2075,7 +2075,7 @@ Messenger *new_messenger(Messenger_Options *options, unsigned int *error)
             kill_onion_announce(m->onion_a);
             kill_onion_client(m->onion_c);
             kill_net_crypto(m->net_crypto);
-            kill_DHT(m->dht);
+            kill_dht(m->dht);
             kill_networking(m->net);
             friendreq_kill(m->fr);
             logger_kill(m->log);
@@ -2121,7 +2121,7 @@ void kill_messenger(Messenger *m)
     kill_onion_announce(m->onion_a);
     kill_onion_client(m->onion_c);
     kill_net_crypto(m->net_crypto);
-    kill_DHT(m->dht);
+    kill_dht(m->dht);
     kill_networking(m->net);
 
     for (i = 0; i < m->numfriends; ++i) {
@@ -2241,7 +2241,7 @@ static int m_handle_packet(void *object, int i, const uint8_t *temp, uint16_t le
                 break;
             }
 
-            USERSTATUS status = (USERSTATUS)data[0];
+            Userstatus status = (Userstatus)data[0];
 
             if (status >= USERSTATUS_INVALID) {
                 break;
@@ -2622,7 +2622,7 @@ void do_messenger(Messenger *m, void *userdata)
 
     if (!m->options.udp_disabled) {
         networking_poll(m->net, userdata);
-        do_DHT(m->dht);
+        do_dht(m->dht);
     }
 
     if (m->tcp_server) {
@@ -2977,7 +2977,7 @@ uint32_t messenger_size(const Messenger *m)
     uint32_t size32 = sizeof(uint32_t), sizesubhead = size32 * 2;
     return   size32 * 2                                      // global cookie
              + sizesubhead + sizeof(uint32_t) + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_SECRET_KEY_SIZE
-             + sizesubhead + DHT_size(m->dht)                  // DHT
+             + sizesubhead + dht_size(m->dht)                  // DHT
              + sizesubhead + saved_friendslist_size(m)         // Friendlist itself.
              + sizesubhead + m->name_length                    // Own nickname.
              + sizesubhead + m->statusmessage_length           // status message
@@ -3042,10 +3042,10 @@ void messenger_save(const Messenger *m, uint8_t *data)
     *data = m->userstatus;
     data += len;
 
-    len = DHT_size(m->dht);
+    len = dht_size(m->dht);
     type = MESSENGER_STATE_TYPE_DHT;
     data = messenger_save_subheader(data, len, type);
-    DHT_save(m->dht, data);
+    dht_save(m->dht, data);
     data += len;
 
     Node_format relays[NUM_SAVED_TCP_RELAYS];
@@ -3098,7 +3098,7 @@ static int messenger_load_state_callback(void *outer, const uint8_t *data, uint3
             break;
 
         case MESSENGER_STATE_TYPE_DHT:
-            DHT_load(m->dht, data, length);
+            dht_load(m->dht, data, length);
             break;
 
         case MESSENGER_STATE_TYPE_FRIENDS:

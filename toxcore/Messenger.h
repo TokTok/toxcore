@@ -136,8 +136,7 @@ typedef enum {
     USERSTATUS_AWAY,
     USERSTATUS_BUSY,
     USERSTATUS_INVALID
-}
-USERSTATUS;
+} Userstatus;
 
 #define FILE_ID_LENGTH 32
 
@@ -195,7 +194,7 @@ typedef struct {
     uint8_t statusmessage[MAX_STATUSMESSAGE_LENGTH];
     uint16_t statusmessage_length;
     uint8_t statusmessage_sent;
-    USERSTATUS userstatus;
+    Userstatus userstatus;
     uint8_t userstatus_sent;
     uint8_t user_istyping;
     uint8_t user_istyping_sent;
@@ -218,6 +217,12 @@ typedef struct {
     struct Receipts *receipts_end;
 } Friend;
 
+typedef void m_self_connection_status_cb(Messenger *, unsigned int, void *);
+typedef void m_friend_status_cb(Messenger *, uint32_t, unsigned int, void *);
+typedef void m_friend_connection_status_cb(Messenger *, uint32_t, unsigned int, void *);
+typedef void m_friend_message_cb(Messenger *, uint32_t, unsigned int, const uint8_t *, size_t, void *);
+typedef void m_file_recv_control_cb(Messenger *, uint32_t, uint32_t, unsigned int, void *);
+
 struct Messenger {
     Logger *log;
 
@@ -239,7 +244,7 @@ struct Messenger {
     uint8_t statusmessage[MAX_STATUSMESSAGE_LENGTH];
     uint16_t statusmessage_length;
 
-    USERSTATUS userstatus;
+    Userstatus userstatus;
 
     Friend *friendlist;
     uint32_t numfriends;
@@ -249,13 +254,13 @@ struct Messenger {
     uint8_t has_added_relays; // If the first connection has occurred in do_messenger
     Node_format loaded_relays[NUM_SAVED_TCP_RELAYS]; // Relays loaded from config
 
-    void (*friend_message)(struct Messenger *m, uint32_t, unsigned int, const uint8_t *, size_t, void *);
+    m_friend_message_cb *friend_message;
     void (*friend_namechange)(struct Messenger *m, uint32_t, const uint8_t *, size_t, void *);
     void (*friend_statusmessagechange)(struct Messenger *m, uint32_t, const uint8_t *, size_t, void *);
-    void (*friend_userstatuschange)(struct Messenger *m, uint32_t, unsigned int, void *);
+    m_friend_status_cb *friend_userstatuschange;
     void (*friend_typingchange)(struct Messenger *m, uint32_t, bool, void *);
     void (*read_receipt)(struct Messenger *m, uint32_t, uint32_t, void *);
-    void (*friend_connectionstatuschange)(struct Messenger *m, uint32_t, unsigned int, void *);
+    m_friend_connection_status_cb *friend_connectionstatuschange;
     void (*friend_connectionstatuschange_internal)(struct Messenger *m, uint32_t, uint8_t, void *);
     void *friend_connectionstatuschange_internal_userdata;
 
@@ -264,7 +269,7 @@ struct Messenger {
 
     void (*file_sendrequest)(struct Messenger *m, uint32_t, uint32_t, uint32_t, uint64_t, const uint8_t *, size_t,
                              void *);
-    void (*file_filecontrol)(struct Messenger *m, uint32_t, uint32_t, unsigned int, void *);
+    m_file_recv_control_cb *file_filecontrol;
     void (*file_filedata)(struct Messenger *m, uint32_t, uint32_t, uint64_t, const uint8_t *, size_t, void *);
     void (*file_reqchunk)(struct Messenger *m, uint32_t, uint32_t, uint64_t, size_t, void *);
 
@@ -274,7 +279,7 @@ struct Messenger {
     void (*lossy_packethandler)(struct Messenger *m, uint32_t, const uint8_t *, size_t, void *);
     void (*lossless_packethandler)(struct Messenger *m, uint32_t, const uint8_t *, size_t, void *);
 
-    void (*core_connection_change)(struct Messenger *m, unsigned int, void *);
+    m_self_connection_status_cb *core_connection_change;
     unsigned int last_connection_status;
 
     Messenger_Options options;
@@ -440,9 +445,9 @@ int m_get_self_statusmessage_size(const Messenger *m);
 int m_copy_statusmessage(const Messenger *m, int32_t friendnumber, uint8_t *buf, uint32_t maxlen);
 int m_copy_self_statusmessage(const Messenger *m, uint8_t *buf);
 
-/*  return one of USERSTATUS values.
+/*  return one of Userstatus values.
  *  Values unknown to your application should be represented as USERSTATUS_NONE.
- *  As above, the self variant will return our own USERSTATUS.
+ *  As above, the self variant will return our own Userstatus.
  *  If friendnumber is invalid, this shall return USERSTATUS_INVALID.
  */
 uint8_t m_get_userstatus(const Messenger *m, int32_t friendnumber);
@@ -499,7 +504,7 @@ void m_callback_namechange(Messenger *m, void (*function)(Messenger *m, uint32_t
 void m_callback_statusmessage(Messenger *m, void (*function)(Messenger *m, uint32_t, const uint8_t *, size_t, void *));
 
 /* Set the callback for status type changes.
- *  Function(uint32_t friendnumber, USERSTATUS kind)
+ *  Function(uint32_t friendnumber, Userstatus kind)
  */
 void m_callback_userstatus(Messenger *m, void (*function)(Messenger *m, uint32_t, unsigned int, void *));
 
