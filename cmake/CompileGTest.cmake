@@ -1,5 +1,8 @@
 # Find and compile the GTest library.
 
+include(CheckCXXCompilerFlag)
+include(CheckIncludeFileCXX)
+
 message(STATUS "Checking for gtest")
 
 # Look for the sources.
@@ -50,7 +53,7 @@ endif()
 
 function(unit_test subdir target)
   if(HAVE_GTEST)
-    add_executable(unit_${target}_test ${subdir}/${target}_test.cpp)
+    add_executable(unit_${target}_test ${subdir}/${target}_test.cc)
     target_link_modules(unit_${target}_test toxcore gtest)
     set_target_properties(unit_${target}_test PROPERTIES COMPILE_FLAGS "${TEST_CXX_FLAGS}")
     add_test(NAME ${target} COMMAND ${CROSSCOMPILING_EMULATOR} unit_${target}_test)

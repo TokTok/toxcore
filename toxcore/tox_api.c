@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define SET_ERROR_PARAMETER(param, x) {if(param) {*param = x;}}
+#define SET_ERROR_PARAMETER(param, x) do { if (param) { *param = x; } } while (0)
 
 
 #define CONST_FUNCTION(lowercase, uppercase) \
@@ -29,6 +29,7 @@ CONST_FUNCTION(max_custom_packet_size, MAX_CUSTOM_PACKET_SIZE)
 CONST_FUNCTION(hash_length, HASH_LENGTH)
 CONST_FUNCTION(file_id_length, FILE_ID_LENGTH)
 CONST_FUNCTION(max_filename_length, MAX_FILENAME_LENGTH)
+CONST_FUNCTION(max_hostname_length, MAX_HOSTNAME_LENGTH)
 
 
 #define ACCESSORS(type, ns, name) \

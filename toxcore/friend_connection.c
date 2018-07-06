@@ -27,6 +27,10 @@
 
 #include "friend_connection.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "util.h"
 
 #define PORTS_PER_DISCOVERY 10
@@ -217,7 +221,7 @@ int friend_add_tcp_relay(Friend_Connections *fr_c, int friendcon_id, IP_Port ip_
 
     /* Local ip and same pk means that they are hosting a TCP relay. */
     if (ip_is_local(ip_port.ip) && public_key_cmp(friend_con->dht_temp_pk, public_key) == 0) {
-        if (friend_con->dht_ip_port.ip.family != 0) {
+        if (!net_family_is_unspec(friend_con->dht_ip_port.ip.family)) {
             ip_port.ip = friend_con->dht_ip_port.ip;
         } else {
             friend_con->hosting_tcp_relay = 0;
@@ -227,7 +231,7 @@ int friend_add_tcp_relay(Friend_Connections *fr_c, int friendcon_id, IP_Port ip_
     const uint16_t index = friend_con->tcp_relay_counter % FRIEND_MAX_STORED_TCP_RELAYS;
 
     for (unsigned i = 0; i < FRIEND_MAX_STORED_TCP_RELAYS; ++i) {
-        if (friend_con->tcp_relays[i].ip_port.ip.family != 0
+        if (!net_family_is_unspec(friend_con->tcp_relays[i].ip_port.ip.family)
                 && public_key_cmp(friend_con->tcp_relays[i].public_key, public_key) == 0) {
             memset(&friend_con->tcp_relays[i], 0, sizeof(Node_format));
         }
@@ -252,7 +256,7 @@ static void connect_to_saved_tcp_relays(Friend_Connections *fr_c, int friendcon_
     for (unsigned i = 0; (i < FRIEND_MAX_STORED_TCP_RELAYS) && (number != 0); ++i) {
         const uint16_t index = (friend_con->tcp_relay_counter - (i + 1)) % FRIEND_MAX_STORED_TCP_RELAYS;
 
-        if (friend_con->tcp_relays[index].ip_port.ip.family) {
+        if (!net_family_is_unspec(friend_con->tcp_relays[index].ip_port.ip.family)) {
             if (add_tcp_relay_peer(fr_c->net_crypto, friend_con->crypt_connection_id, friend_con->tcp_relays[index].ip_port,
                                    friend_con->tcp_relays[index].public_key) == 0) {
                 --number;
@@ -350,7 +354,7 @@ static void change_dht_pk(Friend_Connections *fr_c, int friendcon_id, const uint
     friend_con->dht_pk_lastrecv = unix_time();
 
     if (friend_con->dht_lock) {
-        if (DHT_delfriend(fr_c->dht, friend_con->dht_temp_pk, friend_con->dht_lock) != 0) {
+        if (dht_delfriend(fr_c->dht, friend_con->dht_temp_pk, friend_con->dht_lock) != 0) {
             printf("a. Could not delete dht peer. Please report this.\n");
             return;
         }
@@ -358,7 +362,7 @@ static void change_dht_pk(Friend_Connections *fr_c, int friendcon_id, const uint
         friend_con->dht_lock = 0;
     }
 
-    DHT_addfriend(fr_c->dht, dht_public_key, dht_ip_callback, fr_c, friendcon_id, &friend_con->dht_lock);
+    dht_addfriend(fr_c->dht, dht_public_key, dht_ip_callback, fr_c, friendcon_id, &friend_con->dht_lock);
     memcpy(friend_con->dht_temp_pk, dht_public_key, CRYPTO_PUBLIC_KEY_SIZE);
 }
 
@@ -546,7 +550,7 @@ static int handle_new_connections(void *object, New_Connection *n_c)
     connection_lossy_data_handler(fr_c->net_crypto, id, &handle_lossy_packet, fr_c, friendcon_id);
     friend_con->crypt_connection_id = id;
 
-    if (n_c->source.ip.family != TOX_AF_INET && n_c->source.ip.family != TOX_AF_INET6) {
+    if (!net_family_is_ipv4(n_c->source.ip.family) && !net_family_is_ipv6(n_c->source.ip.family)) {
         set_direct_ip_port(fr_c->net_crypto, friend_con->crypt_connection_id, friend_con->dht_ip_port, 0);
     } else {
         friend_con->dht_ip_port = n_c->source;
@@ -785,7 +789,7 @@ int kill_friend_connection(Friend_Connections *fr_c, int friendcon_id)
     crypto_kill(fr_c->net_crypto, friend_con->crypt_connection_id);
 
     if (friend_con->dht_lock) {
-        DHT_delfriend(fr_c->dht, friend_con->dht_temp_pk, friend_con->dht_lock);
+        dht_delfriend(fr_c->dht, friend_con->dht_temp_pk, friend_con->dht_lock);
     }
 
     return wipe_friend_conn(fr_c, friendcon_id);
@@ -905,14 +909,14 @@ void do_friend_connections(Friend_Connections *fr_c, void *userdata)
             if (friend_con->status == FRIENDCONN_STATUS_CONNECTING) {
                 if (friend_con->dht_pk_lastrecv + FRIEND_DHT_TIMEOUT < temp_time) {
                     if (friend_con->dht_lock) {
-                        DHT_delfriend(fr_c->dht, friend_con->dht_temp_pk, friend_con->dht_lock);
+                        dht_delfriend(fr_c->dht, friend_con->dht_temp_pk, friend_con->dht_lock);
                         friend_con->dht_lock = 0;
                         memset(friend_con->dht_temp_pk, 0, CRYPTO_PUBLIC_KEY_SIZE);
                     }
                 }
 
                 if (friend_con->dht_ip_port_lastrecv + FRIEND_DHT_TIMEOUT < temp_time) {
-                    friend_con->dht_ip_port.ip.family = 0;
+                    friend_con->dht_ip_port.ip.family = net_family_unspec;
                 }
 
                 if (friend_con->dht_lock) {

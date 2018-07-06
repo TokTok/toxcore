@@ -30,7 +30,7 @@ set(CMAKE_MODULE_PATH ${toxcore_SOURCE_DIR}/cmake)
 # versions in a synchronised way.
 set(PROJECT_VERSION_MAJOR "0")
 set(PROJECT_VERSION_MINOR "2")
-set(PROJECT_VERSION_PATCH "2")
+set(PROJECT_VERSION_PATCH "3")
 set(PROJECT_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
 
 # set .so library version / following libtool scheme
@@ -52,7 +52,6 @@ message("SOVERSION: ${SOVERSION}")
 #
 ################################################################################
 
-include(AddCompilerFlag)
 include(ApiDsl)
 include(ModulePackage)
 include(StrictAbi)
@@ -63,25 +62,22 @@ if(APPLE)
 endif()
 
 if(UNIX)
-    if(CMAKE_SYSTEM_NAME MATCHES ".*Linux")
-        set(LINUX TRUE)
-    elseif(CMAKE_SYSTEM_NAME MATCHES "kOpenBSD.*|OpenBSD.*")
-        set(OPENBSD TRUE)
-    elseif(CMAKE_SYSTEM_NAME MATCHES "kNetBSD.*|NetBSD.*")
-        set(NETBSD TRUE)
-    elseif(CMAKE_SYSTEM_NAME MATCHES "kFreeBSD.*|FreeBSD")
-        set(FREEBSD TRUE)
-    endif()
+  if(CMAKE_SYSTEM_NAME MATCHES ".*Linux")
+    set(LINUX TRUE)
+  elseif(CMAKE_SYSTEM_NAME MATCHES "kOpenBSD.*|OpenBSD.*")
+    set(OPENBSD TRUE)
+  elseif(CMAKE_SYSTEM_NAME MATCHES "kNetBSD.*|NetBSD.*")
+    set(NETBSD TRUE)
+  elseif(CMAKE_SYSTEM_NAME MATCHES "kFreeBSD.*|FreeBSD")
+    set(FREEBSD TRUE)
+  endif()
 endif()
 
 enable_testing()
 
 set(CMAKE_MACOSX_RPATH ON)
 
-if(${CMAKE_VERSION} VERSION_LESS "3.1.0")
-  add_cflag("-std=c99")
-  add_cxxflag("-std=c++11")
-else()
+if(NOT ${CMAKE_VERSION} VERSION_LESS "3.1.0")
   # Set standard version for compiler.
   set(CMAKE_C_STANDARD 99)
   set(CMAKE_CXX_STANDARD 11)
@@ -92,90 +88,9 @@ else()
   message(STATUS "Supported C++ compiler features = ${CMAKE_CXX_COMPILE_FEATURES}")
 endif()
 
-if(NOT MSVC)
-  # Warn on non-ISO C.
-  add_cflag("-pedantic")
-
-  option(ERROR_ON_WARNING "Make compilation error on a warning" OFF)
-  if(ERROR_ON_WARNING)
-    add_flag("-Werror")
-  endif()
-
-  option(COVERAGE "Track code coverage" OFF)
-  if(COVERAGE)
-    add_flag("-fprofile-instr-generate")
-    add_flag("-fcoverage-mapping")
-  endif()
-
-  option(DEBUG "Enable assertions and other debugging facilities" OFF)
-  if(DEBUG)
-    set(MIN_LOGGER_LEVEL DEBUG)
-    add_cflag("-g3")
-    if(MINGW)
-      # Allows wine to display source code file names and line numbers on crash in its backtrace
-      add_flag("-gdwarf-2")
-    endif()
-  endif()
-
-  option(WARNINGS "Enable additional compiler warnings" ON)
-  if(WARNINGS)
-    # Add all warning flags we can.
-    add_flag("-Wall")
-    add_flag("-Wextra")
-    add_flag("-Weverything")
-
-    # Disable specific warning flags for both C and C++.
-
-    # TODO(iphydf): Clean these up. Probably all of these are actual bugs.
-    add_flag("-Wno-cast-align")
-    # Very verbose, not very useful. This warns about things like int -> uint
-    # conversions that change sign without a cast and narrowing conversions.
-    add_flag("-Wno-conversion")
-    # TODO(iphydf): Check enum values when received from the user, then assume
-    # correctness and remove this suppression.
-    add_flag("-Wno-covered-switch-default")
-    # Due to clang's tolower() macro being recursive
-    # https://github.com/TokTok/c-toxcore/pull/481
-    add_flag("-Wno-disabled-macro-expansion")
-    # We don't put __attribute__ on the public API.
-    add_flag("-Wno-documentation-deprecated-sync")
-    # Bootstrap daemon does this.
-    add_flag("-Wno-format-nonliteral")
-    # struct Foo foo = {0}; is a common idiom.
-    add_flag("-Wno-missing-field-initializers")
-    # Useful sometimes, but we accept padding in structs for clarity.
-    # Reordering fields to avoid padding will reduce readability.
-    add_flag("-Wno-padded")
-    # This warns on things like _XOPEN_SOURCE, which we currently need (we
-    # probably won't need these in the future).
-    add_flag("-Wno-reserved-id-macro")
-    # TODO(iphydf): Clean these up. They are likely not bugs, but still
-    # potential issues and probably confusing.
-    add_flag("-Wno-sign-compare")
-    # Our use of mutexes results in a false positive, see 1bbe446.
-    add_flag("-Wno-thread-safety-analysis")
-    # File transfer code has this.
-    add_flag("-Wno-type-limits")
-    # Callbacks often don't use all their parameters.
-    add_flag("-Wno-unused-parameter")
-    # libvpx uses __attribute__((unused)) for "potentially unused" static
-    # functions to avoid unused static function warnings.
-    add_flag("-Wno-used-but-marked-unused")
-    # We use variable length arrays a lot.
-    add_flag("-Wno-vla")
-
-    # Disable specific warning flags for C++.
-
-    # Comma at end of enum is supported everywhere we run.
-    add_cxxflag("-Wno-c++98-compat-pedantic")
-    # TODO(iphydf): Stop using flexible array members.
-    add_cxxflag("-Wno-c99-extensions")
-    # We're C-compatible, so use C style casts.
-    add_cxxflag("-Wno-old-style-cast")
-
-    # Downgrade to warning so we still see it.
-    add_flag("-Wno-error=unused-variable")
-  endif()
+option(TRACE "Enable DEBUG level logging (default)" ON)
+if(DEBUG)
+  set(MIN_LOGGER_LEVEL DEBUG)
 endif()
 
 option(TRACE "Enable TRACE level logging (expensive, for network debugging)" OFF)
@@ -185,22 +100,6 @@ endif()
 
 if(MIN_LOGGER_LEVEL)
   add_definitions(-DMIN_LOGGER_LEVEL=LOG_${MIN_LOGGER_LEVEL})
-endif()
-
-option(ASAN "Enable address-sanitizer to detect invalid memory accesses" OFF)
-if(ASAN)
-  set(SAFE_CMAKE_REQUIRED_LIBRARIES "${CMAKE_REQUIRED_LIBRARIES}")
-  set(CMAKE_REQUIRED_LIBRARIES "-fsanitize=address")
-  add_cflag("-fsanitize=address")
-  set(CMAKE_REQUIRED_LIBRARIES "${SAFE_CMAKE_REQUIRED_LIBRARIES}")
-else()
-  # Forbid undefined symbols in shared libraries. This is incompatible with
-  # asan, so it's in the else branch here.
-  if(LINUX)
-    add_dllflag("-Wl,-z,defs")
-  else()
-    add_dllflag("-undefined error")
-  endif()
 endif()
 
 option(USE_IPV6 "Use IPv6 in tests" ON)
@@ -439,6 +338,7 @@ include(CompileGTest)
 
 # The actual unit tests follow.
 #
+unit_test(toxav ring_buffer)
 unit_test(toxav rtp)
 unit_test(toxcore crypto_core)
 unit_test(toxcore util)
@@ -450,19 +350,6 @@ unit_test(toxcore util)
 ################################################################################
 
 set(TEST_TIMEOUT_SECONDS "" CACHE STRING "Limit runtime of each test to the number of seconds specified")
-
-option(FORMAT_TEST "Require the format_test to be executed; fail cmake if it can't" OFF)
-
-if(ASTYLE)
-  add_test(
-    NAME format_test
-    COMMAND ${toxcore_SOURCE_DIR}/other/astyle/format-source
-      "${toxcore_SOURCE_DIR}"
-      "${ASTYLE}")
-  set_tests_properties(format_test PROPERTIES TIMEOUT "${TEST_TIMEOUT_SECONDS}")
-elseif(FORMAT_TEST)
-  message(FATAL_ERROR "format_test can not be run, because ASTYLE (${ASTYLE}) could not be found")
-endif()
 
 if(ANDROID_CPU_FEATURES)
   # We need to compile cpufeatures.c as many times as there are executables,
@@ -492,7 +379,7 @@ endfunction()
 if(BUILD_TOXAV)
   add_definitions(-D__STDC_LIMIT_MACROS=1)
   add_executable(auto_monolith_test ${CPUFEATURES}
-    auto_tests/monolith_test.cpp)
+    auto_tests/monolith_test.cc)
   target_link_libraries(auto_monolith_test ${toxcore_LINK_MODULES})
   add_test(NAME monolith COMMAND ${CROSSCOMPILING_EMULATOR} auto_monolith_test)
 endif()
@@ -500,18 +387,24 @@ endif()
 auto_test(TCP)
 auto_test(bootstrap)
 auto_test(conference)
+auto_test(conference_two)
+auto_test(conference_double_invite)
 auto_test(crypto                        MSVC_DONT_BUILD)
 auto_test(dht                           MSVC_DONT_BUILD)
 auto_test(encryptsave)
 auto_test(file_transfer)
+auto_test(friend_connection)
 auto_test(friend_request)
+auto_test(invalid_proxy)
+auto_test(invalid_tcp_proxy)
 auto_test(lan_discovery)
 auto_test(lossless_packet)
 auto_test(lossy_packet)
 auto_test(messenger                     MSVC_DONT_BUILD)
 auto_test(network)
 auto_test(onion)
-auto_test(resource_leak)
+auto_test(overflow_recvq)
+auto_test(overflow_sendq)
 auto_test(save_friend)
 auto_test(save_load)
 auto_test(send_message)
@@ -526,10 +419,6 @@ auto_test(tox_one)
 auto_test(tox_strncasecmp)
 auto_test(typing)
 auto_test(version)
-# TODO(iphydf): These tests are broken. The code needs to be fixed, as the
-# tests themselves are correct.
-auto_test(selfname_change_conference    DONT_RUN)
-auto_test(self_conference_title_change  DONT_RUN)
 
 if(BUILD_TOXAV)
   auto_test(toxav_basic)
@@ -612,3 +501,7 @@ target_link_modules(DHT_test toxcore)
 add_executable(Messenger_test ${CPUFEATURES}
   testing/Messenger_test.c)
 target_link_modules(Messenger_test toxcore)
+
+add_executable(random_testing ${CPUFEATURES}
+  testing/random_testing.cc)
+target_link_modules(random_testing toxcore)

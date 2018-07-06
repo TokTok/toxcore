@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.65])
-AC_INIT([tox], [0.2.2])
+AC_INIT([tox], [0.2.3])
 AC_CONFIG_AUX_DIR(configure_aux)
 AC_CONFIG_SRCDIR([toxcore/net_crypto.c])
 AC_CONFIG_HEADERS([config.h])
@@ -350,7 +350,9 @@ if test "x$WANT_NACL" = "xyes"; then
     if (test -f "$NACL_SEARCH_LIBS/cpucycles.o") &&
        (test -f "$NACL_SEARCH_LIBS/randombytes.o"); then
         NACL_OBJECTS="$NACL_SEARCH_LIBS/cpucycles.o $NACL_SEARCH_LIBS/randombytes.o"
+        AC_MSG_NOTICE([found extra NaCl objects: $NACL_OBJECTS])
         if test "x$ADD_NACL_OBJECTS_TO_PKGCONFIG" = "xyes"; then
+            AC_MSG_NOTICE([adding extra NaCl objects to pkg-config file])
             NACL_OBJECTS_PKGCONFIG="$NACL_OBJECTS"
         fi
     else

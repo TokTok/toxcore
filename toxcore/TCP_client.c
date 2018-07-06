@@ -27,11 +27,11 @@
 
 #include "TCP_client.h"
 
-#include "util.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#if !defined(_WIN32) && !defined(__WIN32__) && !defined (WIN32)
-#include <sys/ioctl.h>
-#endif
+#include "util.h"
 
 struct TCP_Client_Connection {
     TCP_CLIENT_STATUS status;
@@ -177,7 +177,7 @@ static int proxy_http_read_connection_response(TCP_Client_Connection *TCP_conn)
 
     if (strstr((char *)data, success)) {
         // drain all data
-        unsigned int data_left = TCP_socket_data_recv_buffer(TCP_conn->sock);
+        unsigned int data_left = net_socket_data_recv_buffer(TCP_conn->sock);
 
         if (data_left) {
             VLA(uint8_t, temp_data, data_left);
@@ -227,7 +227,7 @@ static void proxy_socks5_generate_connection_request(TCP_Client_Connection *TCP_
     TCP_conn->last_packet[2] = 0; /* reserved, must be 0 */
     uint16_t length = 3;
 
-    if (TCP_conn->ip_port.ip.family == TOX_AF_INET) {
+    if (net_family_is_ipv4(TCP_conn->ip_port.ip.family)) {
         TCP_conn->last_packet[3] = 1; /* IPv4 address */
         ++length;
         memcpy(TCP_conn->last_packet + length, TCP_conn->ip_port.ip.ip.v4.uint8, sizeof(IP4));
@@ -252,7 +252,7 @@ static void proxy_socks5_generate_connection_request(TCP_Client_Connection *TCP_
  */
 static int proxy_socks5_read_connection_response(TCP_Client_Connection *TCP_conn)
 {
-    if (TCP_conn->ip_port.ip.family == TOX_AF_INET) {
+    if (net_family_is_ipv4(TCP_conn->ip_port.ip.family)) {
         uint8_t data[4 + sizeof(IP4) + sizeof(uint16_t)];
         int ret = read_TCP_packet(TCP_conn->sock, data, sizeof(data));
 
@@ -332,9 +332,8 @@ static int client_send_pending_data_nonpriority(TCP_Client_Connection *con)
         return 0;
     }
 
-    uint16_t left = con->last_packet_length - con->last_packet_sent;
-    const char *data = (const char *)(con->last_packet + con->last_packet_sent);
-    int len = send(con->sock, data, left, MSG_NOSIGNAL);
+    const uint16_t left = con->last_packet_length - con->last_packet_sent;
+    const int len = net_send(con->sock, con->last_packet + con->last_packet_sent, left);
 
     if (len <= 0) {
         return -1;
@@ -363,8 +362,8 @@ static int client_send_pending_data(TCP_Client_Connection *con)
     TCP_Priority_List *p = con->priority_queue_start;
 
     while (p) {
-        uint16_t left = p->size - p->sent;
-        int len = send(con->sock, (const char *)(p->data + p->sent), left, MSG_NOSIGNAL);
+        const uint16_t left = p->size - p->sent;
+        const int len = net_send(con->sock, p->data + p->sent, left);
 
         if (len != left) {
             if (len > 0) {
@@ -459,7 +458,7 @@ static int write_packet_TCP_client_secure_connection(TCP_Client_Connection *con,
     }
 
     if (priority) {
-        len = sendpriority ? send(con->sock, (const char *)packet, SIZEOF_VLA(packet), MSG_NOSIGNAL) : 0;
+        len = sendpriority ? net_send(con->sock, packet, SIZEOF_VLA(packet)) : 0;
 
         if (len <= 0) {
             len = 0;
@@ -474,7 +473,7 @@ static int write_packet_TCP_client_secure_connection(TCP_Client_Connection *con,
         return client_add_priority(con, packet, SIZEOF_VLA(packet), len);
     }
 
-    len = send(con->sock, (const char *)packet, SIZEOF_VLA(packet), MSG_NOSIGNAL);
+    len = net_send(con->sock, packet, SIZEOF_VLA(packet));
 
     if (len <= 0) {
         return 0;
@@ -697,7 +696,7 @@ TCP_Client_Connection *new_TCP_connection(IP_Port ip_port, const uint8_t *public
         return nullptr;
     }
 
-    if (ip_port.ip.family != TOX_AF_INET && ip_port.ip.family != TOX_AF_INET6) {
+    if (!net_family_is_ipv4(ip_port.ip.family) && !net_family_is_ipv6(ip_port.ip.family)) {
         return nullptr;
     }
 
@@ -708,7 +707,7 @@ TCP_Client_Connection *new_TCP_connection(IP_Port ip_port, const uint8_t *public
         proxy_info = &default_proxyinfo;
     }
 
-    uint8_t family = ip_port.ip.family;
+    Family family = ip_port.ip.family;
 
     if (proxy_info->proxy_type != TCP_PROXY_NONE) {
         family = proxy_info->ip_port.ip.family;

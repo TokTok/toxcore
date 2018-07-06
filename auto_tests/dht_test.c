@@ -31,10 +31,10 @@ static inline IP get_loopback()
 {
     IP ip;
 #if USE_IPV6
-    ip.family = TOX_AF_INET6;
+    ip.family = net_family_ipv6;
     ip.ip.v6 = get_ip6_loopback();
 #else
-    ip.family = TOX_AF_INET;
+    ip.family = net_family_ipv4;
     ip.ip.v4 = get_ip4_loopback();
 #endif
     return ip;
@@ -113,7 +113,7 @@ static void test_addto_lists_update(DHT            *dht,
     int used, test, test1, test2, found;
     IP_Port test_ipp;
     uint8_t test_id[CRYPTO_PUBLIC_KEY_SIZE];
-    uint8_t ipv6 = ip_port->ip.family == TOX_AF_INET6 ? 1 : 0;
+    uint8_t ipv6 = net_family_is_ipv6(ip_port->ip.family) ? 1 : 0;
 
     // check id update for existing ip_port
     test = random_u32() % length;
@@ -188,7 +188,7 @@ static void test_addto_lists_bad(DHT            *dht,
     int used, test1, test2, test3;
     uint8_t public_key[CRYPTO_PUBLIC_KEY_SIZE], test_id1[CRYPTO_PUBLIC_KEY_SIZE], test_id2[CRYPTO_PUBLIC_KEY_SIZE],
             test_id3[CRYPTO_PUBLIC_KEY_SIZE];
-    uint8_t ipv6 = ip_port->ip.family == TOX_AF_INET6 ? 1 : 0;
+    uint8_t ipv6 = net_family_is_ipv6(ip_port->ip.family) ? 1 : 0;
 
     random_bytes(public_key, sizeof(public_key));
     mark_all_good(list, length, ipv6);
@@ -232,7 +232,7 @@ static void test_addto_lists_possible_bad(DHT            *dht,
     int used, test1, test2, test3;
     uint8_t public_key[CRYPTO_PUBLIC_KEY_SIZE], test_id1[CRYPTO_PUBLIC_KEY_SIZE], test_id2[CRYPTO_PUBLIC_KEY_SIZE],
             test_id3[CRYPTO_PUBLIC_KEY_SIZE];
-    uint8_t ipv6 = ip_port->ip.family == TOX_AF_INET6 ? 1 : 0;
+    uint8_t ipv6 = net_family_is_ipv6(ip_port->ip.family) ? 1 : 0;
 
     random_bytes(public_key, sizeof(public_key));
     mark_all_good(list, length, ipv6);
@@ -294,7 +294,7 @@ static void test_addto_lists_good(DHT            *dht,
                                   const uint8_t  *comp_client_id)
 {
     uint8_t public_key[CRYPTO_PUBLIC_KEY_SIZE];
-    uint8_t ipv6 = ip_port->ip.family == TOX_AF_INET6 ? 1 : 0;
+    uint8_t ipv6 = net_family_is_ipv6(ip_port->ip.family) ? 1 : 0;
 
     mark_all_good(list, length, ipv6);
 
@@ -330,7 +330,7 @@ static void test_addto_lists(IP ip)
     Networking_Core *net = new_networking(log, ip, TOX_PORT_DEFAULT);
     ck_assert_msg(net != nullptr, "Failed to create Networking_Core");
 
-    DHT *dht = new_DHT(log, net, true);
+    DHT *dht = new_dht(log, net, true);
     ck_assert_msg(dht != nullptr, "Failed to create DHT");
 
     IP_Port ip_port;
@@ -391,8 +391,9 @@ static void test_addto_lists(IP ip)
         test_addto_lists_good(dht, dht->friends_list[i].client_list, MAX_FRIEND_CLIENTS, &ip_port,
                               dht->friends_list[i].public_key);
 
-    kill_DHT(dht);
+    kill_dht(dht);
     kill_networking(net);
+    logger_kill(log);
 }
 
 START_TEST(test_addto_lists_ipv4)
@@ -411,7 +412,7 @@ START_TEST(test_addto_lists_ipv6)
 }
 END_TEST
 
-#define DHT_DEFAULT_PORT (TOX_PORT_DEFAULT + 20)
+#define DHT_DEFAULT_PORT (TOX_PORT_DEFAULT + 1000)
 
 static void print_pk(uint8_t *public_key)
 {
@@ -458,6 +459,7 @@ static void test_add_to_list(uint8_t cmp_list[][CRYPTO_PUBLIC_KEY_SIZE + 1],
 static void test_list_main(void)
 {
     DHT *dhts[NUM_DHT];
+    Logger *logs[NUM_DHT];
     uint32_t index[NUM_DHT];
 
     uint8_t cmp_list1[NUM_DHT][MAX_FRIEND_CLIENTS][CRYPTO_PUBLIC_KEY_SIZE + 1];
@@ -469,13 +471,14 @@ static void test_list_main(void)
         IP ip;
         ip_init(&ip, 1);
 
-        Logger *log = logger_new();
+        logs[i] = logger_new();
         index[i] = i + 1;
-        logger_callback_log(log, (logger_cb *)print_debug_log, nullptr, &index[i]);
+        logger_callback_log(logs[i], (logger_cb *)print_debug_log, nullptr, &index[i]);
 
-        dhts[i] = new_DHT(log, new_networking(log, ip, DHT_DEFAULT_PORT + i), true);
+        dhts[i] = new_dht(logs[i], new_networking(logs[i], ip, DHT_DEFAULT_PORT + i), true);
         ck_assert_msg(dhts[i] != nullptr, "Failed to create dht instances %u", i);
-        ck_assert_msg(net_port(dhts[i]->net) != DHT_DEFAULT_PORT + i, "Bound to wrong port");
+        ck_assert_msg(net_port(dhts[i]->net) != DHT_DEFAULT_PORT + i,
+                      "Bound to wrong port: %d", net_port(dhts[i]->net));
     }
 
     for (j = 0; j < NUM_DHT; ++j) {
@@ -547,7 +550,7 @@ static void test_list_main(void)
                 ck_assert_msg(count == 1, "Nodes in search don't know ip of friend. %u %u %u", i, j, count);
 
                 Node_format ln[MAX_SENT_NODES];
-                int n = get_close_nodes(dhts[(l + j) % NUM_DHT], dhts[l]->self_public_key, ln, 0, 1, 0);
+                int n = get_close_nodes(dhts[(l + j) % NUM_DHT], dhts[l]->self_public_key, ln, net_family_unspec, 1, 0);
                 ck_assert_msg(n == MAX_SENT_NODES, "bad num close %u | %u %u", n, i, j);
 
                 count = 0;
@@ -577,8 +580,9 @@ static void test_list_main(void)
 
     for (i = 0; i < NUM_DHT; ++i) {
         Networking_Core *n = dhts[i]->net;
-        kill_DHT(dhts[i]);
+        kill_dht(dhts[i]);
         kill_networking(n);
+        logger_kill(logs[i]);
     }
 }
 
@@ -603,6 +607,7 @@ START_TEST(test_DHT_test)
 {
     uint32_t to_comp = 8394782;
     DHT *dhts[NUM_DHT];
+    Logger *logs[NUM_DHT];
     uint32_t index[NUM_DHT];
 
     unsigned int i, j;
@@ -611,11 +616,11 @@ START_TEST(test_DHT_test)
         IP ip;
         ip_init(&ip, 1);
 
-        Logger *log = logger_new();
+        logs[i] = logger_new();
         index[i] = i + 1;
-        logger_callback_log(log, (logger_cb *)print_debug_log, nullptr, &index[i]);
+        logger_callback_log(logs[i], (logger_cb *)print_debug_log, nullptr, &index[i]);
 
-        dhts[i] = new_DHT(log, new_networking(log, ip, DHT_DEFAULT_PORT + i), true);
+        dhts[i] = new_dht(logs[i], new_networking(logs[i], ip, DHT_DEFAULT_PORT + i), true);
         ck_assert_msg(dhts[i] != nullptr, "Failed to create dht instances %u", i);
         ck_assert_msg(net_port(dhts[i]->net) != DHT_DEFAULT_PORT + i, "Bound to wrong port");
     }
@@ -637,7 +642,7 @@ loop_top:
         }
 
         uint16_t lock_count = 0;
-        ck_assert_msg(DHT_addfriend(dhts[pairs[i].tox2], dhts[pairs[i].tox1]->self_public_key, &ip_callback, &to_comp, 1337,
+        ck_assert_msg(dht_addfriend(dhts[pairs[i].tox2], dhts[pairs[i].tox1]->self_public_key, &ip_callback, &to_comp, 1337,
                                     &lock_count) == 0, "Failed to add friend");
         ck_assert_msg(lock_count == 1, "bad lock count: %u %u", lock_count, i);
     }
@@ -646,7 +651,7 @@ loop_top:
         IP_Port ip_port;
         ip_port.ip = get_loopback();
         ip_port.port = net_htons(DHT_DEFAULT_PORT + i);
-        DHT_bootstrap(dhts[(i - 1) % NUM_DHT], ip_port, dhts[i]->self_public_key);
+        dht_bootstrap(dhts[(i - 1) % NUM_DHT], ip_port, dhts[i]->self_public_key);
     }
 
     while (1) {
@@ -655,7 +660,7 @@ loop_top:
         for (i = 0; i < NUM_DHT_FRIENDS; ++i) {
             IP_Port a;
 
-            if (DHT_getfriendip(dhts[pairs[i].tox2], dhts[pairs[i].tox1]->self_public_key, &a) == 1) {
+            if (dht_getfriendip(dhts[pairs[i].tox2], dhts[pairs[i].tox1]->self_public_key, &a) == 1) {
                 ++counter;
             }
         }
@@ -666,7 +671,7 @@ loop_top:
 
         for (i = 0; i < NUM_DHT; ++i) {
             networking_poll(dhts[i]->net, nullptr);
-            do_DHT(dhts[i]);
+            do_dht(dhts[i]);
         }
 
         c_sleep(500);
@@ -674,8 +679,9 @@ loop_top:
 
     for (i = 0; i < NUM_DHT; ++i) {
         Networking_Core *n = dhts[i]->net;
-        kill_DHT(dhts[i]);
+        kill_dht(dhts[i]);
         kill_networking(n);
+        logger_kill(logs[i]);
     }
 }
 END_TEST
@@ -688,7 +694,7 @@ START_TEST(test_dht_create_packet)
     uint8_t key[CRYPTO_SYMMETRIC_KEY_SIZE];
     new_symmetric_key(key);
 
-    int length = DHT_create_packet(key, key, NET_PACKET_GET_NODES, plain, sizeof(plain), pkt);
+    int length = dht_create_packet(key, key, NET_PACKET_GET_NODES, plain, sizeof(plain), pkt);
 
     ck_assert_msg(pkt[0] == NET_PACKET_GET_NODES, "Malformed packet.");
     ck_assert_msg(memcmp(pkt + 1, key, CRYPTO_SYMMETRIC_KEY_SIZE) == 0, "Malformed packet.");
@@ -744,8 +750,8 @@ static void random_ip(IP_Port *ipp, int family)
     uint8_t *port = (uint8_t *)&ipp->port;
     random_bytes(port, sizeof(ipp->port));
     random_bytes(ip, size);
-    ipp->ip.family = family;
-
+    // TODO(iphydf): Pass the net_family variant to random_ip.
+    ipp->ip.family.value = family;
 }
 
 #define PACKED_NODES_SIZE (SIZE_IPPORT + CRYPTO_PUBLIC_KEY_SIZE)

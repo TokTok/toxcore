@@ -179,7 +179,7 @@ const VERSION_MINOR                = 2;
  * The patch or revision number. Incremented when bugfixes are applied without
  * changing any functionality or API or ABI.
  */
-const VERSION_PATCH                = 2;
+const VERSION_PATCH                = 3;
 
 /**
  * A macro to check at preprocessing time whether the client code is compatible
@@ -306,6 +306,16 @@ const FILE_ID_LENGTH              = 32;
  * @deprecated The macro will be removed in 0.3.0. Use the function instead.
  */
 const MAX_FILENAME_LENGTH         = 255;
+
+/**
+ * Maximum length of a hostname, e.g. proxy or bootstrap node names.
+ *
+ * This length includes the NUL byte. Hostnames are NUL-terminated C strings, so
+ * they are 255 characters plus one NUL byte.
+ *
+ * @deprecated The macro will be removed in 0.3.0. Use the function instead.
+ */
+const MAX_HOSTNAME_LENGTH         = 256;
 
 
 /*******************************************************************************
@@ -473,7 +483,9 @@ static class options {
      *
      * Setting this to false will force Tox to use TCP only. Communications will
      * need to be relayed through a TCP relay node, potentially slowing them down.
-     * Disabling UDP support is necessary when using anonymous proxies or Tor.
+     *
+     * If a proxy is enabled, UDP will be disabled if either toxcore or the
+     * proxy don't support proxying UDP messages.
      */
     bool udp_enabled;
 
@@ -494,8 +506,8 @@ static class options {
        * The IP address or DNS name of the proxy to be used.
        *
        * If used, this must be non-NULL and be a valid DNS name. The name must not
-       * exceed 255 characters, and be in a NUL-terminated C string format
-       * (255 chars + 1 NUL byte).
+       * exceed $MAX_HOSTNAME_LENGTH characters, and be in a NUL-terminated C string
+       * format ($MAX_HOSTNAME_LENGTH includes the NUL byte).
        *
        * This member is ignored (it can be NULL) if proxy_type is ${PROXY_TYPE.NONE}.
        *
@@ -744,17 +756,18 @@ uint8_t[size] savedata {
  * This function will attempt to connect to the node using UDP. You must use
  * this function even if ${options.this.udp_enabled} was set to false.
  *
- * @param address The hostname or IP address (IPv4 or IPv6) of the node.
+ * @param host The hostname or IP address (IPv4 or IPv6) of the node. Must be
+ *   at most $MAX_HOSTNAME_LENGTH chars, including the NUL byte.
  * @param port The port on the host on which the bootstrap Tox instance is
  *   listening.
  * @param public_key The long term public key of the bootstrap node
  *   ($PUBLIC_KEY_SIZE bytes).
  * @return true on success.
  */
-bool bootstrap(string address, uint16_t port, const uint8_t[PUBLIC_KEY_SIZE] public_key) {
+bool bootstrap(string host, uint16_t port, const uint8_t[PUBLIC_KEY_SIZE] public_key) {
   NULL,
   /**
-   * The address could not be resolved to an IP address, or the IP address
+   * The hostname could not be resolved to an IP address, or the IP address
    * passed was invalid.
    */
   BAD_HOST,
@@ -772,13 +785,14 @@ bool bootstrap(string address, uint16_t port, const uint8_t[PUBLIC_KEY_SIZE] pub
  * the same bootstrap node, or to add TCP relays without using them as
  * bootstrap nodes.
  *
- * @param address The hostname or IP address (IPv4 or IPv6) of the TCP relay.
+ * @param host The hostname or IP address (IPv4 or IPv6) of the TCP relay.
+ *   Must be at most $MAX_HOSTNAME_LENGTH chars, including the NUL byte.
  * @param port The port on the host on which the TCP relay is listening.
  * @param public_key The long term public key of the TCP relay
  *   ($PUBLIC_KEY_SIZE bytes).
  * @return true on success.
  */
-bool add_tcp_relay(string address, uint16_t port, const uint8_t[PUBLIC_KEY_SIZE] public_key)
+bool add_tcp_relay(string host, uint16_t port, const uint8_t[PUBLIC_KEY_SIZE] public_key)
     with error for bootstrap;
 
 
@@ -2601,6 +2615,42 @@ inline namespace self {
 #ifdef __cplusplus
 }
 #endif
+
+typedef TOX_ERR_OPTIONS_NEW Tox_Err_Options_New;
+typedef TOX_ERR_NEW Tox_Err_New;
+typedef TOX_ERR_BOOTSTRAP Tox_Err_Bootstrap;
+typedef TOX_ERR_SET_INFO Tox_Err_Set_Info;
+typedef TOX_ERR_FRIEND_ADD Tox_Err_Friend_Add;
+typedef TOX_ERR_FRIEND_DELETE Tox_Err_Friend_Delete;
+typedef TOX_ERR_FRIEND_BY_PUBLIC_KEY Tox_Err_Friend_By_Public_Key;
+typedef TOX_ERR_FRIEND_GET_PUBLIC_KEY Tox_Err_Friend_Get_Public_Key;
+typedef TOX_ERR_FRIEND_GET_LAST_ONLINE Tox_Err_Friend_Get_Last_Online;
+typedef TOX_ERR_FRIEND_QUERY Tox_Err_Friend_Query;
+typedef TOX_ERR_SET_TYPING Tox_Err_Set_Typing;
+typedef TOX_ERR_FRIEND_SEND_MESSAGE Tox_Err_Friend_Send_Message;
+typedef TOX_ERR_FILE_CONTROL Tox_Err_File_Control;
+typedef TOX_ERR_FILE_SEEK Tox_Err_File_Seek;
+typedef TOX_ERR_FILE_GET Tox_Err_File_Get;
+typedef TOX_ERR_FILE_SEND Tox_Err_File_Send;
+typedef TOX_ERR_FILE_SEND_CHUNK Tox_Err_File_Send_Chunk;
+typedef TOX_ERR_CONFERENCE_NEW Tox_Err_Conference_New;
+typedef TOX_ERR_CONFERENCE_DELETE Tox_Err_Conference_Delete;
+typedef TOX_ERR_CONFERENCE_PEER_QUERY Tox_Err_Conference_Peer_Query;
+typedef TOX_ERR_CONFERENCE_INVITE Tox_Err_Conference_Invite;
+typedef TOX_ERR_CONFERENCE_JOIN Tox_Err_Conference_Join;
+typedef TOX_ERR_CONFERENCE_SEND_MESSAGE Tox_Err_Conference_Send_Message;
+typedef TOX_ERR_CONFERENCE_TITLE Tox_Err_Conference_Title;
+typedef TOX_ERR_CONFERENCE_GET_TYPE Tox_Err_Conference_Get_Type;
+typedef TOX_ERR_FRIEND_CUSTOM_PACKET Tox_Err_Friend_Custom_Packet;
+typedef TOX_ERR_GET_PORT Tox_Err_Get_Port;
+typedef TOX_USER_STATUS Tox_User_Status;
+typedef TOX_MESSAGE_TYPE Tox_Message_Type;
+typedef TOX_PROXY_TYPE Tox_Proxy_Type;
+typedef TOX_SAVEDATA_TYPE Tox_Savedata_Type;
+typedef TOX_LOG_LEVEL Tox_Log_Level;
+typedef TOX_CONNECTION Tox_Connection;
+typedef TOX_FILE_CONTROL Tox_File_Control;
+typedef TOX_CONFERENCE_TYPE Tox_Conference_Type;
 
 #endif
 %}
