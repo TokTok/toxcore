@@ -41,7 +41,7 @@ enum {
      * The number of milliseconds we want to keep a keyframe in the buffer for,
      * even though there are no free slots for incoming frames.
      */
-    VIDEO_KEEP_KEYFRAME_IN_BUFFER_FOR_MS = 15,
+    VIDEO_KEEP_KEYFRAME_IN_BUFFER_FOR_MS = 30,
 };
 
 int TOXAV_SEND_VIDEO_LOSSLESS_PACKETS = 0;
@@ -629,7 +629,7 @@ static int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t 
 
                 int64_t *ptmp = &(((VCSession *)(session->cs))->timestamp_difference_to_sender);
 
-                bool res4 = dntp_drift(ptmp, offset_, (int64_t)300);
+                bool res4 = dntp_drift(ptmp, offset_, (int64_t)800);
                 LOGGER_DEBUG(m->log, "DNTP:*B*:offset new=%lld", ((VCSession *)(session->cs))->timestamp_difference_to_sender);
             }
         }

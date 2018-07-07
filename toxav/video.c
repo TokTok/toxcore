@@ -291,6 +291,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
     uint32_t timestamp_want_get = (uint32_t)((int)want_remote_video_ts - GENERAL_TS_DIFF);
 
+
 #if 0
 
     if ((int)tsb_size((TSBuffer *)vc->vbuf_raw) > 0) {
@@ -302,8 +303,8 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
 #endif
 
-#define VIDEO_CURRENT_TS_SPAN_MS 180
 
+#define VIDEO_CURRENT_TS_SPAN_MS 50
     uint16_t removed_entries;
 
     // HINT: give me video frames that happend "now" minus some diff
@@ -318,38 +319,44 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 #endif
         const struct RTPHeader *header_v3_0 = (void *) & (p->header);
 
-        LOGGER_WARNING(vc->log, "FC:%d min=%ld max=%ld want=%d diff=%d rm=%d",
+        LOGGER_WARNING(vc->log, "seq:%d FC:%d min=%ld max=%ld want=%d diff=%d rm=%d",
+                       (int)header_v3_0->sequnum,
                        (int)tsb_size((TSBuffer *)vc->vbuf_raw),
                        timestamp_min, timestamp_max, (int)timestamp_want_get,
                        (int)timestamp_want_get - (int)timestamp_max,
                        (int)removed_entries);
 
-        LOGGER_DEBUG(vc->log, "--VSEQ:%d want:%d got:%d diff:%d",
-                     (int)header_v3_0->sequnum,
-                     (int)want_remote_video_ts,
-                     (int)timestamp_out_,
-                     (int)((int)want_remote_video_ts - (int)timestamp_out_)
-                    );
+        if ((int)timestamp_max > (int)timestamp_want_get) {
+            if (((int)timestamp_max - (int)timestamp_want_get) > 80) {
+                // more than 80ms delay for video stream, hmm lets drift the timestamp a bit
+                vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment +
+                                                      (((int)timestamp_max - (int)timestamp_want_get) - 60);
+                LOGGER_WARNING(vc->log, " +++++++ LARGE");
+            } else if (((int)timestamp_max - (int)timestamp_want_get) > 70) {
+                // more than 80ms delay for video stream, hmm lets drift the timestamp a bit
+                vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment + 25;
+                LOGGER_WARNING(vc->log, " +++++ 25");
+            }
+        }
 
-        if ((int)want_remote_video_ts > (int)timestamp_out_) {
+        if ((int)timestamp_want_get > (int)timestamp_out_) {
             if (vc->startup_video_timespan == 0) {
                 vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment -
-                                                      ((int)want_remote_video_ts - (int)timestamp_out_);
+                                                      ((int)timestamp_want_get - (int)timestamp_out_);
             } else {
                 vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment - 3;
             }
 
-            // LOGGER_WARNING(vc->log," ---");
-        } else if ((int)want_remote_video_ts < (int)timestamp_out_) {
+            LOGGER_DEBUG(vc->log, " ---");
+        } else if ((int)timestamp_want_get < (int)timestamp_out_) {
             if (vc->startup_video_timespan == 0) {
                 vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment +
-                                                      ((int)timestamp_out_ - (int)want_remote_video_ts);
+                                                      ((int)timestamp_out_ - (int)timestamp_want_get);
             } else {
-                vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment + 3;
+                vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment + 4;
             }
 
-            vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment + 3;
-            // LOGGER_WARNING(vc->log," +++");
+            LOGGER_WARNING(vc->log, " +++");
         }
 
         if (vc->startup_video_timespan > 0) {
@@ -409,66 +416,45 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
             const Messenger *mm = (Messenger *)(vc->av->m);
             const Messenger_Options *mo = (Messenger_Options *) & (mm->options);
 
-            if (mo->proxy_info.proxy_type != TCP_PROXY_NONE) {
+
+            if (missing_frames_count > 2) {
+
+                // HINT: if whole video frames are missing here, they most likely have been
+                //       kicked out of the ringbuffer because the sender is sending at too much FPS
+                //       which out client cant handle. so in the future signal sender to send less FPS!
+
+                LOGGER_WARNING(vc->log, "missing? sn=%d lastseen=%d",
+                               (int)header_v3_0->sequnum,
+                               (int)vc->last_seen_fragment_seqnum);
+
+
+                LOGGER_DEBUG(vc->log, "missing %d video frames (m1)", (int)missing_frames_count);
+
+                if (vc->video_decoder_codec_used != TOXAV_ENCODER_CODEC_USED_H264) {
+                    rc = vpx_codec_decode(vc->decoder, NULL, 0, NULL, VPX_DL_REALTIME);
+                }
+
                 // HINT: give feedback that we lost some bytes (based on the size of this frame)
-                //       we are using a PROXY, so make it much more aggressive!!
-                bwc_add_lost_v3(bwc, (uint32_t)(8 * header_v3_0->data_length_full * missing_frames_count), true);
-                LOGGER_ERROR(vc->log, "BWC:lost:002:*PROXY*:missing count=%d", (int)missing_frames_count);
-
-                // HINT: tell sender to turn down video FPS -------------
-#if 0
-                uint32_t pkg_buf_len = 3;
-                uint8_t pkg_buf[pkg_buf_len];
-                pkg_buf[0] = PACKET_TOXAV_COMM_CHANNEL;
-                pkg_buf[1] = PACKET_TOXAV_COMM_CHANNEL_LESS_VIDEO_FPS;
-                pkg_buf[2] = 2; // skip every 2nd video frame and dont encode and dont sent it
-
-                int result = send_custom_lossless_packet(vc->av->m, vc->friend_number, pkg_buf, pkg_buf_len);
-                LOGGER_ERROR(vc->log, "BWC:lost:002:*PROXY*:request half frame rate");
-#endif
-                // HINT: tell sender to turn down video FPS -------------
-
-            } else {
-
-                if (missing_frames_count > 2) {
-
-                    // HINT: if whole video frames are missing here, they most likely have been
-                    //       kicked out of the ringbuffer because the sender is sending at too much FPS
-                    //       which out client cant handle. so in the future signal sender to send less FPS!
-
-                    LOGGER_WARNING(vc->log, "missing? sn=%d lastseen=%d",
-                                   (int)header_v3_0->sequnum,
-                                   (int)vc->last_seen_fragment_seqnum);
+                bwc_add_lost_v3(bwc, (uint32_t)(header_v3_0->data_length_full * missing_frames_count), false);
+                LOGGER_ERROR(vc->log, "BWC:lost:002:missing count=%d", (int)missing_frames_count);
 
 
-                    LOGGER_DEBUG(vc->log, "missing %d video frames (m1)", (int)missing_frames_count);
+                if (missing_frames_count > 5) {
+                    if ((vc->last_requested_keyframe_ts + VIDEO_MIN_REQUEST_KEYFRAME_INTERVAL_MS_FOR_NF)
+                            < current_time_monotonic()) {
+                        uint32_t pkg_buf_len = 2;
+                        uint8_t pkg_buf[pkg_buf_len];
+                        pkg_buf[0] = PACKET_TOXAV_COMM_CHANNEL;
+                        pkg_buf[1] = PACKET_TOXAV_COMM_CHANNEL_REQUEST_KEYFRAME;
 
-                    if (vc->video_decoder_codec_used != TOXAV_ENCODER_CODEC_USED_H264) {
-                        rc = vpx_codec_decode(vc->decoder, NULL, 0, NULL, VPX_DL_REALTIME);
-                    }
-
-                    // HINT: give feedback that we lost some bytes (based on the size of this frame)
-                    bwc_add_lost_v3(bwc, (uint32_t)(header_v3_0->data_length_full * missing_frames_count), false);
-                    LOGGER_ERROR(vc->log, "BWC:lost:002:missing count=%d", (int)missing_frames_count);
-
-
-                    if (missing_frames_count > 5) {
-                        if ((vc->last_requested_keyframe_ts + VIDEO_MIN_REQUEST_KEYFRAME_INTERVAL_MS_FOR_NF)
-                                < current_time_monotonic()) {
-                            uint32_t pkg_buf_len = 2;
-                            uint8_t pkg_buf[pkg_buf_len];
-                            pkg_buf[0] = PACKET_TOXAV_COMM_CHANNEL;
-                            pkg_buf[1] = PACKET_TOXAV_COMM_CHANNEL_REQUEST_KEYFRAME;
-
-                            if (-1 == send_custom_lossless_packet(m, vc->friend_number, pkg_buf, pkg_buf_len)) {
-                                LOGGER_WARNING(vc->log,
-                                               "PACKET_TOXAV_COMM_CHANNEL:RTP send failed (2)");
-                            } else {
-                                LOGGER_WARNING(vc->log,
-                                               "PACKET_TOXAV_COMM_CHANNEL:RTP Sent. (2)");
-                                have_requested_index_frame = true;
-                                vc->last_requested_keyframe_ts = current_time_monotonic();
-                            }
+                        if (-1 == send_custom_lossless_packet(m, vc->friend_number, pkg_buf, pkg_buf_len)) {
+                            LOGGER_WARNING(vc->log,
+                                           "PACKET_TOXAV_COMM_CHANNEL:RTP send failed (2)");
+                        } else {
+                            LOGGER_WARNING(vc->log,
+                                           "PACKET_TOXAV_COMM_CHANNEL:RTP Sent. (2)");
+                            have_requested_index_frame = true;
+                            vc->last_requested_keyframe_ts = current_time_monotonic();
                         }
                     }
                 }
@@ -526,15 +512,8 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
             const Messenger *mm = (Messenger *)(vc->av->m);
             const Messenger_Options *mo = (Messenger_Options *) & (mm->options);
 
-            if (mo->proxy_info.proxy_type != TCP_PROXY_NONE) {
-                // HINT: we are using a proxy, most likely Tor
-                //       so be much more aggressive on data loss!
-                bwc_add_lost_v3(bwc, full_data_len, true);
-                LOGGER_ERROR(vc->log, "BWC:lost:004:*PROXY*");
-            } else {
-                bwc_add_lost_v3(bwc, (header_v3->received_length_full - full_data_len), false);
-                LOGGER_ERROR(vc->log, "BWC:lost:004");
-            }
+            bwc_add_lost_v3(bwc, (header_v3->received_length_full - full_data_len), false);
+            LOGGER_ERROR(vc->log, "BWC:lost:004");
         }
 
 
@@ -653,6 +632,9 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
     } else {
         // no frame data available
         // LOGGER_WARNING(vc->log, "Error decoding video: rb_read");
+        if (removed_entries > 0) {
+            LOGGER_WARNING(vc->log, "removed entries=%d", (int)removed_entries);
+        }
     }
 
     pthread_mutex_unlock(vc->queue_mutex);

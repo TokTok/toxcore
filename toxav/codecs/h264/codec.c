@@ -370,7 +370,7 @@ uint32_t encode_frame_h264(ToxAV *av, uint32_t friend_number, uint16_t width, ui
     call->video.second->h264_in_pic.i_pts = (int64_t)(*video_frame_record_timestamp);
 
     if ((vpx_encode_flags & VPX_EFLAG_FORCE_KF) > 0) {
-        call->video.second->h264_in_pic.i_type = X264_TYPE_KEYFRAME;
+        call->video.second->h264_in_pic.i_type = X264_TYPE_I; // real full i-frame
         call->video.second->last_sent_keyframe_ts = current_time_monotonic();
     } else {
         call->video.second->h264_in_pic.i_type = X264_TYPE_AUTO;
