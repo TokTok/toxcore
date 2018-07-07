@@ -219,9 +219,18 @@ bool tsb_read(TSBuffer *b, void **p, uint64_t *data_type, uint32_t *timestamp_ou
         return false;
     }
 
-    uint16_t removed_entries = tsb_delete_old_entries(b, (timestamp_in - timestamp_range));
-    *removed_entries_back = removed_entries;
-    return tsb_return_oldest_entry_in_range(b, p, data_type, timestamp_out, timestamp_in, timestamp_range);
+    bool have_found_element = tsb_return_oldest_entry_in_range(b, p, data_type, timestamp_out, timestamp_in,
+                              timestamp_range);
+
+    if (have_found_element == true) {
+        // only delete old entries if we found a "wanted" entry
+        uint16_t removed_entries = tsb_delete_old_entries(b, (timestamp_in - timestamp_range));
+        *removed_entries_back = removed_entries;
+    } else {
+        *removed_entries_back = 0;
+    }
+
+    return have_found_element;
 }
 
 TSBuffer *tsb_new(const int size)
