@@ -155,7 +155,7 @@ static inline struct RTPMessage *jbuf_read(Logger *log, struct TSBuffer *q, int3
         int64_t timestamp_difference_adjustment_,
         int64_t timestamp_difference_to_sender_)
 {
-#define AUDIO_CURRENT_TS_SPAN_MS 50
+#define AUDIO_CURRENT_TS_SPAN_MS 70
 
     void *ret = NULL;
     uint64_t lost_frame = 0;

@@ -304,7 +304,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 #endif
 
 
-#define VIDEO_CURRENT_TS_SPAN_MS 50
+#define VIDEO_CURRENT_TS_SPAN_MS 70
     uint16_t removed_entries;
 
     // HINT: give me video frames that happend "now" minus some diff
@@ -327,12 +327,12 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
                        (int)removed_entries);
 
         if ((int)timestamp_max > (int)timestamp_want_get) {
-            if (((int)timestamp_max - (int)timestamp_want_get) > 80) {
+            if (((int)timestamp_max - (int)timestamp_want_get) > 90) {
                 // more than 80ms delay for video stream, hmm lets drift the timestamp a bit
                 vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment +
                                                       (((int)timestamp_max - (int)timestamp_want_get) - 60);
                 LOGGER_WARNING(vc->log, " +++++++ LARGE");
-            } else if (((int)timestamp_max - (int)timestamp_want_get) > 70) {
+            } else if (((int)timestamp_max - (int)timestamp_want_get) > 80) {
                 // more than 80ms delay for video stream, hmm lets drift the timestamp a bit
                 vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment + 25;
                 LOGGER_WARNING(vc->log, " +++++ 25");
@@ -344,16 +344,16 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
                 vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment -
                                                       ((int)timestamp_want_get - (int)timestamp_out_);
             } else {
-                vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment - 3;
+                vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment - 2;
             }
 
-            LOGGER_DEBUG(vc->log, " ---");
+            LOGGER_WARNING(vc->log, " ---");
         } else if ((int)timestamp_want_get < (int)timestamp_out_) {
             if (vc->startup_video_timespan == 0) {
                 vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment +
                                                       ((int)timestamp_out_ - (int)timestamp_want_get);
             } else {
-                vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment + 4;
+                vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment + 3;
             }
 
             LOGGER_WARNING(vc->log, " +++");
