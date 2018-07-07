@@ -96,7 +96,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc->last_incoming_frame_ts = 0;
     vc->timestamp_difference_to_sender = 0;
     vc->timestamp_difference_adjustment = 0;
-    vc->startup_video_timespan = 5000;
+    vc->startup_video_timespan = 8000;
     // options ---
 
 
@@ -304,7 +304,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 #endif
 
 
-#define VIDEO_CURRENT_TS_SPAN_MS 70
+#define VIDEO_CURRENT_TS_SPAN_MS 120
     uint16_t removed_entries;
 
     // HINT: give me video frames that happend "now" minus some diff
@@ -347,7 +347,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
                 vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment - 2;
             }
 
-            LOGGER_WARNING(vc->log, " ---");
+            LOGGER_DEBUG(vc->log, " ---");
         } else if ((int)timestamp_want_get < (int)timestamp_out_) {
             if (vc->startup_video_timespan == 0) {
                 vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment +
@@ -356,7 +356,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
                 vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment + 3;
             }
 
-            LOGGER_WARNING(vc->log, " +++");
+            LOGGER_DEBUG(vc->log, " +++");
         }
 
         if (vc->startup_video_timespan > 0) {
