@@ -45,6 +45,7 @@
 #define TOXAV_ENCODER_CODEC_HW_ACCEL_NONE 0
 #define TOXAV_ENCODER_CODEC_HW_ACCEL_OMX_PI 1
 
+
 typedef struct ToxAVCall_s {
     ToxAV *av;
 
@@ -71,6 +72,10 @@ typedef struct ToxAVCall_s {
 
     uint64_t last_incoming_audio_frame_rtimestamp;
     uint64_t last_incoming_audio_frame_ltimestamp;
+    
+    int64_t call_timestamp_difference_to_sender;
+    int64_t call_timestamp_difference_adjustment;
+    uint32_t call_rountrip_time_ms;
 
     uint64_t reference_rtimestamp;
     uint64_t reference_ltimestamp;

@@ -21,6 +21,7 @@
 #define AUDIO_H
 
 #include "toxav.h"
+#include "video.h"
 
 #include "../toxcore/logger.h"
 #include "../toxcore/util.h"
@@ -29,7 +30,7 @@
 #include <pthread.h>
 
 
-#define AUDIO_JITTERBUFFER_COUNT (5) // ORIG = 3
+#define AUDIO_JITTERBUFFER_COUNT 100 // (5) // ORIG = 3
 #define AUDIO_JITTERBUFFER_FILL_THRESHOLD (98) // this should be lower than the above value!
 #define AUDIO_JITTERBUFFER_SKIP_THRESHOLD (99)
 
@@ -95,7 +96,9 @@ typedef struct ACSession_s {
 ACSession *ac_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_audio_receive_frame_cb *cb, void *cb_data);
 void ac_kill(ACSession *ac);
 uint8_t ac_iterate(ACSession *ac, uint64_t *a_r_timestamp, uint64_t *a_l_timestamp, uint64_t *v_r_timestamp,
-                   uint64_t *v_l_timestamp);
+                   uint64_t *v_l_timestamp,
+                   int64_t *timestamp_difference_adjustment_,
+                   int64_t *timestamp_difference_to_sender_);
 int ac_queue_message(void *acp, struct RTPMessage *msg);
 int ac_reconfigure_encoder(ACSession *ac, int32_t bit_rate, int32_t sampling_rate, uint8_t channels);
 

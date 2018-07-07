@@ -25,6 +25,7 @@
 
 #include "bwcontroller.h"
 #include "video.h"
+#include "dummy_ntp.h"
 
 #include "../toxcore/Messenger.h"
 #include "../toxcore/network.h"
@@ -542,6 +543,94 @@ static int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t 
 
                     ((VCSession *)(session->cs))->skip_fps_release_counter = TOXAV_SKIP_FPS_RELEASE_AFTER_FRAMES;
                 }
+            } else if (data[1] == PACKET_TOXAV_COMM_CHANNEL_DUMMY_NTP_REQUEST) {
+
+                uint32_t pkg_buf_len = (sizeof(uint32_t) * 3) + 2;
+                uint8_t pkg_buf[pkg_buf_len];
+                pkg_buf[0] = PACKET_TOXAV_COMM_CHANNEL;
+                pkg_buf[1] = PACKET_TOXAV_COMM_CHANNEL_DUMMY_NTP_ANSWER;
+                uint32_t tmp = current_time_monotonic();
+                pkg_buf[2] = data[2];
+                pkg_buf[3] = data[3];
+                pkg_buf[4] = data[4];
+                pkg_buf[5] = data[5];
+                //
+                pkg_buf[6] = tmp >> 24 & 0xFF;
+                pkg_buf[7] = tmp >> 16 & 0xFF;
+                pkg_buf[8] = tmp >> 8  & 0xFF;
+                pkg_buf[9] = tmp       & 0xFF;
+                tmp = tmp + 1; // add 1 ms delay between receiving answer and sending response
+                pkg_buf[10] = tmp >> 24 & 0xFF;
+                pkg_buf[11] = tmp >> 16 & 0xFF;
+                pkg_buf[12] = tmp >> 8  & 0xFF;
+                pkg_buf[13] = tmp       & 0xFF;
+
+                LOGGER_DEBUG(m->log, "RECVD:PACKET_TOXAV_COMM_CHANNEL_DUMMY_NTP_REQUEST: %d %d %d %d",
+                             pkg_buf[6], pkg_buf[7], pkg_buf[8], pkg_buf[9]);
+
+                int result = send_custom_lossless_packet(m, friendnumber, pkg_buf, pkg_buf_len);
+
+
+            } else if (data[1] == PACKET_TOXAV_COMM_CHANNEL_DUMMY_NTP_ANSWER) {
+
+                LOGGER_DEBUG(m->log, "RECVD:PACKET_TOXAV_COMM_CHANNEL_DUMMY_NTP_ANSWER: %d %d %d %d",
+                             data[6], data[7], data[8], data[9]);
+
+
+                ((VCSession *)(session->cs))->dummy_ntp_local_start =
+                    ((uint32_t)(data[2]) << 24)
+                    +
+                    ((uint32_t)(data[3]) << 16)
+                    +
+                    ((uint32_t)(data[4]) << 8)
+                    +
+                    (data[5]);
+
+                ((VCSession *)(session->cs))->dummy_ntp_remote_start =
+                    ((uint32_t)data[6] << 24)
+                    +
+                    ((uint32_t)data[7] << 16)
+                    +
+                    ((uint32_t)data[8] << 8)
+                    +
+                    (data[9]);
+
+                ((VCSession *)(session->cs))->dummy_ntp_remote_end =
+                    ((uint32_t)data[10] << 24)
+                    +
+                    ((uint32_t)data[11] << 16)
+                    +
+                    ((uint32_t)data[12] << 8)
+                    +
+                    (data[13]);
+
+                ((VCSession *)(session->cs))->dummy_ntp_local_end = current_time_monotonic();
+
+                LOGGER_DEBUG(m->log, "DNTP:%ld %ld %ld %ld",
+                             ((VCSession *)(session->cs))->dummy_ntp_local_start,
+                             ((VCSession *)(session->cs))->dummy_ntp_remote_start,
+                             ((VCSession *)(session->cs))->dummy_ntp_remote_end,
+                             ((VCSession *)(session->cs))->dummy_ntp_local_end);
+
+                int64_t offset_ = dntp_calc_offset(((VCSession *)(session->cs))->dummy_ntp_remote_start,
+                                                   ((VCSession *)(session->cs))->dummy_ntp_remote_end,
+                                                   ((VCSession *)(session->cs))->dummy_ntp_local_start,
+                                                   ((VCSession *)(session->cs))->dummy_ntp_local_end);
+
+                uint32_t roundtrip_ = dntp_calc_roundtrip_delay(((VCSession *)(session->cs))->dummy_ntp_remote_start,
+                                      ((VCSession *)(session->cs))->dummy_ntp_remote_end,
+                                      ((VCSession *)(session->cs))->dummy_ntp_local_start,
+                                      ((VCSession *)(session->cs))->dummy_ntp_local_end);
+
+                ((VCSession *)(session->cs))->rountrip_time_ms = roundtrip_;
+
+                LOGGER_DEBUG(m->log, "DNTP:offset=%lld roundtrip=%ld", offset_, roundtrip_);
+                // LOGGER_WARNING(m->log, "DNTP:A:offset new=%lld", ((VCSession *)(session->cs))->timestamp_difference_to_sender);
+
+                int64_t *ptmp = &(((VCSession *)(session->cs))->timestamp_difference_to_sender);
+
+                bool res4 = dntp_drift(ptmp, offset_, (int64_t)300);
+                LOGGER_DEBUG(m->log, "DNTP:*B*:offset new=%lld", ((VCSession *)(session->cs))->timestamp_difference_to_sender);
             }
         }
 
@@ -594,6 +683,37 @@ static int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t 
     LOGGER_DEBUG(m->log, "header.pt %d, video %d", (uint8_t)header.pt, (rtp_TypeVideo % 128));
 
     LOGGER_DEBUG(m->log, "rtp packet record time: %llu", header.frame_record_timestamp);
+
+
+
+
+    // HINT: ask sender for dummy ntp values -------------
+    if (
+        (
+            ((header.sequnum % 100) == 0)
+            ||
+            (header.sequnum < 30)
+        )
+        && (header.offset_lower == 0)) {
+        uint32_t pkg_buf_len = (sizeof(uint32_t) * 3) + 2;
+        uint8_t pkg_buf[pkg_buf_len];
+        pkg_buf[0] = PACKET_TOXAV_COMM_CHANNEL;
+        pkg_buf[1] = PACKET_TOXAV_COMM_CHANNEL_DUMMY_NTP_REQUEST;
+        uint32_t tmp = current_time_monotonic();
+        pkg_buf[2] = tmp >> 24 & 0xFF;
+        pkg_buf[3] = tmp >> 16 & 0xFF;
+        pkg_buf[4] = tmp >> 8  & 0xFF;
+        pkg_buf[5] = tmp       & 0xFF;
+
+        int result = send_custom_lossless_packet(m, friendnumber, pkg_buf, pkg_buf_len);
+    }
+
+    // HINT: ask sender for dummy ntp values -------------
+
+
+
+
+
 
 
     // The sender uses the new large-frame capable protocol and is sending a

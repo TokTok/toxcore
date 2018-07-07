@@ -43,6 +43,7 @@
 #include <libavutil/common.h>
 // for openH264 ----------
 
+#define USE_TS_BUFFER_FOR_VIDEO   1
 
 // TODO: don't hardcode this, let the application choose it
 // VPX Info: Time to spend encoding, in microseconds (it's a *soft* deadline)
@@ -59,6 +60,8 @@ typedef enum PACKET_TOXAV_COMM_CHANNEL_FUNCTION {
     PACKET_TOXAV_COMM_CHANNEL_REQUEST_KEYFRAME = 0,
     PACKET_TOXAV_COMM_CHANNEL_HAVE_H264_VIDEO = 1,
     PACKET_TOXAV_COMM_CHANNEL_LESS_VIDEO_FPS = 2,
+    PACKET_TOXAV_COMM_CHANNEL_DUMMY_NTP_REQUEST = 3,
+    PACKET_TOXAV_COMM_CHANNEL_DUMMY_NTP_ANSWER = 4,
 } PACKET_TOXAV_COMM_CHANNEL_FUNCTION;
 
 
@@ -105,7 +108,7 @@ typedef enum PACKET_TOXAV_COMM_CHANNEL_FUNCTION {
 #define VIDEO_RINGBUFFER_FILL_THRESHOLD (2 * VIDEO_CODEC_FRAGMENT_NUMS) // start decoding at lower quality
 #define VIDEO_RINGBUFFER_DROP_THRESHOLD (5 * VIDEO_CODEC_FRAGMENT_NUMS) // start dropping incoming frames (except index frames)
 #else
-#define VIDEO_RINGBUFFER_BUFFER_ELEMENTS (8) // this buffer has normally max. 1 entry
+#define VIDEO_RINGBUFFER_BUFFER_ELEMENTS (20) // this buffer has normally max. 1 entry
 #define VIDEO_RINGBUFFER_FILL_THRESHOLD (2) // start decoding at lower quality
 #define VIDEO_RINGBUFFER_DROP_THRESHOLD (5) // start dropping incoming frames (except index frames)
 #endif
@@ -131,6 +134,7 @@ typedef enum PACKET_TOXAV_COMM_CHANNEL_FUNCTION {
 
 struct RTPMessage;
 struct RingBuffer;
+struct TSBuffer;
 
 
 struct OMXContext;
@@ -153,8 +157,11 @@ typedef struct VCSession_s {
     /* decoding */
     vpx_codec_ctx_t decoder[1];
     AVCodecContext *h264_decoder;
+#ifdef USE_TS_BUFFER_FOR_VIDEO
+    struct TSBuffer *vbuf_raw; /* Un-decoded data */
+#else
     struct RingBuffer *vbuf_raw; /* Un-decoded data */
-
+#endif
     uint64_t linfts; /* Last received frame time stamp */
     uint32_t lcfd; /* Last calculated frame duration for incoming video payload */
 
@@ -179,7 +186,14 @@ typedef struct VCSession_s {
     uint8_t skip_fps_counter;
 
     int64_t timestamp_difference_to_sender;
+    int64_t timestamp_difference_adjustment;
+    uint32_t rountrip_time_ms;
     uint64_t last_incoming_frame_ts;
+
+    uint32_t dummy_ntp_local_start;
+    uint32_t dummy_ntp_local_end;
+    uint32_t dummy_ntp_remote_start;
+    uint32_t dummy_ntp_remote_end;
 
     // options ---
     int32_t video_encoder_cpu_used;
@@ -199,6 +213,7 @@ typedef struct VCSession_s {
     int32_t video_decoder_error_concealment;
     int32_t video_decoder_error_concealment_prev;
     int32_t video_decoder_codec_used;
+    int32_t startup_video_timespan;
     // options ---
 
     void *vpx_frames_buf_list[VIDEO_MAX_FRAGMENT_BUFFER_COUNT];
@@ -220,7 +235,9 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
 void vc_kill(VCSession *vc);
 uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_t *a_r_timestamp,
                    uint64_t *a_l_timestamp,
-                   uint64_t *v_r_timestamp, uint64_t *v_l_timestamp, BWController *bwc);
+                   uint64_t *v_r_timestamp, uint64_t *v_l_timestamp, BWController *bwc,
+                   int64_t *timestamp_difference_adjustment_,
+                   int64_t *timestamp_difference_to_sender_);
 int vc_queue_message(void *vcp, struct RTPMessage *msg);
 int vc_reconfigure_encoder(Logger *log, VCSession *vc, uint32_t bit_rate, uint16_t width, uint16_t height,
                            int16_t kf_max_dist);

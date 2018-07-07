@@ -24,6 +24,7 @@
 #include "audio.h"
 
 #include "ring_buffer.h"
+#include "ts_buffer.h"
 #include "rtp.h"
 
 #include "../toxcore/logger.h"
@@ -31,10 +32,17 @@
 #include <stdlib.h>
 
 
+#ifdef USE_TS_BUFFER_FOR_VIDEO
+static struct TSBuffer *jbuf_new(int size);
+static void jbuf_clear(struct TSBuffer *q);
+static void jbuf_free(struct TSBuffer *q);
+static int jbuf_write(Logger *log, ACSession *ac, struct TSBuffer *q, struct RTPMessage *m);
+#else
 static struct RingBuffer *jbuf_new(int size);
 static void jbuf_clear(struct RingBuffer *q);
 static void jbuf_free(struct RingBuffer *q);
 static int jbuf_write(Logger *log, ACSession *ac, struct RingBuffer *q, struct RTPMessage *m);
+#endif
 OpusEncoder *create_audio_encoder(Logger *log, int32_t bit_rate, int32_t sampling_rate, int32_t channel_count);
 bool reconfigure_audio_encoder(Logger *log, OpusEncoder **e, int32_t new_br, int32_t new_sr, uint8_t new_ch,
                                int32_t *old_br, int32_t *old_sr, int32_t *old_ch);
@@ -108,7 +116,13 @@ ACSession *ac_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_audio_re
 
 DECODER_CLEANUP:
     opus_decoder_destroy(ac->decoder);
+
+#ifdef USE_TS_BUFFER_FOR_VIDEO
+    jbuf_free((struct TSBuffer *)ac->j_buf);
+#else
     jbuf_free((struct RingBuffer *)ac->j_buf);
+#endif
+
 BASE_CLEANUP:
     pthread_mutex_destroy(ac->queue_mutex);
     free(ac);
@@ -123,7 +137,12 @@ void ac_kill(ACSession *ac)
 
     opus_encoder_destroy(ac->encoder);
     opus_decoder_destroy(ac->decoder);
+
+#ifdef USE_TS_BUFFER_FOR_VIDEO
+    jbuf_free((struct TSBuffer *)ac->j_buf);
+#else
     jbuf_free((struct RingBuffer *)ac->j_buf);
+#endif
 
     pthread_mutex_destroy(ac->queue_mutex);
 
@@ -131,7 +150,48 @@ void ac_kill(ACSession *ac)
     free(ac);
 }
 
-static inline struct RTPMessage *jbuf_read(Logger *log, struct RingBuffer *q, int32_t *success)
+#ifdef USE_TS_BUFFER_FOR_VIDEO
+static inline struct RTPMessage *jbuf_read(Logger *log, struct TSBuffer *q, int32_t *success,
+        int64_t timestamp_difference_adjustment_,
+        int64_t timestamp_difference_to_sender_)
+{
+#define AUDIO_CURRENT_TS_SPAN_MS 180
+
+    void *ret = NULL;
+    uint64_t lost_frame = 0;
+    uint32_t timestamp_out_ = 0;
+    int64_t want_remote_video_ts = (current_time_monotonic() + timestamp_difference_to_sender_ +
+                                    timestamp_difference_adjustment_);
+    *success = 0;
+    uint16_t removed_entries;
+
+    bool res = tsb_read(q, &ret, &lost_frame,
+                        &timestamp_out_,
+                        want_remote_video_ts - GENERAL_TS_DIFF,
+                        AUDIO_CURRENT_TS_SPAN_MS,
+                        &removed_entries);
+
+    LOGGER_DEBUG(log, "jbuf_read:lost_frame=%d", (int)lost_frame);
+
+    if (res == true) {
+        *success = 1;
+    }
+
+    if (lost_frame == 1) {
+        *success = AUDIO_LOST_FRAME_INDICATOR;
+    }
+
+    return (struct RTPMessage *)ret;
+}
+
+static inline bool jbuf_is_empty(struct TSBuffer *q)
+{
+    return tsb_empty(q);
+}
+#else
+static inline struct RTPMessage *jbuf_read(Logger *log, struct RingBuffer *q, int32_t *success,
+        int64_t timestamp_difference_adjustment_,
+        int64_t timestamp_difference_to_sender_)
 {
     void *ret = NULL;
     uint64_t lost_frame = 0;
@@ -160,42 +220,28 @@ static inline bool jbuf_is_empty(struct RingBuffer *q)
 {
     return rb_empty(q);
 }
+#endif
 
 uint8_t ac_iterate(ACSession *ac, uint64_t *a_r_timestamp, uint64_t *a_l_timestamp, uint64_t *v_r_timestamp,
-                   uint64_t *v_l_timestamp)
+                   uint64_t *v_l_timestamp,
+                   int64_t *timestamp_difference_adjustment_,
+                   int64_t *timestamp_difference_to_sender_)
 {
     if (!ac) {
         return 0;
     }
 
     uint8_t ret_value = 1;
+#ifdef USE_TS_BUFFER_FOR_VIDEO
+    struct TSBuffer *jbuffer = (struct TSBuffer *)ac->j_buf;
+#else
     struct RingBuffer *jbuffer = (struct RingBuffer *)ac->j_buf;
-
-    //if (jbuffer)
-    //{
-    //  LOGGER_INFO(ac->log, "jitterbuffer elements=%u", rb_size(jbuffer));
-    //}
+#endif
 
     if (jbuf_is_empty(jbuffer)) {
         return 0;
-    } else if (rb_size(jbuffer) > AUDIO_JITTERBUFFER_FILL_THRESHOLD) {
-        // audio frames are building up, skip video frames to compensate
-        LOGGER_INFO(ac->log, "incoming audio frames are piling up. num=%d", (int)rb_size(jbuffer));
-        // ** // disabled, DONT skip video frames // ret_value = 2;
     }
 
-#if 0
-    else if (rb_size(jbuffer) > AUDIO_JITTERBUFFER_SKIP_THRESHOLD) {
-        // audio frames are still building up, skip audio frames to synchronize again
-        int rc_skip = 0;
-        LOGGER_DEBUG(ac->log, "skipping some incoming audio frames");
-        free(jbuf_read(ac->log, jbuffer, &rc_skip));
-        free(jbuf_read(ac->log, jbuffer, &rc_skip));
-        free(jbuf_read(ac->log, jbuffer, &rc_skip));
-        return 1;
-    }
-
-#endif
 
     /* Enough space for the maximum frame size (120 ms 48 KHz stereo audio) */
     int16_t temp_audio_buffer[AUDIO_MAX_BUFFER_SIZE_PCM16_FOR_FRAME_PER_CHANNEL *
@@ -206,7 +252,9 @@ uint8_t ac_iterate(ACSession *ac, uint64_t *a_r_timestamp, uint64_t *a_l_timesta
 
     pthread_mutex_lock(ac->queue_mutex);
 
-    while ((msg = jbuf_read(ac->log, jbuffer, &rc)) || rc == AUDIO_LOST_FRAME_INDICATOR) {
+    while ((msg = jbuf_read(ac->log, jbuffer, &rc,
+                            *timestamp_difference_adjustment_, *timestamp_difference_to_sender_))
+            || rc == AUDIO_LOST_FRAME_INDICATOR) {
         pthread_mutex_unlock(ac->queue_mutex);
 
         if (rc == AUDIO_LOST_FRAME_INDICATOR) {
@@ -329,7 +377,11 @@ int ac_queue_message(void *acp, struct RTPMessage *msg)
     const struct RTPHeader *header_v3 = (void *) & (msg->header);
     // LOGGER_ERROR(ac->log, "TT:queue:A:seqnum=%d %llu", (int)header_v3->sequnum, header_v3->frame_record_timestamp);
 
+#ifdef USE_TS_BUFFER_FOR_VIDEO
+    int rc = jbuf_write(ac->log, ac, (struct TSBuffer *)ac->j_buf, msg);
+#else
     int rc = jbuf_write(ac->log, ac, (struct RingBuffer *)ac->j_buf, msg);
+#endif
     pthread_mutex_unlock(ac->queue_mutex);
 
     if (rc == -99) {
@@ -350,6 +402,7 @@ int ac_queue_message(void *acp, struct RTPMessage *msg)
 
         ac->last_incoming_frame_ts = header_v3->frame_record_timestamp;
 
+#if 0
         int64_t cur_diff_in_ms = (int64_t)(current_time_monotonic() - ac->last_incoming_frame_ts);
         ac->timestamp_difference_to_sender = ac->timestamp_difference_to_sender
                                              + ((cur_diff_in_ms - ac->timestamp_difference_to_sender) / 2); // go half way in that direction
@@ -358,6 +411,7 @@ int ac_queue_message(void *acp, struct RTPMessage *msg)
                      (uint64_t)(current_time_monotonic() - ac->timestamp_difference_to_sender),
                      (int)((uint64_t)(current_time_monotonic() - ac->timestamp_difference_to_sender) -
                            (uint64_t)ac->last_incoming_frame_ts));
+#endif
     }
 
     return 0;
@@ -376,6 +430,22 @@ int ac_reconfigure_encoder(ACSession *ac, int32_t bit_rate, int32_t sampling_rat
     return 0;
 }
 
+#ifdef USE_TS_BUFFER_FOR_VIDEO
+static struct TSBuffer *jbuf_new(int size)
+{
+    return tsb_new(size);
+}
+
+static void jbuf_clear(struct TSBuffer *q)
+{
+    tsb_drain(q);
+}
+
+static void jbuf_free(struct TSBuffer *q)
+{
+    tsb_kill(q);
+}
+#else
 static struct RingBuffer *jbuf_new(int size)
 {
     return rb_new(size);
@@ -395,6 +465,7 @@ static void jbuf_free(struct RingBuffer *q)
 {
     rb_kill(q);
 }
+#endif
 
 static struct RTPMessage *new_empty_message(size_t allocate_len, const uint8_t *data, uint16_t data_length)
 {
@@ -417,16 +488,44 @@ static struct RTPMessage *new_empty_message(size_t allocate_len, const uint8_t *
     return msg;
 }
 
-static int jbuf_write(Logger *log, ACSession *ac, struct RingBuffer *q, struct RTPMessage *m)
-{
-#if 0
 
-    if (rb_full(q)) {
-        LOGGER_DEBUG(log, "AADEBUG:AudioFramesIN: jitter buffer full: %p", q);
-        return -99;
+#ifdef USE_TS_BUFFER_FOR_VIDEO
+static int jbuf_write(Logger *log, ACSession *ac, struct TSBuffer *q, struct RTPMessage *m)
+{
+
+    if (ac->lp_seqnum == -1) {
+        ac->lp_seqnum = m->header.sequnum;
+    } else {
+        // m->header.seqnum is of size "uint16_t"
+        if (
+            ((int32_t)m->header.sequnum > ac->lp_seqnum)
+            ||
+            ((m->header.sequnum < 8) && (ac->lp_seqnum > (UINT16_MAX - 7)))
+        ) {
+            // int64_t diff = (m->header.sequnum - ac->lp_seqnum);
+            ac->lp_seqnum = m->header.sequnum;
+        } else {
+            LOGGER_DEBUG(log, "AADEBUG:AudioFramesIN: old audio frames received hseqnum=%d, lpseqnum=%d",
+                         (int)m->header.sequnum,
+                         (int)ac->lp_seqnum);
+            return -1;
+        }
     }
 
-#endif
+    void *tmp_buf2 = tsb_write(q, (void *)m, 0, (uint32_t)m->header.frame_record_timestamp);
+
+    if (tmp_buf2 != NULL) {
+        LOGGER_DEBUG(log, "AADEBUG:rb_write: error in rb_write:rb_size=%d", (int)tsb_size(q));
+        free(tmp_buf2);
+        return -1;
+    }
+
+
+    return 0;
+}
+#else
+static int jbuf_write(Logger *log, ACSession *ac, struct RingBuffer *q, struct RTPMessage *m)
+{
 
     if (ac->lp_seqnum == -1) {
         ac->lp_seqnum = m->header.sequnum;
@@ -493,6 +592,7 @@ static int jbuf_write(Logger *log, ACSession *ac, struct RingBuffer *q, struct R
 
     return 0;
 }
+#endif
 
 OpusEncoder *create_audio_encoder(Logger *log, int32_t bit_rate, int32_t sampling_rate, int32_t channel_count)
 {

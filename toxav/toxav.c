@@ -188,7 +188,9 @@ static void *video_play_bg(void *data)
                                                  &(call->last_incoming_audio_frame_ltimestamp),
                                                  &(call->last_incoming_video_frame_rtimestamp),
                                                  &(call->last_incoming_video_frame_ltimestamp),
-                                                 call->bwc
+                                                 call->bwc,
+                                                 &(call->call_timestamp_difference_adjustment),
+                                                 &(call->call_timestamp_difference_to_sender)
                                                 );
         }
     }
@@ -221,25 +223,6 @@ void toxav_iterate(ToxAV *av)
             pthread_mutex_unlock(av->mutex);
 
 
-
-
-
-            VCSession *vc1 = (VCSession *)i->video.second;
-            // LOGGER_ERROR(av->m->log, "video-ts=%d",
-            //             (int)vc1->timestamp_difference_to_sender);
-
-            ACSession *ac1 = (ACSession *)i->audio.second;
-            // LOGGER_ERROR(av->m->log, "audio-ts=%d",
-            //             (int)ac1->timestamp_difference_to_sender);
-
-            const int diff_streams = (int)(vc1->timestamp_difference_to_sender - ac1->timestamp_difference_to_sender);
-
-            // if ((diff_streams < -40) || (diff_streams > 40)) {
-            //    LOGGER_ERROR(av->m->log, "video (to audio) delay in ms=%d", diff_streams);
-            // }
-
-
-
 #if !defined(_GNU_SOURCE)
             video_play_bg((void *)(i));
 #else
@@ -263,7 +246,9 @@ void toxav_iterate(ToxAV *av)
                                         &(i->last_incoming_audio_frame_rtimestamp),
                                         &(i->last_incoming_audio_frame_ltimestamp),
                                         &(i->last_incoming_video_frame_rtimestamp),
-                                        &(i->last_incoming_video_frame_ltimestamp)
+                                        &(i->last_incoming_video_frame_ltimestamp),
+                                        &(i->call_timestamp_difference_adjustment),
+                                        &(i->call_timestamp_difference_to_sender)
                                        );
 
             if (res_ac == 2) {
@@ -290,7 +275,9 @@ void toxav_iterate(ToxAV *av)
                                    &(i->last_incoming_audio_frame_rtimestamp),
                                    &(i->last_incoming_audio_frame_ltimestamp),
                                    &(i->last_incoming_video_frame_rtimestamp),
-                                   &(i->last_incoming_video_frame_ltimestamp)
+                                   &(i->last_incoming_video_frame_ltimestamp),
+                                   &(i->call_timestamp_difference_adjustment),
+                                   &(i->call_timestamp_difference_to_sender)
                                   ) == 0) {
                         // TODO: Zoff: not sure if this sleep is good, or bad??
                         usleep(40);
@@ -805,10 +792,12 @@ END:
 
 bool toxav_video_set_bit_rate(ToxAV *av, uint32_t friend_number, int32_t video_bit_rate, TOXAV_ERR_BIT_RATE_SET *error)
 {
+    return true;
 }
 
 bool toxav_audio_set_bit_rate(ToxAV *av, uint32_t friend_number, int32_t audio_bit_rate, TOXAV_ERR_BIT_RATE_SET *error)
 {
+    return true;
 }
 
 bool toxav_bit_rate_set(ToxAV *av, uint32_t friend_number, int32_t audio_bit_rate,
@@ -1352,11 +1341,21 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         // vpx_encode_flags |= VP8_EFLAG_FORCE_ARF;
         call->video.second->send_keyframe_request_received = 0;
     } else {
+        LOGGER_DEBUG(av->m->log, "++++ FORCE KEYFRAME ++++:%d %d %d",
+                     (int)call->video.second->last_sent_keyframe_ts,
+                     (int)VIDEO_MIN_SEND_KEYFRAME_INTERVAL,
+                     (int)current_time_monotonic());
+
         if ((call->video.second->last_sent_keyframe_ts + VIDEO_MIN_SEND_KEYFRAME_INTERVAL)
                 < current_time_monotonic()) {
             // it's been x seconds without a keyframe, send one now
             vpx_encode_flags = VPX_EFLAG_FORCE_KF;
             vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
+
+            LOGGER_DEBUG(av->m->log, "1***** FORCE KEYFRAME ++++");
+            LOGGER_DEBUG(av->m->log, "2***** FORCE KEYFRAME ++++");
+            LOGGER_DEBUG(av->m->log, "3***** FORCE KEYFRAME ++++");
+            LOGGER_DEBUG(av->m->log, "4***** FORCE KEYFRAME ++++");
             // vpx_encode_flags |= VP8_EFLAG_FORCE_ARF;
         } else {
             // vpx_encode_flags |= VP8_EFLAG_FORCE_GF;
