@@ -55,7 +55,7 @@
 
 #define MAX_PATH_NODES 32
 
-#define GC_MAX_DATA_LENGTH (sizeof(Node_format) + CRYPTO_PUBLIC_KEY_SIZE * 2)
+#define GC_MAX_DATA_LENGTH GC_ANNOUNCE_MAX_SIZE
 
 /* If no packets are received within that interval tox will
  * be considered offline.
