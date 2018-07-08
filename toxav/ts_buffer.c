@@ -76,7 +76,7 @@ static void tsb_move_delete_entry(TSBuffer *b, Logger *log, uint16_t src_index, 
         if (msg) {
             const struct RTPHeader *header_v3_0 = & (msg->header);
             int seq = header_v3_0->sequnum;
-            LOGGER_WARNING(log, "tsb:free:seq=%d", (int)seq);
+            LOGGER_DEBUG(log, "tsb:free:seq=%d", (int)seq);
         }
 
         msg = b->data[src_index];
@@ -84,7 +84,7 @@ static void tsb_move_delete_entry(TSBuffer *b, Logger *log, uint16_t src_index, 
         if (msg) {
             const struct RTPHeader *header_v3_0 = & (msg->header);
             int seq = header_v3_0->sequnum;
-            LOGGER_WARNING(log, "tsb:move:seq=%d from %d to %d", (int)seq, (int)src_index, (int)dst_index);
+            LOGGER_DEBUG(log, "tsb:move:seq=%d from %d to %d", (int)seq, (int)src_index, (int)dst_index);
         }
     }
 
@@ -109,7 +109,10 @@ static void tsb_close_hole(TSBuffer *b, Logger *log, uint16_t start_index, uint1
         struct RTPMessage *msg = b->data[hole_index];
         const struct RTPHeader *header_v3_0 = & (msg->header);
         int seq = header_v3_0->sequnum;
-        LOGGER_WARNING(log, "tsb:hole index:seq=%d", (int)seq);
+
+        if (header_v3_0->pt == rtp_TypeVideo % 128) {
+            LOGGER_DEBUG(log, "tsb:hole index:seq=%d", (int)seq);
+        }
     }
 
 
@@ -154,8 +157,11 @@ static uint16_t tsb_delete_old_entries(TSBuffer *b, Logger *log, const uint32_t 
                 struct RTPMessage *msg = b->data[current_element];
                 const struct RTPHeader *header_v3_0 = & (msg->header);
                 int seq = header_v3_0->sequnum;
-                LOGGER_WARNING(log, "tsb:kick:seq=%d diff=%d", (int)seq,
-                               (int)(timestamp_threshold - b->timestamp[current_element]));
+
+                if (header_v3_0->pt == rtp_TypeVideo % 128) {
+                    LOGGER_DEBUG(log, "tsb:kick:seq=%d diff=%d", (int)seq,
+                                 (int)(timestamp_threshold - b->timestamp[current_element]));
+                }
             }
 
             tsb_close_hole(b, log, start_entry, current_element);
@@ -198,7 +204,7 @@ static bool tsb_return_oldest_entry_in_range(TSBuffer *b, Logger *log, void **p,
     uint16_t current_element;
 
     if (log) {
-        LOGGER_WARNING(log, "tsb_old:tsb_size=%d", (int)tsb_size(b));
+        LOGGER_DEBUG(log, "tsb_old:tsb_size=%d", (int)tsb_size(b));
     }
 
     for (int i = 0; i < tsb_size(b); i++) {
@@ -210,14 +216,15 @@ static bool tsb_return_oldest_entry_in_range(TSBuffer *b, Logger *log, void **p,
             if (msg) {
                 const struct RTPHeader *header_v3_0 = & (msg->header);
                 int seq = header_v3_0->sequnum;
-                LOGGER_WARNING(log, "tsb_old:iter:seq=%d ts=%d",
-                               (int)seq, (int)header_v3_0->frame_record_timestamp);
+
+                if (header_v3_0->pt == rtp_TypeVideo % 128) {
+                    LOGGER_DEBUG(log, "XLS02:%d,%d",
+                                 (int)seq, (int)header_v3_0->frame_record_timestamp);
+                }
             }
         }
 
-#define STRANGE_OFFSET (int)(+400)
-
-        if (((b->timestamp[current_element] + STRANGE_OFFSET) >= (timestamp_in - timestamp_range))
+        if (((b->timestamp[current_element]) >= (timestamp_in - timestamp_range))
                 &&
                 (b->timestamp[current_element] <= (timestamp_in + 1))) {
 
@@ -228,12 +235,15 @@ static bool tsb_return_oldest_entry_in_range(TSBuffer *b, Logger *log, void **p,
                 if (msg) {
                     const struct RTPHeader *header_v3_0 = & (msg->header);
                     int seq = header_v3_0->sequnum;
-                    LOGGER_WARNING(log, "tsb_old:in range:seq=%d range=(%d - %d) -> want=%d prevfound=%d",
-                                   (int)seq,
-                                   (int)(timestamp_in - timestamp_range),
-                                   (int)(timestamp_in + 1),
-                                   (int)timestamp_in,
-                                   (int)found_timestamp);
+
+                    if (header_v3_0->pt == rtp_TypeVideo % 128) {
+                        LOGGER_DEBUG(log, "tsb_old:in range:seq=%d range=(%d - %d) -> want=%d prevfound=%d",
+                                     (int)seq,
+                                     (int)(timestamp_in - timestamp_range),
+                                     (int)(timestamp_in + 1),
+                                     (int)timestamp_in,
+                                     (int)found_timestamp);
+                    }
                 }
             }
 
@@ -249,8 +259,11 @@ static bool tsb_return_oldest_entry_in_range(TSBuffer *b, Logger *log, void **p,
                     if (msg) {
                         const struct RTPHeader *header_v3_0 = & (msg->header);
                         int seq = header_v3_0->sequnum;
-                        LOGGER_WARNING(log, "tsb_old:iter:seq=%d found_timestamp=%d",
-                                       (int)seq, (int)found_timestamp);
+
+                        if (header_v3_0->pt == rtp_TypeVideo % 128) {
+                            LOGGER_DEBUG(log, "tsb_old:iter:seq=%d found_timestamp=%d",
+                                         (int)seq, (int)found_timestamp);
+                        }
                     }
                 }
 

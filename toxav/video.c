@@ -287,7 +287,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
     tsb_get_range_in_buffer((TSBuffer *)vc->vbuf_raw, &timestamp_min, &timestamp_max);
 
-    vc->timestamp_difference_adjustment = -400;
+    // vc->timestamp_difference_adjustment = -400;
     int64_t want_remote_video_ts = (current_time_monotonic() + vc->timestamp_difference_to_sender +
                                     vc->timestamp_difference_adjustment);
 
@@ -319,17 +319,22 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
     if (rb_read((RingBuffer *)vc->vbuf_raw, (void **)&p, &frame_flags)) {
 #endif
 
+        LOGGER_DEBUG(vc->log, "XLS01:%d,%d",
+                     (int)(timestamp_want_get - current_time_monotonic()),
+                     (int)(timestamp_out_ - current_time_monotonic())
+                    );
+
         const struct RTPHeader *header_v3_0 = (void *) & (p->header);
 
-        LOGGER_WARNING(vc->log, "seq:%d FC:%d min=%ld max=%ld want=%d got=%d diff=%d rm=%d",
-                       (int)header_v3_0->sequnum,
-                       (int)tsb_size((TSBuffer *)vc->vbuf_raw),
-                       timestamp_min,
-                       timestamp_max,
-                       (int)timestamp_want_get,
-                       (int)timestamp_out_,
-                       ((int)timestamp_want_get - (int)timestamp_out_),
-                       (int)removed_entries);
+        LOGGER_DEBUG(vc->log, "seq:%d FC:%d min=%ld max=%ld want=%d got=%d diff=%d rm=%d",
+                     (int)header_v3_0->sequnum,
+                     (int)tsb_size((TSBuffer *)vc->vbuf_raw),
+                     timestamp_min,
+                     timestamp_max,
+                     (int)timestamp_want_get,
+                     (int)timestamp_out_,
+                     ((int)timestamp_want_get - (int)timestamp_out_),
+                     (int)removed_entries);
 
         uint16_t buf_size = tsb_size((TSBuffer *)vc->vbuf_raw);
         int32_t diff_want_to_got = (int)timestamp_want_get - (int)timestamp_out_;
@@ -338,10 +343,10 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
         if (buf_size < 4) {
             vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment - 10;
-            LOGGER_WARNING(vc->log, " ---- B");
+            LOGGER_DEBUG(vc->log, " ---- B");
         } else if (buf_size > 4) {
             vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment + 10;
-            LOGGER_WARNING(vc->log, " +++++++ B");
+            LOGGER_DEBUG(vc->log, " +++++++ B");
         }
 
 #endif
@@ -350,10 +355,10 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
         if (diff_want_to_got > 0) {
             vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment - 40;
-            LOGGER_WARNING(vc->log, " ----- Diff");
+            LOGGER_DEBUG(vc->log, " ----- Diff");
         } else if (diff_want_to_got < 0) {
             vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment + 40;
-            LOGGER_WARNING(vc->log, " +++++++ Diff");
+            LOGGER_DEBUG(vc->log, " +++++++ Diff");
         }
 
 #endif
@@ -368,7 +373,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
                 vc->tsb_range_ms = 380;
             }
 
-            LOGGER_WARNING(vc->log, " +++++++++++ drift rm=%d %d", (int)removed_entries, (int)vc->tsb_range_ms);
+            LOGGER_DEBUG(vc->log, " +++++++++++ drift rm=%d %d", (int)removed_entries, (int)vc->tsb_range_ms);
         } else if (removed_entries == 0) {
             vc->tsb_range_ms = vc->tsb_range_ms - 1;
 
@@ -376,17 +381,17 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
                 vc->tsb_range_ms = 180;
             }
 
-            LOGGER_WARNING(vc->log, " --------- drift rm=%d %d", (int)removed_entries, (int)vc->tsb_range_ms);
+            LOGGER_DEBUG(vc->log, " --------- drift rm=%d %d", (int)removed_entries, (int)vc->tsb_range_ms);
         }
 
 #endif
 
 
 
-        LOGGER_WARNING(vc->log, "values:diff_to_sender=%d adj=%d tsb_range=%d bufsize=%d",
-                       (int)vc->timestamp_difference_to_sender, (int)vc->timestamp_difference_adjustment,
-                       (int)vc->tsb_range_ms,
-                       (int)buf_size);
+        LOGGER_DEBUG(vc->log, "values:diff_to_sender=%d adj=%d tsb_range=%d bufsize=%d",
+                     (int)vc->timestamp_difference_to_sender, (int)vc->timestamp_difference_adjustment,
+                     (int)vc->tsb_range_ms,
+                     (int)buf_size);
 
 
 
@@ -400,18 +405,18 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
                 // more than 80ms delay for video stream, hmm lets drift the timestamp a bit
                 vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment +
                                                       (((int)timestamp_max - (int)timestamp_want_get) - 50);
-                LOGGER_WARNING(vc->log, " +++++++ LARGE");
+                LOGGER_DEBUG(vc->log, " +++++++ LARGE");
             } else if (((int)timestamp_max - (int)timestamp_want_get) > 90) {
                 // more than 80ms delay for video stream, hmm lets drift the timestamp a bit
                 vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment + 8;
-                LOGGER_WARNING(vc->log, " +++++ small");
+                LOGGER_DEBUG(vc->log, " +++++ small");
             }
         } else if ((int)timestamp_max < (int)timestamp_want_get) {
             if (((int)timestamp_want_get - (int)timestamp_max) > 1) {
                 // more than 80ms delay for video stream, hmm lets drift the timestamp a bit
                 vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment +
                                                       (((int)timestamp_want_get - (int)timestamp_max) - 1);
-                LOGGER_WARNING(vc->log, " ------- LARGE");
+                LOGGER_DEBUG(vc->log, " ------- LARGE");
             }
         }
 
@@ -421,7 +426,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
         if (removed_entries > 0) {
             vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment - (10 * removed_entries);
-            LOGGER_WARNING(vc->log, " ------- 10*x");
+            LOGGER_DEBUG(vc->log, " ------- 10*x");
         }
 
 #endif
@@ -612,12 +617,12 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
             int percent_recvd = (int)(((float)header_v3->received_length_full / (float)full_data_len) * 100.0f);
 
             if (percent_recvd < 100) {
-                LOGGER_WARNING(vc->log, "RTP_RECV:sn=%ld fn=%ld pct=%d%% *I* len=%ld recv_len=%ld",
-                               (long)header_v3->sequnum,
-                               (long)header_v3->fragment_num,
-                               percent_recvd,
-                               (long)full_data_len,
-                               (long)header_v3->received_length_full);
+                LOGGER_DEBUG(vc->log, "RTP_RECV:sn=%ld fn=%ld pct=%d%% *I* len=%ld recv_len=%ld",
+                             (long)header_v3->sequnum,
+                             (long)header_v3->fragment_num,
+                             percent_recvd,
+                             (long)full_data_len,
+                             (long)header_v3->received_length_full);
             } else {
                 LOGGER_DEBUG(vc->log, "RTP_RECV:sn=%ld fn=%ld pct=%d%% *I* len=%ld recv_len=%ld",
                              (long)header_v3->sequnum,
@@ -812,7 +817,7 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
                 int result = send_custom_lossless_packet(vc->av->m, vc->friend_number, pkg_buf, pkg_buf_len);
                 // HINT: tell sender to turn down video FPS -------------
 #endif
-                LOGGER_WARNING(vc->log, "FPATH:%d kicked out", (int)msg_old->header.sequnum);
+                LOGGER_DEBUG(vc->log, "FPATH:%d kicked out", (int)msg_old->header.sequnum);
 
                 free(msg_old);
             }

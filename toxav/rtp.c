@@ -238,11 +238,11 @@ static struct RTPMessage *process_frame(Logger *log, struct RTPWorkBufferList *w
 {
     assert(wkbl->next_free_entry >= 0);
 
-    LOGGER_WARNING(log, "process_frame:slot_id=%d", (int)slot_id);
+    LOGGER_DEBUG(log, "process_frame:slot_id=%d", (int)slot_id);
 
     if (wkbl->next_free_entry == 0) {
         // There are no frames in any slot.
-        LOGGER_WARNING(log, "process_frame:workbuffer empty");
+        LOGGER_DEBUG(log, "process_frame:workbuffer empty");
         return NULL;
     }
 
@@ -263,10 +263,10 @@ static struct RTPMessage *process_frame(Logger *log, struct RTPWorkBufferList *w
 
     // Move ownership of the frame out of the slot into m_new.
     struct RTPMessage *const m_new = slot->buf;
-    LOGGER_WARNING(log, "process_frame:1:m_new=%p", m_new);
+    LOGGER_DEBUG(log, "process_frame:1:m_new=%p", m_new);
 
     if (m_new) {
-        LOGGER_WARNING(log, "process_frame:1:m_new seq#=%d", (int)m_new->header.sequnum);
+        LOGGER_DEBUG(log, "process_frame:1:m_new seq#=%d", (int)m_new->header.sequnum);
     }
 
     slot->buf = NULL;
@@ -276,26 +276,26 @@ static struct RTPMessage *process_frame(Logger *log, struct RTPWorkBufferList *w
     if (slot_id != wkbl->next_free_entry - 1) {
         // The slot is not the last slot, so we created a gap. We move all the
         // entries after it one step up.
-        LOGGER_WARNING(log, "process_frame:We move all entries after it one step up");
+        LOGGER_DEBUG(log, "process_frame:We move all entries after it one step up");
 
         for (uint8_t i = slot_id; i < wkbl->next_free_entry - 1; i++) {
             // Move entry (i+1) into entry (i).
-            LOGGER_WARNING(log, "process_frame:move %d -> %d", (int)(i + 1), (int)i);
+            LOGGER_DEBUG(log, "process_frame:move %d -> %d", (int)(i + 1), (int)i);
             wkbl->work_buffer[i] = wkbl->work_buffer[i + 1];
         }
     }
 
     // We now have a free entry at the end of the array.
-    LOGGER_WARNING(log, "process_frame:cur next_free_entry=%d", (int)wkbl->next_free_entry);
+    LOGGER_DEBUG(log, "process_frame:cur next_free_entry=%d", (int)wkbl->next_free_entry);
     wkbl->next_free_entry--;
-    LOGGER_WARNING(log, "process_frame:new next_free_entry=%d", (int)wkbl->next_free_entry);
+    LOGGER_DEBUG(log, "process_frame:new next_free_entry=%d", (int)wkbl->next_free_entry);
 
     // Clear the newly freed entry.
     const struct RTPWorkBuffer empty = {0};
     wkbl->work_buffer[wkbl->next_free_entry] = empty;
 
     if (m_new) {
-        LOGGER_WARNING(log, "process_frame:2:m_new seq#=%d", (int)m_new->header.sequnum);
+        LOGGER_DEBUG(log, "process_frame:2:m_new seq#=%d", (int)m_new->header.sequnum);
     }
 
     // Move ownership of the frame to the caller.
@@ -330,8 +330,8 @@ static bool fill_data_into_slot(Logger *log, struct RTPWorkBufferList *wkbl, con
         struct RTPMessage *msg = (struct RTPMessage *)calloc(1, sizeof(struct RTPMessage) + header->data_length_full);
 
         if (msg == NULL) {
-            LOGGER_WARNING(log, "Out of memory while trying to allocate for frame of size %u\n",
-                           (unsigned)header->data_length_full);
+            LOGGER_DEBUG(log, "Out of memory while trying to allocate for frame of size %u\n",
+                         (unsigned)header->data_length_full);
             // Out of memory: throw away the incoming data.
             return false;
         }
@@ -371,8 +371,8 @@ static bool fill_data_into_slot(Logger *log, struct RTPWorkBufferList *wkbl, con
     // Update received length also in the header of the message, for later use.
     slot->buf->header.received_length_full = slot->received_len;
 
-    LOGGER_WARNING(log, "FPATH:slot num=%d:VSEQ:%d %d/%d", slot_id, (int)header->sequnum,
-                   (int)slot->received_len, (int)header->data_length_full);
+    LOGGER_DEBUG(log, "FPATH:slot num=%d:VSEQ:%d %d/%d", slot_id, (int)header->sequnum,
+                 (int)slot->received_len, (int)header->data_length_full);
 
     return slot->received_len == header->data_length_full;
 }
@@ -425,7 +425,7 @@ static int handle_video_packet(RTPSession *session, const struct RTPHeader *head
     // frame or it's not a multipart frame, then this value is 0.
     const uint32_t offset = header->offset_full; // without header
 
-    LOGGER_WARNING(log, "FPATH:%d", (int)header->sequnum);
+    LOGGER_DEBUG(log, "FPATH:%d", (int)header->sequnum);
 
     // sanity checks ---------------
     if (full_frame_length == 0) {
@@ -445,7 +445,7 @@ static int handle_video_packet(RTPSession *session, const struct RTPHeader *head
 
     LOGGER_DEBUG(log, "II:4:VSEQ:%d", (int)header->sequnum);
 
-    LOGGER_WARNING(log, "FPATH:%d", (int)header->sequnum);
+    LOGGER_DEBUG(log, "FPATH:%d", (int)header->sequnum);
 
     // sanity checks ---------------
 
@@ -462,12 +462,12 @@ static int handle_video_packet(RTPSession *session, const struct RTPHeader *head
     int8_t slot_id = get_slot(log, session->work_buffer_list, is_keyframe, header, is_multipart);
     LOGGER_DEBUG(log, "II:5:slot num=%d:VSEQ:%d", slot_id, (int)header->sequnum);
 
-    LOGGER_WARNING(log, "FPATH:%d slot=%d", (int)header->sequnum, slot_id);
+    LOGGER_DEBUG(log, "FPATH:%d slot=%d", (int)header->sequnum, slot_id);
 
 
     // get_slot told us to drop the packet, so we ignore it.
     if (slot_id == GET_SLOT_RESULT_DROP_INCOMING) {
-        LOGGER_WARNING(log, "FPATH:%d slot=%d", (int)header->sequnum, slot_id);
+        LOGGER_DEBUG(log, "FPATH:%d slot=%d", (int)header->sequnum, slot_id);
         LOGGER_DEBUG(log, "EE:6:VSEQ:%d", (int)header->sequnum);
         return -1;
     }
@@ -477,7 +477,7 @@ static int handle_video_packet(RTPSession *session, const struct RTPHeader *head
         LOGGER_DEBUG(log, "there was no free slot, so we process the oldest frame");
         LOGGER_DEBUG(log, "II:7:slot num=%d:VSEQ:%d", slot_id, (int)header->sequnum);
 
-        LOGGER_WARNING(log, "FPATH:%d slot=%d", (int)header->sequnum, slot_id);
+        LOGGER_DEBUG(log, "FPATH:%d slot=%d", (int)header->sequnum, slot_id);
 
         // We now own the frame.
         struct RTPMessage *m_new = process_frame(log, session->work_buffer_list, 0);
@@ -487,7 +487,7 @@ static int handle_video_packet(RTPSession *session, const struct RTPHeader *head
         // get_slot just told us it's full, so process_frame must return non-null.
         assert(m_new != NULL);
 
-        LOGGER_WARNING(log, "FPATH:slot=%d VSEQ:%d:m_new=%p", slot_id, (int)m_new->header.sequnum, m_new);
+        LOGGER_DEBUG(log, "FPATH:slot=%d VSEQ:%d:m_new=%p", slot_id, (int)m_new->header.sequnum, m_new);
 
 
         // LOGGER_DEBUG(log, "-- handle_video_packet -- CALLBACK-001a b0=%d b1=%d", (int)m_new->data[0], (int)m_new->data[1]);
@@ -501,11 +501,11 @@ static int handle_video_packet(RTPSession *session, const struct RTPHeader *head
         // or get told to drop the incoming packet if it's too old.
         slot_id = get_slot(log, session->work_buffer_list, is_keyframe, header, /* is_multipart */false);
 
-        LOGGER_WARNING(log, "FPATH:9.0:slot num=%d:VSEQ:%d", slot_id, (int)header->sequnum);
+        LOGGER_DEBUG(log, "FPATH:9.0:slot num=%d:VSEQ:%d", slot_id, (int)header->sequnum);
 
         if (slot_id == GET_SLOT_RESULT_DROP_INCOMING) {
             // The incoming frame is too old, so we drop it.
-            LOGGER_WARNING(log, "FPATH:9:slot num=%d:VSEQ:%d", slot_id, (int)header->sequnum);
+            LOGGER_DEBUG(log, "FPATH:9:slot num=%d:VSEQ:%d", slot_id, (int)header->sequnum);
             return -1;
         }
     }
@@ -525,12 +525,12 @@ static int handle_video_packet(RTPSession *session, const struct RTPHeader *head
                 incoming_data,
                 incoming_data_length)) {
 
-        LOGGER_WARNING(log, "FPATH:10:slot num=%d:VSEQ:%d", slot_id, (int)header->sequnum);
+        LOGGER_DEBUG(log, "FPATH:10:slot num=%d:VSEQ:%d", slot_id, (int)header->sequnum);
 
         return -1;
     } else {
-        LOGGER_WARNING(log, "FPATH:10c:slot num=%d:VSEQ:%d *message_complete*",
-                       slot_id, (int)header->sequnum);
+        LOGGER_DEBUG(log, "FPATH:10c:slot num=%d:VSEQ:%d *message_complete*",
+                     slot_id, (int)header->sequnum);
     }
 
     if (slot_id > 0) {
@@ -545,12 +545,12 @@ static int handle_video_packet(RTPSession *session, const struct RTPHeader *head
 
         if ((m_new0) && (m_new2)) {
             if ((m_new0->header.sequnum + 2) < m_new2->header.sequnum) {
-                LOGGER_WARNING(log, "kick out:m_new0 seq#=%d", (int)m_new0->header.sequnum);
+                LOGGER_DEBUG(log, "kick out:m_new0 seq#=%d", (int)m_new0->header.sequnum);
                 // change slot_id to "0" to process oldest frame in buffer instead of current one
                 struct RTPMessage *m_new = process_frame(log, session->work_buffer_list, slot_id);
 
                 if (m_new) {
-                    LOGGER_WARNING(log, "FPATH:11x:slot num=%d:VSEQ:%d", slot_id, (int)m_new->header.sequnum);
+                    LOGGER_DEBUG(log, "FPATH:11x:slot num=%d:VSEQ:%d", slot_id, (int)m_new->header.sequnum);
                     session->mcb(session->cs, m_new);
                     m_new = NULL;
                 }
@@ -564,7 +564,7 @@ static int handle_video_packet(RTPSession *session, const struct RTPHeader *head
 
     if (m_new) {
 
-        LOGGER_WARNING(log, "FPATH:11:slot num=%d:VSEQ:%d", slot_id, (int)m_new->header.sequnum);
+        LOGGER_DEBUG(log, "FPATH:11:slot num=%d:VSEQ:%d", slot_id, (int)m_new->header.sequnum);
 
         // LOGGER_DEBUG(log, "-- handle_video_packet -- CALLBACK-003a b0=%d b1=%d", (int)m_new->data[0], (int)m_new->data[1]);
         //**//update_bwc_values(log, session, m_new);
@@ -573,7 +573,7 @@ static int handle_video_packet(RTPSession *session, const struct RTPHeader *head
         m_new = NULL;
     }
 
-    LOGGER_WARNING(log, "FPATH:12:slot num=%d:VSEQ:%d", slot_id, (int)header->sequnum);
+    LOGGER_DEBUG(log, "FPATH:12:slot num=%d:VSEQ:%d", slot_id, (int)header->sequnum);
 
     return 0;
 }
