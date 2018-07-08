@@ -30,7 +30,7 @@ mkdir -p /opt/freebsd/cache
 cd /opt/freebsd/cache
 
 # Make sure to update DL_SHA512 when bumping the version
-FREEBSD_VERSION="11.1"
+FREEBSD_VERSION="11.2"
 IMAGE_NAME=FreeBSD-${FREEBSD_VERSION}-RELEASE-amd64.raw
 
 # Sends keys to the VM as they are
