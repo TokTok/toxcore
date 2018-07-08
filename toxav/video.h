@@ -99,7 +99,7 @@ typedef enum PACKET_TOXAV_COMM_CHANNEL_FUNCTION {
 
 // #define VIDEO_PTS_TIMESTAMPS 1
 
-#define VIDEO_SEND_X_KEYFRAMES_FIRST (5) // force the first n frames to be keyframes!
+#define VIDEO_SEND_X_KEYFRAMES_FIRST (10) // force the first n frames to be keyframes!
 #define VPX_MAX_DIST_START (100)
 
 
@@ -108,7 +108,7 @@ typedef enum PACKET_TOXAV_COMM_CHANNEL_FUNCTION {
 #define VIDEO_RINGBUFFER_FILL_THRESHOLD (2 * VIDEO_CODEC_FRAGMENT_NUMS) // start decoding at lower quality
 #define VIDEO_RINGBUFFER_DROP_THRESHOLD (5 * VIDEO_CODEC_FRAGMENT_NUMS) // start dropping incoming frames (except index frames)
 #else
-#define VIDEO_RINGBUFFER_BUFFER_ELEMENTS (10) // this buffer has normally max. 1 entry
+#define VIDEO_RINGBUFFER_BUFFER_ELEMENTS (22) // this buffer has normally max. 1 entry
 #define VIDEO_RINGBUFFER_FILL_THRESHOLD (2) // start decoding at lower quality
 #define VIDEO_RINGBUFFER_DROP_THRESHOLD (5) // start dropping incoming frames (except index frames)
 #endif

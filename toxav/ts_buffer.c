@@ -165,7 +165,7 @@ static bool tsb_return_oldest_entry_in_range(TSBuffer *b, void **p, uint64_t *da
 
         if ((b->timestamp[current_element] >= (timestamp_in - timestamp_range))
                 &&
-                (b->timestamp[current_element] <= (timestamp_in + timestamp_range))) {
+                (b->timestamp[current_element] <= (timestamp_in + 1))) {
             // timestamp of entry is in range
             if ((uint32_t)b->timestamp[current_element] < found_timestamp) {
                 // entry is older than previous found entry, or is the first found entry

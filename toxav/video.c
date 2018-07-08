@@ -304,7 +304,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 #endif
 
 
-#define VIDEO_CURRENT_TS_SPAN_MS 120
+#define VIDEO_CURRENT_TS_SPAN_MS 60
     uint16_t removed_entries;
 
     // HINT: give me video frames that happend "now" minus some diff
@@ -317,34 +317,70 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
     if (rb_read((RingBuffer *)vc->vbuf_raw, (void **)&p, &frame_flags)) {
 #endif
+
         const struct RTPHeader *header_v3_0 = (void *) & (p->header);
 
-        LOGGER_WARNING(vc->log, "seq:%d FC:%d min=%ld max=%ld want=%d diff=%d rm=%d",
+        LOGGER_WARNING(vc->log, "seq:%d FC:%d min=%ld max=%ld want=%d got=%d diff=%d rm=%d",
                        (int)header_v3_0->sequnum,
                        (int)tsb_size((TSBuffer *)vc->vbuf_raw),
-                       timestamp_min, timestamp_max, (int)timestamp_want_get,
-                       (int)timestamp_want_get - (int)timestamp_max,
+                       timestamp_min,
+                       timestamp_max,
+                       (int)timestamp_want_get,
+                       (int)timestamp_out_,
+                       ((int)timestamp_want_get - (int)timestamp_max),
                        (int)removed_entries);
 
+        uint16_t buf_size = tsb_size((TSBuffer *)vc->vbuf_raw);
+
+        if (buf_size < 3) {
+            vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment - 40;
+            LOGGER_WARNING(vc->log, " ---- B");
+        } else if (buf_size > 4) {
+            vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment + 40;
+            LOGGER_WARNING(vc->log, " +++++++ B");
+        }
+
+#if 0
+
         if ((int)timestamp_max > (int)timestamp_want_get) {
-            if (((int)timestamp_max - (int)timestamp_want_get) > 90) {
+            if (((int)timestamp_max - (int)timestamp_want_get) > 120) {
                 // more than 80ms delay for video stream, hmm lets drift the timestamp a bit
                 vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment +
-                                                      (((int)timestamp_max - (int)timestamp_want_get) - 60);
+                                                      (((int)timestamp_max - (int)timestamp_want_get) - 50);
                 LOGGER_WARNING(vc->log, " +++++++ LARGE");
-            } else if (((int)timestamp_max - (int)timestamp_want_get) > 80) {
+            } else if (((int)timestamp_max - (int)timestamp_want_get) > 90) {
                 // more than 80ms delay for video stream, hmm lets drift the timestamp a bit
-                vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment + 25;
-                LOGGER_WARNING(vc->log, " +++++ 25");
+                vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment + 8;
+                LOGGER_WARNING(vc->log, " +++++ small");
+            }
+        } else if ((int)timestamp_max < (int)timestamp_want_get) {
+            if (((int)timestamp_want_get - (int)timestamp_max) > 1) {
+                // more than 80ms delay for video stream, hmm lets drift the timestamp a bit
+                vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment +
+                                                      (((int)timestamp_want_get - (int)timestamp_max) - 1);
+                LOGGER_WARNING(vc->log, " ------- LARGE");
             }
         }
+
+#endif
+
+#if 0
+
+        if (removed_entries > 0) {
+            vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment - (10 * removed_entries);
+            LOGGER_WARNING(vc->log, " ------- 10*x");
+        }
+
+#endif
+
+#if 0
 
         if ((int)timestamp_want_get > (int)timestamp_out_) {
             if (vc->startup_video_timespan == 0) {
                 vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment -
                                                       ((int)timestamp_want_get - (int)timestamp_out_);
             } else {
-                vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment - 2;
+                vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment - 3;
             }
 
             LOGGER_DEBUG(vc->log, " ---");
@@ -353,11 +389,13 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
                 vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment +
                                                       ((int)timestamp_out_ - (int)timestamp_want_get);
             } else {
-                vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment + 3;
+                vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment + 2;
             }
 
             LOGGER_DEBUG(vc->log, " +++");
         }
+
+#endif
 
         if (vc->startup_video_timespan > 0) {
             vc->startup_video_timespan = 0;
@@ -375,10 +413,10 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
         if ((int32_t)header_v3_0->sequnum < (int32_t)vc->last_seen_fragment_seqnum) {
             // drop frame with too old sequence number
-            LOGGER_DEBUG(vc->log, "skipping incoming video frame (0) with sn=%d lastseen=%d old_frames_count=%d",
-                         (int)header_v3_0->sequnum,
-                         (int)vc->last_seen_fragment_seqnum,
-                         (int)vc->count_old_video_frames_seen);
+            LOGGER_WARNING(vc->log, "skipping incoming video frame (0) with sn=%d lastseen=%d old_frames_count=%d",
+                           (int)header_v3_0->sequnum,
+                           (int)vc->last_seen_fragment_seqnum,
+                           (int)vc->count_old_video_frames_seen);
 
             vc->count_old_video_frames_seen++;
 
@@ -417,7 +455,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
             const Messenger_Options *mo = (Messenger_Options *) & (mm->options);
 
 
-            if (missing_frames_count > 2) {
+            if (missing_frames_count > 0) {
 
                 // HINT: if whole video frames are missing here, they most likely have been
                 //       kicked out of the ringbuffer because the sender is sending at too much FPS
@@ -721,6 +759,8 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
                 int result = send_custom_lossless_packet(vc->av->m, vc->friend_number, pkg_buf, pkg_buf_len);
                 // HINT: tell sender to turn down video FPS -------------
 #endif
+                LOGGER_WARNING(vc->log, "FPATH:%d kicked out", (int)msg_old->header.sequnum);
+
                 free(msg_old);
             }
         } else {
