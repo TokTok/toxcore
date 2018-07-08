@@ -96,7 +96,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc->last_incoming_frame_ts = 0;
     vc->timestamp_difference_to_sender = 0;
     vc->timestamp_difference_adjustment = 0;
-    vc->tsb_range_ms = 80;
+    vc->tsb_range_ms = 60;
     vc->startup_video_timespan = 8000;
     // options ---
 
@@ -287,7 +287,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
     tsb_get_range_in_buffer((TSBuffer *)vc->vbuf_raw, &timestamp_min, &timestamp_max);
 
-    vc->timestamp_difference_adjustment = -400;
+    vc->timestamp_difference_adjustment = -410;
     int64_t want_remote_video_ts = (current_time_monotonic() + vc->timestamp_difference_to_sender +
                                     vc->timestamp_difference_adjustment);
 
@@ -531,9 +531,10 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
                 }
 
                 // HINT: give feedback that we lost some bytes (based on the size of this frame)
-                bwc_add_lost_v3(bwc, (uint32_t)(header_v3_0->data_length_full * missing_frames_count), false);
+                bwc_add_lost_v3(bwc, (uint32_t)(header_v3_0->data_length_full * missing_frames_count), true);
                 LOGGER_ERROR(vc->log, "BWC:lost:002:missing count=%d", (int)missing_frames_count);
 
+#if 0
 
                 if (missing_frames_count > 5) {
                     if ((vc->last_requested_keyframe_ts + VIDEO_MIN_REQUEST_KEYFRAME_INTERVAL_MS_FOR_NF)
@@ -554,6 +555,9 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
                         }
                     }
                 }
+
+#endif
+
             }
         }
 
