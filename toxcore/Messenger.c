@@ -2682,21 +2682,33 @@ static void try_pack_gc_data(const Messenger *m, const GC_Chat *chat, Onion_Frie
                                             MAX_ANNOUNCED_TCP_RELAYS);
     IP_Port self_ip_port;
     int copy_ip_port_result = ipport_self_copy(m->dht, &self_ip_port);
+    fprintf(stderr, "copy_ip_port_result %d tcp %d\n", copy_ip_port_result, tcp_num);
     bool ip_port_is_set = copy_ip_port_result == 0;
 
-    if (tcp_num >= 0 || ip_port_is_set) {
+    if (tcp_num > 0) {
         announce.base_announce.tcp_relays_count = (uint8_t)tcp_num;
-        announce.base_announce.ip_port_is_set = ip_port_is_set ? 1 : 0;
+        announce.base_announce.ip_port_is_set = (uint8_t)(ip_port_is_set ? 1 : 0);
+        announce.base_announce.ip_port_is_set = 0;
         if (ip_port_is_set) {
             memcpy(&announce.base_announce.ip_port, &self_ip_port, sizeof(IP_Port));
         }
         memcpy(announce.base_announce.peer_public_key, chat->self_public_key, ENC_PUBLIC_KEY);
         memcpy(announce.chat_public_key, get_chat_id(chat->chat_public_key), ENC_PUBLIC_KEY);
+
         int length = pack_public_announce(onion_friend->gc_data, GC_MAX_DATA_LENGTH, &announce);
+        if (length == -1) {
+            return;
+        }
+
         onion_friend->gc_data_length = (short)length;
-        memcpy((void*)&chat->announced_node, &announce.base_announce.tcp_relays[0], sizeof(Node_format));
+        fprintf(stderr, "pack success %d\n", length);
+        if (tcp_num > 0) {
+            memcpy((void*)&chat->announced_node, &announce.base_announce.tcp_relays[0], sizeof(Node_format));
+        }
         add_gc_announce(m->mono_time, m->group_announce, &announce);
+        fprintf(stderr, "pack success\n");
     } else {
+        fprintf(stderr, "pack error\n");
         onion_friend->gc_data_length = -1;  // new gc - no connected relays yet and no ip/port
     }
 }
