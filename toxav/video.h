@@ -162,6 +162,8 @@ typedef struct VCSession_s {
 #else
     struct RingBuffer *vbuf_raw; /* Un-decoded data */
 #endif
+
+    uint32_t tsb_range_ms;
     uint64_t linfts; /* Last received frame time stamp */
     uint32_t lcfd; /* Last calculated frame duration for incoming video payload */
 

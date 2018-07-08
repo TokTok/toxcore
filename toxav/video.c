@@ -96,6 +96,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc->last_incoming_frame_ts = 0;
     vc->timestamp_difference_to_sender = 0;
     vc->timestamp_difference_adjustment = 0;
+    vc->tsb_range_ms = 80;
     vc->startup_video_timespan = 8000;
     // options ---
 
@@ -286,11 +287,12 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
     tsb_get_range_in_buffer((TSBuffer *)vc->vbuf_raw, &timestamp_min, &timestamp_max);
 
+    vc->timestamp_difference_adjustment = -400;
     int64_t want_remote_video_ts = (current_time_monotonic() + vc->timestamp_difference_to_sender +
                                     vc->timestamp_difference_adjustment);
 
-    uint32_t timestamp_want_get = (uint32_t)((int)want_remote_video_ts - GENERAL_TS_DIFF);
-
+    uint32_t timestamp_want_get = (uint32_t)
+                                  want_remote_video_ts; // (uint32_t)((int)want_remote_video_ts - GENERAL_TS_DIFF);
 
 #if 0
 
@@ -304,14 +306,13 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 #endif
 
 
-#define VIDEO_CURRENT_TS_SPAN_MS 60
     uint16_t removed_entries;
 
     // HINT: give me video frames that happend "now" minus some diff
-    if (tsb_read((TSBuffer *)vc->vbuf_raw, (void **)&p, &frame_flags,
+    if (tsb_read((TSBuffer *)vc->vbuf_raw, vc->log, (void **)&p, &frame_flags,
                  &timestamp_out_,
                  timestamp_want_get,
-                 VIDEO_CURRENT_TS_SPAN_MS + vc->startup_video_timespan,
+                 vc->tsb_range_ms + vc->startup_video_timespan,
                  &removed_entries)) {
 #else
 
@@ -327,18 +328,70 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
                        timestamp_max,
                        (int)timestamp_want_get,
                        (int)timestamp_out_,
-                       ((int)timestamp_want_get - (int)timestamp_max),
+                       ((int)timestamp_want_get - (int)timestamp_out_),
                        (int)removed_entries);
 
         uint16_t buf_size = tsb_size((TSBuffer *)vc->vbuf_raw);
+        int32_t diff_want_to_got = (int)timestamp_want_get - (int)timestamp_out_;
 
-        if (buf_size < 3) {
-            vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment - 40;
+#if 0
+
+        if (buf_size < 4) {
+            vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment - 10;
             LOGGER_WARNING(vc->log, " ---- B");
         } else if (buf_size > 4) {
-            vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment + 40;
+            vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment + 10;
             LOGGER_WARNING(vc->log, " +++++++ B");
         }
+
+#endif
+
+#if 0
+
+        if (diff_want_to_got > 0) {
+            vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment - 40;
+            LOGGER_WARNING(vc->log, " ----- Diff");
+        } else if (diff_want_to_got < 0) {
+            vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment + 40;
+            LOGGER_WARNING(vc->log, " +++++++ Diff");
+        }
+
+#endif
+
+#if 0
+
+        if ((removed_entries > 0) && (removed_entries < 4)) {
+            vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment - (removed_entries * 10);
+            vc->tsb_range_ms = vc->tsb_range_ms + (removed_entries * 10);
+
+            if (vc->tsb_range_ms > 380) {
+                vc->tsb_range_ms = 380;
+            }
+
+            LOGGER_WARNING(vc->log, " +++++++++++ drift rm=%d %d", (int)removed_entries, (int)vc->tsb_range_ms);
+        } else if (removed_entries == 0) {
+            vc->tsb_range_ms = vc->tsb_range_ms - 1;
+
+            if (vc->tsb_range_ms < 180) {
+                vc->tsb_range_ms = 180;
+            }
+
+            LOGGER_WARNING(vc->log, " --------- drift rm=%d %d", (int)removed_entries, (int)vc->tsb_range_ms);
+        }
+
+#endif
+
+
+
+        LOGGER_WARNING(vc->log, "values:diff_to_sender=%d adj=%d tsb_range=%d bufsize=%d",
+                       (int)vc->timestamp_difference_to_sender, (int)vc->timestamp_difference_adjustment,
+                       (int)vc->tsb_range_ms,
+                       (int)buf_size);
+
+
+
+
+
 
 #if 0
 

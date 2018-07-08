@@ -22,6 +22,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "../toxcore/logger.h"
 
 /* TimeStamp Buffer */
 typedef struct TSBuffer TSBuffer;
@@ -30,7 +31,7 @@ bool tsb_full(const TSBuffer *b);
 bool tsb_empty(const TSBuffer *b);
 void tsb_get_range_in_buffer(TSBuffer *b, uint32_t *timestamp_min, uint32_t *timestamp_max);
 void *tsb_write(TSBuffer *b, void *p, const uint64_t data_type, const uint32_t timestamp);
-bool tsb_read(TSBuffer *b, void **p, uint64_t *data_type, uint32_t *timestamp_out,
+bool tsb_read(TSBuffer *b, Logger *log, void **p, uint64_t *data_type, uint32_t *timestamp_out,
               const uint32_t timestamp_in, const uint32_t timestamp_range,
               uint16_t *removed_entries_back);
 TSBuffer *tsb_new(const int size);

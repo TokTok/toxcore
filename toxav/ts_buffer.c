@@ -22,6 +22,8 @@
  */
 
 #include "ts_buffer.h"
+#include "rtp.h"
+#include "../toxcore/logger.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -66,8 +68,26 @@ void *tsb_write(TSBuffer *b, void *p, const uint64_t data_type, const uint32_t t
     return rc;
 }
 
-static void tsb_move_delete_entry(TSBuffer *b, uint16_t src_index, uint16_t dst_index)
+static void tsb_move_delete_entry(TSBuffer *b, Logger *log, uint16_t src_index, uint16_t dst_index)
 {
+    if (log) {
+        struct RTPMessage *msg = b->data[dst_index];
+
+        if (msg) {
+            const struct RTPHeader *header_v3_0 = & (msg->header);
+            int seq = header_v3_0->sequnum;
+            LOGGER_WARNING(log, "tsb:free:seq=%d", (int)seq);
+        }
+
+        msg = b->data[src_index];
+
+        if (msg) {
+            const struct RTPHeader *header_v3_0 = & (msg->header);
+            int seq = header_v3_0->sequnum;
+            LOGGER_WARNING(log, "tsb:move:seq=%d from %d to %d", (int)seq, (int)src_index, (int)dst_index);
+        }
+    }
+
     free(b->data[dst_index]);
 
     b->data[dst_index] = b->data[src_index];
@@ -81,17 +101,25 @@ static void tsb_move_delete_entry(TSBuffer *b, uint16_t src_index, uint16_t dst_
     // just to be safe ---
 }
 
-static void tsb_close_hole(TSBuffer *b, uint16_t start_index, uint16_t hole_index)
+static void tsb_close_hole(TSBuffer *b, Logger *log, uint16_t start_index, uint16_t hole_index)
 {
     int32_t current_index = (int32_t)hole_index;
+
+    if (log) {
+        struct RTPMessage *msg = b->data[hole_index];
+        const struct RTPHeader *header_v3_0 = & (msg->header);
+        int seq = header_v3_0->sequnum;
+        LOGGER_WARNING(log, "tsb:hole index:seq=%d", (int)seq);
+    }
+
 
     while (true) {
         // delete current index by moving the previous entry into it
         // don't change start element pointer in this function!
         if (current_index < 1) {
-            tsb_move_delete_entry(b, (b->size - 1), current_index);
+            tsb_move_delete_entry(b, log, (b->size - 1), current_index);
         } else {
-            tsb_move_delete_entry(b, (uint16_t)(current_index - 1), current_index);
+            tsb_move_delete_entry(b, log, (uint16_t)(current_index - 1), current_index);
         }
 
         if (current_index == (int32_t)start_index) {
@@ -106,7 +134,7 @@ static void tsb_close_hole(TSBuffer *b, uint16_t start_index, uint16_t hole_inde
     }
 }
 
-static uint16_t tsb_delete_old_entries(TSBuffer *b, const uint32_t timestamp_threshold)
+static uint16_t tsb_delete_old_entries(TSBuffer *b, Logger *log, const uint32_t timestamp_threshold)
 {
     // buffer empty, nothing to delete
     if (tsb_empty(b) == true) {
@@ -122,7 +150,15 @@ static uint16_t tsb_delete_old_entries(TSBuffer *b, const uint32_t timestamp_thr
         current_element = (start_entry + i) % b->size;
 
         if (b->timestamp[current_element] < timestamp_threshold) {
-            tsb_close_hole(b, start_entry, current_element);
+            if (log) {
+                struct RTPMessage *msg = b->data[current_element];
+                const struct RTPHeader *header_v3_0 = & (msg->header);
+                int seq = header_v3_0->sequnum;
+                LOGGER_WARNING(log, "tsb:kick:seq=%d diff=%d", (int)seq,
+                               (int)(timestamp_threshold - b->timestamp[current_element]));
+            }
+
+            tsb_close_hole(b, log, start_entry, current_element);
             removed_entries++;
         }
     }
@@ -152,7 +188,8 @@ void tsb_get_range_in_buffer(TSBuffer *b, uint32_t *timestamp_min, uint32_t *tim
     }
 }
 
-static bool tsb_return_oldest_entry_in_range(TSBuffer *b, void **p, uint64_t *data_type, uint32_t *timestamp_out,
+static bool tsb_return_oldest_entry_in_range(TSBuffer *b, Logger *log, void **p, uint64_t *data_type,
+        uint32_t *timestamp_out,
         const uint32_t timestamp_in, const uint32_t timestamp_range)
 {
     int32_t found_element = -1;
@@ -160,17 +197,63 @@ static bool tsb_return_oldest_entry_in_range(TSBuffer *b, void **p, uint64_t *da
     uint16_t start_entry = b->start;
     uint16_t current_element;
 
+    if (log) {
+        LOGGER_WARNING(log, "tsb_old:tsb_size=%d", (int)tsb_size(b));
+    }
+
     for (int i = 0; i < tsb_size(b); i++) {
         current_element = (start_entry + i) % b->size;
 
-        if ((b->timestamp[current_element] >= (timestamp_in - timestamp_range))
+        if (log) {
+            struct RTPMessage *msg = b->data[current_element];
+
+            if (msg) {
+                const struct RTPHeader *header_v3_0 = & (msg->header);
+                int seq = header_v3_0->sequnum;
+                LOGGER_WARNING(log, "tsb_old:iter:seq=%d ts=%d",
+                               (int)seq, (int)header_v3_0->frame_record_timestamp);
+            }
+        }
+
+#define STRANGE_OFFSET (int)(+400)
+
+        if (((b->timestamp[current_element] + STRANGE_OFFSET) >= (timestamp_in - timestamp_range))
                 &&
                 (b->timestamp[current_element] <= (timestamp_in + 1))) {
+
+
+            if (log) {
+                struct RTPMessage *msg = b->data[current_element];
+
+                if (msg) {
+                    const struct RTPHeader *header_v3_0 = & (msg->header);
+                    int seq = header_v3_0->sequnum;
+                    LOGGER_WARNING(log, "tsb_old:in range:seq=%d range=(%d - %d) -> want=%d prevfound=%d",
+                                   (int)seq,
+                                   (int)(timestamp_in - timestamp_range),
+                                   (int)(timestamp_in + 1),
+                                   (int)timestamp_in,
+                                   (int)found_timestamp);
+                }
+            }
+
             // timestamp of entry is in range
             if ((uint32_t)b->timestamp[current_element] < found_timestamp) {
                 // entry is older than previous found entry, or is the first found entry
                 found_timestamp = (uint32_t)b->timestamp[current_element];
                 found_element = (int32_t)current_element;
+
+                if (log) {
+                    struct RTPMessage *msg = b->data[current_element];
+
+                    if (msg) {
+                        const struct RTPHeader *header_v3_0 = & (msg->header);
+                        int seq = header_v3_0->sequnum;
+                        LOGGER_WARNING(log, "tsb_old:iter:seq=%d found_timestamp=%d",
+                                       (int)seq, (int)found_timestamp);
+                    }
+                }
+
             }
         }
     }
@@ -209,7 +292,7 @@ static bool tsb_return_oldest_entry_in_range(TSBuffer *b, void **p, uint64_t *da
     return false;
 }
 
-bool tsb_read(TSBuffer *b, void **p, uint64_t *data_type, uint32_t *timestamp_out,
+bool tsb_read(TSBuffer *b, Logger *log, void **p, uint64_t *data_type, uint32_t *timestamp_out,
               const uint32_t timestamp_in, const uint32_t timestamp_range,
               uint16_t *removed_entries_back)
 {
@@ -219,12 +302,14 @@ bool tsb_read(TSBuffer *b, void **p, uint64_t *data_type, uint32_t *timestamp_ou
         return false;
     }
 
-    bool have_found_element = tsb_return_oldest_entry_in_range(b, p, data_type, timestamp_out, timestamp_in,
+    bool have_found_element = tsb_return_oldest_entry_in_range(b, log, p, data_type,
+                              timestamp_out,
+                              timestamp_in,
                               timestamp_range);
 
     if (have_found_element == true) {
         // only delete old entries if we found a "wanted" entry
-        uint16_t removed_entries = tsb_delete_old_entries(b, (timestamp_in - timestamp_range));
+        uint16_t removed_entries = tsb_delete_old_entries(b, log, (timestamp_in - timestamp_range));
         *removed_entries_back = removed_entries;
     } else {
         *removed_entries_back = 0;
@@ -274,7 +359,7 @@ void tsb_drain(TSBuffer *b)
         uint32_t to;
         uint16_t reb;
 
-        while (tsb_read(b, &dummy, &dt, &to, UINT32_MAX, 0, &reb) == true) {
+        while (tsb_read(b, NULL, &dummy, &dt, &to, UINT32_MAX, 0, &reb) == true) {
             free(dummy);
         }
     }
@@ -373,7 +458,7 @@ void unit_test()
         loop = false;
         ti = rand() % 4999 + 1000;
         tr = rand() % 100 + 1;
-        res1 = tsb_read(b1, &ptr, &dt, &to, ti, tr, &reb);
+        res1 = tsb_read(b1, NULL, &ptr, &dt, &to, ti, tr, &reb);
         printf("ti=%d,tr=%d\n", (int)ti, (int)tr);
 
         if (res1 == true) {

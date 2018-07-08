@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 #define TOXAV_SKIP_FPS_RELEASE_AFTER_FRAMES 60
-#define GENERAL_TS_DIFF (int)(200) // give x ms delay to video and audio streams (for buffering and syncing)
+#define GENERAL_TS_DIFF (int)(150) // give x ms delay to video and audio streams (for buffering and syncing)
 
 
 /**
@@ -61,7 +61,7 @@ enum {
 };
 
 
-#define USED_RTP_WORKBUFFER_COUNT 3
+#define USED_RTP_WORKBUFFER_COUNT 10
 #define VIDEO_FRAGMENT_NUM_NO_FRAG (-1)
 
 

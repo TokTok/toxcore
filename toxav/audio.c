@@ -155,7 +155,7 @@ static inline struct RTPMessage *jbuf_read(Logger *log, struct TSBuffer *q, int3
         int64_t timestamp_difference_adjustment_,
         int64_t timestamp_difference_to_sender_)
 {
-#define AUDIO_CURRENT_TS_SPAN_MS 60
+#define AUDIO_CURRENT_TS_SPAN_MS 80
 
     void *ret = NULL;
     uint64_t lost_frame = 0;
@@ -165,7 +165,7 @@ static inline struct RTPMessage *jbuf_read(Logger *log, struct TSBuffer *q, int3
     *success = 0;
     uint16_t removed_entries;
 
-    bool res = tsb_read(q, &ret, &lost_frame,
+    bool res = tsb_read(q, log, &ret, &lost_frame,
                         &timestamp_out_,
                         want_remote_video_ts - GENERAL_TS_DIFF,
                         AUDIO_CURRENT_TS_SPAN_MS,
