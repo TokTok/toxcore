@@ -287,7 +287,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
     tsb_get_range_in_buffer((TSBuffer *)vc->vbuf_raw, &timestamp_min, &timestamp_max);
 
-    // vc->timestamp_difference_adjustment = -400;
+    vc->timestamp_difference_adjustment = -400;
     int64_t want_remote_video_ts = (current_time_monotonic() + vc->timestamp_difference_to_sender +
                                     vc->timestamp_difference_adjustment);
 
