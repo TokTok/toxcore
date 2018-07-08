@@ -462,6 +462,7 @@ static int handle_gc_announce_request(Onion_Announce *onion_a, IP_Port source, c
     uint8_t nonce[CRYPTO_NONCE_SIZE];
     random_nonce(nonce);
 
+    GC_Peer_Announce gc_announces[MAX_SENT_ANNOUNCES];
     uint8_t pl[3 + ONION_PING_ID_SIZE + sizeof(nodes_list) + sizeof(gc_announces)];
 
     if (index == -1) {
@@ -494,7 +495,6 @@ static int handle_gc_announce_request(Onion_Announce *onion_a, IP_Port source, c
     pl[1 + ONION_PING_ID_SIZE] = (uint8_t)num_nodes;
 
     GC_Announces_List *gc_announces_list = onion_a->gc_announces_list;
-    GC_Peer_Announce gc_announces[MAX_SENT_ANNOUNCES];
     GC_Public_Announce public_announce;
     int unpack_result = unpack_public_announce(plain + minimal_size, length - ANNOUNCE_REQUEST_MIN_SIZE_RECV,
                                                &public_announce);
