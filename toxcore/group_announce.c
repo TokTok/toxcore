@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <wchar.h>
+#include <stdio.h>
 
 #include "util.h"
 
@@ -213,6 +214,7 @@ int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Peer_Announce *gc_
 int pack_announce(uint8_t *data, uint16_t length, GC_Announce *announce)
 {
     if (!data || !announce || length < GC_ANNOUNCE_MIN_SIZE) {
+        fprintf(stderr, "pack ann1\n");
         return -1;
     }
 
@@ -226,6 +228,7 @@ int pack_announce(uint8_t *data, uint16_t length, GC_Announce *announce)
     if (announce->ip_port_is_set) {
         int ip_port_length = pack_ip_port(data + offset, length - offset, &announce->ip_port);
         if (ip_port_length == -1) {
+            fprintf(stderr, "pack ann2\n");
             return -1;
         }
 
@@ -235,6 +238,7 @@ int pack_announce(uint8_t *data, uint16_t length, GC_Announce *announce)
     int nodes_length = pack_nodes(data + offset, length - offset, announce->tcp_relays,
                                   announce->tcp_relays_count);
     if (nodes_length == -1) {
+        fprintf(stderr, "pack ann3\n");
         return -1;
     }
 
@@ -293,45 +297,37 @@ int unpack_announces_list(uint8_t *data, uint16_t length, GC_Announce *announces
 
 int pack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce *announce)
 {
-    if (length <= ENC_PUBLIC_KEY * 2 || !announce || !data) {
+    if (!announce || !data || length < ENC_PUBLIC_KEY) {
         return -1;
     }
 
     memcpy(data, announce->chat_public_key, ENC_PUBLIC_KEY);
 
     int packed_size = pack_announce(data + ENC_PUBLIC_KEY, length - ENC_PUBLIC_KEY, &announce->base_announce);
-    if (packed_size == -1) {
+    if (packed_size < 0) {
         return -1;
     }
 
     return packed_size + ENC_PUBLIC_KEY;
 }
 
-bool unpack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce *announce)
+int unpack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce *announce)
 {
-    if (length <= ENC_PUBLIC_KEY * 2 || !announce || !data) {
-        return false;
+    if (length < ENC_PUBLIC_KEY || !announce || !data) {
+        fprintf(stderr, "pub ann too short\n");
+        return -1;
     }
+    fprintf(stderr, "pub ann length %d\n", length);
 
-    uint16_t offset = ENC_PUBLIC_KEY;
     memcpy(announce->chat_public_key, data, ENC_PUBLIC_KEY);
-    memcpy(announce->base_announce.peer_public_key, data + offset, ENC_PUBLIC_KEY);
-    offset += ENC_PUBLIC_KEY;
 
-    announce->base_announce.ip_port_is_set = data[offset];
-    offset++;
-
-    if (announce->base_announce.ip_port_is_set) {
-        int unpack_ip_port_result = unpack_ip_port(&announce->base_announce.ip_port, data + offset, length - offset, 0);
-        if (unpack_ip_port_result == -1) {
-            return false;
-        }
+    int base_announce_size = unpack_announce(data + ENC_PUBLIC_KEY, length - ENC_PUBLIC_KEY, &announce->base_announce);
+    if (base_announce_size == -1) {
+        fprintf(stderr, "unpack base failed \n");
+        return -1;
     }
 
-    int nodes_count = unpack_nodes(announce->base_announce.tcp_relays, MAX_ANNOUNCED_TCP_RELAYS, NULL, data + offset, length, 0);
-    announce->base_announce.tcp_relays_count = (uint8_t)nodes_count;
-
-    return announce->base_announce.ip_port_is_set || nodes_count > 0;
+    return base_announce_size + ENC_PUBLIC_KEY;
 }
 
 

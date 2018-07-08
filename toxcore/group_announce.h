@@ -28,7 +28,9 @@
 #define GC_ANNOUNCE_PACKED_SIZE (sizeof(GC_Peer_Announce))
 #define GC_ANNOUNCE_SAVING_TIMEOUT 30
 #define MAX_ANNOUNCED_TCP_RELAYS 1
+#define MAX_SENT_ANNOUNCES 4
 #define GC_ANNOUNCE_MIN_SIZE (ENC_PUBLIC_KEY + 1)
+#define GC_ANNOUNCE_MAX_SIZE (sizeof(GC_Announce))
 
 typedef struct {
     uint8_t public_key[ENC_PUBLIC_KEY];
@@ -41,6 +43,7 @@ typedef struct GC_Announces GC_Announces;
 typedef struct GC_Announces_List GC_Announces_List;
 typedef struct GC_Public_Announce GC_Public_Announce;
 
+// Base announce
 struct GC_Announce {
     Node_format tcp_relays[MAX_ANNOUNCED_TCP_RELAYS];
     uint8_t tcp_relays_count;
@@ -49,6 +52,7 @@ struct GC_Announce {
     uint8_t peer_public_key[ENC_PUBLIC_KEY];
 };
 
+// Peer announce for specific group
 struct GC_Peer_Announce {
     GC_Announce base_announce;
 
@@ -125,6 +129,6 @@ int unpack_announces_list(uint8_t *data, uint16_t length, GC_Announce *announces
 
 int pack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce *announce);
 
-bool unpack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce *announce);
+int unpack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce *announce);
 
 #endif /* GROUP_ANNOUNCE_H */
