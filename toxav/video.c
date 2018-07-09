@@ -95,9 +95,12 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
 
     vc->last_incoming_frame_ts = 0;
     vc->timestamp_difference_to_sender = 0;
-    vc->timestamp_difference_adjustment = 0;
+    vc->timestamp_difference_adjustment = -450;
     vc->tsb_range_ms = 60;
     vc->startup_video_timespan = 8000;
+    vc->incoming_video_bitrate_last_changed = 0;
+    vc->network_round_trip_time_last_cb_ts = 0;
+    vc->incoming_video_bitrate_last_cb_ts = 0;
     // options ---
 
 
@@ -287,19 +290,36 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
     tsb_get_range_in_buffer((TSBuffer *)vc->vbuf_raw, &timestamp_min, &timestamp_max);
 
-    vc->timestamp_difference_adjustment = -410;
+    // vc->timestamp_difference_adjustment = -450;
+
+#define MIN_AV_BUFFERING_MS 250
+
+    if (vc->rountrip_time_ms > (-vc->timestamp_difference_adjustment)) {
+        // drift
+        if (vc->timestamp_difference_adjustment < -MIN_AV_BUFFERING_MS) {
+            vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment - 2;
+        }
+    } else if (vc->rountrip_time_ms < (-vc->timestamp_difference_adjustment)) {
+        // drift
+        if (vc->timestamp_difference_adjustment < -MIN_AV_BUFFERING_MS) {
+            vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment + 2;
+        }
+    }
+
     int64_t want_remote_video_ts = (current_time_monotonic() + vc->timestamp_difference_to_sender +
                                     vc->timestamp_difference_adjustment);
 
     uint32_t timestamp_want_get = (uint32_t)want_remote_video_ts;
 
-#if 0
+#if 1
 
     if ((int)tsb_size((TSBuffer *)vc->vbuf_raw) > 0) {
-        LOGGER_WARNING(vc->log, "FC:%d min=%ld max=%ld want=%d diff=%d",
-                       (int)tsb_size((TSBuffer *)vc->vbuf_raw),
-                       timestamp_min, timestamp_max, (int)timestamp_want_get,
-                       (int)timestamp_want_get - (int)timestamp_max);
+        LOGGER_DEBUG(vc->log, "FC:%d min=%ld max=%ld want=%d diff=%d adj=%d roundtrip=%d",
+                     (int)tsb_size((TSBuffer *)vc->vbuf_raw),
+                     timestamp_min, timestamp_max, (int)timestamp_want_get,
+                     (int)timestamp_want_get - (int)timestamp_max,
+                     (int)vc->timestamp_difference_adjustment,
+                     (int)vc->rountrip_time_ms);
     }
 
 #endif
@@ -458,6 +478,8 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
             vc->startup_video_timespan = 0;
         }
 
+        // TODO: make it available to the audio session
+        // bad hack -> make better!
         *timestamp_difference_adjustment_ = vc->timestamp_difference_adjustment;
 
 
@@ -749,7 +771,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 int vc_queue_message(void *vcp, struct RTPMessage *msg)
 {
     /* This function is called with complete messages
-     * they have already been assembled.
+     * they have already been assembled. but not yet decoded (data is still compressed by video codec)
      * this function gets called from handle_rtp_packet() and handle_rtp_packet_v3()
      */
     if (!vcp || !msg) {
@@ -780,24 +802,55 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
 
     if ((header->flags & RTP_LARGE_FRAME) && header->pt == rtp_TypeVideo % 128) {
 
-        if (vc->show_own_video == 0) {
-            LOGGER_DEBUG(vc->log, "VIDEO_incoming_bitrate=%d", (int)header->encoder_bit_rate_used);
 
-            if (vc->incoming_video_bitrate_last_changed != header->encoder_bit_rate_used) {
-                if (vc->av) {
-                    if (vc->av->call_comm_cb.first) {
-                        vc->av->call_comm_cb.first(vc->av, vc->friend_number,
-                                                   TOXAV_CALL_COMM_DECODER_CURRENT_BITRATE,
-                                                   (int64_t)header->encoder_bit_rate_used,
-                                                   vc->av->call_comm_cb.second);
-                    }
+        vc->last_incoming_frame_ts = header_v3->frame_record_timestamp;
 
+
+        // give network roundtrip time to client -------
+
+        if ((vc->network_round_trip_time_last_cb_ts + 2000) < current_time_monotonic()) {
+            if (vc->av) {
+                if (vc->av->call_comm_cb.first) {
+                    vc->av->call_comm_cb.first(vc->av, vc->friend_number,
+                                               TOXAV_CALL_COMM_NETWORK_ROUND_TRIP_MS,
+                                               (int64_t)vc->rountrip_time_ms,
+                                               vc->av->call_comm_cb.second);
                 }
 
-                vc->incoming_video_bitrate_last_changed = header->encoder_bit_rate_used;
             }
 
-            vc->last_incoming_frame_ts = header_v3->frame_record_timestamp;
+            vc->network_round_trip_time_last_cb_ts = current_time_monotonic();
+        }
+
+        // give network roundtrip time to client -------
+
+
+
+        if (vc->show_own_video == 0) {
+
+            if ((vc->incoming_video_bitrate_last_cb_ts + 2000) < current_time_monotonic()) {
+                if (vc->incoming_video_bitrate_last_changed != header->encoder_bit_rate_used) {
+                    if (vc->av) {
+
+                        LOGGER_DEBUG(vc->log, "VIDEO_incoming_bitrate=%d",
+                                     (int)header->encoder_bit_rate_used);
+
+                        if (vc->av->call_comm_cb.first) {
+                            vc->av->call_comm_cb.first(vc->av, vc->friend_number,
+                                                       TOXAV_CALL_COMM_DECODER_CURRENT_BITRATE,
+                                                       (int64_t)header->encoder_bit_rate_used,
+                                                       vc->av->call_comm_cb.second);
+                        }
+
+                    }
+
+                    vc->incoming_video_bitrate_last_changed = header->encoder_bit_rate_used;
+                }
+
+                vc->incoming_video_bitrate_last_cb_ts = current_time_monotonic();
+
+            }
+
 
 #ifdef USE_TS_BUFFER_FOR_VIDEO
             struct RTPMessage *msg_old = tsb_write((TSBuffer *)vc->vbuf_raw, msg,

@@ -225,6 +225,8 @@ typedef struct VCSession_s {
     ToxAV *av;
     uint32_t friend_number;
     uint32_t incoming_video_bitrate_last_changed;
+    uint32_t incoming_video_bitrate_last_cb_ts;
+    uint32_t network_round_trip_time_last_cb_ts;
 
     PAIR(toxav_video_receive_frame_cb *, void *) vcb; /* Video frame receive callback */
 
