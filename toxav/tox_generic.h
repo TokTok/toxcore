@@ -18,6 +18,9 @@
  * along with Tox.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
+#define DISABLE_H264_ENCODER_FEATURE    0
+
 // H264 settings -----------
 #define x264_param_profile_str "high"
 #define VIDEO_BITRATE_INITIAL_VALUE_H264 1500
@@ -45,6 +48,9 @@
 #define TOXAV_ENCODER_CODEC_HW_ACCEL_NONE 0
 #define TOXAV_ENCODER_CODEC_HW_ACCEL_OMX_PI 1
 
+#define VIDEO_BITRATE_MAX_AUTO_VALUE_VP8 2000
+#define VIDEO_BITRATE_MIN_AUTO_VALUE_VP8 95
+
 
 typedef struct ToxAVCall_s {
     ToxAV *av;
@@ -66,6 +72,7 @@ typedef struct ToxAVCall_s {
     uint32_t audio_bit_rate; /* Sending audio bit rate */
     uint32_t video_bit_rate; /* Sending video bit rate */
     uint32_t video_bit_rate_last_last_changed; // only for callback info
+    uint32_t video_bit_rate_last_last_changed_cb_ts;
 
     uint64_t last_incoming_video_frame_rtimestamp;
     uint64_t last_incoming_video_frame_ltimestamp;

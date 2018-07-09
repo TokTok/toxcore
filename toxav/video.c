@@ -290,8 +290,6 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
     tsb_get_range_in_buffer((TSBuffer *)vc->vbuf_raw, &timestamp_min, &timestamp_max);
 
-    // vc->timestamp_difference_adjustment = -450;
-
 #define MIN_AV_BUFFERING_MS 250
 
     if (vc->rountrip_time_ms > (-vc->timestamp_difference_adjustment)) {
@@ -693,16 +691,19 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
         //             (int)h264_encoded_video_frame,
         //             (int)vc->video_decoder_codec_used);
 
-        if ((vc->video_decoder_codec_used != TOXAV_ENCODER_CODEC_USED_H264)
-                && (h264_encoded_video_frame == 1)) {
-            LOGGER_ERROR(vc->log, "h264_encoded_video_frame:AA");
-            video_switch_decoder(vc, TOXAV_ENCODER_CODEC_USED_H264);
+        if (DISABLE_H264_ENCODER_FEATURE == 0) {
 
-        } else if ((vc->video_decoder_codec_used == TOXAV_ENCODER_CODEC_USED_H264)
-                   && (h264_encoded_video_frame == 0)) {
-            LOGGER_ERROR(vc->log, "h264_encoded_video_frame:BB");
-            // HINT: once we switched to H264 never switch back to VP8 until this call ends
-            // video_switch_decoder(vc, TOXAV_ENCODER_CODEC_USED_VP8);
+            if ((vc->video_decoder_codec_used != TOXAV_ENCODER_CODEC_USED_H264)
+                    && (h264_encoded_video_frame == 1)) {
+                LOGGER_ERROR(vc->log, "h264_encoded_video_frame:AA");
+                video_switch_decoder(vc, TOXAV_ENCODER_CODEC_USED_H264);
+
+            } else if ((vc->video_decoder_codec_used == TOXAV_ENCODER_CODEC_USED_H264)
+                       && (h264_encoded_video_frame == 0)) {
+                LOGGER_ERROR(vc->log, "h264_encoded_video_frame:BB");
+                // HINT: once we switched to H264 never switch back to VP8 until this call ends
+                // video_switch_decoder(vc, TOXAV_ENCODER_CODEC_USED_VP8);
+            }
         }
 
         // HINT: somtimes the singaling of H264 capability does not work
@@ -825,30 +826,24 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
         // give network roundtrip time to client -------
 
 
-
         if (vc->show_own_video == 0) {
+
 
             if ((vc->incoming_video_bitrate_last_cb_ts + 2000) < current_time_monotonic()) {
                 if (vc->incoming_video_bitrate_last_changed != header->encoder_bit_rate_used) {
                     if (vc->av) {
-
-                        LOGGER_DEBUG(vc->log, "VIDEO_incoming_bitrate=%d",
-                                     (int)header->encoder_bit_rate_used);
-
                         if (vc->av->call_comm_cb.first) {
                             vc->av->call_comm_cb.first(vc->av, vc->friend_number,
                                                        TOXAV_CALL_COMM_DECODER_CURRENT_BITRATE,
                                                        (int64_t)header->encoder_bit_rate_used,
                                                        vc->av->call_comm_cb.second);
                         }
-
                     }
 
                     vc->incoming_video_bitrate_last_changed = header->encoder_bit_rate_used;
                 }
 
                 vc->incoming_video_bitrate_last_cb_ts = current_time_monotonic();
-
             }
 
 

@@ -36,6 +36,10 @@
 #include <errno.h>
 #include <stdlib.h>
 
+
+#define DISABLE_H264_ENCODER_FEATURE    1
+
+
 enum {
     /**
      * The number of milliseconds we want to keep a keyframe in the buffer for,
@@ -600,7 +604,9 @@ static int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t 
                 LOGGER_ERROR(m->log, "RECVD:PACKET_TOXAV_COMM_CHANNEL_HAVE_H264_VIDEO");
 
                 if (session->cs) {
-                    ((VCSession *)(session->cs))->h264_video_capabilities_received = 1;
+                    if (DISABLE_H264_ENCODER_FEATURE == 0) {
+                        ((VCSession *)(session->cs))->h264_video_capabilities_received = 1;
+                    }
                 }
             } else if (data[1] == PACKET_TOXAV_COMM_CHANNEL_LESS_VIDEO_FPS) {
                 if (session->cs) {

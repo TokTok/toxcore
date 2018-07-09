@@ -1191,14 +1191,6 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 
     }
 
-    // --- STAY on VP8 ENCODE !! ----
-    // --- STAY on VP8 ENCODE !! ----
-    // --- STAY on VP8 ENCODE !! ----
-    // call->video.second->video_encoder_coded_used = TOXAV_ENCODER_CODEC_USED_VP8;
-    // --- STAY on VP8 ENCODE !! ----
-    // --- STAY on VP8 ENCODE !! ----
-    // --- STAY on VP8 ENCODE !! ----
-
     // HINT: auto switch encoder, if we got capabilities packet from friend ------
 
     if ((call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_VP8)
@@ -1220,16 +1212,19 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
         }
     }
 
+    if ((call->video_bit_rate_last_last_changed_cb_ts + 2000) < current_time_monotonic()) {
+        if (call->video_bit_rate_last_last_changed != call->video_bit_rate) {
+            if (av->call_comm_cb.first) {
+                av->call_comm_cb.first(av, friend_number,
+                                       TOXAV_CALL_COMM_ENCODER_CURRENT_BITRATE,
+                                       (int64_t)call->video_bit_rate,
+                                       av->call_comm_cb.second);
+            }
 
-    if (call->video_bit_rate_last_last_changed != call->video_bit_rate) {
-        if (av->call_comm_cb.first) {
-            av->call_comm_cb.first(av, friend_number,
-                                   TOXAV_CALL_COMM_ENCODER_CURRENT_BITRATE,
-                                   (int64_t)call->video_bit_rate,
-                                   av->call_comm_cb.second);
+            call->video_bit_rate_last_last_changed = call->video_bit_rate;
         }
 
-        call->video_bit_rate_last_last_changed = call->video_bit_rate;
+        call->video_bit_rate_last_last_changed_cb_ts = current_time_monotonic();
     }
 
     int vpx_encode_flags = 0;
@@ -1534,7 +1529,7 @@ void callback_bwc(BWController *bwc, uint32_t friend_number, float loss, void *u
         LOGGER_ERROR(call->av->m->log, "Reported loss of %f%% : %f", loss * 100, loss);
     }
 
-    if (call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_H264) {
+    if (1 == 1) { // (call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_H264) {
 
         if (call->video_bit_rate == 0) {
             // HINT: video is turned off -> just do nothing
@@ -1622,10 +1617,19 @@ void callback_bwc(BWController *bwc, uint32_t friend_number, float loss, void *u
         }
 
         // HINT: sanity check --------------
-        if (call->video_bit_rate < VIDEO_BITRATE_MIN_AUTO_VALUE_H264) {
-            call->video_bit_rate = VIDEO_BITRATE_MIN_AUTO_VALUE_H264;
-        } else if (call->video_bit_rate > VIDEO_BITRATE_MAX_AUTO_VALUE_H264) {
-            call->video_bit_rate = VIDEO_BITRATE_MAX_AUTO_VALUE_H264;
+
+        if (call->video.second->video_encoder_coded_used == TOXAV_ENCODER_CODEC_USED_H264) {
+            if (call->video_bit_rate < VIDEO_BITRATE_MIN_AUTO_VALUE_H264) {
+                call->video_bit_rate = VIDEO_BITRATE_MIN_AUTO_VALUE_H264;
+            } else if (call->video_bit_rate > VIDEO_BITRATE_MAX_AUTO_VALUE_H264) {
+                call->video_bit_rate = VIDEO_BITRATE_MAX_AUTO_VALUE_H264;
+            }
+        } else {
+            if (call->video_bit_rate < VIDEO_BITRATE_MIN_AUTO_VALUE_VP8) {
+                call->video_bit_rate = VIDEO_BITRATE_MIN_AUTO_VALUE_VP8;
+            } else if (call->video_bit_rate > VIDEO_BITRATE_MAX_AUTO_VALUE_VP8) {
+                call->video_bit_rate = VIDEO_BITRATE_MAX_AUTO_VALUE_VP8;
+            }
         }
 
         // HINT: sanity check --------------

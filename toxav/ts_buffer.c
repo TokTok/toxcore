@@ -56,7 +56,8 @@ void *tsb_write(TSBuffer *b, void *p, const uint64_t data_type, const uint32_t t
     void *rc = NULL;
 
     if (tsb_full(b) == true) {
-        rc = b->data[b->start]; // return oldest element
+        rc = b->data[b->start]; // return oldest element -> TODO: this is not actually the oldest
+        // element. --> search for the element with the oldest timestamp and return that!
         b->start = (b->start + 1) % b->size; // include empty element if buffer would be empty now
     }
 
