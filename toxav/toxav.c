@@ -1630,6 +1630,13 @@ void callback_bwc(BWController *bwc, uint32_t friend_number, float loss, void *u
             } else if (call->video_bit_rate > VIDEO_BITRATE_MAX_AUTO_VALUE_VP8) {
                 call->video_bit_rate = VIDEO_BITRATE_MAX_AUTO_VALUE_VP8;
             }
+
+            call->video_bit_rate = (uint32_t)((float)call->video_bit_rate * VIDEO_BITRATE_CORRECTION_FACTOR_VP8);
+
+            if (call->video_bit_rate < VIDEO_BITRATE_MIN_AUTO_VALUE_VP8) {
+                call->video_bit_rate = VIDEO_BITRATE_MIN_AUTO_VALUE_VP8;
+            }
+
         }
 
         // HINT: sanity check --------------

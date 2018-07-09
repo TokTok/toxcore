@@ -138,11 +138,11 @@ static void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t 
             cfg->rc_max_quantizer = rc_max_quantizer; // 40
             cfg->rc_resize_up_thresh = 29;
             cfg->rc_resize_down_thresh = 5;
-            cfg->rc_undershoot_pct = 10; // 100
+            cfg->rc_undershoot_pct = 100; // 100
             cfg->rc_overshoot_pct = 10; // 15
-            cfg->rc_buf_initial_sz = 5000; // 500 in ms
-            cfg->rc_buf_optimal_sz = 5000; // 600 in ms
-            cfg->rc_buf_sz = 5000; // 1000 in ms
+            cfg->rc_buf_initial_sz = 500; // 500 in ms
+            cfg->rc_buf_optimal_sz = 600; // 600 in ms
+            cfg->rc_buf_sz = 1000; // 1000 in ms
         } else { // TOXAV_ENCODER_VP8_QUALITY_NORMAL
             cfg->rc_dropframe_thresh = 0;
             cfg->rc_resize_allowed = 0; // allow encoder to resize to smaller resolution
@@ -150,11 +150,11 @@ static void vc__init_encoder_cfg(Logger *log, vpx_codec_enc_cfg_t *cfg, int16_t 
             cfg->rc_max_quantizer = rc_max_quantizer; // 63
             cfg->rc_resize_up_thresh = TOXAV_ENCODER_VP_RC_RESIZE_UP_THRESH;
             cfg->rc_resize_down_thresh = TOXAV_ENCODER_VP_RC_RESIZE_DOWN_THRESH;
-            cfg->rc_undershoot_pct = 10; // 100
+            cfg->rc_undershoot_pct = 100; // 100
             cfg->rc_overshoot_pct = 10; // 15
-            cfg->rc_buf_initial_sz = 5000; // 500 in ms
-            cfg->rc_buf_optimal_sz = 5000; // 600 in ms
-            cfg->rc_buf_sz = 5000; // 1000 in ms
+            cfg->rc_buf_initial_sz = 500; // 500 in ms
+            cfg->rc_buf_optimal_sz = 600; // 600 in ms
+            cfg->rc_buf_sz = 1000; // 1000 in ms
         }
 
     }
@@ -312,9 +312,9 @@ VCSession *vc_new_vpx(Logger *log, ToxAV *av, uint32_t friend_number, toxav_vide
 #endif
 
 
-#if 0
-    uint32_t rc_max_intra_target; // = MaxIntraTarget(600);
-    rc_max_intra_target = 102;
+#if 1
+    uint32_t rc_max_intra_target; // = MaxIntraTarget(250);
+    rc_max_intra_target = 200;
     rc = vpx_codec_control(vc->encoder, VP8E_SET_MAX_INTRA_BITRATE_PCT, rc_max_intra_target);
 
     if (rc != VPX_CODEC_OK) {
@@ -626,15 +626,15 @@ int vc_reconfigure_encoder_vpx(Logger *log, VCSession *vc, uint32_t bit_rate,
         encoder->Control(VP8E_SET_ARNR_TYPE, 3);
         */
 
-#if 0
+#if 1
         /*
         Codec control function to set Max data rate for Intra frames.
         This value controls additional clamping on the maximum size of a keyframe. It is expressed as a percentage of the average per-frame bitrate, with the special (and default) value 0 meaning unlimited, or no additional clamping beyond the codec's built-in algorithm.
         For example, to allocate no more than 4.5 frames worth of bitrate to a keyframe, set this to 450.
         Supported in codecs: VP8, VP9
         */
-        uint32_t rc_max_intra_target; // = MaxIntraTarget(600);
-        rc_max_intra_target = 102;
+        uint32_t rc_max_intra_target; // = MaxIntraTarget(250);
+        rc_max_intra_target = 200;
         rc = vpx_codec_control(&new_c, VP8E_SET_MAX_INTRA_BITRATE_PCT, rc_max_intra_target);
 
         if (rc != VPX_CODEC_OK) {

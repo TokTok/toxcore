@@ -39,8 +39,8 @@ deadline parameter analogous to VPx BEST QUALITY mode.
 
 
 // initialize encoder with this value. Target bandwidth to use for this stream, in kilobits per second.
-#define VIDEO_BITRATE_INITIAL_VALUE 500
-#define VIDEO_BITRATE_INITIAL_VALUE_VP9 500
+#define VIDEO_BITRATE_INITIAL_VALUE 1000
+#define VIDEO_BITRATE_INITIAL_VALUE_VP9 1000
 
 struct vpx_frame_user_data {
     uint64_t record_timestamp;
