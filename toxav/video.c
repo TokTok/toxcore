@@ -291,8 +291,7 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
     int64_t want_remote_video_ts = (current_time_monotonic() + vc->timestamp_difference_to_sender +
                                     vc->timestamp_difference_adjustment);
 
-    uint32_t timestamp_want_get = (uint32_t)
-                                  want_remote_video_ts; // (uint32_t)((int)want_remote_video_ts - GENERAL_TS_DIFF);
+    uint32_t timestamp_want_get = (uint32_t)want_remote_video_ts;
 
 #if 0
 
