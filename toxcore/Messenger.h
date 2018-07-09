@@ -50,6 +50,31 @@ typedef enum Message_Type {
     MESSAGE_ACTION
 } Message_Type;
 
+typedef struct Messenger Messenger;
+
+typedef uint32_t m_state_size_cb(const Messenger *m);
+typedef void m_state_save_cb(const Messenger *m, uint8_t *data);
+typedef void m_state_load_cb(Messenger *m, const uint8_t *data, uint32_t length);
+
+typedef enum Messenger_State_Type {
+    MESSENGER_STATE_TYPE_NOSPAMKEYS    = 1,
+    MESSENGER_STATE_TYPE_DHT           = 2,
+    MESSENGER_STATE_TYPE_FRIENDS       = 3,
+    MESSENGER_STATE_TYPE_NAME          = 4,
+    MESSENGER_STATE_TYPE_STATUSMESSAGE = 5,
+    MESSENGER_STATE_TYPE_STATUS        = 6,
+    MESSENGER_STATE_TYPE_TCP_RELAY     = 10,
+    MESSENGER_STATE_TYPE_PATH_NODE     = 11,
+    MESSENGER_STATE_TYPE_END           = 255,
+} Messenger_State_Type;
+
+typedef struct Messenger_State_Plugin {
+    Messenger_State_Type type;
+    m_state_size_cb *size;
+    m_state_save_cb *save;
+    m_state_load_cb *load;
+} Messenger_State_Plugin;
+
 typedef struct Messenger_Options {
     bool ipv6enabled;
     bool udp_disabled;
@@ -63,6 +88,9 @@ typedef struct Messenger_Options {
     logger_cb *log_callback;
     void *log_context;
     void *log_user_data;
+
+    const Messenger_State_Plugin *state_plugins;
+    uint8_t state_plugins_length;
 } Messenger_Options;
 
 
@@ -155,8 +183,6 @@ typedef enum Filekind {
     FILEKIND_AVATAR
 } Filekind;
 
-
-typedef struct Messenger Messenger;
 
 typedef void m_self_connection_status_cb(Messenger *m, unsigned int connection_status, void *user_data);
 typedef void m_friend_status_cb(Messenger *m, uint32_t friend_number, unsigned int status, void *user_data);
