@@ -193,8 +193,9 @@ int main(int argc, char *argv[]) {
   // toxcore/Messenger
   CHECK_SIZE(File_Transfers, 72);
   CHECK_SIZE(Friend, 39264);
-  CHECK_SIZE(Messenger, 2008);
-  CHECK_SIZE(Messenger_Options, 72);
+  CHECK_SIZE(Messenger, 2024);
+  CHECK_SIZE(Messenger_State_Plugin, 32);
+  CHECK_SIZE(Messenger_Options, 88);
   CHECK_SIZE(Receipts, 16);
   // toxcore/net_crypto
 #ifdef __linux__

@@ -2748,15 +2748,6 @@ void do_messenger(Messenger *m, void *userdata)
 #define MESSENGER_STATE_COOKIE_GLOBAL 0x15ed1b1f
 
 #define MESSENGER_STATE_COOKIE_TYPE      0x01ce
-#define MESSENGER_STATE_TYPE_NOSPAMKEYS    1
-#define MESSENGER_STATE_TYPE_DHT           2
-#define MESSENGER_STATE_TYPE_FRIENDS       3
-#define MESSENGER_STATE_TYPE_NAME          4
-#define MESSENGER_STATE_TYPE_STATUSMESSAGE 5
-#define MESSENGER_STATE_TYPE_STATUS        6
-#define MESSENGER_STATE_TYPE_TCP_RELAY     10
-#define MESSENGER_STATE_TYPE_PATH_NODE     11
-#define MESSENGER_STATE_TYPE_END           255
 
 #define SAVED_FRIEND_REQUEST_SIZE 1024
 #define NUM_SAVED_PATH_NODES 8
@@ -2973,10 +2964,27 @@ static int friends_list_load(Messenger *m, const uint8_t *data, uint32_t length)
     return num;
 }
 
+static uint32_t m_state_plugins_size(const Messenger *m)
+{
+    const uint32_t size32 = sizeof(uint32_t);
+    const uint32_t sizesubhead = size32 * 2;
+
+    uint32_t size = 0;
+
+    for (const Messenger_State_Plugin *plugin = m->options.state_plugins;
+            plugin != m->options.state_plugins + m->options.state_plugins_length;
+            ++plugin) {
+        size += sizesubhead + plugin->size(m);
+    }
+
+    return size;
+}
+
 /*  return size of the messenger data (for saving) */
 uint32_t messenger_size(const Messenger *m)
 {
-    uint32_t size32 = sizeof(uint32_t), sizesubhead = size32 * 2;
+    const uint32_t size32 = sizeof(uint32_t);
+    const uint32_t sizesubhead = size32 * 2;
     return   size32 * 2                                      // global cookie
              + sizesubhead + sizeof(uint32_t) + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_SECRET_KEY_SIZE
              + sizesubhead + dht_size(m->dht)                  // DHT
@@ -2986,6 +2994,7 @@ uint32_t messenger_size(const Messenger *m)
              + sizesubhead + 1                                 // status
              + sizesubhead + NUM_SAVED_TCP_RELAYS * packed_node_size(net_family_tcp_ipv6) // TCP relays
              + sizesubhead + NUM_SAVED_PATH_NODES * packed_node_size(net_family_tcp_ipv6) // saved path nodes
+             + m_state_plugins_size(m)
              + sizesubhead;
 }
 
