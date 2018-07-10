@@ -38,7 +38,7 @@
 #include <stdlib.h>
 
 
-#define DISABLE_H264_ENCODER_FEATURE    1
+#define DISABLE_H264_ENCODER_FEATURE    0
 
 
 enum {
