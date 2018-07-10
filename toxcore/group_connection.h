@@ -76,6 +76,7 @@ struct GC_Connection {
     int tcp_relays_index;
     bool any_tcp_connections;
 
+
     uint64_t    last_rcvd_ping;
     bool        pending_sync_request;   /* true if we have sent this peer a sync request and have not received a reply*/
     bool        pending_state_sync;    /* used for group state syncing */

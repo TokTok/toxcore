@@ -214,7 +214,6 @@ int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Peer_Announce *gc_
 int pack_announce(uint8_t *data, uint16_t length, GC_Announce *announce)
 {
     if (!data || !announce || length < GC_ANNOUNCE_MIN_SIZE) {
-        fprintf(stderr, "pack ann1\n");
         return -1;
     }
 
@@ -228,7 +227,6 @@ int pack_announce(uint8_t *data, uint16_t length, GC_Announce *announce)
     if (announce->ip_port_is_set) {
         int ip_port_length = pack_ip_port(data + offset, length - offset, &announce->ip_port);
         if (ip_port_length == -1) {
-            fprintf(stderr, "pack ann2\n");
             return -1;
         }
 
@@ -238,7 +236,6 @@ int pack_announce(uint8_t *data, uint16_t length, GC_Announce *announce)
     int nodes_length = pack_nodes(data + offset, length - offset, announce->tcp_relays,
                                   announce->tcp_relays_count);
     if (nodes_length == -1) {
-        fprintf(stderr, "pack ann3\n");
         return -1;
     }
 
@@ -267,11 +264,14 @@ int unpack_announce(uint8_t *data, uint16_t length, GC_Announce *announce)
         offset += ip_port_length;
     }
 
-    int nodes_length = unpack_nodes(announce->tcp_relays, MAX_ANNOUNCED_TCP_RELAYS, nullptr,
-                                    data + offset, length - offset, 1);
-    if (nodes_length == -1) {
+    uint16_t nodes_length;
+    int nodes_count = unpack_nodes(announce->tcp_relays, MAX_ANNOUNCED_TCP_RELAYS, &nodes_length,
+                                   data + offset, length - offset, 1);
+    if (nodes_count == -1) {
         return -1;
     }
+
+    announce->tcp_relays_count = (uint8_t)nodes_count;
 
     return offset + nodes_length;
 }
@@ -314,16 +314,13 @@ int pack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce *ann
 int unpack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce *announce)
 {
     if (length < ENC_PUBLIC_KEY || !announce || !data) {
-        fprintf(stderr, "pub ann too short\n");
         return -1;
     }
-    fprintf(stderr, "pub ann length %d\n", length);
 
     memcpy(announce->chat_public_key, data, ENC_PUBLIC_KEY);
 
     int base_announce_size = unpack_announce(data + ENC_PUBLIC_KEY, length - ENC_PUBLIC_KEY, &announce->base_announce);
     if (base_announce_size == -1) {
-        fprintf(stderr, "unpack base failed \n");
         return -1;
     }
 
