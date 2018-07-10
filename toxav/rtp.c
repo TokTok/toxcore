@@ -25,6 +25,7 @@
 
 #include "bwcontroller.h"
 #include "video.h"
+#include "audio.h"
 #include "dummy_ntp.h"
 
 #include "../toxcore/Messenger.h"
@@ -758,7 +759,18 @@ static int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t 
     LOGGER_DEBUG(m->log, "rtp packet record time: %llu", header.frame_record_timestamp);
 
 
+    // check flag indicating that we have real record-timestamps for frames ---
+    if ((header.flags & RTP_ENCODER_HAS_RECORD_TIMESTAMP) == 0) {
+        if (header.pt == (rtp_TypeVideo % 128)) {
+            LOGGER_DEBUG(m->log, "RTP_ENCODER_HAS_RECORD_TIMESTAMP:VV");
+            ((VCSession *)(session->cs))->encoder_frame_has_record_timestamp = 0;
+        } else if (header.pt == (rtp_TypeAudio % 128)) {
+            LOGGER_DEBUG(m->log, "RTP_ENCODER_HAS_RECORD_TIMESTAMP:AA");
+            ((ACSession *)(session->cs))->encoder_frame_has_record_timestamp = 0;
+        }
+    }
 
+    // set flag indicating that we have real record-timestamps for frames ---
 
     // HINT: ask sender for dummy ntp values -------------
     if (
@@ -791,7 +803,7 @@ static int handle_rtp_packet(Messenger *m, uint32_t friendnumber, const uint8_t 
 
     // The sender uses the new large-frame capable protocol and is sending a
     // video packet.
-    if ((header.flags & RTP_LARGE_FRAME) && header.pt == (rtp_TypeVideo % 128)) {
+    if ((header.flags & RTP_LARGE_FRAME) && (header.pt == (rtp_TypeVideo % 128))) {
 
         if (session->incoming_packets_ts_last_ts == -1) {
             session->incoming_packets_ts[session->incoming_packets_ts_index] = 0;
@@ -1178,10 +1190,9 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length, boo
 
     header.offset_lower = 0;
 
-    // here the highest bits gets stripped anyway, no need to do keyframe bit magic here!
     header.data_length_lower = length;
 
-    header.flags = RTP_LARGE_FRAME;
+    header.flags = RTP_LARGE_FRAME | RTP_ENCODER_HAS_RECORD_TIMESTAMP;
 
     if ((codec_used == TOXAV_ENCODER_CODEC_USED_H264) &&
             (is_video_payload == 1)) {

@@ -101,6 +101,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc->incoming_video_bitrate_last_changed = 0;
     vc->network_round_trip_time_last_cb_ts = 0;
     vc->incoming_video_bitrate_last_cb_ts = 0;
+    vc->encoder_frame_has_record_timestamp = 1;
     // options ---
 
 
@@ -309,12 +310,25 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
     uint32_t timestamp_want_get = (uint32_t)want_remote_video_ts;
 
-#if 1
+
+    // HINT: compensate for older clients ----------------
+    if (vc->encoder_frame_has_record_timestamp == 0) {
+        LOGGER_DEBUG(vc->log, "old client:002");
+        vc->tsb_range_ms = (UINT32_MAX - 1);
+        timestamp_want_get = (UINT32_MAX - 1);
+        vc->startup_video_timespan = 0;
+    }
+
+    // HINT: compensate for older clients ----------------
+
+#if 0
 
     if ((int)tsb_size((TSBuffer *)vc->vbuf_raw) > 0) {
-        LOGGER_DEBUG(vc->log, "FC:%d min=%ld max=%ld want=%d diff=%d adj=%d roundtrip=%d",
+        LOGGER_ERROR(vc->log, "FC:%d min=%ld max=%ld want=%d diff=%d adj=%d roundtrip=%d",
                      (int)tsb_size((TSBuffer *)vc->vbuf_raw),
-                     timestamp_min, timestamp_max, (int)timestamp_want_get,
+                     timestamp_min,
+                     timestamp_max,
+                     (int)timestamp_want_get,
                      (int)timestamp_want_get - (int)timestamp_max,
                      (int)vc->timestamp_difference_adjustment,
                      (int)vc->rountrip_time_ms);
@@ -803,6 +817,7 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
     // older clients do not send the frame record timestamp
     // compensate by using the frame sennt timestamp
     if (msg->header.frame_record_timestamp == 0) {
+        LOGGER_ERROR(vc->log, "old client:001");
         msg->header.frame_record_timestamp = msg->header.timestamp;
     }
 

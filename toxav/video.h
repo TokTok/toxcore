@@ -216,6 +216,7 @@ typedef struct VCSession_s {
     int32_t video_decoder_error_concealment_prev;
     int32_t video_decoder_codec_used;
     int32_t startup_video_timespan;
+    uint8_t encoder_frame_has_record_timestamp;
     // options ---
 
     void *vpx_frames_buf_list[VIDEO_MAX_FRAGMENT_BUFFER_COUNT];

@@ -85,6 +85,7 @@ typedef struct ACSession_s {
 
     int64_t timestamp_difference_to_sender;
     uint64_t last_incoming_frame_ts;
+    uint8_t encoder_frame_has_record_timestamp;
 
     pthread_mutex_t queue_mutex[1];
 

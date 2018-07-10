@@ -91,9 +91,14 @@ enum RTPFlags {
     RTP_KEY_FRAME = 1 << 1,
 
     /**
-     * Whether H264 codec was used to encode this vide frame
+     * Whether H264 codec was used to encode this video frame
      */
     RTP_ENCODER_IS_H264 = 1 << 2,
+
+    /**
+     * Whether we have record-timestamp for this video frame
+     */
+    RTP_ENCODER_HAS_RECORD_TIMESTAMP = 1 << 3,
 
 };
 

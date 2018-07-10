@@ -107,6 +107,8 @@ ACSession *ac_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_audio_re
     ac->lp_sampling_rate = AUDIO_DECODER__START_SAMPLING_RATE;
     ac->lp_channel_count = AUDIO_DECODER__START_CHANNEL_COUNT;
 
+    ac->encoder_frame_has_record_timestamp = 1;
+
     ac->av = av;
     ac->friend_number = friend_number;
     ac->acb.first = cb;
@@ -153,7 +155,8 @@ void ac_kill(ACSession *ac)
 #ifdef USE_TS_BUFFER_FOR_VIDEO
 static inline struct RTPMessage *jbuf_read(Logger *log, struct TSBuffer *q, int32_t *success,
         int64_t timestamp_difference_adjustment_,
-        int64_t timestamp_difference_to_sender_)
+        int64_t timestamp_difference_to_sender_,
+        uint8_t encoder_frame_has_record_timestamp)
 {
 #define AUDIO_CURRENT_TS_SPAN_MS 60
 // #define AUDIO_AHEAD_OF_VIDEO_MS 20
@@ -166,10 +169,22 @@ static inline struct RTPMessage *jbuf_read(Logger *log, struct TSBuffer *q, int3
     *success = 0;
     uint16_t removed_entries;
 
+    uint32_t tsb_range_ms = AUDIO_CURRENT_TS_SPAN_MS;
+
+    // HINT: compensate for older clients ----------------
+    if (encoder_frame_has_record_timestamp == 0) {
+        LOGGER_DEBUG(log, "old client:003");
+        tsb_range_ms = (UINT32_MAX - 1);
+        want_remote_video_ts = (UINT32_MAX - 1);
+    }
+
+    // HINT: compensate for older clients ----------------
+
+
     bool res = tsb_read(q, log, &ret, &lost_frame,
                         &timestamp_out_,
                         want_remote_video_ts,
-                        AUDIO_CURRENT_TS_SPAN_MS,
+                        tsb_range_ms,
                         &removed_entries);
 
     LOGGER_DEBUG(log, "jbuf_read:lost_frame=%d", (int)lost_frame);
@@ -192,7 +207,8 @@ static inline bool jbuf_is_empty(struct TSBuffer *q)
 #else
 static inline struct RTPMessage *jbuf_read(Logger *log, struct RingBuffer *q, int32_t *success,
         int64_t timestamp_difference_adjustment_,
-        int64_t timestamp_difference_to_sender_)
+        int64_t timestamp_difference_to_sender_,
+        uint8_t encoder_frame_has_record_timestamp)
 {
     void *ret = NULL;
     uint64_t lost_frame = 0;
@@ -254,7 +270,9 @@ uint8_t ac_iterate(ACSession *ac, uint64_t *a_r_timestamp, uint64_t *a_l_timesta
     pthread_mutex_lock(ac->queue_mutex);
 
     while ((msg = jbuf_read(ac->log, jbuffer, &rc,
-                            *timestamp_difference_adjustment_, *timestamp_difference_to_sender_))
+                            *timestamp_difference_adjustment_,
+                            *timestamp_difference_to_sender_,
+                            ac->encoder_frame_has_record_timestamp))
             || rc == AUDIO_LOST_FRAME_INDICATOR) {
         pthread_mutex_unlock(ac->queue_mutex);
 
