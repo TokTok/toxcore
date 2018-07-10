@@ -2680,15 +2680,14 @@ static void try_pack_gc_data(const Messenger *m, const GC_Chat *chat, Onion_Frie
     GC_Public_Announce announce;
     int tcp_num = tcp_copy_connected_relays(chat->tcp_conn, announce.base_announce.tcp_relays,
                                             MAX_ANNOUNCED_TCP_RELAYS);
-    IP_Port self_ip_port;
+    IP_Port self_ip_port = {0};
     int copy_ip_port_result = ipport_self_copy(m->dht, &self_ip_port);
     fprintf(stderr, "copy_ip_port_result %d tcp %d\n", copy_ip_port_result, tcp_num);
     bool ip_port_is_set = copy_ip_port_result == 0;
 
-    if (tcp_num > 0) {
+    if (tcp_num > 0 || ip_port_is_set) {
         announce.base_announce.tcp_relays_count = (uint8_t)tcp_num;
         announce.base_announce.ip_port_is_set = (uint8_t)(ip_port_is_set ? 1 : 0);
-        announce.base_announce.ip_port_is_set = 0;
         if (ip_port_is_set) {
             memcpy(&announce.base_announce.ip_port, &self_ip_port, sizeof(IP_Port));
         }
@@ -3260,7 +3259,7 @@ static uint8_t *groups_save(const Messenger *m, uint8_t *data)
             temp.privacy_state = c->chats[i].shared_state.privacy_state;
             temp.maxpeers = net_htons(c->chats[i].shared_state.maxpeers);
             temp.passwd_len = net_htons(c->chats[i].shared_state.password_length);
-            memcpy(temp.passwd, c->chats[i].shared_state.password, MAX_GC_PASSWD_SIZE);
+            memcpy(temp.passwd, c->chats[i].shared_state.password, MAX_GC_PASSWORD_SIZE);
             memcpy(temp.mod_list_hash, c->chats[i].shared_state.mod_list_hash, GC_MODERATION_HASH_SIZE);
             temp.sstate_version = net_htonl(c->chats[i].shared_state.version);
             memcpy(temp.sstate_signature, c->chats[i].shared_state_sig, SIGNATURE_SIZE);
