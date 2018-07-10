@@ -378,6 +378,12 @@ int ac_queue_message(void *acp, struct RTPMessage *msg)
     const struct RTPHeader *header_v3 = (void *) & (msg->header);
     // LOGGER_ERROR(ac->log, "TT:queue:A:seqnum=%d %llu", (int)header_v3->sequnum, header_v3->frame_record_timestamp);
 
+    // older clients do not send the frame record timestamp
+    // compensate by using the frame sennt timestamp
+    if (msg->header.frame_record_timestamp == 0) {
+        msg->header.frame_record_timestamp = msg->header.timestamp;
+    }
+
 #ifdef USE_TS_BUFFER_FOR_VIDEO
     int rc = jbuf_write(ac->log, ac, (struct TSBuffer *)ac->j_buf, msg);
 #else

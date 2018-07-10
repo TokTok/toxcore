@@ -800,6 +800,12 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
 
     LOGGER_DEBUG(vc->log, "TT:queue:V:fragnum=%ld", (long)header_v3->fragment_num);
 
+    // older clients do not send the frame record timestamp
+    // compensate by using the frame sennt timestamp
+    if (msg->header.frame_record_timestamp == 0) {
+        msg->header.frame_record_timestamp = msg->header.timestamp;
+    }
+
 
     if ((header->flags & RTP_LARGE_FRAME) && header->pt == rtp_TypeVideo % 128) {
 
