@@ -331,7 +331,6 @@ int gcc_send_group_packet(const GC_Chat *chat, const GC_Connection *gconn, const
     if (!net_family_is_unspec(gconn->addr.ip_port.ip.family)) {
         if (gcc_connection_is_direct(gconn)) {
             if ((uint16_t) sendpacket(chat->net, gconn->addr.ip_port, packet, length) == length) {
-                fprintf(stderr, "direct\n");
                 return 0;
             }
 
@@ -341,7 +340,6 @@ int gcc_send_group_packet(const GC_Chat *chat, const GC_Connection *gconn, const
         if (packet_type != GP_BROADCAST && packet_type != GP_MESSAGE_ACK) {
             if ((uint16_t) sendpacket(chat->net, gconn->addr.ip_port, packet, length) == length) {
                 direct_send_attempt = true;
-                fprintf(stderr, "direct attempt\n");
             }
         }
     }
@@ -349,7 +347,6 @@ int gcc_send_group_packet(const GC_Chat *chat, const GC_Connection *gconn, const
     int ret = send_packet_tcp_connection(chat->tcp_conn, gconn->tcp_connection_num, packet, length);
 
     if (ret == 0 || direct_send_attempt) {
-        fprintf(stderr, "both\n");
         return 0;
     }
 
