@@ -102,6 +102,7 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc->network_round_trip_time_last_cb_ts = 0;
     vc->incoming_video_bitrate_last_cb_ts = 0;
     vc->encoder_frame_has_record_timestamp = 1;
+    vc->video_max_bitrate = VIDEO_BITRATE_MAX_AUTO_VALUE_H264; // HINT: should probably be set to a higher value
     // options ---
 
 

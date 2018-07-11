@@ -665,6 +665,8 @@ bool toxav_option_set(ToxAV *av, uint32_t friend_number, TOXAV_OPTIONS_OPTION op
 
     ToxAVCall *call;
 
+    LOGGER_DEBUG(av->m->log, "toxav_option_set:1 %d %d", (int)option, (int)value);
+
     if (m_friend_exists(av->m, friend_number) == 0) {
         rc = TOXAV_ERR_OPTION_SET_OTHER_ERROR;
         goto END;
@@ -680,6 +682,8 @@ bool toxav_option_set(ToxAV *av, uint32_t friend_number, TOXAV_OPTIONS_OPTION op
     }
 
     pthread_mutex_lock(call->mutex);
+
+    LOGGER_DEBUG(av->m->log, "toxav_option_set:2 %d %d", (int)option, (int)value);
 
     if (option == TOXAV_ENCODER_CPU_USED) {
         VCSession *vc = (VCSession *)call->video.second;
@@ -737,6 +741,20 @@ bool toxav_option_set(ToxAV *av, uint32_t friend_number, TOXAV_OPTIONS_OPTION op
             vc->video_rc_max_quantizer_prev = vc->video_rc_max_quantizer;
             vc->video_rc_max_quantizer = (int32_t)value;
             LOGGER_WARNING(av->m->log, "video encoder setting rc_max_quantizer to: %d", (int)value);
+        }
+    } else if (option == TOXAV_ENCODER_VIDEO_MAX_BITRATE) {
+        VCSession *vc = (VCSession *)call->video.second;
+
+        if (vc->video_max_bitrate == (int32_t)value) {
+            LOGGER_WARNING(av->m->log, "video encoder video_max_bitrate already set to: %d", (int)value);
+        } else {
+            vc->video_max_bitrate = (int32_t)value;
+
+            if (call->video_bit_rate > vc->video_max_bitrate) {
+                call->video_bit_rate = vc->video_max_bitrate;
+            }
+
+            LOGGER_WARNING(av->m->log, "video encoder setting video_max_bitrate to: %d", (int)value);
         }
     } else if (option == TOXAV_ENCODER_VIDEO_BITRATE_AUTOSET) {
         VCSession *vc = (VCSession *)call->video.second;
@@ -1561,6 +1579,10 @@ void callback_bwc(BWController *bwc, uint32_t friend_number, float loss, void *u
                     call->video_bit_rate = VIDEO_BITRATE_MAX_AUTO_VALUE_H264;
                 }
 
+                if (call->video_bit_rate > (uint32_t)call->video.second->video_max_bitrate) {
+                    call->video_bit_rate = (uint32_t)call->video.second->video_max_bitrate;
+                }
+
                 // HINT: sanity check --------------
 
                 LOGGER_ERROR(call->av->m->log, "callback_bwc:DEC:1:H:vb=%d loss=%d", (int)call->video_bit_rate, (int)(loss * 100));
@@ -1588,6 +1610,10 @@ void callback_bwc(BWController *bwc, uint32_t friend_number, float loss, void *u
                     call->video_bit_rate = VIDEO_BITRATE_MAX_AUTO_VALUE_H264;
                 }
 
+                if (call->video_bit_rate > (uint32_t)call->video.second->video_max_bitrate) {
+                    call->video_bit_rate = (uint32_t)call->video.second->video_max_bitrate;
+                }
+
                 // HINT: sanity check --------------
 
                 LOGGER_DEBUG(call->av->m->log, "callback_bwc:INC:vb=%d loss=%d", (int)call->video_bit_rate, (int)(loss * 100));
@@ -1608,6 +1634,10 @@ void callback_bwc(BWController *bwc, uint32_t friend_number, float loss, void *u
                     call->video_bit_rate = VIDEO_BITRATE_MIN_AUTO_VALUE_H264;
                 } else if (call->video_bit_rate > VIDEO_BITRATE_MAX_AUTO_VALUE_H264) {
                     call->video_bit_rate = VIDEO_BITRATE_MAX_AUTO_VALUE_H264;
+                }
+
+                if (call->video_bit_rate > (uint32_t)call->video.second->video_max_bitrate) {
+                    call->video_bit_rate = (uint32_t)call->video.second->video_max_bitrate;
                 }
 
                 // HINT: sanity check --------------
@@ -1637,6 +1667,10 @@ void callback_bwc(BWController *bwc, uint32_t friend_number, float loss, void *u
                 call->video_bit_rate = VIDEO_BITRATE_MIN_AUTO_VALUE_VP8;
             }
 
+        }
+
+        if (call->video_bit_rate > (uint32_t)call->video.second->video_max_bitrate) {
+            call->video_bit_rate = (uint32_t)call->video.second->video_max_bitrate;
         }
 
         // HINT: sanity check --------------
