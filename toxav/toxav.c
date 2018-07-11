@@ -750,8 +750,8 @@ bool toxav_option_set(ToxAV *av, uint32_t friend_number, TOXAV_OPTIONS_OPTION op
         } else {
             vc->video_max_bitrate = (int32_t)value;
 
-            if (call->video_bit_rate > vc->video_max_bitrate) {
-                call->video_bit_rate = vc->video_max_bitrate;
+            if (call->video_bit_rate > (uint32_t)vc->video_max_bitrate) {
+                call->video_bit_rate = (uint32_t)vc->video_max_bitrate;
             }
 
             LOGGER_WARNING(av->m->log, "video encoder setting video_max_bitrate to: %d", (int)value);
@@ -1255,7 +1255,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
     }
 
     if (call->video.second->video_keyframe_method == TOXAV_ENCODER_KF_METHOD_NORMAL) {
-        if (call->video.first->ssrc < (VIDEO_SEND_X_KEYFRAMES_FIRST * h264_iframe_factor)) {
+        if (call->video.first->ssrc < (uint32_t)(VIDEO_SEND_X_KEYFRAMES_FIRST * h264_iframe_factor)) {
 
             if (call->video.second->video_encoder_coded_used != TOXAV_ENCODER_CODEC_USED_VP9) {
                 // Key frame flag for first frames
@@ -1277,7 +1277,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 #endif
 
             call->video.first->ssrc++;
-        } else if (call->video.first->ssrc == (VIDEO_SEND_X_KEYFRAMES_FIRST * h264_iframe_factor)) {
+        } else if (call->video.first->ssrc == (uint32_t)(VIDEO_SEND_X_KEYFRAMES_FIRST * h264_iframe_factor)) {
             if (call->video.second->video_encoder_coded_used != TOXAV_ENCODER_CODEC_USED_VP9) {
                 // normal keyframe placement
                 vpx_encode_flags = 0;

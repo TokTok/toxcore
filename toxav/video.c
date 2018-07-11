@@ -91,6 +91,8 @@ VCSession *vc_new(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_re
     vc->dummy_ntp_remote_start = 0;
     vc->dummy_ntp_remote_end = 0;
     vc->rountrip_time_ms = 0;
+    vc->video_play_delay = 0;
+    vc->video_frame_buffer_entries = 0;
     vc->last_sent_keyframe_ts = 0;
 
     vc->last_incoming_frame_ts = 0;
@@ -293,13 +295,14 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
     tsb_get_range_in_buffer((TSBuffer *)vc->vbuf_raw, &timestamp_min, &timestamp_max);
 
 #define MIN_AV_BUFFERING_MS 250
+#define AV_ADJUSTMENT_BASE_MS 100
 
-    if (vc->rountrip_time_ms > (-vc->timestamp_difference_adjustment)) {
+    if (vc->rountrip_time_ms > (-vc->timestamp_difference_adjustment - AV_ADJUSTMENT_BASE_MS)) {
         // drift
         if (vc->timestamp_difference_adjustment < -MIN_AV_BUFFERING_MS) {
             vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment - 2;
         }
-    } else if (vc->rountrip_time_ms < (-vc->timestamp_difference_adjustment)) {
+    } else if (vc->rountrip_time_ms < (-vc->timestamp_difference_adjustment - AV_ADJUSTMENT_BASE_MS)) {
         // drift
         if (vc->timestamp_difference_adjustment < -MIN_AV_BUFFERING_MS) {
             vc->timestamp_difference_adjustment = vc->timestamp_difference_adjustment + 2;
@@ -358,15 +361,20 @@ uint8_t vc_iterate(VCSession *vc, Messenger *m, uint8_t skip_video_flag, uint64_
 
         const struct RTPHeader *header_v3_0 = (void *) & (p->header);
 
-        LOGGER_DEBUG(vc->log, "seq:%d FC:%d min=%ld max=%ld want=%d got=%d diff=%d rm=%d",
-                     (int)header_v3_0->sequnum,
-                     (int)tsb_size((TSBuffer *)vc->vbuf_raw),
-                     timestamp_min,
-                     timestamp_max,
-                     (int)timestamp_want_get,
-                     (int)timestamp_out_,
-                     ((int)timestamp_want_get - (int)timestamp_out_),
-                     (int)removed_entries);
+        vc->video_play_delay = ((current_time_monotonic() + vc->timestamp_difference_to_sender) - timestamp_out_);
+        vc->video_frame_buffer_entries = (uint32_t)tsb_size((TSBuffer *)vc->vbuf_raw);
+
+        LOGGER_WARNING(vc->log, "seq:%d FC:%d min=%ld max=%ld want=%d got=%d diff=%d rm=%d pdelay=%d adj=%d",
+                       (int)header_v3_0->sequnum,
+                       (int)tsb_size((TSBuffer *)vc->vbuf_raw),
+                       timestamp_min,
+                       timestamp_max,
+                       (int)timestamp_want_get,
+                       (int)timestamp_out_,
+                       ((int)timestamp_want_get - (int)timestamp_out_),
+                       (int)removed_entries,
+                       (int)vc->video_play_delay,
+                       (int)vc->timestamp_difference_adjustment);
 
         uint16_t buf_size = tsb_size((TSBuffer *)vc->vbuf_raw);
         int32_t diff_want_to_got = (int)timestamp_want_get - (int)timestamp_out_;
@@ -837,6 +845,16 @@ int vc_queue_message(void *vcp, struct RTPMessage *msg)
                     vc->av->call_comm_cb.first(vc->av, vc->friend_number,
                                                TOXAV_CALL_COMM_NETWORK_ROUND_TRIP_MS,
                                                (int64_t)vc->rountrip_time_ms,
+                                               vc->av->call_comm_cb.second);
+
+                    vc->av->call_comm_cb.first(vc->av, vc->friend_number,
+                                               TOXAV_CALL_COMM_PLAY_DELAY,
+                                               (int64_t)vc->video_play_delay,
+                                               vc->av->call_comm_cb.second);
+
+                    vc->av->call_comm_cb.first(vc->av, vc->friend_number,
+                                               TOXAV_CALL_COMM_PLAY_BUFFER_ENTRIES,
+                                               (int64_t)vc->video_frame_buffer_entries,
                                                vc->av->call_comm_cb.second);
                 }
 

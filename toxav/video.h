@@ -190,6 +190,8 @@ typedef struct VCSession_s {
     int64_t timestamp_difference_to_sender;
     int64_t timestamp_difference_adjustment;
     uint32_t rountrip_time_ms;
+    int32_t video_play_delay;
+    uint32_t video_frame_buffer_entries;
     uint64_t last_incoming_frame_ts;
 
     uint32_t dummy_ntp_local_start;
