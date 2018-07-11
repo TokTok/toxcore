@@ -1023,7 +1023,7 @@ static int handle_gc_sync_response(Messenger *m, int groupnumber, int peernumber
 
         GC_Announce *announces = (GC_Announce *)malloc(sizeof(GC_Announce) * num_peers);
         uint8_t *announces_pointer = (uint8_t*)(data + sizeof(uint32_t));
-        unpack_announces_list(announces_pointer, length - sizeof(uint32_t), announces, num_peers);
+        unpack_announces_list(announces_pointer, length - sizeof(uint32_t), announces, num_peers, nullptr);
 
         bool is_tcp_mode = is_tcp_only_mode(m->group_handler);
         int i, j;
@@ -1231,10 +1231,18 @@ static int handle_gc_sync_request(const Messenger *m, int groupnumber, int peern
 
             // sends new peer announce to selected existing peer
             send_new_peer_announcement(chat, peer_gconn, sender_relay_data, sender_data_length);
+            num++;
         }
     }
 
-    net_pack_u32(response + len - sizeof(uint32_t), num); // TODO: 32 => 16/8?
+    size_t packed_announces_length;
+    int announces_count = pack_announces_list(response + len, MAX_GC_PACKET_SIZE - len, existing_peers_announces,
+                                              num, &packed_announces_length);
+    if (announces_count != num) {
+        return -1;
+    }
+
+    len += packed_announces_length;
 
     // TODO: split packet !important
     fprintf(stderr, "handle gc sync success\n");
