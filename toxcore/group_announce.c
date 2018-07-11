@@ -276,25 +276,6 @@ int unpack_announce(uint8_t *data, uint16_t length, GC_Announce *announce)
     return offset + nodes_length;
 }
 
-int unpack_announces_list(uint8_t *data, uint16_t length, GC_Announce *announces, int announces_count)
-{
-    if (!data || !announces) {
-        return -1;
-    }
-
-    int i, processed = 0;
-    for (i = 0; i < announces_count; i++ ) {
-        int announce_size = unpack_announce(data + processed, length - processed, &announces[i]);
-        if (announce_size == -1) {
-            return -1;
-        }
-
-        processed += announce_size;
-    }
-
-    return processed;
-}
-
 int pack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce *announce)
 {
     if (!announce || !data || length < ENC_PUBLIC_KEY) {
@@ -327,11 +308,63 @@ int unpack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce *a
     return base_announce_size + ENC_PUBLIC_KEY;
 }
 
+int pack_announces_list(uint8_t *data, uint16_t length, GC_Announce *announces, uint8_t announces_count,
+                        size_t *processed)
+{
+    if (!data || !announces) {
+        return -1;
+    }
+
+    size_t offset = 0;
+    int i;
+
+    for (i = 0; i < announces_count; i++) {
+        int packed_length = pack_announce(data + offset, length - offset, &announces[i]);
+        if (packed_length == -1) {
+            return -1;
+        }
+
+        offset += packed_length;
+    }
+
+    if (processed) {
+        *processed = offset;
+    }
+
+    return announces_count;
+}
+
+int unpack_announces_list(uint8_t *data, uint16_t length, GC_Announce *announces, uint8_t max_announces_count,
+                          size_t *processed)
+{
+    if (!data || !announces) {
+        return -1;
+    }
+
+    size_t offset = 0;
+    int i, announces_count = 0;
+
+    for (i = 0; i < max_announces_count && length > offset; i++) {
+        int packed_length = pack_announce(data + offset, length - offset, &announces[i]);
+        if (packed_length == -1) {
+            return -1;
+        }
+
+        offset += packed_length;
+        announces_count++;
+    }
+
+    if (processed) {
+        *processed = offset;
+    }
+
+    return announces_count;
+}
 
 GC_Peer_Announce* add_gc_announce(const Mono_Time *mono_time, GC_Announces_List *gc_announces_list, const GC_Public_Announce *announce)
 {
     if (!gc_announces_list || !announce) {
-        return NULL;
+        return nullptr;
     }
 
     GC_Announces *announces = get_announces_by_chat_id(gc_announces_list, announce->chat_public_key);

@@ -125,7 +125,11 @@ int pack_announce(uint8_t *data, uint16_t length, GC_Announce *announce);
 
 int unpack_announce(uint8_t *data, uint16_t length, GC_Announce *announce);
 
-int unpack_announces_list(uint8_t *data, uint16_t length, GC_Announce *announces, int announces_count);
+int pack_announces_list(uint8_t *data, uint16_t length, GC_Announce *announces, uint8_t announces_count,
+                        size_t *processed);
+
+int unpack_announces_list(uint8_t *data, uint16_t length, GC_Announce *announces, uint8_t max_announces_count,
+                          size_t *processed);
 
 int pack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce *announce);
 
