@@ -1381,7 +1381,7 @@ int32_t net_getipport(const char *node, IP_Port **res, int tox_type)
     }
 
     // Used to avoid malloc parameter overflow
-    const size_t MAX_COUNT = MIN(SIZE_MAX, INT32_MAX) / sizeof(IP_Port);
+    const size_t MAX_COUNT = min_u64(SIZE_MAX, INT32_MAX) / sizeof(IP_Port);
     int type = make_socktype(tox_type);
     struct addrinfo *cur;
     size_t count = 0;
