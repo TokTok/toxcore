@@ -15,10 +15,10 @@ travis_install() {
   cd /opt/freebsd/cache
 
   # Extract the cached image
-  tar -Sxzvf $IMAGE_NAME.tgz
+  tar -Sxzvf "$IMAGE_NAME.tgz"
 
   # Get the image we will be using out of the cached directory
-  mv $IMAGE_NAME ..
+  mv "$IMAGE_NAME" ..
   ls -lh
 
   cd ..

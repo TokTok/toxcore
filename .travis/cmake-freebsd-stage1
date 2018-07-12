@@ -22,7 +22,7 @@ travis_install() {
   sha256sum "$OLD_PWD/.travis/cmake-freebsd-env.sh"      > /tmp/sha
   sha256sum "$OLD_PWD/.travis/cmake-freebsd-install.sh" >> /tmp/sha
   sha256sum "$OLD_PWD/.travis/cmake-freebsd-stage1"     >> /tmp/sha
-  if [ ! -f ./$IMAGE_NAME.tgz ] || [ ! -f ./cmake-freebsd-stage1-all.sha256 ] || [ "`cat cmake-freebsd-stage1-all.sha256`" != "`cat /tmp/sha`" ]; then
+  if [ ! -f "./$IMAGE_NAME.tgz" ] || [ ! -f ./cmake-freebsd-stage1-all.sha256 ] || [ "`cat cmake-freebsd-stage1-all.sha256`" != "`cat /tmp/sha`" ]; then
 
     rm -rf ./*
 
@@ -35,16 +35,16 @@ travis_install() {
     DL_MIRROR_2=4
     # There are 2 mirrors
     DL_MIRROR_RANDOM=`expr $(date +%s) % 2 + 1`
-    DL_URL=ftp://ftp$(eval echo \$DL_MIRROR_$DL_MIRROR_RANDOM).us.freebsd.org/pub/FreeBSD/releases/VM-IMAGES/${FREEBSD_VERSION}-RELEASE/amd64/Latest/${IMAGE_NAME}.xz
+    DL_URL="ftp://ftp$(eval echo \$DL_MIRROR_$DL_MIRROR_RANDOM).us.freebsd.org/pub/FreeBSD/releases/VM-IMAGES/${FREEBSD_VERSION}-RELEASE/amd64/Latest/${IMAGE_NAME}.xz"
 
-    wget $DL_URL
+    wget "$DL_URL"
 
     if ! ( echo "$DL_SHA512  $IMAGE_NAME.xz" | sha512sum -c --status - ) ; then
         echo "Error: sha512 of $IMAGE_NAME.xz doesn't match the known one"
         exit 1
     fi
 
-    unxz $IMAGE_NAME.xz
+    unxz "$IMAGE_NAME.xz"
 
     # With this we don't have to guess how long a command will run for and sleeping
     # for that amount of time, risking either under sleeping or over sleeping, instead
@@ -127,8 +127,8 @@ travis_install() {
     stop_vm
 
     # Create cache
-    tar -Sczvf $IMAGE_NAME.tgz $IMAGE_NAME
-    rm $IMAGE_NAME
+    tar -Sczvf "$IMAGE_NAME.tgz" "$IMAGE_NAME"
+    rm "$IMAGE_NAME"
     rm screenlog.0
 
     cp "$OLD_PWD/GIT_TAGS" .
@@ -143,7 +143,7 @@ travis_install() {
 
   if ! diff -u ./GIT_TAGS "$OLD_PWD/GIT_TAGS" ; then
     # Extract the cached image
-    tar -Sxzvf $IMAGE_NAME.tgz
+    tar -Sxzvf "$IMAGE_NAME.tgz"
 
     start_vm
 
@@ -159,9 +159,9 @@ travis_install() {
     stop_vm
 
     # Create/Update cache
-    rm $IMAGE_NAME.tgz
-    tar -Sczvf $IMAGE_NAME.tgz $IMAGE_NAME
-    rm $IMAGE_NAME
+    rm "$IMAGE_NAME.tgz"
+    tar -Sczvf "$IMAGE_NAME.tgz" "$IMAGE_NAME"
+    rm "$IMAGE_NAME"
     rm screenlog.0
 
     cp "$OLD_PWD/GIT_TAGS" .

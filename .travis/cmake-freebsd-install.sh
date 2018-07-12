@@ -56,7 +56,7 @@ start_vm()
   # Start emulator. 2000mb RAM should be enough, right? The build machine has over 7gb.
   screen -L -S $SCREEN_SESSION -d -m \
     qemu-system-x86_64 -curses -m 2000 -smp $NPROC \
-    -net user,hostfwd=tcp::${SSH_PORT}-:22 -net nic $IMAGE_NAME
+    -net user,hostfwd=tcp::${SSH_PORT}-:22 -net nic "$IMAGE_NAME"
 
   # Wait for the boot screen options
   wait_for "Autoboot in"
