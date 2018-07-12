@@ -29,6 +29,7 @@
 #include "dummy_ntp.h"
 
 #include "../toxcore/Messenger.h"
+#include "../toxcore/mono_time.h"
 #include "../toxcore/network.h"
 #include "../toxcore/logger.h"
 #include "../toxcore/util.h"
@@ -1048,7 +1049,7 @@ RTPSession *rtp_new(int payload_type, Messenger *m, uint32_t friendnumber,
     // First entry is free.
     session->work_buffer_list->next_free_entry = 0;
 
-    session->ssrc = payload_type == rtp_TypeVideo ? 0 : random_int();
+    session->ssrc = payload_type == rtp_TypeVideo ? 0 : random_u32();
     session->payload_type = payload_type;
     session->m = m;
     session->friend_number = friendnumber;

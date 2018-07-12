@@ -17,13 +17,14 @@
  * along with Tox.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "audio.h"
-#include "video.h"
-#include "msi.h"
-#include "ring_buffer.h"
-#include "rtp.h"
-#include "tox_generic.h"
-#include "codecs/toxav_codecs.h"
+#include "../../../toxcore/mono_time.h"
+#include "../../audio.h"
+#include "../../video.h"
+#include "../../msi.h"
+#include "../../ring_buffer.h"
+#include "../../rtp.h"
+#include "../../tox_generic.h"
+#include "../toxav_codecs.h"
 
 
 VCSession *vc_new_h264(Logger *log, ToxAV *av, uint32_t friend_number, toxav_video_receive_frame_cb *cb, void *cb_data,
@@ -443,7 +444,7 @@ uint32_t send_frames_h264(ToxAV *av, uint32_t friend_number, uint16_t width, uin
         const uint32_t frame_length_in_bytes = *i_frame_size;
         const int keyframe = (int)call->video.second->h264_out_pic.b_keyframe;
 
-        LOGGER_DEBUG(av->m->log, "video packet record time: %llu", (*video_frame_record_timestamp));
+        LOGGER_DEBUG(av->m->log, "video packet record time: %lu", (unsigned long)(*video_frame_record_timestamp));
 
         int res = rtp_send_data
                   (

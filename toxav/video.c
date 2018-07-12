@@ -29,6 +29,7 @@
 #include "rtp.h"
 
 #include "../toxcore/logger.h"
+#include "../toxcore/mono_time.h"
 #include "../toxcore/network.h"
 #include "../toxcore/Messenger.h"
 

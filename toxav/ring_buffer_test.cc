@@ -20,10 +20,11 @@ class TypedRingBuffer<T *> {
 
   bool full() const { return rb_full(rb_); }
   bool empty() const { return rb_empty(rb_); }
-  T *write(T *p) { return static_cast<T *>(rb_write(rb_, p)); }
+  T *write(T *p) { return static_cast<T *>(rb_write(rb_, p, 0)); }
   bool read(T **p) {
     void *vp;
-    bool res = rb_read(rb_, &vp);
+    uint64_t t;
+    bool res = rb_read(rb_, &vp, &t);
     *p = static_cast<T *>(vp);
     return res;
   }

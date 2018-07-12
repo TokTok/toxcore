@@ -17,13 +17,14 @@
  * along with Tox.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "audio.h"
-#include "video.h"
-#include "msi.h"
-#include "ring_buffer.h"
-#include "rtp.h"
-#include "tox_generic.h"
-#include "codecs/toxav_codecs.h"
+#include "../../../toxcore/mono_time.h"
+#include "../../audio.h"
+#include "../../video.h"
+#include "../../msi.h"
+#include "../../ring_buffer.h"
+#include "../../rtp.h"
+#include "../../tox_generic.h"
+#include "../toxav_codecs.h"
 
 
 static uint32_t MaxIntraTarget(uint32_t optimalBuffersize)
@@ -560,7 +561,7 @@ int vc_reconfigure_encoder_vpx(Logger *log, VCSession *vc, uint32_t bit_rate,
          * TODO: Zoff in 2018: i wonder if this is still the case with libvpx 1.7.x ?
          */
 
-        LOGGER_DEBUG(vc->log, "Have to reinitialize vpx encoder on session %p", vc);
+        LOGGER_DEBUG(vc->log, "Have to reinitialize vpx encoder on session %p", (void *)vc);
 
 
         vpx_codec_ctx_t new_c;

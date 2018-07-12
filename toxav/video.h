@@ -28,6 +28,7 @@
 #include "../toxcore/Messenger.h"
 
 #include "bwcontroller.h"
+#include "pair.h"
 
 // for VPX ----------
 #include <vpx/vpx_decoder.h>

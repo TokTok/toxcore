@@ -450,7 +450,7 @@ int m_delfriend(Messenger *m, uint32_t friendnumber)
     }
 
     clear_receipts(m, friendnumber);
-    remove_request_received(&(m->fr), m->friendlist[friendnumber].real_pk);
+    remove_request_received(m->fr, m->friendlist[friendnumber].real_pk);
     friend_connection_callbacks(m->fr_c, m->friendlist[friendnumber].friendcon_id, MESSENGER_CALLBACK_INDEX, nullptr,
                                 nullptr, nullptr, nullptr, 0);
 
@@ -1906,15 +1906,13 @@ int m_callback_rtp_packet(Messenger *m, int32_t friendnumber, uint8_t byte, m_lo
     }
 
     if (byte == PACKET_LOSSLESS_VIDEO) {
-        m->friendlist[friendnumber].lossy_rtp_packethandlers[5].function =
-            packet_handler_callback;
+        m->friendlist[friendnumber].lossy_rtp_packethandlers[5].function = function;
         m->friendlist[friendnumber].lossy_rtp_packethandlers[5].object = object;
         return 0;
     }
 
     if (byte == PACKET_TOXAV_COMM_CHANNEL) {
-        m->friendlist[friendnumber].lossy_rtp_packethandlers[6].function =
-            packet_handler_callback;
+        m->friendlist[friendnumber].lossy_rtp_packethandlers[6].function = function;
         m->friendlist[friendnumber].lossy_rtp_packethandlers[6].object = object;
         return 0;
     }
