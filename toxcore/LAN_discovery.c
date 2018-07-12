@@ -259,11 +259,11 @@ static IP broadcast_ip(Family family_socket, Family family_broadcast)
             ip.ip.v6.uint8[15] = 0x01;
         } else if (net_family_is_ipv4(family_broadcast)) {
             ip.family = net_family_ipv6;
-            ip.ip.v6 = IP6_BROADCAST;
+            ip.ip.v6 = ip6_broadcast;
         }
     } else if (net_family_is_ipv4(family_socket) && net_family_is_ipv4(family_broadcast)) {
         ip.family = net_family_ipv4;
-        ip.ip.v4 = IP4_BROADCAST;
+        ip.ip.v4 = ip4_broadcast;
     }
 
     return ip;
@@ -281,7 +281,7 @@ bool ip_is_local(IP ip)
         }
     } else {
         /* embedded IPv4-in-IPv6 */
-        if (IPV6_IPV4_IN_V6(ip.ip.v6)) {
+        if (ipv6_ipv4_in_v6(ip.ip.v6)) {
             IP ip4;
             ip4.family = net_family_ipv4;
             ip4.ip.v4.uint32 = ip.ip.v6.uint32[3];
@@ -345,7 +345,7 @@ int ip_is_lan(IP ip)
         }
 
         /* embedded IPv4-in-IPv6 */
-        if (IPV6_IPV4_IN_V6(ip.ip.v6)) {
+        if (ipv6_ipv4_in_v6(ip.ip.v6)) {
             IP ip4;
             ip4.family = net_family_ipv4;
             ip4.ip.v4.uint32 = ip.ip.v6.uint32[3];
