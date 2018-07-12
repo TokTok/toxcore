@@ -50,7 +50,6 @@ matrix:
     install:       .travis/$JOB install
     script:        .travis/$JOB script
   - stage: "Stage 1"
-    if: type IN (push, api, cron)
     env: JOB=cmake-freebsd
     sudo: required
     install:       .travis/$JOB-stage1 install
@@ -61,7 +60,6 @@ matrix:
     services: [docker]
     script:        .travis/$JOB
   - stage: "Stage 2"
-    if: type IN (push, api, cron)
     env: JOB=cmake-freebsd
     sudo: required
     install:       .travis/$JOB-stage2 install
