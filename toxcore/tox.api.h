@@ -241,6 +241,11 @@ const PUBLIC_KEY_SIZE              = 32;
 const SECRET_KEY_SIZE              = 32;
 
 /**
+ * The size of a Tox Conference unique id in bytes.
+ */
+const CONFERENCE_UID_SIZE          = 32;
+
+/**
  * The size of the nospam in bytes when written in a Tox address.
  */
 const NOSPAM_SIZE                  = sizeof(uint32_t);
@@ -2453,6 +2458,29 @@ namespace conference {
     }
   }
 
+  /**
+   * Get the conference unique ID.
+   *
+   * @param uid A memory region large enough to store $CONFERENCE_UID_SIZE bytes
+   *
+   * @return true on success.
+   */
+  const bool get_uid(uint32_t conference_number, uint8_t[CONFERENCE_UID_SIZE] uid);
+
+  /**
+   * Return the conference number associated with that uid.
+   *
+   * @return the conference number on success, UINT32_MAX on failure.
+   * @param uid A byte array containing the conference id ($CONFERENCE_UID_SIZE).
+   */
+  const uint32_t by_uid(const uint8_t[CONFERENCE_UID_SIZE] uid) {
+    NULL,
+    /**
+     * No conference with the given uid exists on the conference list.
+     */
+    NOT_FOUND,
+  }
+
 }
 
 
@@ -2644,6 +2672,7 @@ typedef TOX_ERR_FILE_SEND_CHUNK Tox_Err_File_Send_Chunk;
 typedef TOX_ERR_CONFERENCE_NEW Tox_Err_Conference_New;
 typedef TOX_ERR_CONFERENCE_DELETE Tox_Err_Conference_Delete;
 typedef TOX_ERR_CONFERENCE_PEER_QUERY Tox_Err_Conference_Peer_Query;
+typedef TOX_ERR_CONFERENCE_BY_UID Tox_Err_Conference_By_Uid;
 typedef TOX_ERR_CONFERENCE_INVITE Tox_Err_Conference_Invite;
 typedef TOX_ERR_CONFERENCE_JOIN Tox_Err_Conference_Join;
 typedef TOX_ERR_CONFERENCE_SEND_MESSAGE Tox_Err_Conference_Send_Message;

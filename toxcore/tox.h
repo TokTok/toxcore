@@ -246,6 +246,13 @@ uint32_t tox_public_key_size(void);
 uint32_t tox_secret_key_size(void);
 
 /**
+ * The size of a Tox Conference unique id in bytes.
+ */
+#define TOX_CONFERENCE_UID_SIZE        32
+
+uint32_t tox_conference_uid_size(void);
+
+/**
  * The size of the nospam in bytes when written in a Tox address.
  */
 #define TOX_NOSPAM_SIZE                (sizeof(uint32_t))
@@ -2804,6 +2811,43 @@ typedef enum TOX_ERR_CONFERENCE_GET_TYPE {
 TOX_CONFERENCE_TYPE tox_conference_get_type(const Tox *tox, uint32_t conference_number,
         TOX_ERR_CONFERENCE_GET_TYPE *error);
 
+/**
+ * Get the conference unique ID.
+ *
+ * @param uid A memory region large enough to store TOX_CONFERENCE_UID_SIZE bytes
+ *
+ * @return true on success.
+ */
+bool tox_conference_get_uid(const Tox *tox, uint32_t conference_number, uint8_t *uid);
+
+typedef enum TOX_ERR_CONFERENCE_BY_UID {
+
+    /**
+     * The function returned successfully.
+     */
+    TOX_ERR_CONFERENCE_BY_UID_OK,
+
+    /**
+     * One of the arguments to the function was NULL when it was not expected.
+     */
+    TOX_ERR_CONFERENCE_BY_UID_NULL,
+
+    /**
+     * No conference with the given uid exists on the conference list.
+     */
+    TOX_ERR_CONFERENCE_BY_UID_NOT_FOUND,
+
+} TOX_ERR_CONFERENCE_BY_UID;
+
+
+/**
+ * Return the conference number associated with that uid.
+ *
+ * @return the conference number on success, UINT32_MAX on failure.
+ * @param uid A byte array containing the conference id (TOX_CONFERENCE_UID_SIZE).
+ */
+uint32_t tox_conference_by_uid(const Tox *tox, const uint8_t *uid, TOX_ERR_CONFERENCE_BY_UID *error);
+
 
 /*******************************************************************************
  *
@@ -3004,6 +3048,7 @@ typedef TOX_ERR_FILE_SEND_CHUNK Tox_Err_File_Send_Chunk;
 typedef TOX_ERR_CONFERENCE_NEW Tox_Err_Conference_New;
 typedef TOX_ERR_CONFERENCE_DELETE Tox_Err_Conference_Delete;
 typedef TOX_ERR_CONFERENCE_PEER_QUERY Tox_Err_Conference_Peer_Query;
+typedef TOX_ERR_CONFERENCE_BY_UID Tox_Err_Conference_By_Uid;
 typedef TOX_ERR_CONFERENCE_INVITE Tox_Err_Conference_Invite;
 typedef TOX_ERR_CONFERENCE_JOIN Tox_Err_Conference_Join;
 typedef TOX_ERR_CONFERENCE_SEND_MESSAGE Tox_Err_Conference_Send_Message;
