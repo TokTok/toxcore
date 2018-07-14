@@ -73,7 +73,9 @@ start_vm()
 stop_vm()
 {
   # Turn it off
-  RUN poweroff
+#  RUN poweroff
+  send_keys 'poweroff
+'
 
   sleep 300
   echo "foo"
