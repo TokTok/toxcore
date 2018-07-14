@@ -68,6 +68,8 @@ struct GC_Announces {
 struct GC_Announces_List {
     GC_Announces *announces;
     int announces_count;
+
+    bool should_update_self_announces;
 };
 
 
