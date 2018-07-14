@@ -2718,19 +2718,20 @@ static void try_pack_gc_data(const Messenger *m, const GC_Chat *chat, Onion_Frie
     }
 }
 
-// TODO: to callback
 static void update_gc_friends_data(const Messenger *m)
 {
+    bool should_update_announces = m->group_announce->should_update_self_announces;
     int i;
     for (i = 0; i < m->onion_c->num_friends; i++) {
         Onion_Friend *onion_friend = &m->onion_c->friends_list[i];
-        if (onion_friend->gc_data_length != -1) {
-            continue;
-        }
-        GC_Chat *chat = gc_get_group_by_public_key(m->group_handler, onion_friend->gc_public_key);
+        if (onion_friend->gc_data_length == -1 || (onion_friend->gc_data_length > 0 && should_update_announces)) {
+            GC_Chat *chat = gc_get_group_by_public_key(m->group_handler, onion_friend->gc_public_key);
 
-        try_pack_gc_data(m, chat, onion_friend);
+            try_pack_gc_data(m, chat, onion_friend);
+        }
     }
+
+    m->group_announce->should_update_self_announces = false;
 }
 
 /* The main loop that needs to be run at least 20 times per second. */
