@@ -55,7 +55,7 @@
 
 #define MAX_PATH_NODES 32
 
-#define GC_MAX_DATA_LENGTH GC_ANNOUNCE_MAX_SIZE
+#define GC_MAX_DATA_LENGTH GC_PUBLIC_ANNOUNCE_MAX_SIZE
 
 /* If no packets are received within that interval tox will
  * be considered offline.
