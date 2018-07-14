@@ -75,6 +75,14 @@ stop_vm()
   # Turn it off
   RUN poweroff
 
+  sleep 300
+  echo "foo"
+  sleep 300
+  echo "bar"
+  sleep 300
+  ps aux
+  cat screenlog.0
+
   # Wait for qemu process to terminate
   while ps aux | grep qemu | grep -vq grep
   do
