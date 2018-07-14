@@ -25,12 +25,7 @@ static void remove_announces(GC_Announces_List *gc_announces_list, GC_Announces 
 
 GC_Announces_List *new_gca_list()
 {
-    GC_Announces_List *announces_list = (GC_Announces_List*)malloc(sizeof(GC_Announces_List));
-
-    if (announces_list) {
-        announces_list->announces_count = 0;
-        announces_list->announces = NULL;
-    }
+    GC_Announces_List *announces_list = (GC_Announces_List*)calloc(0, sizeof(GC_Announces_List));
 
     return announces_list;
 }
@@ -40,8 +35,9 @@ void kill_gca(GC_Announces_List *announces_list)
     while (announces_list->announces) {
         remove_announces(announces_list, announces_list->announces);
     }
+
     free(announces_list);
-    announces_list = NULL;
+    announces_list = nullptr;
 }
 
 void do_gca(const Mono_Time *mono_time, GC_Announces_List *gc_announces_list) {

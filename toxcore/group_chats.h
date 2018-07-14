@@ -119,7 +119,7 @@ typedef enum Group_Broadcast_Type {
     GM_NICK,
     GM_PLAIN_MESSAGE,
     GM_ACTION_MESSAGE,
-    GM_PRVT_MESSAGE,
+    GM_PRIVATE_MESSAGE,
     GM_PEER_EXIT,
     GM_REMOVE_PEER,
     GM_REMOVE_BAN,
