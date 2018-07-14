@@ -172,7 +172,7 @@ bool cleanup_gca(GC_Announces_List *gc_announces_list, const uint8_t *chat_id) {
     return false;
 }
 
-int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Peer_Announce *gc_announces, uint8_t max_nodes,
+int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Announce *gc_announces, uint8_t max_nodes,
                      const uint8_t *chat_id, const uint8_t *except_public_key)
 {
     if (!gc_announces || !gc_announces_list || !chat_id || !max_nodes || !except_public_key) {
@@ -194,7 +194,7 @@ int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Peer_Announce *gc_
 
         bool already_added = false;
         for (j = 0; j < gc_announces_count; j++) {
-            if (!memcmp(&gc_announces[j].base_announce.peer_public_key,
+            if (!memcmp(&gc_announces[j].peer_public_key,
                         &announces->announces[index].base_announce.peer_public_key,
                         ENC_PUBLIC_KEY)) {
                 already_added = true;
@@ -203,7 +203,7 @@ int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Peer_Announce *gc_
         }
 
         if (!already_added) {
-            memcpy(&gc_announces[gc_announces_count], &announces->announces[index], sizeof(GC_Peer_Announce));
+            memcpy(&gc_announces[gc_announces_count], &announces->announces[index], sizeof(GC_Announce));
             gc_announces_count++;
         }
     }
@@ -213,7 +213,7 @@ int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Peer_Announce *gc_
 
 int pack_announce(uint8_t *data, uint16_t length, GC_Announce *announce)
 {
-    if (!data || !announce || length < GC_ANNOUNCE_MIN_SIZE) {
+    if (!data || !announce || length < GC_ANNOUNCE_MAX_SIZE) {
         return -1;
     }
 
@@ -222,6 +222,9 @@ int pack_announce(uint8_t *data, uint16_t length, GC_Announce *announce)
     offset += ENC_PUBLIC_KEY;
 
     data[offset] = announce->ip_port_is_set;
+    offset++;
+
+    data[offset] = announce->tcp_relays_count;
     offset++;
 
     if (announce->ip_port_is_set) {
@@ -233,8 +236,7 @@ int pack_announce(uint8_t *data, uint16_t length, GC_Announce *announce)
         offset += ip_port_length;
     }
 
-    int nodes_length = pack_nodes(data + offset, length - offset, announce->tcp_relays,
-                                  announce->tcp_relays_count);
+    int nodes_length = pack_nodes(data + offset, length - offset, announce->tcp_relays, announce->tcp_relays_count);
     if (nodes_length == -1) {
         return -1;
     }
@@ -248,12 +250,19 @@ int unpack_announce(uint8_t *data, uint16_t length, GC_Announce *announce)
         return -1;
     }
 
-    int offset = 0;
+    uint16_t offset = 0;
     memcpy(announce->peer_public_key, data + offset, ENC_PUBLIC_KEY);
     offset += ENC_PUBLIC_KEY;
 
     announce->ip_port_is_set = data[offset];
     offset++;
+
+    announce->tcp_relays_count = data[offset];
+    offset++;
+
+    if (announce->tcp_relays_count > MAX_ANNOUNCED_TCP_RELAYS) {
+        return -1;
+    }
 
     if (announce->ip_port_is_set) {
         int ip_port_length = unpack_ip_port(&announce->ip_port, data + offset, length - offset, 0);
@@ -265,13 +274,11 @@ int unpack_announce(uint8_t *data, uint16_t length, GC_Announce *announce)
     }
 
     uint16_t nodes_length;
-    int nodes_count = unpack_nodes(announce->tcp_relays, MAX_ANNOUNCED_TCP_RELAYS, &nodes_length,
+    int nodes_count = unpack_nodes(announce->tcp_relays,announce->tcp_relays_count, &nodes_length,
                                    data + offset, length - offset, 1);
-    if (nodes_count == -1) {
+    if (nodes_count != announce->tcp_relays_count) {
         return -1;
     }
-
-    announce->tcp_relays_count = (uint8_t)nodes_count;
 
     return offset + nodes_length;
 }
@@ -315,7 +322,7 @@ int pack_announces_list(uint8_t *data, uint16_t length, GC_Announce *announces, 
         return -1;
     }
 
-    size_t offset = 0;
+    uint16_t offset = 0;
     int i;
 
     for (i = 0; i < announces_count; i++) {
@@ -341,16 +348,17 @@ int unpack_announces_list(uint8_t *data, uint16_t length, GC_Announce *announces
         return -1;
     }
 
-    size_t offset = 0;
+    uint16_t offset = 0;
     int i, announces_count = 0;
 
     for (i = 0; i < max_announces_count && length > offset; i++) {
-        int packed_length = pack_announce(data + offset, length - offset, &announces[i]);
-        if (packed_length == -1) {
+        int unpacked_length = unpack_announce(data + offset, length - offset, &announces[i]);
+        if (unpacked_length == -1) {
+            fprintf(stderr, "unpack error: %d %d\n", length, offset);
             return -1;
         }
 
-        offset += packed_length;
+        offset += unpacked_length;
         announces_count++;
     }
 

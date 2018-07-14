@@ -25,12 +25,12 @@
 #include "stdbool.h"
 
 #define MAX_GCA_SAVED_ANNOUNCES_PER_GC 100
-#define GC_ANNOUNCE_PACKED_SIZE (sizeof(GC_Peer_Announce))
 #define GC_ANNOUNCE_SAVING_TIMEOUT 30
 #define MAX_ANNOUNCED_TCP_RELAYS 1
 #define MAX_SENT_ANNOUNCES 4
-#define GC_ANNOUNCE_MIN_SIZE (ENC_PUBLIC_KEY + 1)
+#define GC_ANNOUNCE_MIN_SIZE (ENC_PUBLIC_KEY + 2)
 #define GC_ANNOUNCE_MAX_SIZE (sizeof(GC_Announce))
+#define GC_PUBLIC_ANNOUNCE_MAX_SIZE (sizeof(GC_Public_Announce))
 
 typedef struct {
     uint8_t public_key[ENC_PUBLIC_KEY];
@@ -116,7 +116,7 @@ int unpack_gca_nodes(GC_Announce_Node *nodes, uint32_t max_num_nodes, uint16_t *
 int make_self_gca_node(const DHT *dht, GC_Announce_Node *node, const uint8_t *client_id);
 
 
-int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Peer_Announce *gc_announces, uint8_t max_nodes,
+int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Announce *gc_announces, uint8_t max_nodes,
                      const uint8_t *chat_id, const uint8_t *except_public_key);
 
 GC_Peer_Announce* add_gc_announce(const Mono_Time *mono_time, GC_Announces_List *gc_announces_list, const GC_Public_Announce *announce);
