@@ -3547,7 +3547,7 @@ int gc_send_private_message(GC_Chat *chat, uint32_t peer_id, const uint8_t *mess
     }
 
     VLA(uint8_t, packet, length + GC_BROADCAST_ENC_HEADER_SIZE);
-    uint32_t packet_len = make_gc_broadcast_header(chat, message, length, packet, GM_PRVT_MESSAGE);
+    uint32_t packet_len = make_gc_broadcast_header(chat, message, length, packet, GM_PRIVATE_MESSAGE);
 
     if (send_lossless_group_packet(chat, gconn, packet, packet_len, GP_BROADCAST) == -1) {
         return -5;
@@ -4080,7 +4080,7 @@ static int handle_gc_broadcast(Messenger *m, int groupnumber, uint32_t peernumbe
         case GM_PLAIN_MESSAGE:
             return handle_bc_message(m, groupnumber, peernumber, message, m_len, broadcast_type);
 
-        case GM_PRVT_MESSAGE:
+        case GM_PRIVATE_MESSAGE:
             return handle_bc_private_message(m, groupnumber, peernumber, message, m_len);
 
         case GM_PEER_EXIT:
@@ -4488,6 +4488,7 @@ static int handle_gc_handshake_request(Messenger *m, int groupnumber, IP_Port *i
         gc_peer_delete(m, groupnumber, peer_number, NULL, 0);
         return -1;
     }
+
     if (add_tcp_result >= 0) {
         save_tcp_relay(gconn, node);
     }
@@ -5495,6 +5496,15 @@ static int get_new_group_index(GC_Session *c)
     return new_index;
 }
 
+static void handle_connection_status_updated_callback(void *object)
+{
+    Messenger *m = (Messenger *)object;
+
+    fprintf(stderr, "updated gc data\n");
+
+    m->group_announce->should_update_self_announces = true;
+}
+
 static int init_gc_tcp_connection(Messenger *m, GC_Chat *chat)
 {
     chat->tcp_conn = new_tcp_connections(m->mono_time, chat->self_secret_key, &m->options.proxy_info);
@@ -5519,6 +5529,8 @@ static int init_gc_tcp_connection(Messenger *m, GC_Chat *chat)
 
     set_packet_tcp_connection_callback(chat->tcp_conn, &handle_gc_tcp_packet, m);
     set_oob_packet_tcp_connection_callback(chat->tcp_conn, &handle_gc_tcp_oob_packet, m);
+    set_connection_status_updated_callback(chat->tcp_conn, &handle_connection_status_updated_callback, m);
+
     return 0;
 }
 
