@@ -368,6 +368,7 @@ uint16_t gc_copy_peer_addrs(const GC_Chat *chat, GC_SavedPeerInfo *addrs, size_t
         GC_Connection *gconn = &chat->gcc[i];
         if (gconn->confirmed || chat->connection_state != CS_CONNECTED) {
             gcc_copy_tcp_relay(gconn, &addrs[num].tcp_relay);
+            memcpy(&addrs[num].ip_port, &gconn->addr.ip_port, sizeof(IP_Port));
             memcpy(addrs[num].public_key, gconn->addr.public_key, ENC_PUBLIC_KEY);
             num++;
         }
@@ -4247,8 +4248,7 @@ static int send_gc_handshake_packet(GC_Chat *chat, uint32_t peernumber, uint8_t 
                                     uint8_t request_type, uint8_t join_type)
 {
     GC_Connection *gconn = gcc_get_connection(chat, peernumber);
-
-    if (gconn == nullptr) {
+    if (!gconn) {
         return -1;
     }
 
@@ -5169,8 +5169,7 @@ static int peer_add(Messenger *m, int groupnumber, IP_Port *ipp, const uint8_t *
 {
     GC_Session *c = m->group_handler;
     GC_Chat *chat = gc_get_group(c, groupnumber);
-
-    if (chat == nullptr) {
+    if (!chat) {
         return -1;
     }
 
@@ -5736,7 +5735,9 @@ int gc_group_load(GC_Session *c, struct Saved_Group *save)
     uint16_t i, num_addrs = net_ntohs(save->num_addrs);
 
     for (i = 0; i < num_addrs && i < MAX_GC_PEER_ADDRS; ++i) {
-        int peer_number = peer_add(m, chat->groupnumber, nullptr, save->addrs[i].public_key);
+        bool ip_port_is_set = ipport_isset(&save->addrs[i].ip_port);
+        IP_Port *ip_port = ip_port_is_set ? &save->addrs[i].ip_port : nullptr;
+        int peer_number = peer_add(m, chat->groupnumber, ip_port, save->addrs[i].public_key);
         if (peer_number < 0) {
             continue;
         }
@@ -5751,17 +5752,17 @@ int gc_group_load(GC_Session *c, struct Saved_Group *save)
         int add_tcp_result = add_tcp_relay_connection(chat->tcp_conn, gconn->tcp_connection_num,
                                                       save->addrs[i].tcp_relay.ip_port,
                                                       save->addrs[i].tcp_relay.public_key);
-        if (add_tcp_result < 0) {
+        if (add_tcp_result < 0 && !ip_port_is_set) {
             fprintf(stderr, "error adding relay\n");
+            memcpy(gconn->oob_relay_pk, save->addrs[i].tcp_relay.public_key, ENC_PUBLIC_KEY);
             continue;
         }
 
         int save_tcp_result = save_tcp_relay(gconn, &save->addrs[i].tcp_relay);
-        if (save_tcp_result < 0) {
+        if (save_tcp_result < 0 && !ip_port_is_set) {
             continue;
         }
 
-        memcpy(gconn->oob_relay_pk, save->addrs[i].tcp_relay.public_key, ENC_PUBLIC_KEY);
         gconn->is_oob_handshake = true;
         gconn->is_pending_handshake_response = false;
         gconn->pending_handshake_type = HS_INVITE_REQUEST;
