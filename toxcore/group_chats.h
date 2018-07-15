@@ -187,6 +187,7 @@ typedef struct GC_PeerAddress {
 typedef struct GC_SavedPeerInfo {
     uint8_t     public_key[EXT_PUBLIC_KEY];
     Node_format tcp_relay;
+    IP_Port     ip_port;
 } GC_SavedPeerInfo;
 
 typedef struct GC_SelfPeerInfo {
