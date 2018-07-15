@@ -149,7 +149,9 @@ typedef int tcp_oob_cb(void *object, const uint8_t *public_key, unsigned int tcp
                        const uint8_t *data, uint16_t length, void *userdata);
 
 void set_connection_status_updated_callback(TCP_Connections *tcp_c,
-                                            void (*connection_status_updated_callback)(void *object),
+                                            void (*connection_status_updated_callback)(void *object,
+                                                                                       TCP_Connections *tcp_c,
+                                                                                       int status),
                                             void *object);
 
 /* Set the callback for TCP oob data packets.
