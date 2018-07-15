@@ -526,7 +526,7 @@ static int handle_gc_announce_request(Onion_Announce *onion_a, IP_Port source, c
     }
 
     offset += announces_length;
-    fprintf(stderr, "announces_length: %d\n", announces_length);
+    fprintf(stderr, "announces_length: %ld\n", announces_length);
 
     uint8_t data[ONION_ANNOUNCE_RESPONSE_MAX_SIZE];
     len = encrypt_data_symmetric(shared_key, nonce, pl, offset,

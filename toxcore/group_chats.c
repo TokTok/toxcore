@@ -5336,7 +5336,7 @@ static void do_new_connection_cooldown(GC_Chat *chat)
     }
 }
 
-#define PENDING_HANDSHAKE_SENDING_MAX_INTERVAL 10
+#define PENDING_HANDSHAKE_SENDING_MAX_INTERVAL 15
 static int send_pending_handshake(GC_Chat *chat, GC_Connection *gconn, uint32_t peer_number)
 {
     if (!chat || !gconn || !peer_number) {
@@ -5344,6 +5344,10 @@ static int send_pending_handshake(GC_Chat *chat, GC_Connection *gconn, uint32_t 
     }
 
     uint64_t time = mono_time_get(chat->mono_time);
+    if (gconn->pending_handshake && chat->should_start_sending_handshakes) {
+        gconn->pending_handshake = time;
+    }
+
     if (!gconn->pending_handshake || time < gconn->pending_handshake) {
         return 0;
     }
@@ -5395,6 +5399,8 @@ static void do_group_tcp(GC_Chat *chat, void *userdata)
 
         send_pending_handshake(chat, gconn, i);
     }
+
+    chat->should_start_sending_handshakes = false;
 }
 
 #define GROUP_JOIN_ATTEMPT_INTERVAL 20
@@ -5402,7 +5408,7 @@ static void do_group_tcp(GC_Chat *chat, void *userdata)
 /* CS_CONNECTED: Peers are pinged, unsent packets are resent, and timeouts are checked.
  * CS_CONNECTING: Look for new DHT nodes after an interval.
  * CS_DISCONNECTED: Send an invite request using a random node if our timeout GROUP_JOIN_ATTEMPT_INTERVAL has expired.
- * CS_FAILED: Do nothing. This occurrs if we cannot connect to a group or our invite request is rejected.
+ * CS_FAILED: Do nothing. This occurs if we cannot connect to a group or our invite request is rejected.
  */
 void do_gc(GC_Session *c, void *userdata)
 {
@@ -5429,20 +5435,24 @@ void do_gc(GC_Session *c, void *userdata)
                 if (mono_time_is_timeout(chat->mono_time, chat->last_join_attempt, GROUP_JOIN_ATTEMPT_INTERVAL)) {
                     chat->connection_state = CS_DISCONNECTED;
                 }
+
                 break;
             }
 
             case CS_DISCONNECTED: {
-                if (chat->numpeers > 1 && mono_time_is_timeout(c->messenger->mono_time, chat->last_join_attempt, GROUP_JOIN_ATTEMPT_INTERVAL)) {
-                    chat->last_join_attempt = mono_time_get(c->messenger->mono_time);
-                    chat->connection_state = CS_CONNECTING;
-                    for (j = 1; j < chat->numpeers; j++) {
-                        GC_Connection *gconn = &chat->gcc[j];
-                        if (!gconn->handshaked && !gconn->pending_handshake) {
-                            gconn->pending_handshake = mono_time_get(c->messenger->mono_time) + HANDSHAKE_SENDING_TIMEOUT;
-                        }
+                if (chat->numpeers <= 1 || !mono_time_is_timeout(c->messenger->mono_time, chat->last_join_attempt, GROUP_JOIN_ATTEMPT_INTERVAL)) {
+                    break;
+                }
+
+                chat->last_join_attempt = mono_time_get(c->messenger->mono_time);
+                chat->connection_state = CS_CONNECTING;
+                for (j = 1; j < chat->numpeers; j++) {
+                    GC_Connection *gconn = &chat->gcc[j];
+                    if (!gconn->handshaked && !gconn->pending_handshake) {
+                        gconn->pending_handshake = mono_time_get(c->messenger->mono_time) + HANDSHAKE_SENDING_TIMEOUT;
                     }
                 }
+
                 break;
             }
 
@@ -5508,13 +5518,39 @@ static int get_new_group_index(GC_Session *c)
     return new_index;
 }
 
-static void handle_connection_status_updated_callback(void *object)
+static GC_Chat* get_chat_by_tcp_connections(GC_Session *group_handler, TCP_Connections *tcp_c)
+{
+    uint32_t i;
+    for (i = 0; i < group_handler->num_chats; i++) {
+        GC_Chat *chat = &group_handler->chats[i];
+        if (chat->tcp_conn == tcp_c) {
+            return chat;
+        }
+    }
+
+    return nullptr;
+}
+
+static void handle_connection_status_updated_callback(void *object, TCP_Connections *tcp_c, int status)
 {
     Messenger *m = (Messenger *)object;
 
     fprintf(stderr, "updated gc data\n");
 
-    m->group_announce->should_update_self_announces = true;
+    GC_Chat *chat = get_chat_by_tcp_connections(m->group_handler, tcp_c);
+    if (!chat) {
+        return;
+    }
+
+    if (status != TCP_CONNECTIONS_STATUS_REGISTERED) {
+        fprintf(stderr, "update self ann\n");
+        chat->should_update_self_announces = true;
+    }
+
+    if (status == TCP_CONNECTIONS_STATUS_ONLINE) {
+        fprintf(stderr, "try send handshakes\n");
+        chat->should_start_sending_handshakes = true;
+    }
 }
 
 static int init_gc_tcp_connection(Messenger *m, GC_Chat *chat)

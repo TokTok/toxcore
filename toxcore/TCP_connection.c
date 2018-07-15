@@ -59,7 +59,7 @@ struct TCP_Connections {
     tcp_onion_cb *tcp_onion_callback;
     void *tcp_onion_callback_object;
 
-    void (*tcp_connection_status_updated_callback)(void *object);
+    void (*tcp_connection_status_updated_callback)(void *object, TCP_Connections *tcp_c, int status);
     void *tcp_connection_status_updated_callback_object;
 
     TCP_Proxy_Info proxy_info;
@@ -489,7 +489,9 @@ void set_onion_packet_tcp_connection_callback(TCP_Connections *tcp_c, tcp_onion_
 }
 
 void set_connection_status_updated_callback(TCP_Connections *tcp_c,
-                                            void (*connection_status_updated_callback)(void *object),
+                                            void (*connection_status_updated_callback)(void *object,
+                                                                                       TCP_Connections *tcp_c,
+                                                                                       int status),
                                             void *object)
 {
     tcp_c->tcp_connection_status_updated_callback = connection_status_updated_callback;
@@ -779,7 +781,8 @@ static int set_tcp_connection_status(TCP_Connections *tcp_c, TCP_Connection_to *
             con_to->connections[i].connection_id = connection_id;
 
             if (tcp_c->tcp_connection_status_updated_callback) {
-                tcp_c->tcp_connection_status_updated_callback(tcp_c->tcp_connection_status_updated_callback_object);
+                tcp_c->tcp_connection_status_updated_callback(tcp_c->tcp_connection_status_updated_callback_object,
+                                                              tcp_c, status);
             }
 
             return i;

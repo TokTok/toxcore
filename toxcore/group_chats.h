@@ -276,6 +276,8 @@ typedef struct GC_Chat {
     uint8_t saved_invites_index;
 
     uint8_t onion_friend_public_key[ENC_PUBLIC_KEY];
+    bool should_update_self_announces;
+    bool should_start_sending_handshakes;
 } GC_Chat;
 
 typedef struct GC_Session {
