@@ -46,7 +46,7 @@ static void accept_friend_request(Tox *m, const uint8_t *public_key, const uint8
 START_TEST(test_known_kdf)
 {
     unsigned char out[CRYPTO_SHARED_KEY_SIZE];
-    int res = crypto_pwhash_scryptsalsa208sha256(out,
+    int16_t res = crypto_pwhash_scryptsalsa208sha256(out,
               CRYPTO_SHARED_KEY_SIZE,
               pw,
               pwlen,
@@ -207,12 +207,12 @@ static Suite *encryptsave_suite(void)
 int main(void)
 {
     setvbuf(stdout, nullptr, _IONBF, 0);
-    srand((unsigned int) time(nullptr));
+    srand((uint32_t) time(nullptr));
 
     Suite *encryptsave =  encryptsave_suite();
     SRunner *test_runner = srunner_create(encryptsave);
 
-    int number_failed = 0;
+    uint8_t number_failed = 0;
     srunner_run_all(test_runner, CK_NORMAL);
     number_failed = srunner_ntests_failed(test_runner);
 
