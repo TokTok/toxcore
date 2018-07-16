@@ -14,7 +14,7 @@
 int main(void)
 {
     // Create toxes.
-    uint8_t id = 1;
+    uint32_t id = 1;
     Tox *tox1 = tox_new_log(nullptr, nullptr, &id);
 
     // Create two conferences and then exit.
