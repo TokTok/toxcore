@@ -100,11 +100,16 @@ typedef enum GROUP_CONNECTION_STATE {
     CS_NONE,
     CS_FAILED,
     CS_DISCONNECTED,
+    CS_MANUALLY_DISCONNECTED,
     CS_CONNECTING,
     CS_CONNECTED,
-    CS_CLOSING,
     CS_INVALID
 } GROUP_CONNECTION_STATE;
+
+typedef enum SAVED_GROUP_CONNECTION_STATE {
+    SGCS_DISCONNECTED,
+    SGCS_CONNECTED
+} SAVED_GROUP_CONNECTION_STATE;
 
 typedef enum GROUP_JOIN_REJECTED {
     GJ_NICK_TAKEN,
@@ -228,6 +233,49 @@ typedef struct {
 
 typedef struct GC_Connection GC_Connection;
 
+
+#define GROUP_SAVE_MAX_PEERS MAX_GC_PEER_ADDRS
+
+struct Saved_Group {
+    /* Group shared state */
+    uint8_t   founder_public_key[EXT_PUBLIC_KEY];
+    uint16_t  maxpeers;
+    uint16_t  group_name_len;
+    uint8_t   group_name[MAX_GC_GROUP_NAME_SIZE];
+    uint8_t   privacy_state;
+    uint16_t  passwd_len;
+    uint8_t   passwd[MAX_GC_PASSWORD_SIZE];
+    uint8_t   mod_list_hash[GC_MODERATION_HASH_SIZE];
+    uint32_t  sstate_version;
+    uint8_t   sstate_signature[SIGNATURE_SIZE];
+
+    /* Topic info */
+    uint16_t  topic_len;
+    uint8_t   topic[MAX_GC_TOPIC_SIZE];
+    uint8_t   topic_public_sig_key[SIG_PUBLIC_KEY];
+    uint32_t  topic_version;
+    uint8_t   topic_signature[SIGNATURE_SIZE];
+
+    /* Other group info */
+    uint8_t   chat_public_key[EXT_PUBLIC_KEY];
+    uint8_t   chat_secret_key[EXT_SECRET_KEY];
+    uint16_t  num_addrs;
+    GC_SavedPeerInfo addrs[GROUP_SAVE_MAX_PEERS];
+    uint16_t  num_mods;
+    uint8_t   mod_list[GC_MOD_LIST_ENTRY_SIZE * MAX_GC_MODERATORS];
+    uint8_t   group_connection_state;
+
+    /* self info */
+    uint8_t   self_public_key[EXT_PUBLIC_KEY];
+    uint8_t   self_secret_key[EXT_SECRET_KEY];
+    uint8_t   self_nick[MAX_GC_NICK_SIZE];
+    uint16_t  self_nick_len;
+    uint8_t   self_role;
+    uint8_t   self_status;
+};
+
+typedef struct Saved_Group Saved_Group;
+
 typedef struct GC_Chat {
     const Mono_Time *mono_time;
     uint8_t confirmed_peers[MAX_GC_CONFIRMED_PEERS][ENC_PUBLIC_KEY];
@@ -279,6 +327,8 @@ typedef struct GC_Chat {
     uint8_t onion_friend_public_key[ENC_PUBLIC_KEY];
     bool should_update_self_announces;
     bool should_start_sending_handshakes;
+
+    struct Saved_Group *save;
 } GC_Chat;
 
 typedef struct GC_Session {
@@ -318,44 +368,7 @@ typedef struct GC_Session {
     void *rejected_userdata;
 } GC_Session;
 
-#define GROUP_SAVE_MAX_PEERS MAX_GC_PEER_ADDRS
-
-struct Saved_Group {
-    /* Group shared state */
-    uint8_t   founder_public_key[EXT_PUBLIC_KEY];
-    uint16_t  maxpeers;
-    uint16_t  group_name_len;
-    uint8_t   group_name[MAX_GC_GROUP_NAME_SIZE];
-    uint8_t   privacy_state;
-    uint16_t  passwd_len;
-    uint8_t   passwd[MAX_GC_PASSWORD_SIZE];
-    uint8_t   mod_list_hash[GC_MODERATION_HASH_SIZE];
-    uint32_t  sstate_version;
-    uint8_t   sstate_signature[SIGNATURE_SIZE];
-
-    /* Topic info */
-    uint16_t  topic_len;
-    uint8_t   topic[MAX_GC_TOPIC_SIZE];
-    uint8_t   topic_public_sig_key[SIG_PUBLIC_KEY];
-    uint32_t  topic_version;
-    uint8_t   topic_signature[SIGNATURE_SIZE];
-
-    /* Other group info */
-    uint8_t   chat_public_key[EXT_PUBLIC_KEY];
-    uint8_t   chat_secret_key[EXT_SECRET_KEY];
-    uint16_t  num_addrs;
-    GC_SavedPeerInfo addrs[GROUP_SAVE_MAX_PEERS];
-    uint16_t  num_mods;
-    uint8_t   mod_list[GC_MOD_LIST_ENTRY_SIZE * MAX_GC_MODERATORS];
-
-    /* self info */
-    uint8_t   self_public_key[EXT_PUBLIC_KEY];
-    uint8_t   self_secret_key[EXT_SECRET_KEY];
-    uint8_t   self_nick[MAX_GC_NICK_SIZE];
-    uint16_t  self_nick_len;
-    uint8_t   self_role;
-    uint8_t   self_status;
-};
+void pack_group_info(GC_Chat *chat, struct Saved_Group *temp);
 
 bool is_public_chat(const GC_Chat *chat);
 
@@ -639,7 +652,7 @@ void kill_dht_groupchats(GC_Session *c);
  * Returns groupnumber on success.
  * Returns -1 on failure.
  */
-int gc_group_load(GC_Session *c, struct Saved_Group *save);
+int gc_group_load(GC_Session *c, struct Saved_Group *save, int group_number);
 
 /* Creates a new group.
  *
@@ -666,8 +679,10 @@ int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name
 int gc_group_join(GC_Session *c, const uint8_t *chat_id, const uint8_t *passwd, uint16_t passwd_len,
                   const GC_SelfPeerInfo *peer_info);
 
+bool gc_disconnect_from_group(GC_Session *c, GC_Chat *chat);
+
 /* Resets chat saving all self state and attempts to reconnect to group */
-void gc_rejoin_group(GC_Session *c, GC_Chat *chat);
+bool gc_rejoin_group(GC_Session *c, GC_Chat *chat);
 
 /* Joins a group using the invite data received in a friend's group invite.
  *
