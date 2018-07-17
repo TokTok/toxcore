@@ -121,6 +121,49 @@ static bool is_tcp_only_mode(const GC_Session *session)
     return !dht_isconnected(session->messenger->dht);  // TODO: get self connection status?
 }
 
+void pack_group_info(GC_Chat *chat, struct Saved_Group *temp)
+{
+    if (chat->save) {   // copy info from cached save struct if possible (for disconnected groups only)
+        memcpy(temp, chat->save, sizeof(struct Saved_Group));
+
+        return;
+    }
+
+    memcpy(temp->founder_public_key, chat->shared_state.founder_public_key, EXT_PUBLIC_KEY);
+    temp->group_name_len = net_htons(chat->shared_state.group_name_len);
+    memcpy(temp->group_name, chat->shared_state.group_name, MAX_GC_GROUP_NAME_SIZE);
+    temp->privacy_state = chat->shared_state.privacy_state;
+    temp->maxpeers = net_htons(chat->shared_state.maxpeers);
+    temp->passwd_len = net_htons(chat->shared_state.password_length);
+    memcpy(temp->passwd, chat->shared_state.password, MAX_GC_PASSWORD_SIZE);
+    memcpy(temp->mod_list_hash, chat->shared_state.mod_list_hash, GC_MODERATION_HASH_SIZE);
+    temp->sstate_version = net_htonl(chat->shared_state.version);
+    memcpy(temp->sstate_signature, chat->shared_state_sig, SIGNATURE_SIZE);
+
+    temp->topic_len = net_htons(chat->topic_info.length);
+    memcpy(temp->topic, chat->topic_info.topic, MAX_GC_TOPIC_SIZE);
+    memcpy(temp->topic_public_sig_key, chat->topic_info.public_sig_key, SIG_PUBLIC_KEY);
+    temp->topic_version = net_htonl(chat->topic_info.version);
+    memcpy(temp->topic_signature, chat->topic_sig, SIGNATURE_SIZE);
+
+    memcpy(temp->chat_public_key, chat->chat_public_key, EXT_PUBLIC_KEY);
+    memcpy(temp->chat_secret_key, chat->chat_secret_key, EXT_SECRET_KEY);  /* empty for non-founders */
+
+    uint16_t num_addrs = gc_copy_peer_addrs(chat, temp->addrs, GROUP_SAVE_MAX_PEERS);
+    temp->num_addrs = net_htons(num_addrs);
+
+    temp->num_mods = net_htons(chat->moderation.num_mods);
+    mod_list_pack(chat, temp->mod_list);
+    temp->group_connection_state = chat->connection_state == CS_MANUALLY_DISCONNECTED ? SGCS_DISCONNECTED : SGCS_CONNECTED;
+
+    memcpy(temp->self_public_key, chat->self_public_key, EXT_PUBLIC_KEY);
+    memcpy(temp->self_secret_key, chat->self_secret_key, EXT_SECRET_KEY);
+    memcpy(temp->self_nick, chat->group[0].nick, MAX_GC_NICK_SIZE);
+    temp->self_nick_len = net_htons(chat->group[0].nick_len);
+    temp->self_role = chat->group[0].role;
+    temp->self_status = chat->group[0].status;
+}
+
 static bool is_peer_confirmed(const GC_Chat *chat, const uint8_t *peer_pk)
 {
     int i;
@@ -3370,8 +3413,9 @@ uint8_t gc_get_privacy_state(const GC_Chat *chat)
  * Returns -1 if groupnumber is invalid.
  * Returns -2 if the privacy state is an invalid type.
  * Returns -3 if the caller does not have sufficient permissions for this action.
- * Returns -4 if the privacy state could not be set.
- * Returns -5 if the packet failed to send.
+ * Returns -4 if the group is disconnected.
+ * Returns -5 if the privacy state could not be set.
+ * Returns -6 if the packet failed to send.
  */
 int gc_founder_set_privacy_state(Messenger *m, int groupnumber, uint8_t new_privacy_state)
 {
@@ -3390,6 +3434,10 @@ int gc_founder_set_privacy_state(Messenger *m, int groupnumber, uint8_t new_priv
         return -3;
     }
 
+    if (chat->connection_state == CS_MANUALLY_DISCONNECTED) {
+        return -4;
+    }
+
     uint8_t old_privacy_state = chat->shared_state.privacy_state;
 
     if (new_privacy_state == old_privacy_state) {
@@ -3400,7 +3448,7 @@ int gc_founder_set_privacy_state(Messenger *m, int groupnumber, uint8_t new_priv
 
     if (sign_gc_shared_state(chat) == -1) {
         chat->shared_state.privacy_state = old_privacy_state;
-        return -4;
+        return -5;
     }
 
     if (new_privacy_state == GI_PRIVATE) {
@@ -3411,7 +3459,7 @@ int gc_founder_set_privacy_state(Messenger *m, int groupnumber, uint8_t new_priv
     }
 
     if (broadcast_gc_shared_state(chat) == -1) {
-        return -5;
+        return -6;
     }
 
     return 0;
@@ -4839,6 +4887,11 @@ static int handle_gc_lossy_message(Messenger *m, GC_Chat *chat, const uint8_t *p
     return ret;
 }
 
+static bool group_can_handle_packets(GC_Chat *chat)
+{
+    return chat->connection_state != CS_FAILED && chat->connection_state != CS_MANUALLY_DISCONNECTED;
+}
+
 /* Sends a group packet to appropriate handler function.
  *
  * Returns non-negative value on success.
@@ -4861,7 +4914,7 @@ int handle_gc_tcp_packet(void *object, int id, const uint8_t *packet, uint16_t l
         return -1;
     }
 
-    if (chat->connection_state == CS_FAILED) {
+    if (!group_can_handle_packets(chat)) {
         return -1;
     }
 
@@ -4894,7 +4947,7 @@ int handle_gc_tcp_oob_packet(void *object, const uint8_t *public_key, unsigned i
         return -1;
     }
 
-    if (chat->connection_state == CS_FAILED) {
+    if (!group_can_handle_packets(chat)) {
         return -1;
     }
 
@@ -4931,7 +4984,7 @@ int handle_gc_udp_packet(void *object, IP_Port ipp, const uint8_t *packet, uint1
         return -1;
     }
 
-    if (chat->connection_state == CS_FAILED) {
+    if (!group_can_handle_packets(chat)) {
         return -1;
     }
 
@@ -5066,18 +5119,19 @@ int gc_peer_delete(Messenger *m, int groupnumber, uint32_t peernumber, const uin
     GC_Session *c = m->group_handler;
 
     GC_Chat *chat = gc_get_group(c, groupnumber);
-
-    if (chat == nullptr) {
+    if (!chat) {
         return -1;
     }
 
-    if ((chat->connection_state == CS_DISCONNECTED || chat->connection_state == CS_CONNECTING) && !is_public_chat(chat)) {
+    if ((chat->connection_state == CS_DISCONNECTED
+         || chat->connection_state == CS_CONNECTING
+         || chat->connection_state == CS_MANUALLY_DISCONNECTED)
+        && !is_public_chat(chat)) {
         return -1;
     }
 
     GC_Connection *gconn = gcc_get_connection(chat, peernumber);
-
-    if (gconn == nullptr) {
+    if (!gconn) {
         return -1;
     }
 
@@ -5383,7 +5437,7 @@ static int send_pending_handshake(GC_Chat *chat, GC_Connection *gconn, uint32_t 
 
 static void do_group_tcp(GC_Chat *chat, void *userdata)
 {
-    if (!chat->tcp_conn) {
+    if (!chat->tcp_conn || chat->connection_state == CS_MANUALLY_DISCONNECTED) {
         return;
     }
 
@@ -5455,13 +5509,9 @@ void do_gc(GC_Session *c, void *userdata)
                 break;
             }
 
+            case CS_MANUALLY_DISCONNECTED:
             case CS_FAILED: {
                 break;
-            }
-
-            case CS_CLOSING: {
-                group_delete(c, chat);
-                i--;
             }
         }
     }
@@ -5655,25 +5705,25 @@ static int init_gc_sanctions_creds(GC_Chat *chat)
 
 /* Loads a previously saved group and attempts to connect to it.
  *
- * Returns groupnumber on success.
+ * Returns group number on success.
  * Returns -1 on failure.
  */
-int gc_group_load(GC_Session *c, struct Saved_Group *save)
+int gc_group_load(GC_Session *c, struct Saved_Group *save, int group_number)
 {
-    int groupnumber = get_new_group_index(c);
-
-    if (groupnumber == -1) {
+    group_number = group_number == -1 ? get_new_group_index(c) : group_number;
+    if (group_number == -1) {
         return -1;
     }
 
     uint64_t tm = mono_time_get(c->messenger->mono_time);
 
     Messenger *m = c->messenger;
-    GC_Chat *chat = &c->chats[groupnumber];
+    GC_Chat *chat = &c->chats[group_number];
+    bool is_active_chat = save->group_connection_state != SGCS_DISCONNECTED;
 
-    chat->groupnumber = groupnumber;
+    chat->groupnumber = group_number;
     chat->numpeers = 0;
-    chat->connection_state = CS_CONNECTING;
+    chat->connection_state = is_active_chat ? CS_CONNECTING : CS_MANUALLY_DISCONNECTED;
     chat->join_type = HJ_PRIVATE;
     chat->last_join_attempt = tm;
     chat->net = m->net;
@@ -5711,11 +5761,7 @@ int gc_group_load(GC_Session *c, struct Saved_Group *save)
     chat->chat_id_hash = get_chat_id_hash(get_chat_id(chat->chat_public_key));
     chat->self_public_key_hash = get_peer_key_hash(chat->self_public_key);
 
-    if (init_gc_tcp_connection(m, chat) == -1) {
-        return -1;
-    }
-
-    if (peer_add(m, groupnumber, nullptr, save->self_public_key) != 0) {
+    if (peer_add(m, group_number, nullptr, save->self_public_key) != 0) {
         return -1;
     }
 
@@ -5730,6 +5776,25 @@ int gc_group_load(GC_Session *c, struct Saved_Group *save)
         if (init_gc_sanctions_creds(chat) == -1) {
             return -1;
         }
+    }
+
+    if (!is_active_chat) {
+        chat->save = (struct Saved_Group *)malloc(sizeof(struct Saved_Group));
+        if (!chat->save) {
+            return -1;
+        }
+
+        memcpy(chat->save, save, sizeof(struct Saved_Group));
+
+        return group_number;
+    }
+
+    if (init_gc_tcp_connection(m, chat) == -1) {
+        return -1;
+    }
+
+    if (is_public_chat(chat)) {
+        m_add_friend_gc(m, chat);
     }
 
     uint16_t i, num_addrs = net_ntohs(save->num_addrs);
@@ -5754,7 +5819,6 @@ int gc_group_load(GC_Session *c, struct Saved_Group *save)
                                                       save->addrs[i].tcp_relay.public_key);
         if (add_tcp_result < 0 && !ip_port_is_set) {
             fprintf(stderr, "error adding relay\n");
-            memcpy(gconn->oob_relay_pk, save->addrs[i].tcp_relay.public_key, ENC_PUBLIC_KEY);
             continue;
         }
 
@@ -5763,13 +5827,14 @@ int gc_group_load(GC_Session *c, struct Saved_Group *save)
             continue;
         }
 
-        gconn->is_oob_handshake = true;
+        memcpy(gconn->oob_relay_pk, save->addrs[i].tcp_relay.public_key, ENC_PUBLIC_KEY);
+        gconn->is_oob_handshake = add_tcp_result == 0;
         gconn->is_pending_handshake_response = false;
         gconn->pending_handshake_type = HS_INVITE_REQUEST;
         gconn->last_rcvd_ping = gconn->pending_handshake = mono_time_get(chat->mono_time) + HANDSHAKE_SENDING_TIMEOUT;
     }
 
-    return groupnumber;
+    return group_number;
 }
 
 /* Creates a new group.
@@ -5900,10 +5965,51 @@ int gc_group_join(GC_Session *c, const uint8_t *chat_id, const uint8_t *passwd, 
     return groupnumber;
 }
 
-/* Resets chat saving all self state and attempts to reconnect to group */
-void gc_rejoin_group(GC_Session *c, GC_Chat *chat)
+bool gc_disconnect_from_group(GC_Session *c, GC_Chat *chat)
 {
-    // TODO: fix
+    if (!c || !chat) {
+        return false;
+    }
+
+    send_gc_broadcast_message(chat, nullptr, 0, GM_PEER_EXIT);
+    chat->connection_state = CS_MANUALLY_DISCONNECTED;
+
+    chat->save = (struct Saved_Group *)malloc(sizeof(struct Saved_Group));
+    if (!chat->save) {
+        return false;
+    }
+
+    // save info about group
+    pack_group_info(chat, chat->save);
+
+    // cleanup gc data
+    m_remove_friend_gc(c->messenger, chat);
+    mod_list_cleanup(chat);
+    sanctions_list_cleanup(chat);
+    kill_tcp_connections(chat->tcp_conn);
+    gcc_cleanup(chat);
+
+    return true;
+}
+
+/* Resets chat saving all self state and attempts to reconnect to group */
+bool gc_rejoin_group(GC_Session *c, GC_Chat *chat)
+{
+    if (!c || !chat) {
+        return false;
+    }
+
+    if (chat->connection_state != CS_MANUALLY_DISCONNECTED) {
+        bool disconnection_result = gc_disconnect_from_group(c, chat);
+        if (!disconnection_result) {
+            return false;
+        }
+    }
+
+    chat->save->group_connection_state = SGCS_CONNECTED;
+    int group_loading_result = gc_group_load(c, chat->save, chat->groupnumber);
+
+    return group_loading_result != -1;
 }
 
 
@@ -5913,7 +6019,7 @@ bool check_group_invite(GC_Session *c, const uint8_t *data, uint32_t length)
         return false;
     }
 
-    return gc_get_group_by_public_key(c, data) == NULL;
+    return !gc_get_group_by_public_key(c, data);
 }
 
 
@@ -6121,8 +6227,7 @@ int handle_gc_invite_accepted_packet(GC_Session *c, int friend_number, const uin
     memcpy(invite_chat_pk, data + CHAT_ID_SIZE, ENC_PUBLIC_KEY);
 
     GC_Chat *chat = gc_get_group_by_public_key(c, chat_id);
-
-    if (chat == NULL) {
+    if (!chat || chat->connection_state == CS_MANUALLY_DISCONNECTED) {
         return -2;
     }
 
@@ -6131,7 +6236,6 @@ int handle_gc_invite_accepted_packet(GC_Session *c, int friend_number, const uin
     }
 
     int peer_number = peer_add(m, chat->groupnumber, NULL, invite_chat_pk);
-
     if (peer_number < 0) {
         return -3;
     }
@@ -6274,7 +6378,7 @@ GC_Session *new_dht_groupchats(Messenger *m)
  */
 static int group_delete(GC_Session *c, GC_Chat *chat)
 {
-    if (c == nullptr) {
+    if (!c || !chat) {
         return -1;
     }
 
@@ -6321,8 +6425,7 @@ int gc_group_exit(GC_Session *c, GC_Chat *chat, const uint8_t *message, uint16_t
 {
     int ret = send_gc_self_exit(chat, message, length);
 
-    chat->connection_state = CS_CLOSING;
-    do_gc(c, nullptr);
+    group_delete(c, chat);
 
     return ret;
 }
@@ -6371,7 +6474,7 @@ uint32_t gc_count_groups(const GC_Session *c)
     uint32_t i, count = 0;
 
     for (i = 0; i < c->num_chats; i++)
-        if (c->chats[i].connection_state > CS_NONE && c->chats[i].connection_state < CS_CLOSING) {
+        if (c->chats[i].connection_state > CS_NONE && c->chats[i].connection_state < CS_INVALID) {
             count++;
         }
 
