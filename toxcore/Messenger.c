@@ -3231,46 +3231,18 @@ static uint8_t *groups_save(const Messenger *m, uint8_t *data)
                                       STATE_TYPE_GROUPS);
 
     for (i = 0; i < c->num_chats; ++i) {
-        if (c->chats[i].connection_state > CS_NONE && c->chats[i].connection_state < CS_CLOSING) {
-            struct Saved_Group temp;
-            memset(&temp, 0, sizeof(struct Saved_Group));
-
-            memcpy(temp.founder_public_key, c->chats[i].shared_state.founder_public_key, EXT_PUBLIC_KEY);
-            temp.group_name_len = net_htons(c->chats[i].shared_state.group_name_len);
-            memcpy(temp.group_name, c->chats[i].shared_state.group_name, MAX_GC_GROUP_NAME_SIZE);
-            temp.privacy_state = c->chats[i].shared_state.privacy_state;
-            temp.maxpeers = net_htons(c->chats[i].shared_state.maxpeers);
-            temp.passwd_len = net_htons(c->chats[i].shared_state.password_length);
-            memcpy(temp.passwd, c->chats[i].shared_state.password, MAX_GC_PASSWORD_SIZE);
-            memcpy(temp.mod_list_hash, c->chats[i].shared_state.mod_list_hash, GC_MODERATION_HASH_SIZE);
-            temp.sstate_version = net_htonl(c->chats[i].shared_state.version);
-            memcpy(temp.sstate_signature, c->chats[i].shared_state_sig, SIGNATURE_SIZE);
-
-            temp.topic_len = net_htons(c->chats[i].topic_info.length);
-            memcpy(temp.topic, c->chats[i].topic_info.topic, MAX_GC_TOPIC_SIZE);
-            memcpy(temp.topic_public_sig_key, c->chats[i].topic_info.public_sig_key, SIG_PUBLIC_KEY);
-            temp.topic_version = net_htonl(c->chats[i].topic_info.version);
-            memcpy(temp.topic_signature, c->chats[i].topic_sig, SIGNATURE_SIZE);
-
-            memcpy(temp.chat_public_key, c->chats[i].chat_public_key, EXT_PUBLIC_KEY);
-            memcpy(temp.chat_secret_key, c->chats[i].chat_secret_key, EXT_SECRET_KEY);  /* empty for non-founders */
-
-            uint16_t num_addrs = gc_copy_peer_addrs(&c->chats[i], temp.addrs, GROUP_SAVE_MAX_PEERS);
-            temp.num_addrs = net_htons(num_addrs);
-
-            temp.num_mods = net_htons(c->chats[i].moderation.num_mods);
-            mod_list_pack(&c->chats[i], temp.mod_list);
-
-            memcpy(temp.self_public_key, c->chats[i].self_public_key, EXT_PUBLIC_KEY);
-            memcpy(temp.self_secret_key, c->chats[i].self_secret_key, EXT_SECRET_KEY);
-            memcpy(temp.self_nick, c->chats[i].group[0].nick, MAX_GC_NICK_SIZE);
-            temp.self_nick_len = net_htons(c->chats[i].group[0].nick_len);
-            temp.self_role = c->chats[i].group[0].role;
-            temp.self_status = c->chats[i].group[0].status;
-
-            memcpy(data + num * sizeof(struct Saved_Group), &temp, sizeof(struct Saved_Group));
-            ++num;
+        GC_Chat *chat = &c->chats[i];
+        if (chat->connection_state <= CS_NONE || chat->connection_state >= CS_INVALID) {
+            continue;
         }
+
+        Saved_Group temp;
+        memset(&temp, 0, sizeof(struct Saved_Group));
+
+        pack_group_info(chat, &temp);
+
+        memcpy(data + num * sizeof(struct Saved_Group), &temp, sizeof(struct Saved_Group));
+        num++;
     }
 
     return data + num * sizeof(struct Saved_Group);
@@ -3279,7 +3251,7 @@ static uint8_t *groups_save(const Messenger *m, uint8_t *data)
 static State_Load_Status groups_load(Messenger *m, const uint8_t *data, uint32_t length)
 {
     if (length % sizeof(struct Saved_Group) != 0) {
-        return STATE_LOAD_STATUS_ERROR; // TODO(endoffile78): error or continue?
+        return -1;
     }
 
     uint32_t i, num = length / sizeof(struct Saved_Group);
@@ -3288,16 +3260,10 @@ static State_Load_Status groups_load(Messenger *m, const uint8_t *data, uint32_t
         struct Saved_Group temp;
         memcpy(&temp, data + i * sizeof(struct Saved_Group), sizeof(struct Saved_Group));
 
-        int group_number = gc_group_load(m->group_handler, &temp);
+        int group_number = gc_group_load(m->group_handler, &temp, -1);
 
         if (group_number == -1) {
             LOGGER_WARNING(m->log, "Failed to join group");
-        }
-        else {
-            GC_Chat *chat = gc_get_group(m->group_handler, group_number);
-            if (is_public_chat(chat)) {
-                m_add_friend_gc(m, chat);
-            }
         }
     }
 
