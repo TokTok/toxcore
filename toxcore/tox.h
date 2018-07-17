@@ -3430,7 +3430,7 @@ struct Group_Chat_Self_Peer_Info *group_chat_self_peer_info_new(Tox *tox, TOX_ER
  * @param length The length of the group name. This must be greater than zero and no larger than
  *   TOX_GROUP_MAX_GROUP_NAME_LENGTH.
  *
- * @return groupnumber on success, UINT32_MAX on failure.
+ * @return group_number on success, UINT32_MAX on failure.
  */
 uint32_t tox_group_new(Tox *tox, TOX_GROUP_PRIVACY_STATE privacy_state, const uint8_t *group_name, size_t group_name_length,
                        struct Group_Chat_Self_Peer_Info *peer_info,
@@ -3461,7 +3461,6 @@ typedef enum TOX_ERR_GROUP_JOIN {
 
 } TOX_ERR_GROUP_JOIN;
 
-
 /**
  * Joins a group chat with specified Chat ID.
  *
@@ -3474,11 +3473,34 @@ typedef enum TOX_ERR_GROUP_JOIN {
  * @param length The length of the password. If length is equal to zero,
  *   the password parameter is ignored. length must be no larger than TOX_GROUP_MAX_PASSWORD_SIZE.
  *
- * @return groupnumber on success, UINT32_MAX on failure.
+ * @return group_number on success, UINT32_MAX on failure.
  */
 uint32_t tox_group_join(Tox *tox, const uint8_t *chat_id, const uint8_t *password, size_t length,
                         struct Group_Chat_Self_Peer_Info *peer_info,
                         TOX_ERR_GROUP_JOIN *error);
+
+
+typedef enum TOX_ERR_GROUP_IS_CONNECTED {
+    TOX_ERR_GROUP_IS_CONNECTED_OK,
+
+    TOX_ERR_GROUP_IS_CONNECTED_GROUP_NOT_FOUND
+} TOX_ERR_GROUP_IS_CONNECTED;
+
+
+bool tox_group_is_connected(Tox *tox, uint32_t group_number, TOX_ERR_GROUP_IS_CONNECTED *error);
+
+typedef enum TOX_ERR_GROUP_DISCONNECT {
+
+    TOX_ERR_GROUP_DISCONNECT_OK,
+
+    TOX_ERR_GROUP_DISCONNECT_GROUP_NOT_FOUND,
+
+    TOX_ERR_GROUP_DISCONNECT_ALREADY_DISCONNECTED,
+
+    TOX_ERR_GROUP_DISCONNECT_ERROR
+} TOX_ERR_GROUP_DISCONNECT;
+
+bool tox_group_disconnect(Tox *tox, uint32_t group_number, TOX_ERR_GROUP_DISCONNECT *error);
 
 typedef enum TOX_ERR_GROUP_RECONNECT {
 
@@ -3492,6 +3514,8 @@ typedef enum TOX_ERR_GROUP_RECONNECT {
      */
     TOX_ERR_GROUP_RECONNECT_GROUP_NOT_FOUND,
 
+    TOX_ERR_GROUP_RECONNECT_MALLOC,
+
 } TOX_ERR_GROUP_RECONNECT;
 
 
@@ -3501,11 +3525,11 @@ typedef enum TOX_ERR_GROUP_RECONNECT {
  * This function disconnects from all peers in the group, then attempts to reconnect with the group.
  * The caller's state is not changed (i.e. name, status, role, chat public key etc.)
  *
- * @param groupnumber The group number of the group we wish to reconnect to.
+ * @param group_number The group number of the group we wish to reconnect to.
  *
  * @return true on success.
  */
-bool tox_group_reconnect(Tox *tox, uint32_t groupnumber, TOX_ERR_GROUP_RECONNECT *error);
+bool tox_group_reconnect(Tox *tox, uint32_t group_number, TOX_ERR_GROUP_RECONNECT *error);
 
 typedef enum TOX_ERR_GROUP_LEAVE {
 
@@ -3544,14 +3568,14 @@ typedef enum TOX_ERR_GROUP_LEAVE {
  * peers in a group, and deletes the group from the chat array. All group state information is permanently
  * lost, including keys and role credentials.
  *
- * @param groupnumber The group number of the group we wish to leave.
+ * @param group_number The group number of the group we wish to leave.
  * @param message The parting message to be sent to all the peers. Set to NULL if we do not wish to
  *   send a parting message.
  * @param length The length of the parting message. Set to 0 if we do not wish to send a parting message.
  *
  * @return true if the group chat instance is successfully deleted.
  */
-bool tox_group_leave(Tox *tox, uint32_t groupnumber, const uint8_t *message, size_t length, TOX_ERR_GROUP_LEAVE *error);
+bool tox_group_leave(Tox *tox, uint32_t group_number, const uint8_t *message, size_t length, TOX_ERR_GROUP_LEAVE *error);
 
 
 /*******************************************************************************
@@ -3629,19 +3653,19 @@ typedef enum TOX_ERR_GROUP_SELF_NAME_SET {
  *
  * @return true on success.
  */
-bool tox_group_self_set_name(Tox *tox, uint32_t groupnumber, const uint8_t *name, size_t length,
+bool tox_group_self_set_name(Tox *tox, uint32_t group_number, const uint8_t *name, size_t length,
                              TOX_ERR_GROUP_SELF_NAME_SET *error);
 
 /**
  * Return the length of the client's current nickname for the group instance designated
- * by groupnumber as passed to tox_group_self_set_name.
+ * by group_number as passed to tox_group_self_set_name.
  *
  * If no nickname was set before calling this function, the name is empty,
  * and this function returns 0.
  *
  * @see threading for concurrency implications.
  */
-size_t tox_group_self_get_name_size(const Tox *tox, uint32_t groupnumber, TOX_ERR_GROUP_SELF_QUERY *error);
+size_t tox_group_self_get_name_size(const Tox *tox, uint32_t group_number, TOX_ERR_GROUP_SELF_QUERY *error);
 
 /**
  * Write the nickname set by tox_group_self_set_name to a byte array.
@@ -3656,7 +3680,7 @@ size_t tox_group_self_get_name_size(const Tox *tox, uint32_t groupnumber, TOX_ER
  *
  * @returns true on success.
  */
-bool tox_group_self_get_name(const Tox *tox, uint32_t groupnumber, uint8_t *name, TOX_ERR_GROUP_SELF_QUERY *error);
+bool tox_group_self_get_name(const Tox *tox, uint32_t group_number, uint8_t *name, TOX_ERR_GROUP_SELF_QUERY *error);
 
 /**
  * Error codes for self status setting.
@@ -3691,26 +3715,26 @@ typedef enum TOX_ERR_GROUP_SELF_STATUS_SET {
  *
  * @return true on success.
  */
-bool tox_group_self_set_status(Tox *tox, uint32_t groupnumber, TOX_USER_STATUS status,
+bool tox_group_self_set_status(Tox *tox, uint32_t group_number, TOX_USER_STATUS status,
                                TOX_ERR_GROUP_SELF_STATUS_SET *error);
 
 /**
  * returns the client's status for the group instance on success.
  * return value is unspecified on failure.
  */
-TOX_USER_STATUS tox_group_self_get_status(const Tox *tox, uint32_t groupnumber, TOX_ERR_GROUP_SELF_QUERY *error);
+TOX_USER_STATUS tox_group_self_get_status(const Tox *tox, uint32_t group_number, TOX_ERR_GROUP_SELF_QUERY *error);
 
 /**
  * returns the client's role for the group instance on success.
  * return value is unspecified on failure.
  */
-TOX_GROUP_ROLE tox_group_self_get_role(const Tox *tox, uint32_t groupnumber, TOX_ERR_GROUP_SELF_QUERY *error);
+TOX_GROUP_ROLE tox_group_self_get_role(const Tox *tox, uint32_t group_number, TOX_ERR_GROUP_SELF_QUERY *error);
 
 /**
  * returns the client's peer id for the group instance on success.
  * return value is unspecified on failure.
  */
-uint32_t tox_group_self_get_peer_id(const Tox *tox, uint32_t groupnumber, TOX_ERR_GROUP_SELF_QUERY *error);
+uint32_t tox_group_self_get_peer_id(const Tox *tox, uint32_t group_number, TOX_ERR_GROUP_SELF_QUERY *error);
 
 /**
  * Write the client's group public key designated by the given group number to a byte array.
@@ -3726,7 +3750,7 @@ uint32_t tox_group_self_get_peer_id(const Tox *tox, uint32_t groupnumber, TOX_ER
  *
  * @return true on success.
  */
-bool tox_group_self_get_public_key(const Tox *tox, uint32_t groupnumber, uint8_t *public_key,
+bool tox_group_self_get_public_key(const Tox *tox, uint32_t group_number, uint8_t *public_key,
                                    TOX_ERR_GROUP_SELF_QUERY *error);
 
 
@@ -3768,7 +3792,7 @@ typedef enum TOX_ERR_GROUP_PEER_QUERY {
  * The return value is equal to the `length` argument received by the last
  * `group_peer_name` callback.
  */
-size_t tox_group_peer_get_name_size(const Tox *tox, uint32_t groupnumber, uint32_t peer_id,
+size_t tox_group_peer_get_name_size(const Tox *tox, uint32_t group_number, uint32_t peer_id,
                                     TOX_ERR_GROUP_PEER_QUERY *error);
 
 /**
@@ -3780,13 +3804,13 @@ size_t tox_group_peer_get_name_size(const Tox *tox, uint32_t groupnumber, uint32
  * The data written to `name` is equal to the data received by the last
  * `group_peer_name` callback.
  *
- * @param groupnumber The group number of the group we wish to query.
+ * @param group_number The group number of the group we wish to query.
  * @param peer_id The ID of the peer whose name we want to retrieve.
  * @param name A valid memory region large enough to store the friend's name.
  *
  * @return true on success.
  */
-bool tox_group_peer_get_name(const Tox *tox, uint32_t groupnumber, uint32_t peer_id, uint8_t *name,
+bool tox_group_peer_get_name(const Tox *tox, uint32_t group_number, uint32_t peer_id, uint8_t *name,
                              TOX_ERR_GROUP_PEER_QUERY *error);
 
 /**
@@ -3796,7 +3820,7 @@ bool tox_group_peer_get_name(const Tox *tox, uint32_t groupnumber, uint32_t peer
  * The status returned is equal to the last status received through the
  * `group_peer_status` callback.
  */
-TOX_USER_STATUS tox_group_peer_get_status(const Tox *tox, uint32_t groupnumber, uint32_t peer_id,
+TOX_USER_STATUS tox_group_peer_get_status(const Tox *tox, uint32_t group_number, uint32_t peer_id,
         TOX_ERR_GROUP_PEER_QUERY *error);
 
 /**
@@ -3806,7 +3830,7 @@ TOX_USER_STATUS tox_group_peer_get_status(const Tox *tox, uint32_t groupnumber, 
  * The role returned is equal to the last role received through the
  * `group_moderation` callback.
  */
-TOX_GROUP_ROLE tox_group_peer_get_role(const Tox *tox, uint32_t groupnumber, uint32_t peer_id,
+TOX_GROUP_ROLE tox_group_peer_get_role(const Tox *tox, uint32_t group_number, uint32_t peer_id,
                                        TOX_ERR_GROUP_PEER_QUERY *error);
 
 /**
@@ -3822,16 +3846,16 @@ TOX_GROUP_ROLE tox_group_peer_get_role(const Tox *tox, uint32_t groupnumber, uin
  *
  * @return true on success.
  */
-bool tox_group_peer_get_public_key(const Tox *tox, uint32_t groupnumber, uint32_t peer_id, uint8_t *public_key,
+bool tox_group_peer_get_public_key(const Tox *tox, uint32_t group_number, uint32_t peer_id, uint8_t *public_key,
                                    TOX_ERR_GROUP_PEER_QUERY *error);
 
 /**
- * @param groupnumber The group number of the group the name change is intended for.
+ * @param group_number The group number of the group the name change is intended for.
  * @param peer_id The ID of the peer who has changed their name.
  * @param name The name data.
  * @param length The length of the name.
  */
-typedef void tox_group_peer_name_cb(Tox *tox, uint32_t groupnumber, uint32_t peer_id, const uint8_t *name,
+typedef void tox_group_peer_name_cb(Tox *tox, uint32_t group_number, uint32_t peer_id, const uint8_t *name,
                                     size_t length, void *user_data);
 
 
@@ -3843,11 +3867,11 @@ typedef void tox_group_peer_name_cb(Tox *tox, uint32_t groupnumber, uint32_t pee
 void tox_callback_group_peer_name(Tox *tox, tox_group_peer_name_cb *callback, void *user_data);
 
 /**
- * @param groupnumber The group number of the group the status change is intended for.
+ * @param group_number The group number of the group the status change is intended for.
  * @param peer_id The ID of the peer who has changed their status.
  * @param status The new status of the peer.
  */
-typedef void tox_group_peer_status_cb(Tox *tox, uint32_t groupnumber, uint32_t peer_id, TOX_USER_STATUS status,
+typedef void tox_group_peer_status_cb(Tox *tox, uint32_t group_number, uint32_t peer_id, TOX_USER_STATUS status,
                                       void *user_data);
 
 
@@ -3900,6 +3924,9 @@ typedef enum TOX_ERR_GROUP_TOPIC_SET {
      */
     TOX_ERR_GROUP_TOPIC_SET_GROUP_NOT_FOUND,
 
+
+    TOX_ERR_GROUP_TOPIC_SET_GROUP_IS_DISCONNECTED,
+
     /**
      * Topic length exceeded TOX_GROUP_MAX_TOPIC_LENGTH.
      */
@@ -3931,7 +3958,7 @@ typedef enum TOX_ERR_GROUP_TOPIC_SET {
  *
  * @returns true on success.
  */
-bool tox_group_set_topic(Tox *tox, uint32_t groupnumber, const uint8_t *topic, size_t length,
+bool tox_group_set_topic(Tox *tox, uint32_t group_number, const uint8_t *topic, size_t length,
                          TOX_ERR_GROUP_TOPIC_SET *error);
 
 /**
@@ -3941,7 +3968,7 @@ bool tox_group_set_topic(Tox *tox, uint32_t groupnumber, const uint8_t *topic, s
  * The return value is equal to the `length` argument received by the last
  * `group_topic` callback.
  */
-size_t tox_group_get_topic_size(const Tox *tox, uint32_t groupnumber, TOX_ERR_GROUP_STATE_QUERIES *error);
+size_t tox_group_get_topic_size(const Tox *tox, uint32_t group_number, TOX_ERR_GROUP_STATE_QUERIES *error);
 
 /**
  * Write the topic designated by the given group number to a byte array.
@@ -3956,15 +3983,15 @@ size_t tox_group_get_topic_size(const Tox *tox, uint32_t groupnumber, TOX_ERR_GR
  *
  * @return true on success.
  */
-bool tox_group_get_topic(const Tox *tox, uint32_t groupnumber, uint8_t *topic, TOX_ERR_GROUP_STATE_QUERIES *error);
+bool tox_group_get_topic(const Tox *tox, uint32_t group_number, uint8_t *topic, TOX_ERR_GROUP_STATE_QUERIES *error);
 
 /**
- * @param groupnumber The group number of the group the topic change is intended for.
+ * @param group_number The group number of the group the topic change is intended for.
  * @param peer_id The ID of the peer who changed the topic.
  * @param topic The topic data.
  * @param length The topic length.
  */
-typedef void tox_group_topic_cb(Tox *tox, uint32_t groupnumber, uint32_t peer_id, const uint8_t *topic, size_t length,
+typedef void tox_group_topic_cb(Tox *tox, uint32_t group_number, uint32_t peer_id, const uint8_t *topic, size_t length,
                                 void *user_data);
 
 
@@ -3979,7 +4006,7 @@ void tox_callback_group_topic(Tox *tox, tox_group_topic_cb *callback, void *user
  * Return the length of the group name. If the group number is invalid, the
  * return value is unspecified.
  */
-size_t tox_group_get_name_size(const Tox *tox, uint32_t groupnumber, TOX_ERR_GROUP_STATE_QUERIES *error);
+size_t tox_group_get_name_size(const Tox *tox, uint32_t group_number, TOX_ERR_GROUP_STATE_QUERIES *error);
 
 /**
  * Write the name of the group designated by the given group number to a byte array.
@@ -3991,7 +4018,7 @@ size_t tox_group_get_name_size(const Tox *tox, uint32_t groupnumber, TOX_ERR_GRO
  *
  * @return true on success.
  */
-bool tox_group_get_name(const Tox *tox, uint32_t groupnumber, uint8_t *name, TOX_ERR_GROUP_STATE_QUERIES *error);
+bool tox_group_get_name(const Tox *tox, uint32_t group_number, uint8_t *name, TOX_ERR_GROUP_STATE_QUERIES *error);
 
 /**
  * Write the Chat ID designated by the given group number to a byte array.
@@ -4003,7 +4030,7 @@ bool tox_group_get_name(const Tox *tox, uint32_t groupnumber, uint8_t *name, TOX
  *
  * @return true on success.
  */
-bool tox_group_get_chat_id(const Tox *tox, uint32_t groupnumber, uint8_t *chat_id, TOX_ERR_GROUP_STATE_QUERIES *error);
+bool tox_group_get_chat_id(const Tox *tox, uint32_t group_number, uint8_t *chat_id, TOX_ERR_GROUP_STATE_QUERIES *error);
 
 /**
  * Return the number of groups in the Tox chats array.
@@ -4019,14 +4046,14 @@ uint32_t tox_group_get_number_groups(const Tox *tox);
  *
  * @see the `Group chat founder controls` section for the respective set function.
  */
-TOX_GROUP_PRIVACY_STATE tox_group_get_privacy_state(const Tox *tox, uint32_t groupnumber,
+TOX_GROUP_PRIVACY_STATE tox_group_get_privacy_state(const Tox *tox, uint32_t group_number,
         TOX_ERR_GROUP_STATE_QUERIES *error);
 
 /**
- * @param groupnumber The group number of the group the topic change is intended for.
+ * @param group_number The group number of the group the topic change is intended for.
  * @param privacy_state The new privacy state.
  */
-typedef void tox_group_privacy_state_cb(Tox *tox, uint32_t groupnumber, TOX_GROUP_PRIVACY_STATE privacy_state,
+typedef void tox_group_privacy_state_cb(Tox *tox, uint32_t group_number, TOX_GROUP_PRIVACY_STATE privacy_state,
                                         void *user_data);
 
 
@@ -4046,13 +4073,13 @@ void tox_callback_group_privacy_state(Tox *tox, tox_group_privacy_state_cb *call
  *
  * @see the `Group chat founder controls` section for the respective set function.
  */
-uint32_t tox_group_get_peer_limit(const Tox *tox, uint32_t groupnumber, TOX_ERR_GROUP_STATE_QUERIES *error);
+uint32_t tox_group_get_peer_limit(const Tox *tox, uint32_t group_number, TOX_ERR_GROUP_STATE_QUERIES *error);
 
 /**
- * @param groupnumber The group number of the group for which the peer limit has changed.
+ * @param group_number The group number of the group for which the peer limit has changed.
  * @param peer_limit The new peer limit for the group.
  */
-typedef void tox_group_peer_limit_cb(Tox *tox, uint32_t groupnumber, uint32_t peer_limit, void *user_data);
+typedef void tox_group_peer_limit_cb(Tox *tox, uint32_t group_number, uint32_t peer_limit, void *user_data);
 
 
 /**
@@ -4066,7 +4093,7 @@ void tox_callback_group_peer_limit(Tox *tox, tox_group_peer_limit_cb *callback, 
  * Return the length of the group password. If the group number is invalid, the
  * return value is unspecified.
  */
-size_t tox_group_get_password_size(const Tox *tox, uint32_t groupnumber, TOX_ERR_GROUP_STATE_QUERIES *error);
+size_t tox_group_get_password_size(const Tox *tox, uint32_t group_number, TOX_ERR_GROUP_STATE_QUERIES *error);
 
 /**
  * Write the password for the group designated by the given group number to a byte array.
@@ -4083,15 +4110,15 @@ size_t tox_group_get_password_size(const Tox *tox, uint32_t groupnumber, TOX_ERR
  *
  * @return true on success.
  */
-bool tox_group_get_password(const Tox *tox, uint32_t groupnumber, uint8_t *password,
+bool tox_group_get_password(const Tox *tox, uint32_t group_number, uint8_t *password,
                             TOX_ERR_GROUP_STATE_QUERIES *error);
 
 /**
- * @param groupnumber The group number of the group for which the password has changed.
+ * @param group_number The group number of the group for which the password has changed.
  * @param password The new group password.
  * @param length The length of the password.
  */
-typedef void tox_group_password_cb(Tox *tox, uint32_t groupnumber, const uint8_t *password, size_t length,
+typedef void tox_group_password_cb(Tox *tox, uint32_t group_number, const uint8_t *password, size_t length,
                                    void *user_data);
 
 
@@ -4122,6 +4149,8 @@ typedef enum TOX_ERR_GROUP_SEND_MESSAGE {
      * The group number passed did not designate a valid group.
      */
     TOX_ERR_GROUP_SEND_MESSAGE_GROUP_NOT_FOUND,
+
+    TOX_ERR_GROUP_SEND_MESSAGE_GROUP_IS_DISCONNECTED,
 
     /**
      * Message length exceeded TOX_MAX_MESSAGE_LENGTH.
@@ -4161,7 +4190,7 @@ typedef enum TOX_ERR_GROUP_SEND_MESSAGE {
  * must be split by the client and sent as separate messages. Other clients can
  * then reassemble the fragments. Messages may not be empty.
  *
- * @param groupnumber The group number of the group the message is intended for.
+ * @param group_number The group number of the group the message is intended for.
  * @param type Message type (normal, action, ...).
  * @param message A non-NULL pointer to the first element of a byte array
  *   containing the message text.
@@ -4169,7 +4198,7 @@ typedef enum TOX_ERR_GROUP_SEND_MESSAGE {
  *
  * @return true on success.
  */
-bool tox_group_send_message(Tox *tox, uint32_t groupnumber, TOX_MESSAGE_TYPE type, const uint8_t *message,
+bool tox_group_send_message(Tox *tox, uint32_t group_number, TOX_MESSAGE_TYPE type, const uint8_t *message,
                             size_t length, TOX_ERR_GROUP_SEND_MESSAGE *error);
 
 typedef enum TOX_ERR_GROUP_SEND_PRIVATE_MESSAGE {
@@ -4183,6 +4212,8 @@ typedef enum TOX_ERR_GROUP_SEND_PRIVATE_MESSAGE {
      * The group number passed did not designate a valid group.
      */
     TOX_ERR_GROUP_SEND_PRIVATE_MESSAGE_GROUP_NOT_FOUND,
+
+    TOX_ERR_GROUP_SEND_PRIVATE_MESSAGE_GROUP_IS_DISCONNECTED,
 
     /**
      * The ID passed did not designate a valid peer.
@@ -4222,7 +4253,7 @@ typedef enum TOX_ERR_GROUP_SEND_PRIVATE_MESSAGE {
  * must be split by the client and sent as separate messages. Other clients can
  * then reassemble the fragments. Messages may not be empty.
  *
- * @param groupnumber The group number of the group the message is intended for.
+ * @param group_number The group number of the group the message is intended for.
  * @param peer_id The ID of the peer the message is intended for.
  * @param message A non-NULL pointer to the first element of a byte array
  *   containing the message text.
@@ -4230,7 +4261,7 @@ typedef enum TOX_ERR_GROUP_SEND_PRIVATE_MESSAGE {
  *
  * @return true on success.
  */
-bool tox_group_send_private_message(Tox *tox, uint32_t groupnumber, uint32_t peer_id, const uint8_t *message,
+bool tox_group_send_private_message(Tox *tox, uint32_t group_number, uint32_t peer_id, const uint8_t *message,
                                     size_t length, TOX_ERR_GROUP_SEND_PRIVATE_MESSAGE *error);
 
 typedef enum TOX_ERR_GROUP_SEND_CUSTOM_PACKET {
@@ -4244,6 +4275,8 @@ typedef enum TOX_ERR_GROUP_SEND_CUSTOM_PACKET {
      * The group number passed did not designate a valid group.
      */
     TOX_ERR_GROUP_SEND_CUSTOM_PACKET_GROUP_NOT_FOUND,
+
+    TOX_ERR_GROUP_SEND_CUSTOM_PACKET_GROUP_IS_DISCONNECTED,
 
     /**
      * Message length exceeded TOX_MAX_MESSAGE_LENGTH.
@@ -4276,14 +4309,14 @@ typedef enum TOX_ERR_GROUP_SEND_CUSTOM_PACKET {
  * Unless latency is an issue or message reliability is not important, it is recommended that you use
  * lossless custom packets.
  *
- * @param groupnumber The group number of the group the message is intended for.
+ * @param group_number The group number of the group the message is intended for.
  * @param lossless True if the packet should be lossless.
  * @param data A byte array containing the packet data.
  * @param length The length of the packet data byte array.
  *
  * @return true on success.
  */
-bool tox_group_send_custom_packet(Tox *tox, uint32_t groupnumber, bool lossless, const uint8_t *data, size_t length,
+bool tox_group_send_custom_packet(Tox *tox, uint32_t group_number, bool lossless, const uint8_t *data, size_t length,
                                   TOX_ERR_GROUP_SEND_CUSTOM_PACKET *error);
 
 
@@ -4296,13 +4329,13 @@ bool tox_group_send_custom_packet(Tox *tox, uint32_t groupnumber, bool lossless,
 
 
 /**
- * @param groupnumber The group number of the group the message is intended for.
+ * @param group_number The group number of the group the message is intended for.
  * @param peer_id The ID of the peer who sent the message.
  * @param type The type of message (normal, action, ...).
  * @param message The message data.
  * @param length The length of the message.
  */
-typedef void tox_group_message_cb(Tox *tox, uint32_t groupnumber, uint32_t peer_id, TOX_MESSAGE_TYPE type,
+typedef void tox_group_message_cb(Tox *tox, uint32_t group_number, uint32_t peer_id, TOX_MESSAGE_TYPE type,
                                   const uint8_t *message, size_t length, void *user_data);
 
 
@@ -4314,12 +4347,12 @@ typedef void tox_group_message_cb(Tox *tox, uint32_t groupnumber, uint32_t peer_
 void tox_callback_group_message(Tox *tox, tox_group_message_cb *callback, void *user_data);
 
 /**
- * @param groupnumber The group number of the group the private message is intended for.
+ * @param group_number The group number of the group the private message is intended for.
  * @param peer_id The ID of the peer who sent the private message.
  * @param message The message data.
  * @param length The length of the message.
  */
-typedef void tox_group_private_message_cb(Tox *tox, uint32_t groupnumber, uint32_t peer_id, const uint8_t *message,
+typedef void tox_group_private_message_cb(Tox *tox, uint32_t group_number, uint32_t peer_id, const uint8_t *message,
         size_t length, void *user_data);
 
 
@@ -4331,12 +4364,12 @@ typedef void tox_group_private_message_cb(Tox *tox, uint32_t groupnumber, uint32
 void tox_callback_group_private_message(Tox *tox, tox_group_private_message_cb *callback, void *user_data);
 
 /**
- * @param groupnumber The group number of the group the custom packet is intended for.
+ * @param group_number The group number of the group the custom packet is intended for.
  * @param peer_id The ID of the peer who sent the custom packet.
  * @param data The custom packet data.
  * @param length The length of the data.
  */
-typedef void tox_group_custom_packet_cb(Tox *tox, uint32_t groupnumber, uint32_t peer_id, const uint8_t *data,
+typedef void tox_group_custom_packet_cb(Tox *tox, uint32_t group_number, uint32_t peer_id, const uint8_t *data,
                                         size_t length, void *user_data);
 
 
@@ -4368,6 +4401,9 @@ typedef enum TOX_ERR_GROUP_INVITE_FRIEND {
      */
     TOX_ERR_GROUP_INVITE_FRIEND_GROUP_NOT_FOUND,
 
+
+    TOX_ERR_GROUP_INVITE_FRIEND_GROUP_IS_DISCONNECTED,
+
     /**
      * The friend number passed did not designate a valid friend.
      */
@@ -4391,12 +4427,12 @@ typedef enum TOX_ERR_GROUP_INVITE_FRIEND {
  *
  * This function creates an invite request packet and pushes it to the send queue.
  *
- * @param groupnumber The group number of the group the message is intended for.
+ * @param group_number The group number of the group the message is intended for.
  * @param friend_number The friend number of the friend the invite is intended for.
  *
  * @return true on success.
  */
-bool tox_group_invite_friend(Tox *tox, uint32_t groupnumber, uint32_t friend_number,
+bool tox_group_invite_friend(Tox *tox, uint32_t group_number, uint32_t friend_number,
                              TOX_ERR_GROUP_INVITE_FRIEND *error);
 
 typedef enum TOX_ERR_GROUP_INVITE_ACCEPT {
@@ -4434,7 +4470,7 @@ typedef enum TOX_ERR_GROUP_INVITE_ACCEPT {
  * @param password_length The length of the password. If password_length is equal to zero, the password
  *    parameter will be ignored. password_length must be no larger than TOX_GROUP_MAX_PASSWORD_SIZE.
  *
- * @return the groupnumber on success, UINT32_MAX on failure.
+ * @return the group_number on success, UINT32_MAX on failure.
  */
 uint32_t tox_group_invite_accept(Tox *tox, uint32_t friend_number, const uint8_t *invite_data, size_t length, const uint8_t *password,
                                  size_t password_length, struct Group_Chat_Self_Peer_Info *peer_info, TOX_ERR_GROUP_INVITE_ACCEPT *error);
@@ -4457,11 +4493,11 @@ typedef void tox_group_invite_cb(Tox *tox, uint32_t friend_number, const uint8_t
 void tox_callback_group_invite(Tox *tox, tox_group_invite_cb *callback, void *user_data);
 
 /**
- * @param groupnumber The group number of the group in which a new peer has joined.
+ * @param group_number The group number of the group in which a new peer has joined.
  * @param peer_id The permanent ID of the new peer. This id should not be relied on for
  * client behaviour and should be treated as a random value.
  */
-typedef void tox_group_peer_join_cb(Tox *tox, uint32_t groupnumber, uint32_t peer_id, void *user_data);
+typedef void tox_group_peer_join_cb(Tox *tox, uint32_t group_number, uint32_t peer_id, void *user_data);
 
 
 /**
@@ -4472,12 +4508,12 @@ typedef void tox_group_peer_join_cb(Tox *tox, uint32_t groupnumber, uint32_t pee
 void tox_callback_group_peer_join(Tox *tox, tox_group_peer_join_cb *callback, void *user_data);
 
 /**
- * @param groupnumber The group number of the group in which a peer has left.
+ * @param group_number The group number of the group in which a peer has left.
  * @param peer_id The ID of the peer who left the group.
  * @param part_message The parting message data.
  * @param length The length of the parting message.
  */
-typedef void tox_group_peer_exit_cb(Tox *tox, uint32_t groupnumber, uint32_t peer_id, const uint8_t *part_message,
+typedef void tox_group_peer_exit_cb(Tox *tox, uint32_t group_number, uint32_t peer_id, const uint8_t *part_message,
                                     size_t length, void *user_data);
 
 
@@ -4489,9 +4525,9 @@ typedef void tox_group_peer_exit_cb(Tox *tox, uint32_t groupnumber, uint32_t pee
 void tox_callback_group_peer_exit(Tox *tox, tox_group_peer_exit_cb *callback, void *user_data);
 
 /**
- * @param groupnumber The group number of the group that the client has joined.
+ * @param group_number The group number of the group that the client has joined.
  */
-typedef void tox_group_self_join_cb(Tox *tox, uint32_t groupnumber, void *user_data);
+typedef void tox_group_self_join_cb(Tox *tox, uint32_t group_number, void *user_data);
 
 
 /**
@@ -4533,10 +4569,10 @@ typedef enum TOX_GROUP_JOIN_FAIL {
 
 
 /**
- * @param groupnumber The group number of the group for which the join has failed.
+ * @param group_number The group number of the group for which the join has failed.
  * @param fail_type The type of group rejection.
  */
-typedef void tox_group_join_fail_cb(Tox *tox, uint32_t groupnumber, TOX_GROUP_JOIN_FAIL fail_type, void *user_data);
+typedef void tox_group_join_fail_cb(Tox *tox, uint32_t group_number, TOX_GROUP_JOIN_FAIL fail_type, void *user_data);
 
 
 /**
@@ -4567,6 +4603,8 @@ typedef enum TOX_ERR_GROUP_FOUNDER_SET_PASSWORD {
      */
     TOX_ERR_GROUP_FOUNDER_SET_PASSWORD_GROUP_NOT_FOUND,
 
+    TOX_ERR_GROUP_FOUNDER_SET_PASSWORD_GROUP_IS_DISCONNECTED,
+
     /**
      * The caller does not have the required permissions to set the password.
      */
@@ -4591,13 +4629,13 @@ typedef enum TOX_ERR_GROUP_FOUNDER_SET_PASSWORD {
  * This function sets the groups password, creates a new group shared state including the change,
  * and distributes it to the rest of the group.
  *
- * @param groupnumber The group number of the group for which we wish to set the password.
+ * @param group_number The group number of the group for which we wish to set the password.
  * @param password The password we want to set. Set password to NULL to unset the password.
  * @param length The length of the password. length must be no longer than TOX_GROUP_MAX_PASSWORD_SIZE.
  *
  * @return true on success.
  */
-bool tox_group_founder_set_password(Tox *tox, uint32_t groupnumber, const uint8_t *password, size_t length,
+bool tox_group_founder_set_password(Tox *tox, uint32_t group_number, const uint8_t *password, size_t length,
                                     TOX_ERR_GROUP_FOUNDER_SET_PASSWORD *error);
 
 typedef enum TOX_ERR_GROUP_FOUNDER_SET_PRIVACY_STATE {
@@ -4611,6 +4649,8 @@ typedef enum TOX_ERR_GROUP_FOUNDER_SET_PRIVACY_STATE {
      * The group number passed did not designate a valid group.
      */
     TOX_ERR_GROUP_FOUNDER_SET_PRIVACY_STATE_GROUP_NOT_FOUND,
+
+    TOX_ERR_GROUP_FOUNDER_SET_PRIVACY_STATE_GROUP_IS_DISCONNECTED,
 
     /**
      * TOX_GROUP_PRIVACY_STATE is an invalid type.
@@ -4645,12 +4685,12 @@ typedef enum TOX_ERR_GROUP_FOUNDER_SET_PRIVACY_STATE {
  * If an attempt is made to set the privacy state to the same state that the group is already
  * in, the function call will be successful and no action will be taken.
  *
- * @param groupnumber The group number of the group for which we wish to change the privacy state.
+ * @param group_number The group number of the group for which we wish to change the privacy state.
  * @param privacy_state The privacy state we wish to set the group to.
  *
  * @return true on success.
  */
-bool tox_group_founder_set_privacy_state(Tox *tox, uint32_t groupnumber, TOX_GROUP_PRIVACY_STATE privacy_state,
+bool tox_group_founder_set_privacy_state(Tox *tox, uint32_t group_number, TOX_GROUP_PRIVACY_STATE privacy_state,
         TOX_ERR_GROUP_FOUNDER_SET_PRIVACY_STATE *error);
 
 typedef enum TOX_ERR_GROUP_FOUNDER_SET_PEER_LIMIT {
@@ -4664,6 +4704,9 @@ typedef enum TOX_ERR_GROUP_FOUNDER_SET_PEER_LIMIT {
      * The group number passed did not designate a valid group.
      */
     TOX_ERR_GROUP_FOUNDER_SET_PEER_LIMIT_GROUP_NOT_FOUND,
+
+
+    TOX_ERR_GROUP_FOUNDER_SET_PEER_LIMIT_GROUP_IS_DISCONNECTED,
 
     /**
      * The caller does not have the required permissions to set the peer limit.
@@ -4690,12 +4733,12 @@ typedef enum TOX_ERR_GROUP_FOUNDER_SET_PEER_LIMIT {
  * This function sets a limit for the number of peers who may be in the group, creates a new
  * group shared state including the change, and distributes it to the rest of the group.
  *
- * @param groupnumber The group number of the group for which we wish to set the peer limit.
+ * @param group_number The group number of the group for which we wish to set the peer limit.
  * @param max_peers The maximum number of peers to allow in the group.
  *
  * @return true on success.
  */
-bool tox_group_founder_set_peer_limit(Tox *tox, uint32_t groupnumber, uint32_t max_peers,
+bool tox_group_founder_set_peer_limit(Tox *tox, uint32_t group_number, uint32_t max_peers,
                                       TOX_ERR_GROUP_FOUNDER_SET_PEER_LIMIT *error);
 
 
@@ -4730,13 +4773,13 @@ typedef enum TOX_ERR_GROUP_TOGGLE_IGNORE {
 /**
  * Ignore or unignore a peer.
  *
- * @param groupnumber The group number of the group the in which you wish to ignore a peer.
+ * @param group_number The group number of the group the in which you wish to ignore a peer.
  * @param peer_id The ID of the peer who shall be ignored or unignored.
  * @param ignore True to ignore the peer, false to unignore the peer.
  *
  * @return true on success.
  */
-bool tox_group_toggle_ignore(Tox *tox, uint32_t groupnumber, uint32_t peer_id, bool ignore,
+bool tox_group_toggle_ignore(Tox *tox, uint32_t group_number, uint32_t peer_id, bool ignore,
                              TOX_ERR_GROUP_TOGGLE_IGNORE *error);
 
 typedef enum TOX_ERR_GROUP_MOD_SET_ROLE {
@@ -4783,13 +4826,13 @@ typedef enum TOX_ERR_GROUP_MOD_SET_ROLE {
  * It will also send a packet to the rest of the group, requesting that they perform
  * the role reassignment. Note: peers cannot be set to the founder role.
  *
- * @param groupnumber The group number of the group the in which you wish set the peer's role.
+ * @param group_number The group number of the group the in which you wish set the peer's role.
  * @param peer_id The ID of the peer whose role you wish to set.
  * @param role The role you wish to set the peer to.
  *
  * @return true on success.
  */
-bool tox_group_mod_set_role(Tox *tox, uint32_t groupnumber, uint32_t peer_id, TOX_GROUP_ROLE role,
+bool tox_group_mod_set_role(Tox *tox, uint32_t group_number, uint32_t peer_id, TOX_GROUP_ROLE role,
                             TOX_ERR_GROUP_MOD_SET_ROLE *error);
 
 typedef enum TOX_ERR_GROUP_MOD_REMOVE_PEER {
@@ -4839,13 +4882,13 @@ typedef enum TOX_ERR_GROUP_MOD_REMOVE_PEER {
  * to the ban list. It will also send a packet to all group members requesting them
  * to do the same.
  *
- * @param groupnumber The group number of the group the ban is intended for.
+ * @param group_number The group number of the group the ban is intended for.
  * @param peer_id The ID of the peer who will be kicked and/or added to the ban list.
  * @param set_ban Set to true if a ban shall be set on the peer's IP address.
  *
  * @return true on success.
  */
-bool tox_group_mod_remove_peer(Tox *tox, uint32_t groupnumber, uint32_t peer_id, bool set_ban,
+bool tox_group_mod_remove_peer(Tox *tox, uint32_t group_number, uint32_t peer_id, bool set_ban,
                                TOX_ERR_GROUP_MOD_REMOVE_PEER *error);
 
 typedef enum TOX_ERR_GROUP_MOD_REMOVE_BAN {
@@ -4859,6 +4902,8 @@ typedef enum TOX_ERR_GROUP_MOD_REMOVE_BAN {
      * The group number passed did not designate a valid group.
      */
     TOX_ERR_GROUP_MOD_REMOVE_BAN_GROUP_NOT_FOUND,
+
+    TOX_ERR_GROUP_MOD_REMOVE_BAN_GROUP_IS_DISCONNECTED,
 
     /**
      * The caller does not have the required permissions for this action.
@@ -4885,12 +4930,12 @@ typedef enum TOX_ERR_GROUP_MOD_REMOVE_BAN {
  * This function removes a ban entry from the ban list, and sends a packet to the rest of
  * the group requesting that they do the same.
  *
- * @param groupnumber The group number of the group in which the ban is to be removed.
+ * @param group_number The group number of the group in which the ban is to be removed.
  * @param ban_id The ID of the ban entry that shall be removed.
  *
  * @return true on success
  */
-bool tox_group_mod_remove_ban(Tox *tox, uint32_t groupnumber, uint32_t ban_id, TOX_ERR_GROUP_MOD_REMOVE_BAN *error);
+bool tox_group_mod_remove_ban(Tox *tox, uint32_t group_number, uint32_t ban_id, TOX_ERR_GROUP_MOD_REMOVE_BAN *error);
 
 /**
  * Represents moderation events. These should be used with the `group_moderation` event.
@@ -4926,12 +4971,12 @@ typedef enum TOX_GROUP_MOD_EVENT {
 
 
 /**
- * @param groupnumber The group number of the group the event is intended for.
+ * @param group_number The group number of the group the event is intended for.
  * @param source_peer_number The ID of the peer who initiated the event.
  * @param target_peer_number The ID of the peer who is the target of the event.
  * @param mod_type The type of event.
  */
-typedef void tox_group_moderation_cb(Tox *tox, uint32_t groupnumber, uint32_t source_peer_number,
+typedef void tox_group_moderation_cb(Tox *tox, uint32_t group_number, uint32_t source_peer_number,
                                      uint32_t target_peer_number, TOX_GROUP_MOD_EVENT mod_type, void *user_data);
 
 
@@ -4966,6 +5011,8 @@ typedef enum TOX_ERR_GROUP_BAN_QUERY {
      */
     TOX_ERR_GROUP_BAN_QUERY_GROUP_NOT_FOUND,
 
+    TOX_ERR_GROUP_BAN_QUERY_GROUP_IS_DISCONNECTED,
+
     /**
      * The ban_id does not designate a valid ban list entry.
      */
@@ -4978,7 +5025,7 @@ typedef enum TOX_ERR_GROUP_BAN_QUERY {
  * Return the number of entries in the ban list for the group designated by
  * the given group number. If the group number is invalid, the return value is unspecified.
  */
-size_t tox_group_ban_get_list_size(const Tox *tox, uint32_t groupnumber, TOX_ERR_GROUP_BAN_QUERY *error);
+size_t tox_group_ban_get_list_size(const Tox *tox, uint32_t group_number, TOX_ERR_GROUP_BAN_QUERY *error);
 
 /**
  * Copy a list of valid ban list ID's into an array.
@@ -4990,14 +5037,14 @@ size_t tox_group_ban_get_list_size(const Tox *tox, uint32_t groupnumber, TOX_ERR
  *
  * @return true on success.
  */
-bool tox_group_ban_get_list(const Tox *tox, uint32_t groupnumber, uint32_t *list, TOX_ERR_GROUP_BAN_QUERY *error);
+bool tox_group_ban_get_list(const Tox *tox, uint32_t group_number, uint32_t *list, TOX_ERR_GROUP_BAN_QUERY *error);
 
 /**
  * Return the length of the name for the ban list entry designated by ban_id, in the
- * group designated by the given group number. If either groupnumber or ban_id is invalid,
+ * group designated by the given group number. If either group_number or ban_id is invalid,
  * the return value is unspecified.
  */
-size_t tox_group_ban_get_name_size(const Tox *tox, uint32_t groupnumber, uint32_t ban_id,
+size_t tox_group_ban_get_name_size(const Tox *tox, uint32_t group_number, uint32_t ban_id,
                                    TOX_ERR_GROUP_BAN_QUERY *error);
 
 /**
@@ -5008,15 +5055,15 @@ size_t tox_group_ban_get_name_size(const Tox *tox, uint32_t groupnumber, uint32_
  *
  * @return true on success.
  */
-bool tox_group_ban_get_name(const Tox *tox, uint32_t groupnumber, uint32_t ban_id, uint8_t *name,
+bool tox_group_ban_get_name(const Tox *tox, uint32_t group_number, uint32_t ban_id, uint8_t *name,
                             TOX_ERR_GROUP_BAN_QUERY *error);
 
 /**
  * Return a time stamp indicating the time the ban was set, for the ban list entry
  * designated by ban_id, in the group designated by the given group number.
- * If either groupnumber or ban_id is invalid, the return value is unspecified.
+ * If either group_number or ban_id is invalid, the return value is unspecified.
  */
-uint64_t tox_group_ban_get_time_set(const Tox *tox, uint32_t groupnumber, uint32_t ban_id,
+uint64_t tox_group_ban_get_time_set(const Tox *tox, uint32_t group_number, uint32_t ban_id,
                                     TOX_ERR_GROUP_BAN_QUERY *error);
 
 #ifdef __cplusplus
