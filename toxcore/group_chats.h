@@ -367,7 +367,7 @@ typedef struct GC_Session {
     void *rejected_userdata;
 } GC_Session;
 
-void pack_group_info(GC_Chat *chat, SAVED_GROUP *temp);
+void pack_group_info(GC_Chat *chat, SAVED_GROUP *temp, bool can_use_cached_value);
 
 bool is_public_chat(const GC_Chat *chat);
 
