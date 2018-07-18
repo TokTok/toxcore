@@ -87,6 +87,7 @@ static int groupnumber_valid(const GC_Session *c, int groupnumber);
 static int peer_add(Messenger *m, int groupnumber, IP_Port *ipp, const uint8_t *public_key);
 static int peer_update(Messenger *m, int groupnumber, GC_GroupPeer *peer, uint32_t peernumber);
 static int group_delete(GC_Session *c, GC_Chat *chat);
+static void group_cleanup(GC_Session *c, GC_Chat *chat);
 static int get_nick_peernumber(const GC_Chat *chat, const uint8_t *nick, uint16_t length);
 static bool group_exists(const GC_Session *c, const uint8_t *chat_id);
 static int save_tcp_relay(GC_Connection *gconn, Node_format *node);
@@ -121,13 +122,16 @@ static bool is_tcp_only_mode(const GC_Session *session)
     return !dht_isconnected(session->messenger->dht);  // TODO: get self connection status?
 }
 
-void pack_group_info(GC_Chat *chat, struct Saved_Group *temp)
+void pack_group_info(GC_Chat *chat, Saved_Group *temp, bool can_use_cached_value)
 {
-    if (chat->save) {   // copy info from cached save struct if possible (for disconnected groups only)
-        memcpy(temp, chat->save, sizeof(struct Saved_Group));
+    // copy info from cached save struct if possible (for disconnected groups only)
+    if (can_use_cached_value && chat->save) {
+        memcpy(temp, chat->save, sizeof(Saved_Group));
 
         return;
     }
+
+    memset(temp, 0, sizeof(Saved_Group));
 
     memcpy(temp->founder_public_key, chat->shared_state.founder_public_key, EXT_PUBLIC_KEY);
     temp->group_name_len = net_htons(chat->shared_state.group_name_len);
@@ -154,7 +158,9 @@ void pack_group_info(GC_Chat *chat, struct Saved_Group *temp)
 
     temp->num_mods = net_htons(chat->moderation.num_mods);
     mod_list_pack(chat, temp->mod_list);
-    temp->group_connection_state = chat->connection_state == CS_MANUALLY_DISCONNECTED ? SGCS_DISCONNECTED : SGCS_CONNECTED;
+
+    bool is_manually_disconnected = chat->connection_state == CS_MANUALLY_DISCONNECTED;
+    temp->group_connection_state = is_manually_disconnected ? SGCS_DISCONNECTED : SGCS_CONNECTED;
 
     memcpy(temp->self_public_key, chat->self_public_key, EXT_PUBLIC_KEY);
     memcpy(temp->self_secret_key, chat->self_secret_key, EXT_SECRET_KEY);
@@ -5751,6 +5757,7 @@ int gc_group_load(GC_Session *c, struct Saved_Group *save, int group_number)
     memcpy(chat->chat_secret_key, save->chat_secret_key, EXT_SECRET_KEY);
 
     uint16_t num_mods = net_ntohs(save->num_mods);
+    fprintf(stderr, "num mods %d\n", num_mods);
 
     if (mod_list_unpack(chat, save->mod_list, num_mods * GC_MOD_LIST_ENTRY_SIZE, num_mods) == -1) {
         return -1;
@@ -5971,23 +5978,23 @@ bool gc_disconnect_from_group(GC_Session *c, GC_Chat *chat)
         return false;
     }
 
-    send_gc_broadcast_message(chat, nullptr, 0, GM_PEER_EXIT);
+    uint8_t previous_state = chat->connection_state;
     chat->connection_state = CS_MANUALLY_DISCONNECTED;
 
     chat->save = (struct Saved_Group *)malloc(sizeof(struct Saved_Group));
     if (!chat->save) {
+        chat->connection_state = previous_state;
+
         return false;
     }
 
+    send_gc_broadcast_message(chat, nullptr, 0, GM_PEER_EXIT);
+
     // save info about group
-    pack_group_info(chat, chat->save);
+    pack_group_info(chat, chat->save, false);
 
     // cleanup gc data
-    m_remove_friend_gc(c->messenger, chat);
-    mod_list_cleanup(chat);
-    sanctions_list_cleanup(chat);
-    kill_tcp_connections(chat->tcp_conn);
-    gcc_cleanup(chat);
+    group_cleanup(c, chat);
 
     return true;
 }
@@ -6008,8 +6015,13 @@ bool gc_rejoin_group(GC_Session *c, GC_Chat *chat)
 
     chat->save->group_connection_state = SGCS_CONNECTED;
     int group_loading_result = gc_group_load(c, chat->save, chat->groupnumber);
+    bool rejoin_successful = group_loading_result != -1;
+    if (rejoin_successful) {
+        free(chat->save);
+        chat->save = nullptr;
+    }
 
-    return group_loading_result != -1;
+    return rejoin_successful;
 }
 
 
@@ -6371,15 +6383,10 @@ GC_Session *new_dht_groupchats(Messenger *m)
     return c;
 }
 
-/* Deletes chat from group chat array and cleans up.
- *
- * Return 0 on success.
- * Return -1 on failure.
- */
-static int group_delete(GC_Session *c, GC_Chat *chat)
+static void group_cleanup(GC_Session *c, GC_Chat *chat)
 {
     if (!c || !chat) {
-        return -1;
+        return;
     }
 
     m_remove_friend_gc(c->messenger, chat);
@@ -6391,6 +6398,24 @@ static int group_delete(GC_Session *c, GC_Chat *chat)
 
     if (chat->group) {
         free(chat->group);
+    }
+}
+
+/* Deletes chat from group chat array and cleans up.
+ *
+ * Return 0 on success.
+ * Return -1 on failure.
+ */
+static int group_delete(GC_Session *c, GC_Chat *chat)
+{
+    if (!c || !chat) {
+        return -1;
+    }
+
+    group_cleanup(c, chat);
+
+    if (chat->save) {
+        free(chat->save);
     }
 
     memset(&(c->chats[chat->groupnumber]), 0, sizeof(GC_Chat));
@@ -6423,7 +6448,8 @@ static int group_delete(GC_Session *c, GC_Chat *chat)
  */
 int gc_group_exit(GC_Session *c, GC_Chat *chat, const uint8_t *message, uint16_t length)
 {
-    int ret = send_gc_self_exit(chat, message, length);
+    bool is_chat_active = chat->connection_state != CS_MANUALLY_DISCONNECTED;
+    int ret = is_chat_active ? send_gc_self_exit(chat, message, length) : 0;
 
     group_delete(c, chat);
 
