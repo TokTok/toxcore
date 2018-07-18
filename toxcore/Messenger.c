@@ -3237,9 +3237,7 @@ static uint8_t *groups_save(const Messenger *m, uint8_t *data)
         }
 
         Saved_Group temp;
-        memset(&temp, 0, sizeof(struct Saved_Group));
-
-        pack_group_info(chat, &temp);
+        pack_group_info(chat, &temp, true);
 
         memcpy(data + num * sizeof(struct Saved_Group), &temp, sizeof(struct Saved_Group));
         num++;
