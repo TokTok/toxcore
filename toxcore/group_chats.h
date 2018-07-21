@@ -508,8 +508,6 @@ uint8_t gc_get_status(const GC_Chat *chat, uint32_t peer_id);
  */
 uint8_t gc_get_role(const GC_Chat *chat, uint32_t peer_id);
 
-int gc_get_peer_public_key(const GC_Chat *chat, uint32_t peer_number, uint8_t *public_key);
-
 /* Sets the role of peer_id. role must be one of: GR_MODERATOR, GR_USER, GR_OBSERVER
  *
  * Returns 0 on success.
@@ -554,7 +552,7 @@ int gc_founder_set_privacy_state(struct Messenger *m, int group_number, uint8_t 
  * Returns -2 if the peer limit could not be set.
  * Returns -3 if the packet failed to send.
  */
-int gc_founder_set_max_peers(GC_Chat *chat, int group_number, uint32_t max_peers);
+int gc_founder_set_max_peers(GC_Chat *chat, uint32_t max_peers);
 
 /* Instructs all peers to remove peer_id from their peerlist.
  * If set_ban is true peer will be added to the ban list.
@@ -724,17 +722,12 @@ bool peer_number_valid(const GC_Chat *chat, int peer_number);
  */
 GC_Chat *gc_get_group(const GC_Session *c, int group_number);
 
-/* Deletets peer_number from group.
+/* Deletes peer_number from group.
  *
  * Return 0 on success.
  * Return -1 on failure.
  */
 int gc_peer_delete(struct Messenger *m, int group_number, uint32_t peer_number, const uint8_t *data, uint16_t length);
-
-/* Packs mod_list into data.
- * data must have room for num_mods * SIG_PUBLIC_KEY bytes.
- */
-void pack_gc_mod_list(const GC_Chat *chat, uint8_t *data);
 
 /* Copies up to max_addrs peer addresses from chat into addrs.
  *

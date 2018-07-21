@@ -36,14 +36,14 @@
 /* The time between attempts to share our TCP relays with a peer */
 #define GCC_TCP_SHARED_RELAYS_TIMEOUT 300
 
-#define GCC_IP_PORT_TIMEOUT (GC_PING_INTERVAL * 4)
+#define GCC_IP_PORT_TIMEOUT 500
 
 /* The time before the direct UDP connection is considered dead */
 #define GCC_UDP_DIRECT_TIMEOUT (GC_PING_INTERVAL * 2 + 2)
 
 #define HANDSHAKE_SENDING_TIMEOUT 3
 
-struct GC_Message_Ary_Entry {
+struct GC_Message_Array_Entry {
     uint8_t *data;
     uint32_t data_length;
     uint8_t  packet_type;
@@ -55,11 +55,11 @@ struct GC_Message_Ary_Entry {
 struct GC_Connection {
     uint64_t send_message_id;   /* message_id of the next message we send to peer */
 
-    uint16_t send_ary_start;   /* send_ary index of oldest item */
-    struct GC_Message_Ary_Entry send_ary[GCC_BUFFER_SIZE];
+    uint16_t send_array_start;   /* send_array index of oldest item */
+    struct GC_Message_Array_Entry send_array[GCC_BUFFER_SIZE];
 
-    uint64_t recv_message_id;   /* message_id of peer's last message to us */
-    struct GC_Message_Ary_Entry recv_ary[GCC_BUFFER_SIZE];
+    uint64_t received_message_id;   /* message_id of peer's last message to us */
+    struct GC_Message_Array_Entry received_array[GCC_BUFFER_SIZE];
 
     GC_PeerAddress   addr;   /* holds peer's extended real public key and ip_port */
     uint32_t    public_key_hash;   /* hash of peer's real encryption public key */
@@ -68,7 +68,7 @@ struct GC_Connection {
     uint8_t     shared_key[CRYPTO_SHARED_KEY_SIZE];  /* made with our session sk and peer's session pk */
 
     int         tcp_connection_num;
-    uint64_t    last_recv_direct_time;   /* the last time we received a direct packet from this peer */
+    uint64_t    last_received_direct_time;   /* the last time we received a direct packet from this peer */
     uint64_t    last_tcp_relays_shared;  /* the last time we tried to send this peer our tcp relays */
     uint64_t    last_ip_port_shared;
 
@@ -77,7 +77,7 @@ struct GC_Connection {
     bool any_tcp_connections;
 
 
-    uint64_t    last_rcvd_ping;
+    uint64_t    last_received_ping_time;
     bool        pending_sync_request;   /* true if we have sent this peer a sync request and have not received a reply*/
     bool        pending_state_sync;    /* used for group state syncing */
     bool        handshaked; /* true if we've successfully handshaked with this peer */
@@ -96,28 +96,28 @@ struct GC_Connection {
  */
 GC_Connection *gcc_get_connection(const GC_Chat *chat, int peer_number);
 
-/* Adds data of length to gconn's send_ary.
+/* Adds data of length to gconn's send_array.
  *
  * Returns 0 on success and increments gconn's send_message_id.
  * Returns -1 on failure.
  */
-int gcc_add_send_ary(const Mono_Time *mono_time, GC_Connection *gconn, const uint8_t *data, uint32_t length,
-                     uint8_t packet_type);
+int gcc_add_to_send_array(const Mono_Time *mono_time, GC_Connection *gconn, const uint8_t *data,
+                          uint32_t length, uint8_t packet_type);
 
-/* Decides if message need to be put in recv_ary or immediately handled.
+/* Decides if message need to be put in received_array or immediately handled.
  *
  * Return 2 if message is in correct sequence and may be handled immediately.
- * Return 1 if packet is out of sequence and added to recv_ary.
+ * Return 1 if packet is out of sequence and added to received_array.
  * Return 0 if message is a duplicate.
  * Return -1 on failure
  */
-int gcc_handle_recv_message(GC_Chat *chat, uint32_t peer_number, const uint8_t *data, uint32_t length,
-                            uint8_t packet_type, uint64_t message_id);
+int gcc_handle_received_message(GC_Chat *chat, uint32_t peer_number, const uint8_t *data, uint32_t length,
+                                uint8_t packet_type, uint64_t message_id);
 
-/* Return ary index for message_id */
-uint16_t get_ary_index(uint64_t message_id);
+/* Return array index for message_id */
+uint16_t get_array_index(uint64_t message_id);
 
-/* Removes send_ary item with message_id.
+/* Removes send_array item with message_id.
  *
  * Return 0 if success.
  * Return -1 on failure.
@@ -126,13 +126,13 @@ int gcc_handle_ack(GC_Connection *gconn, uint64_t message_id);
 
 bool gcc_is_ip_set(GC_Connection *gconn);
 
-/* Checks for and handles messages that are in proper sequence in gconn's recv_ary.
+/* Checks for and handles messages that are in proper sequence in gconn's received_array.
  * This should always be called after a new packet is successfully handled.
  *
  * Return 0 on success.
  * Return -1 on failure.
  */
-int gcc_check_recv_ary(struct Messenger *m, int groupnum, uint32_t peer_number);
+int gcc_check_recieved_array(struct Messenger *m, int group_number, uint32_t peer_number);
 
 void gcc_resend_packets(struct Messenger *m, GC_Chat *chat, uint32_t peer_number);
 
