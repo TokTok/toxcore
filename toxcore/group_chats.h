@@ -240,17 +240,17 @@ struct Saved_Group {
     /* Group shared state */
     uint8_t   founder_public_key[EXT_PUBLIC_KEY];
     uint16_t  maxpeers;
-    uint16_t  group_name_len;
+    uint16_t  group_name_length;
     uint8_t   group_name[MAX_GC_GROUP_NAME_SIZE];
     uint8_t   privacy_state;
-    uint16_t  passwd_len;
-    uint8_t   passwd[MAX_GC_PASSWORD_SIZE];
+    uint16_t  password_length;
+    uint8_t   password[MAX_GC_PASSWORD_SIZE];
     uint8_t   mod_list_hash[GC_MODERATION_HASH_SIZE];
-    uint32_t  sstate_version;
-    uint8_t   sstate_signature[SIGNATURE_SIZE];
+    uint32_t  shared_state_version;
+    uint8_t   shared_state_signature[SIGNATURE_SIZE];
 
     /* Topic info */
-    uint16_t  topic_len;
+    uint16_t  topic_length;
     uint8_t   topic[MAX_GC_TOPIC_SIZE];
     uint8_t   topic_public_sig_key[SIG_PUBLIC_KEY];
     uint32_t  topic_version;
@@ -269,7 +269,7 @@ struct Saved_Group {
     uint8_t   self_public_key[EXT_PUBLIC_KEY];
     uint8_t   self_secret_key[EXT_SECRET_KEY];
     uint8_t   self_nick[MAX_GC_NICK_SIZE];
-    uint16_t  self_nick_len;
+    uint16_t  self_nick_length;
     uint8_t   self_role;
     uint8_t   self_status;
 };
@@ -296,7 +296,7 @@ typedef struct GC_Chat {
     uint8_t         topic_sig[SIGNATURE_SIZE];    /* Signed by a moderator or the founder */
 
     uint32_t    numpeers;
-    int         groupnumber;
+    int         group_number;
 
     uint8_t     chat_public_key[EXT_PUBLIC_KEY];    /* the chat_id is the sig portion */
     uint8_t     chat_secret_key[EXT_SECRET_KEY];    /* only used by the founder */
@@ -315,11 +315,7 @@ typedef struct GC_Chat {
     /* keeps track of frequency of new inbound connections */
     uint8_t     connection_O_metre;
     uint64_t    connection_cooldown_timer;
-    bool        block_handshakes;
-
-    /* Holder for IP/keys received from announcement requests and loaded from saved groups */
-    GC_PeerAddress addr_list[MAX_GC_PEER_ADDRS];
-    uint16_t    addrs_idx;
+    bool        block_handshakes;  // TODO: ???
 
     int32_t saved_invites[MAX_GC_SAVED_INVITES];
     uint8_t saved_invites_index;
@@ -427,7 +423,7 @@ void gc_get_topic(const GC_Chat *chat, uint8_t *topic);
 uint16_t gc_get_topic_size(const GC_Chat *chat);
 
 /* Copies group name to groupname. */
-void gc_get_group_name(const GC_Chat *chat, uint8_t *groupname);
+void gc_get_group_name(const GC_Chat *chat, uint8_t *group_name);
 
 /* Returns group name length */
 uint16_t gc_get_group_name_size(const GC_Chat *chat);
@@ -448,13 +444,13 @@ uint32_t gc_get_max_peers(const GC_Chat *chat);
  * Sets your own nick.
  *
  * Returns 0 on success.
- * Returns -1 if groupnumber is invalid.
+ * Returns -1 if group_number is invalid.
  * Returns -2 if the length is too long.
  * Returns -3 if the length is zero or nick is a NULL pointer.
  * Returns -4 if the nick is already taken.
  * Returns -5 if the packet fails to send.
  */
-int gc_set_self_nick(struct Messenger *m, int groupnumber, const uint8_t *nick, uint16_t length);
+int gc_set_self_nick(struct Messenger *m, int group_number, const uint8_t *nick, uint16_t length);
 
 /* Copies your own nick to nick */
 void gc_get_self_nick(const GC_Chat *chat, uint8_t *nick);
@@ -496,11 +492,11 @@ int gc_get_peer_public_key(const GC_Chat *chat, uint32_t peer_id, uint8_t *publi
 /* Sets the caller's status to status
  *
  * Returns 0 on success.
- * Returns -1 if the groupnumber is invalid.
+ * Returns -1 if the group_number is invalid.
  * Returns -2 if the status type is invalid.
  * Returns -3 if the packet failed to send.
  */
-int gc_set_self_status(struct Messenger *m, int groupnumber, uint8_t status);
+int gc_set_self_status(struct Messenger *m, int group_number, uint8_t status);
 
 /* Returns peer_id's status.
  * Returns (uint8_t) -1 on failure.
@@ -512,18 +508,18 @@ uint8_t gc_get_status(const GC_Chat *chat, uint32_t peer_id);
  */
 uint8_t gc_get_role(const GC_Chat *chat, uint32_t peer_id);
 
-int gc_get_peer_public_key(const GC_Chat *chat, uint32_t peernumber, uint8_t *public_key);
+int gc_get_peer_public_key(const GC_Chat *chat, uint32_t peer_number, uint8_t *public_key);
 
 /* Sets the role of peer_id. role must be one of: GR_MODERATOR, GR_USER, GR_OBSERVER
  *
  * Returns 0 on success.
- * Returns -1 if the groupnumber is invalid.
+ * Returns -1 if the group_number is invalid.
  * Returns -2 if the peer_id is invalid.
  * Returns -3 if caller does not have sufficient permissions for the action.
  * Returns -4 if the role assignment is invalid.
  * Returns -5 if the role failed to be set.
  */
-int gc_set_peer_role(struct Messenger *m, int groupnumber, uint32_t peer_id, uint8_t role);
+int gc_set_peer_role(struct Messenger *m, int group_number, uint32_t peer_id, uint8_t role);
 
 /* Sets the group password and distributes the new shared state to the group.
  *
@@ -534,20 +530,20 @@ int gc_set_peer_role(struct Messenger *m, int groupnumber, uint32_t peer_id, uin
  * Returns -2 if the password is too long.
  * Returns -3 if the packet failed to send.
  */
-int gc_founder_set_password(GC_Chat *chat, const uint8_t *passwd, uint16_t passwd_len);
+int gc_founder_set_password(GC_Chat *chat, const uint8_t *password, uint16_t password_length);
 
 /* Sets the group privacy state and distributes the new shared state to the group.
  *
  * This function requires that the shared state be re-signed and will only work for the group founder.
  *
  * Returns 0 on success.
- * Returns -1 if groupnumber is invalid.
+ * Returns -1 if group_number is invalid.
  * Returns -2 if the privacy state is an invalid type.
  * Returns -3 if the caller does not have sufficient permissions for this action.
  * Returns -4 if the privacy state fails to set.
  * Returns -5 if the packet fails to send.
  */
-int gc_founder_set_privacy_state(struct Messenger *m, int groupnumber, uint8_t new_privacy_state);
+int gc_founder_set_privacy_state(struct Messenger *m, int group_number, uint8_t new_privacy_state);
 
 /* Sets the peer limit to maxpeers and distributes the new shared state to the group.
  *
@@ -558,19 +554,19 @@ int gc_founder_set_privacy_state(struct Messenger *m, int groupnumber, uint8_t n
  * Returns -2 if the peer limit could not be set.
  * Returns -3 if the packet failed to send.
  */
-int gc_founder_set_max_peers(GC_Chat *chat, int groupnumber, uint32_t maxpeers);
+int gc_founder_set_max_peers(GC_Chat *chat, int group_number, uint32_t max_peers);
 
 /* Instructs all peers to remove peer_id from their peerlist.
  * If set_ban is true peer will be added to the ban list.
  *
  * Returns 0 on success.
- * Returns -1 if the groupnumber is invalid.
+ * Returns -1 if the group_number is invalid.
  * Returns -2 if the peer_id is invalid.
  * Returns -3 if the caller does not have sufficient permissions for this action.
  * Returns -4 if the action failed.
  * Returns -5 if the packet failed to send.
  */
-int gc_remove_peer(struct Messenger *m, int groupnumber, uint32_t peer_id, bool set_ban);
+int gc_remove_peer(struct Messenger *m, int group_number, uint32_t peer_id, bool set_ban);
 
 /* Instructs all peers to remove ban_id from their ban list.
  *
@@ -649,14 +645,14 @@ void kill_dht_groupchats(GC_Session *c);
 
 /* Loads a previously saved group and attempts to join it.
  *
- * Returns groupnumber on success.
+ * Returns group_number on success.
  * Returns -1 on failure.
  */
 int gc_group_load(GC_Session *c, struct Saved_Group *save, int group_number);
 
 /* Creates a new group.
  *
- * Return groupnumber on success.
+ * Return group_number on success.
  * Return -1 if the group name is too long.
  * Return -2 if the group name is empty.
  * Return -3 if the privacy state is an invalid type.
@@ -669,9 +665,9 @@ int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name
 
 /* Sends an invite request to a public group using the chat_id.
  *
- * If the group is not password protected passwd should be set to NULL and passwd_len should be 0.
+ * If the group is not password protected password should be set to NULL and password_length should be 0.
  *
- * Return groupnumber on success.
+ * Return group_number on success.
  * Reutrn -1 if the group object fails to initialize.
  * Return -2 if chat_id is NULL or a group with chat_id already exists in the chats arr
  * Return -3 if there is an error setting the group password.
@@ -686,7 +682,7 @@ bool gc_rejoin_group(GC_Session *c, GC_Chat *chat);
 
 /* Joins a group using the invite data received in a friend's group invite.
  *
- * Return groupnumber on success.
+ * Return group_number on success.
  * Return -1 if the invite data is malformed.
  * Return -2 if the group object fails to initialize.
  * Return -3 if there is an error setting the password.
@@ -720,20 +716,20 @@ int gc_group_exit(GC_Session *c, GC_Chat *chat, const uint8_t *message, uint16_t
  */
 uint32_t gc_count_groups(const GC_Session *c);
 
-/* Returns true if peernumber exists */
-bool peernumber_valid(const GC_Chat *chat, int peernumber);
+/* Returns true if peer_number exists */
+bool peer_number_valid(const GC_Chat *chat, int peer_number);
 
-/* Return groupnumber's GC_Chat pointer on success
+/* Return group_number's GC_Chat pointer on success
  * Return NULL on failure
  */
-GC_Chat *gc_get_group(const GC_Session *c, int groupnumber);
+GC_Chat *gc_get_group(const GC_Session *c, int group_number);
 
-/* Deletets peernumber from group.
+/* Deletets peer_number from group.
  *
  * Return 0 on success.
  * Return -1 on failure.
  */
-int gc_peer_delete(struct Messenger *m, int groupnumber, uint32_t peernumber, const uint8_t *data, uint16_t length);
+int gc_peer_delete(struct Messenger *m, int group_number, uint32_t peer_number, const uint8_t *data, uint16_t length);
 
 /* Packs mod_list into data.
  * data must have room for num_mods * SIG_PUBLIC_KEY bytes.
@@ -751,7 +747,7 @@ uint16_t gc_copy_peer_addrs(const GC_Chat *chat, GC_SavedPeerInfo *addrs, size_t
  */
 int gc_send_message_ack(const GC_Chat *chat, GC_Connection *gconn, uint64_t read_id, uint64_t request_id);
 
-int handle_gc_lossless_helper(struct Messenger *m, int groupnumber, uint32_t peernumber, const uint8_t *data,
+int handle_gc_lossless_helper(struct Messenger *m, int group_number, uint32_t peer_number, const uint8_t *data,
                               uint16_t length, uint64_t message_id, uint8_t packet_type);
 
 /* Sends the sanctions list to all peers in group.

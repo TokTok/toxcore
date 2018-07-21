@@ -967,16 +967,16 @@ static int sanctions_list_sign_entry(const GC_Chat *chat, struct GC_Sanction *sa
                                 get_sig_sk(chat->self_secret_key));
 }
 
-/* Creates a new sanction entry for peernumber where type is one GROUP_SANCTION_TYPE.
+/* Creates a new sanction entry for peer_number where type is one GROUP_SANCTION_TYPE.
  * New entry is signed and placed in the sanction list, and the sanction list credentials
  * are updated.
  *
  * Returns 0 on success.
  * Returns -1 on failure.
  */
-int sanctions_list_make_entry(GC_Chat *chat, uint32_t peernumber, struct GC_Sanction *sanction, uint8_t type)
+int sanctions_list_make_entry(GC_Chat *chat, uint32_t peer_number, struct GC_Sanction *sanction, uint8_t type)
 {
-    GC_Connection *gconn = gcc_get_connection(chat, peernumber);
+    GC_Connection *gconn = gcc_get_connection(chat, peer_number);
 
     if (gconn == nullptr) {
         return -1;
@@ -990,8 +990,8 @@ int sanctions_list_make_entry(GC_Chat *chat, uint32_t peernumber, struct GC_Sanc
         }
 
         ipport_copy(&sanction->info.ban_info.ip_port, &gconn->addr.ip_port);
-        memcpy(sanction->info.ban_info.nick, chat->group[peernumber].nick, MAX_GC_NICK_SIZE);
-        sanction->info.ban_info.nick_len = chat->group[peernumber].nick_len;
+        memcpy(sanction->info.ban_info.nick, chat->group[peer_number].nick, MAX_GC_NICK_SIZE);
+        sanction->info.ban_info.nick_len = chat->group[peer_number].nick_len;
         sanction->info.ban_info.id = get_new_ban_id(chat);
     } else if (type == SA_OBSERVER) {
         memcpy(sanction->info.target_pk, gconn->addr.public_key, ENC_PUBLIC_KEY);
