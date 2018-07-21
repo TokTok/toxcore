@@ -5709,6 +5709,45 @@ static int init_gc_sanctions_creds(GC_Chat *chat)
     return 0;
 }
 
+void gc_load_peers(Messenger* m, GC_Chat* chat, GC_SavedPeerInfo *addrs, uint16_t num_addrs)
+{
+    int i;
+    for (i = 0; i < num_addrs && i < MAX_GC_PEER_ADDRS; ++i) {
+        bool ip_port_is_set = ipport_isset(&addrs[i].ip_port);
+        IP_Port *ip_port = ip_port_is_set ? &addrs[i].ip_port : nullptr;
+        int peer_number = peer_add(m, chat->groupnumber, ip_port, addrs[i].public_key);
+        if (peer_number < 0) {
+            continue;
+        }
+
+        GC_Connection *gconn = gcc_get_connection(chat, peer_number);
+        if (!gconn) {
+            continue;
+        }
+
+        add_tcp_relay_global(chat->tcp_conn, addrs[i].tcp_relay.ip_port, addrs[i].tcp_relay.public_key);
+
+        int add_tcp_result = add_tcp_relay_connection(chat->tcp_conn, gconn->tcp_connection_num,
+                                                      addrs[i].tcp_relay.ip_port,
+                                                      addrs[i].tcp_relay.public_key);
+        if (add_tcp_result < 0 && !ip_port_is_set) {
+            fprintf(stderr, "error adding relay\n");
+            continue;
+        }
+
+        int save_tcp_result = save_tcp_relay(gconn, &addrs[i].tcp_relay);
+        if (save_tcp_result < 0 && !ip_port_is_set) {
+            continue;
+        }
+
+        memcpy(gconn->oob_relay_pk, addrs[i].tcp_relay.public_key, ENC_PUBLIC_KEY);
+        gconn->is_oob_handshake = add_tcp_result == 0;
+        gconn->is_pending_handshake_response = false;
+        gconn->pending_handshake_type = HS_INVITE_REQUEST;
+        gconn->last_rcvd_ping = gconn->pending_handshake = mono_time_get(chat->mono_time) + HANDSHAKE_SENDING_TIMEOUT;
+    }
+}
+
 /* Loads a previously saved group and attempts to connect to it.
  *
  * Returns group number on success.
@@ -5804,42 +5843,8 @@ int gc_group_load(GC_Session *c, struct Saved_Group *save, int group_number)
         m_add_friend_gc(m, chat);
     }
 
-    uint16_t i, num_addrs = net_ntohs(save->num_addrs);
-
-    for (i = 0; i < num_addrs && i < MAX_GC_PEER_ADDRS; ++i) {
-        bool ip_port_is_set = ipport_isset(&save->addrs[i].ip_port);
-        IP_Port *ip_port = ip_port_is_set ? &save->addrs[i].ip_port : nullptr;
-        int peer_number = peer_add(m, chat->groupnumber, ip_port, save->addrs[i].public_key);
-        if (peer_number < 0) {
-            continue;
-        }
-
-        GC_Connection *gconn = gcc_get_connection(chat, peer_number);
-        if (!gconn) {
-            continue;
-        }
-
-        add_tcp_relay_global(chat->tcp_conn, save->addrs[i].tcp_relay.ip_port, save->addrs[i].tcp_relay.public_key);
-
-        int add_tcp_result = add_tcp_relay_connection(chat->tcp_conn, gconn->tcp_connection_num,
-                                                      save->addrs[i].tcp_relay.ip_port,
-                                                      save->addrs[i].tcp_relay.public_key);
-        if (add_tcp_result < 0 && !ip_port_is_set) {
-            fprintf(stderr, "error adding relay\n");
-            continue;
-        }
-
-        int save_tcp_result = save_tcp_relay(gconn, &save->addrs[i].tcp_relay);
-        if (save_tcp_result < 0 && !ip_port_is_set) {
-            continue;
-        }
-
-        memcpy(gconn->oob_relay_pk, save->addrs[i].tcp_relay.public_key, ENC_PUBLIC_KEY);
-        gconn->is_oob_handshake = add_tcp_result == 0;
-        gconn->is_pending_handshake_response = false;
-        gconn->pending_handshake_type = HS_INVITE_REQUEST;
-        gconn->last_rcvd_ping = gconn->pending_handshake = mono_time_get(chat->mono_time) + HANDSHAKE_SENDING_TIMEOUT;
-    }
+    uint16_t num_addrs = net_ntohs(save->num_addrs);
+    gc_load_peers(m, chat, save->addrs, num_addrs);
 
     return group_number;
 }
@@ -5999,6 +6004,38 @@ bool gc_disconnect_from_group(GC_Session *c, GC_Chat *chat)
     return true;
 }
 
+static bool gc_rejoin_disconnected_group(GC_Session *c, GC_Chat *chat)
+{
+    chat->save->group_connection_state = SGCS_CONNECTED;
+
+    int group_loading_result = gc_group_load(c, chat->save, chat->groupnumber);
+    bool rejoin_successful = group_loading_result != -1;
+
+    if (rejoin_successful) {
+        free(chat->save);
+        chat->save = nullptr;
+    }
+
+    return rejoin_successful;
+}
+
+static bool gc_rejoin_connected_group(GC_Session *c, GC_Chat *chat)
+{
+    GC_SavedPeerInfo peers[GROUP_SAVE_MAX_PEERS];
+    uint16_t i, num_addrs = gc_copy_peer_addrs(chat, peers, GROUP_SAVE_MAX_PEERS);
+    chat->connection_state = CS_CONNECTED;
+
+    /* Remove all peers except self. Numpeers decrements with each call to gc_peer_delete */
+    for (i = 1; chat->numpeers > 1;) {
+        gc_peer_delete(c->messenger, chat->groupnumber, i, nullptr, 0);
+    }
+
+    gc_load_peers(c->messenger, chat, peers, num_addrs);
+    chat->connection_state = CS_CONNECTING;
+
+    return true;
+}
+
 /* Resets chat saving all self state and attempts to reconnect to group */
 bool gc_rejoin_group(GC_Session *c, GC_Chat *chat)
 {
@@ -6006,22 +6043,8 @@ bool gc_rejoin_group(GC_Session *c, GC_Chat *chat)
         return false;
     }
 
-    if (chat->connection_state != CS_MANUALLY_DISCONNECTED) {
-        bool disconnection_result = gc_disconnect_from_group(c, chat);
-        if (!disconnection_result) {
-            return false;
-        }
-    }
-
-    chat->save->group_connection_state = SGCS_CONNECTED;
-    int group_loading_result = gc_group_load(c, chat->save, chat->groupnumber);
-    bool rejoin_successful = group_loading_result != -1;
-    if (rejoin_successful) {
-        free(chat->save);
-        chat->save = nullptr;
-    }
-
-    return rejoin_successful;
+    return (chat->connection_state == CS_MANUALLY_DISCONNECTED ? gc_rejoin_disconnected_group
+                                                               : gc_rejoin_connected_group)(c, chat);
 }
 
 
