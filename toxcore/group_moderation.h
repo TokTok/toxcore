@@ -166,13 +166,13 @@ int sanctions_list_check_integrity(const GC_Chat *chat, struct GC_Sanction_Creds
  */
 int sanctions_list_add_entry(GC_Chat *chat, struct GC_Sanction *sanction, struct GC_Sanction_Creds *creds);
 
-/* Creates a new sanction entry for peernumber where type is one GROUP_SANCTION_TYPE.
+/* Creates a new sanction entry for peer_number where type is one GROUP_SANCTION_TYPE.
  * New entry is signed and placed in the sanctions list.
  *
  * Returns 0 on success.
  * Returns -1 on failure.
  */
-int sanctions_list_make_entry(GC_Chat *chat, uint32_t peernumber, struct GC_Sanction *sanction, uint8_t type);
+int sanctions_list_make_entry(GC_Chat *chat, uint32_t peer_number, struct GC_Sanction *sanction, uint8_t type);
 
 /* Returns true if public key is in the observer list. */
 bool sanctions_list_is_observer(const GC_Chat *chat, const uint8_t *public_key);
