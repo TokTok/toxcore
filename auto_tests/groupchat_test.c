@@ -31,26 +31,26 @@
 /* Returns 0 if group state is equal to the state passed to this function.
  * Returns negative integer if state is invalid.
  */
-static int check_group_state(Tox *tox, uint32_t groupnumber, uint32_t peer_limit, TOX_GROUP_PRIVACY_STATE priv_state,
+static int check_group_state(Tox *tox, uint32_t group_number, uint32_t peer_limit, TOX_GROUP_PRIVACY_STATE priv_state,
                              const uint8_t *password, size_t pass_len, const uint8_t *topic, size_t topic_len)
 {
     TOX_ERR_GROUP_STATE_QUERIES query_err;
 
-    TOX_GROUP_PRIVACY_STATE my_priv_state = tox_group_get_privacy_state(tox, groupnumber, &query_err);
+    TOX_GROUP_PRIVACY_STATE my_priv_state = tox_group_get_privacy_state(tox, group_number, &query_err);
     ck_assert_msg(query_err == TOX_ERR_GROUP_STATE_QUERIES_OK, "Failed to get privacy state: %d", query_err);
 
     if (my_priv_state != priv_state) {
         return -1;
     }
 
-    uint32_t my_peer_limit = tox_group_get_peer_limit(tox, groupnumber, &query_err);
+    uint32_t my_peer_limit = tox_group_get_peer_limit(tox, group_number, &query_err);
     ck_assert_msg(query_err == TOX_ERR_GROUP_STATE_QUERIES_OK, "Failed to get peer limit: %d", query_err);
 
     if (my_peer_limit != peer_limit) {
         return -2;
     }
 
-    size_t my_topic_len = tox_group_get_topic_size(tox, groupnumber, &query_err);
+    size_t my_topic_len = tox_group_get_topic_size(tox, group_number, &query_err);
     ck_assert_msg(query_err == TOX_ERR_GROUP_STATE_QUERIES_OK, "Failed to get topic size: %d", query_err);
 
     if (my_topic_len != topic_len) {
@@ -58,7 +58,7 @@ static int check_group_state(Tox *tox, uint32_t groupnumber, uint32_t peer_limit
     }
 
     VLA(uint8_t, my_topic, my_topic_len + 1);
-    tox_group_get_topic(tox, groupnumber, my_topic, &query_err);
+    tox_group_get_topic(tox, group_number, my_topic, &query_err);
     my_topic[my_topic_len] = 0;
     ck_assert_msg(query_err == TOX_ERR_GROUP_STATE_QUERIES_OK, "Failed to get topic: %d", query_err);
 
@@ -66,7 +66,7 @@ static int check_group_state(Tox *tox, uint32_t groupnumber, uint32_t peer_limit
         return -4;
     }
 
-    size_t my_pass_len = tox_group_get_password_size(tox, groupnumber, &query_err);
+    size_t my_pass_len = tox_group_get_password_size(tox, group_number, &query_err);
     ck_assert_msg(query_err == TOX_ERR_GROUP_STATE_QUERIES_OK, "Failed to get password size: %d", query_err);
 
     if (my_pass_len != pass_len) {
@@ -75,7 +75,7 @@ static int check_group_state(Tox *tox, uint32_t groupnumber, uint32_t peer_limit
 
     if (my_pass_len) {
         VLA(uint8_t, my_pass, my_pass_len + 1);
-        tox_group_get_password(tox, groupnumber, my_pass, &query_err);
+        tox_group_get_password(tox, group_number, my_pass, &query_err);
         my_pass[my_pass_len] = 0;
         ck_assert_msg(query_err == TOX_ERR_GROUP_STATE_QUERIES_OK, "Failed to get password: %d", query_err);
 
@@ -85,7 +85,7 @@ static int check_group_state(Tox *tox, uint32_t groupnumber, uint32_t peer_limit
     }
 
     /* Group name should never change */
-    size_t my_gname_len = tox_group_get_name_size(tox, groupnumber, &query_err);
+    size_t my_gname_len = tox_group_get_name_size(tox, group_number, &query_err);
     ck_assert_msg(query_err == TOX_ERR_GROUP_STATE_QUERIES_OK, "Failed to get group name size: %d", query_err);
 
     if (my_gname_len != GROUP_NAME_LEN) {
@@ -93,7 +93,7 @@ static int check_group_state(Tox *tox, uint32_t groupnumber, uint32_t peer_limit
     }
 
     VLA(uint8_t, my_gname, my_gname_len + 1);
-    tox_group_get_name(tox, groupnumber, my_gname, &query_err);
+    tox_group_get_name(tox, group_number, my_gname, &query_err);
     my_gname[my_gname_len] = 0;
 
     if (memcmp(my_gname, (const uint8_t *)GROUP_NAME, my_gname_len) != 0) {
@@ -103,24 +103,24 @@ static int check_group_state(Tox *tox, uint32_t groupnumber, uint32_t peer_limit
     return 0;
 }
 
-static void set_group_state(Tox *tox, uint32_t groupnumber, uint32_t peer_limit, TOX_GROUP_PRIVACY_STATE priv_state,
+static void set_group_state(Tox *tox, uint32_t group_number, uint32_t peer_limit, TOX_GROUP_PRIVACY_STATE priv_state,
                             const uint8_t *password, size_t pass_len, const uint8_t *topic, size_t topic_len)
 {
 
     TOX_ERR_GROUP_FOUNDER_SET_PEER_LIMIT limit_set_err;
-    tox_group_founder_set_peer_limit(tox, groupnumber, peer_limit, &limit_set_err);
+    tox_group_founder_set_peer_limit(tox, group_number, peer_limit, &limit_set_err);
     ck_assert_msg(limit_set_err == TOX_ERR_GROUP_FOUNDER_SET_PEER_LIMIT_OK, "failed to set peer limit: %d", limit_set_err);
 
     TOX_ERR_GROUP_FOUNDER_SET_PRIVACY_STATE priv_err;
-    tox_group_founder_set_privacy_state(tox, groupnumber, priv_state, &priv_err);
+    tox_group_founder_set_privacy_state(tox, group_number, priv_state, &priv_err);
     ck_assert_msg(priv_err == TOX_ERR_GROUP_FOUNDER_SET_PRIVACY_STATE_OK, "failed to set privacy state: %d", priv_err);
 
     TOX_ERR_GROUP_FOUNDER_SET_PASSWORD pass_set_err;
-    tox_group_founder_set_password(tox, groupnumber, password, pass_len, &pass_set_err);
+    tox_group_founder_set_password(tox, group_number, password, pass_len, &pass_set_err);
     ck_assert_msg(pass_set_err == TOX_ERR_GROUP_FOUNDER_SET_PASSWORD_OK, "failed to set password: %d", pass_set_err);
 
     TOX_ERR_GROUP_TOPIC_SET topic_set_err;
-    tox_group_set_topic(tox, groupnumber, topic, topic_len, &topic_set_err);
+    tox_group_set_topic(tox, group_number, topic, topic_len, &topic_set_err);
     ck_assert_msg(topic_set_err == TOX_ERR_GROUP_TOPIC_SET_OK, "failed to set topic: %d", topic_set_err);
 }
 

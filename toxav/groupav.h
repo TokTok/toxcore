@@ -50,8 +50,7 @@ int join_av_groupchat(const Logger *log, Group_Chats *g_c, uint32_t friendnumber
  * return 0 on success.
  * return -1 on failure.
  */
-int group_send_audio(Group_Chats *g_c, uint32_t groupnumber, const int16_t *pcm, unsigned int samples, uint8_t channels,
-                     uint32_t sample_rate);
-
+int group_send_audio(Group_Chats *g_c, uint32_t group_number, const int16_t *pcm, unsigned int samples,
+                     uint8_t channels, uint32_t sample_rate);
 
 #endif // C_TOXCORE_TOXAV_GROUPAV_H

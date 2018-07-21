@@ -16,9 +16,9 @@
 #define PEERCOUNT       20
 #define min(a,b) ((a)>(b)?(b):(a))
 
-static void on_group_peer_join(Messenger *m, uint32_t groupnumber, uint32_t peernumber, void *userdata)
+static void on_group_peer_join(Messenger *m, uint32_t group_number, uint32_t peer_number, void *userdata)
 {
-    GC_Chat *ct = gc_get_group(m->group_handler, groupnumber);
+    GC_Chat *ct = gc_get_group(m->group_handler, group_number);
     printf("Number of peers in the chat: %u\n", ct->numpeers);
 }
 
@@ -85,13 +85,13 @@ int main(int argc, char *argv[])
     printf("Network is connected\n");
 
     chat->group_handler = new_dht_groupchats(chat);
-    int groupnumber = gc_group_add(chat->group_handler, 0, (const uint8_t *)"Test", 4, nullptr);
+    int group_number = gc_group_add(chat->group_handler, 0, (const uint8_t *)"Test", 4, nullptr);
 
-    if (groupnumber < 0) {
+    if (group_number < 0) {
         printf("Cannot create group\n");
     }
 
-    GC_Chat *ct = gc_get_group(chat->group_handler, groupnumber);
+    GC_Chat *ct = gc_get_group(chat->group_handler, group_number);
     printf("CHAT ENC: %s\n CHAT SIG: %s\n", id_toa(ENC_KEY(ct->chat_public_key)), id_toa(SIG_PK(ct->chat_public_key)));
 
     gc_callback_peer_join(chat, on_group_peer_join, nullptr);
