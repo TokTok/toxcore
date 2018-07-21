@@ -2942,7 +2942,7 @@ namespace group {
    * @param length The length of the group name. This must be greater than zero and no larger than
    *   $MAX_GROUP_NAME_LENGTH.
    *
-   * @return groupnumber on success, UINT32_MAX on failure.
+   * @return group_number on success, UINT32_MAX on failure.
    */
   uint32_t new(PRIVACY_STATE privacy_state, const uint8_t[length <= MAX_GROUP_NAME_LENGTH] group_name) {
     /**
@@ -2984,7 +2984,7 @@ namespace group {
    * @param length The length of the password. If length is equal to zero,
    *   the password parameter is ignored. length must be no larger than $MAX_PASSWORD_SIZE.
    *
-   * @return groupnumber on success, UINT32_MAX on failure.
+   * @return group_number on success, UINT32_MAX on failure.
    */
   uint32_t join(const uint8_t[CHAT_ID_SIZE] chat_id, const uint8_t[length <= MAX_PASSWORD_SIZE] password) {
     /**
@@ -3008,11 +3008,11 @@ namespace group {
    * This function disconnects from all peers in the group, then attempts to reconnect with the group.
    * The caller's state is not changed (i.e. name, status, role, chat public key etc.)
    *
-   * @param groupnumber The group number of the group we wish to reconnect to.
+   * @param group_number The group number of the group we wish to reconnect to.
    *
    * @return true on success.
    */
-  bool reconnect(uint32_t groupnumber) {
+  bool reconnect(uint32_t group_number) {
     /**
      * The group number passed did not designate a valid group.
      */
@@ -3026,14 +3026,14 @@ namespace group {
    * peers in a group, and deletes the group from the chat array. All group state information is permanently
    * lost, including keys and role credentials.
    *
-   * @param groupnumber The group number of the group we wish to leave.
+   * @param group_number The group number of the group we wish to leave.
    * @param message The parting message to be sent to all the peers. Set to NULL if we do not wish to
    *   send a parting message.
    * @param length The length of the parting message. Set to 0 if we do not wish to send a parting message.
    *
    * @return true if the group chat instance is successfully deleted.
    */
-  bool leave(uint32_t groupnumber, const uint8_t[length <= MAX_PART_LENGTH] message) {
+  bool leave(uint32_t group_number, const uint8_t[length <= MAX_PART_LENGTH] message) {
     /**
      * The group number passed did not designate a valid group.
      */
@@ -3113,18 +3113,18 @@ namespace group {
        *
        * @return true on success.
        */
-      set(uint32_t groupnumber) with error for self_name_set;
+      set(uint32_t group_number) with error for self_name_set;
 
       /**
        * Return the length of the client's current nickname for the group instance designated
-       * by groupnumber as passed to $set.
+       * by group_number as passed to $set.
        *
        * If no nickname was set before calling this function, the name is empty,
        * and this function returns 0.
        *
        * @see threading for concurrency implications.
        */
-      size(uint32_t groupnumber) with error for self_query;
+      size(uint32_t group_number) with error for self_query;
 
       /**
        * Write the nickname set by $set to a byte array.
@@ -3139,7 +3139,7 @@ namespace group {
        *
        * @returns true on success.
        */
-      get(uint32_t groupnumber) with error for self_query;
+      get(uint32_t group_number) with error for self_query;
     }
 
     /**
@@ -3167,13 +3167,13 @@ namespace group {
        *
        * @return true on success.
        */
-      set(uint32_t groupnumber) with error for self_status_set;
+      set(uint32_t group_number) with error for self_status_set;
 
       /**
        * returns the client's status for the group instance on success.
        * return value is unspecified on failure.
        */
-      get(uint32_t groupnumber) with error for self_query;
+      get(uint32_t group_number) with error for self_query;
     }
 
     ROLE role {
@@ -3182,7 +3182,7 @@ namespace group {
        * returns the client's role for the group instance on success.
        * return value is unspecified on failure.
        */
-      get(uint32_t groupnumber) with error for self_query;
+      get(uint32_t group_number) with error for self_query;
     }
 
     uint32_t peer_id {
@@ -3191,7 +3191,7 @@ namespace group {
        * returns the client's peer id for the group instance on success.
        * return value is unspecified on failure.
        */
-       get(uint32_t groupnumber) with error for self_query;
+       get(uint32_t group_number) with error for self_query;
     }
 
     uint8_t [length] public_key {
@@ -3210,7 +3210,7 @@ namespace group {
        *
        * @return true on success.
        */
-      get(uint32_t groupnumber) with error for self_query;
+      get(uint32_t group_number) with error for self_query;
     }
   }
 
@@ -3249,7 +3249,7 @@ namespace group {
        * The return value is equal to the `length` argument received by the last
        * `${event name}` callback.
        */
-      size(uint32_t groupnumber, uint32_t peer_id) with error for query;
+      size(uint32_t group_number, uint32_t peer_id) with error for query;
 
       /**
        * Write the name of the peer designated by the given ID to a byte
@@ -3260,13 +3260,13 @@ namespace group {
        * The data written to `name` is equal to the data received by the last
        * `${event name}` callback.
        *
-       * @param groupnumber The group number of the group we wish to query.
+       * @param group_number The group number of the group we wish to query.
        * @param peer_id The ID of the peer whose name we want to retrieve.
        * @param name A valid memory region large enough to store the friend's name.
        *
        * @return true on success.
        */
-      get(uint32_t groupnumber, uint32_t  peer_id) with error for query;
+      get(uint32_t group_number, uint32_t  peer_id) with error for query;
     }
 
     USER_STATUS status {
@@ -3278,7 +3278,7 @@ namespace group {
        * The status returned is equal to the last status received through the
        * `${event status}` callback.
        */
-      get(uint32_t groupnumber, uint32_t peer_id) with error for query;
+      get(uint32_t group_number, uint32_t peer_id) with error for query;
     }
 
     ROLE role {
@@ -3289,7 +3289,7 @@ namespace group {
        * The role returned is equal to the last role received through the
        * `${event moderation}` callback.
        */
-      get(uint32_t groupnumber, uint32_t peer_id) with error for query;
+      get(uint32_t group_number, uint32_t peer_id) with error for query;
     }
 
     uint8_t[length] public_key {
@@ -3307,7 +3307,7 @@ namespace group {
        *
        * @return true on success.
        */
-       get(uint32_t groupnumber, uint32_t peer_id) with error for query;
+       get(uint32_t group_number, uint32_t peer_id) with error for query;
     }
 
     /**
@@ -3315,12 +3315,12 @@ namespace group {
      */
     event name {
       /**
-       * @param groupnumber The group number of the group the name change is intended for.
+       * @param group_number The group number of the group the name change is intended for.
        * @param peer_id The ID of the peer who has changed their name.
        * @param name The name data.
        * @param length The length of the name.
        */
-      typedef void(uint32_t groupnumber, uint32_t peer_id, const uint8_t[length <= MAX_NAME_LENGTH] name);
+      typedef void(uint32_t group_number, uint32_t peer_id, const uint8_t[length <= MAX_NAME_LENGTH] name);
     }
 
     /**
@@ -3328,11 +3328,11 @@ namespace group {
      */
     event status {
       /**
-       * @param groupnumber The group number of the group the status change is intended for.
+       * @param group_number The group number of the group the status change is intended for.
        * @param peer_id The ID of the peer who has changed their status.
        * @param status The new status of the peer.
        */
-      typedef void(uint32_t groupnumber, uint32_t peer_id, USER_STATUS status);
+      typedef void(uint32_t group_number, uint32_t peer_id, USER_STATUS status);
     }
   }
 
@@ -3393,7 +3393,7 @@ namespace group {
      *
      * @returns true on success.
      */
-    set(uint32_t groupnumber) with error for topic_set;
+    set(uint32_t group_number) with error for topic_set;
 
     /**
      * Return the length of the group topic. If the group number is invalid, the
@@ -3402,7 +3402,7 @@ namespace group {
      * The return value is equal to the `length` argument received by the last
      * `${event topic}` callback.
      */
-    size(uint32_t groupnumber) with error for state_queries;
+    size(uint32_t group_number) with error for state_queries;
 
     /**
      * Write the topic designated by the given group number to a byte array.
@@ -3417,7 +3417,7 @@ namespace group {
      *
      * @return true on success.
      */
-    get(uint32_t groupnumber) with error for state_queries;
+    get(uint32_t group_number) with error for state_queries;
   }
 
   /**
@@ -3425,12 +3425,12 @@ namespace group {
    */
   event topic {
     /**
-     * @param groupnumber The group number of the group the topic change is intended for.
+     * @param group_number The group number of the group the topic change is intended for.
      * @param peer_id The ID of the peer who changed the topic.
      * @param topic The topic data.
      * @param length The topic length.
      */
-    typedef void(uint32_t groupnumber, uint32_t peer_id, const uint8_t[length <= MAX_TOPIC_LENGTH] topic);
+    typedef void(uint32_t group_number, uint32_t peer_id, const uint8_t[length <= MAX_TOPIC_LENGTH] topic);
   }
 
   uint8_t[length <= MAX_TOPIC_LENGTH] name {
@@ -3438,7 +3438,7 @@ namespace group {
      * Return the length of the group name. If the group number is invalid, the
      * return value is unspecified.
      */
-    size(uint32_t groupnumber) with error for state_queries;
+    size(uint32_t group_number) with error for state_queries;
 
     /**
      * Write the name of the group designated by the given group number to a byte array.
@@ -3450,7 +3450,7 @@ namespace group {
      *
      * @return true on success.
      */
-    get(uint32_t groupnumber) with error for state_queries;
+    get(uint32_t group_number) with error for state_queries;
   }
 
   uint8_t[length] chat_id {
@@ -3465,7 +3465,7 @@ namespace group {
      *
      * @return true on success.
      */
-    get(uint32_t groupnumber) with error for state_queries;
+    get(uint32_t group_number) with error for state_queries;
   }
 
   uint32_t number_groups {
@@ -3486,7 +3486,7 @@ namespace group {
      *
      * @see the `Group chat founder controls` section for the respective set function.
      */
-    get(uint32_t groupnumber) with error for state_queries;
+    get(uint32_t group_number) with error for state_queries;
   }
 
   /**
@@ -3494,10 +3494,10 @@ namespace group {
    */
   event privacy_state {
     /**
-     * @param groupnumber The group number of the group the topic change is intended for.
+     * @param group_number The group number of the group the topic change is intended for.
      * @param privacy_state The new privacy state.
      */
-    typedef void(uint32_t groupnumber, PRIVACY_STATE privacy_state);
+    typedef void(uint32_t group_number, PRIVACY_STATE privacy_state);
   }
 
   uint32_t peer_limit {
@@ -3511,7 +3511,7 @@ namespace group {
      *
      * @see the `Group chat founder controls` section for the respective set function.
      */
-    get(uint32_t groupnumber) with error for state_queries;
+    get(uint32_t group_number) with error for state_queries;
   }
 
   /**
@@ -3519,10 +3519,10 @@ namespace group {
    */
   event peer_limit {
     /**
-     * @param groupnumber The group number of the group for which the peer limit has changed.
+     * @param group_number The group number of the group for which the peer limit has changed.
      * @param peer_limit The new peer limit for the group.
      */
-    typedef void(uint32_t groupnumber, uint32_t peer_limit);
+    typedef void(uint32_t group_number, uint32_t peer_limit);
   }
 
   uint8_t[length <= MAX_PASSWORD_SIZE] password {
@@ -3531,7 +3531,7 @@ namespace group {
      * Return the length of the group password. If the group number is invalid, the
      * return value is unspecified.
      */
-    size(uint32_t groupnumber) with error for state_queries;
+    size(uint32_t group_number) with error for state_queries;
 
     /**
      * Write the password for the group designated by the given group number to a byte array.
@@ -3548,7 +3548,7 @@ namespace group {
      *
      * @return true on success.
      */
-    get(uint32_t groupnumber) with error for state_queries;
+    get(uint32_t group_number) with error for state_queries;
   }
 
   /**
@@ -3556,11 +3556,11 @@ namespace group {
    */
   event password {
     /**
-     * @param groupnumber The group number of the group for which the password has changed.
+     * @param group_number The group number of the group for which the password has changed.
      * @param password The new group password.
      * @param length The length of the password.
      */
-    typedef void(uint32_t groupnumber, const uint8_t[length <= MAX_PASSWORD_SIZE] password);
+    typedef void(uint32_t group_number, const uint8_t[length <= MAX_PASSWORD_SIZE] password);
   }
 
 }
@@ -3584,7 +3584,7 @@ namespace group {
      * must be split by the client and sent as separate messages. Other clients can
      * then reassemble the fragments. Messages may not be empty.
      *
-     * @param groupnumber The group number of the group the message is intended for.
+     * @param group_number The group number of the group the message is intended for.
      * @param type Message type (normal, action, ...).
      * @param message A non-NULL pointer to the first element of a byte array
      *   containing the message text.
@@ -3592,7 +3592,7 @@ namespace group {
      *
      * @return true on success.
      */
-    bool message(uint32_t groupnumber, MESSAGE_TYPE type, const uint8_t[length <= MAX_MESSAGE_LENGTH] message) {
+    bool message(uint32_t group_number, MESSAGE_TYPE type, const uint8_t[length <= MAX_MESSAGE_LENGTH] message) {
       /**
        * The group number passed did not designate a valid group.
        */
@@ -3629,7 +3629,7 @@ namespace group {
      * must be split by the client and sent as separate messages. Other clients can
      * then reassemble the fragments. Messages may not be empty.
      *
-     * @param groupnumber The group number of the group the message is intended for.
+     * @param group_number The group number of the group the message is intended for.
      * @param peer_id The ID of the peer the message is intended for.
      * @param message A non-NULL pointer to the first element of a byte array
      *   containing the message text.
@@ -3637,7 +3637,7 @@ namespace group {
      *
      * @return true on success.
      */
-    bool private_message(uint32_t groupnumber, uint32_t peer_id, const uint8_t[length <= MAX_MESSAGE_LENGTH] message) {
+    bool private_message(uint32_t group_number, uint32_t peer_id, const uint8_t[length <= MAX_MESSAGE_LENGTH] message) {
       /**
        * The group number passed did not designate a valid group.
        */
@@ -3677,14 +3677,14 @@ namespace group {
      * Unless latency is an issue or message reliability is not important, it is recommended that you use
      * lossless custom packets.
      *
-     * @param groupnumber The group number of the group the message is intended for.
+     * @param group_number The group number of the group the message is intended for.
      * @param lossless True if the packet should be lossless.
      * @param data A byte array containing the packet data.
      * @param length The length of the packet data byte array.
      *
      * @return true on success.
      */
-    bool custom_packet(uint32_t groupnumber, bool lossless, const uint8_t[length <= MAX_MESSAGE_LENGTH] data) {
+    bool custom_packet(uint32_t group_number, bool lossless, const uint8_t[length <= MAX_MESSAGE_LENGTH] data) {
       /**
        * The group number passed did not designate a valid group.
        */
@@ -3718,13 +3718,13 @@ namespace group {
    */
   event message {
     /**
-     * @param groupnumber The group number of the group the message is intended for.
+     * @param group_number The group number of the group the message is intended for.
      * @param peer_id The ID of the peer who sent the message.
      * @param type The type of message (normal, action, ...).
      * @param message The message data.
      * @param length The length of the message.
      */
-    typedef void(uint32_t groupnumber, uint32_t peer_id, MESSAGE_TYPE type, const uint8_t[length <= MAX_MESSAGE_LENGTH] message);
+    typedef void(uint32_t group_number, uint32_t peer_id, MESSAGE_TYPE type, const uint8_t[length <= MAX_MESSAGE_LENGTH] message);
   }
 
   /**
@@ -3732,12 +3732,12 @@ namespace group {
    */
   event private_message {
     /**
-     * @param groupnumber The group number of the group the private message is intended for.
+     * @param group_number The group number of the group the private message is intended for.
      * @param peer_id The ID of the peer who sent the private message.
      * @param message The message data.
      * @param length The length of the message.
      */
-    typedef void(uint32_t groupnumber, uint32_t peer_id, const uint8_t[length <= MAX_MESSAGE_LENGTH] message);
+    typedef void(uint32_t group_number, uint32_t peer_id, const uint8_t[length <= MAX_MESSAGE_LENGTH] message);
   }
 
   /**
@@ -3745,12 +3745,12 @@ namespace group {
    */
   event custom_packet {
     /**
-     * @param groupnumber The group number of the group the custom packet is intended for.
+     * @param group_number The group number of the group the custom packet is intended for.
      * @param peer_id The ID of the peer who sent the custom packet.
      * @param data The custom packet data.
      * @param length The length of the data.
      */
-    typedef void(uint32_t groupnumber, uint32_t peer_id, const uint8_t[length <= MAX_MESSAGE_LENGTH] data);
+    typedef void(uint32_t group_number, uint32_t peer_id, const uint8_t[length <= MAX_MESSAGE_LENGTH] data);
   }
 
 }
@@ -3770,12 +3770,12 @@ namespace group {
      *
      * This function creates an invite request packet and pushes it to the send queue.
      *
-     * @param groupnumber The group number of the group the message is intended for.
+     * @param group_number The group number of the group the message is intended for.
      * @param friend_number The friend number of the friend the invite is intended for.
      *
      * @return true on success.
      */
-    bool friend(uint32_t groupnumber, uint32_t friend_number) {
+    bool friend(uint32_t group_number, uint32_t friend_number) {
       /**
        * The group number passed did not designate a valid group.
        */
@@ -3804,7 +3804,7 @@ namespace group {
      * @param password_length The length of the password. If password_length is equal to zero, the password
      *    parameter will be ignored. password_length must be no larger than $MAX_PASSWORD_SIZE.
      *
-     * @return the groupnumber on success, UINT32_MAX on failure.
+     * @return the group_number on success, UINT32_MAX on failure.
      */
     uint32_t accept(const uint8_t[length] invite_data, const uint8_t[password_length <= MAX_PASSWORD_SIZE] password) {
       /**
@@ -3840,11 +3840,11 @@ namespace group {
    */
   event peer_join {
     /**
-     * @param groupnumber The group number of the group in which a new peer has joined.
+     * @param group_number The group number of the group in which a new peer has joined.
      * @param peer_id The permanent ID of the new peer. This id should not be relied on for
      * client behaviour and should be treated as a random value.
      */
-    typedef void(uint32_t groupnumber, uint32_t peer_id);
+    typedef void(uint32_t group_number, uint32_t peer_id);
   }
 
   /**
@@ -3852,14 +3852,14 @@ namespace group {
    */
   event peer_exit {
     /**
-     * @param groupnumber The group number of the group in which a peer has left.
+     * @param group_number The group number of the group in which a peer has left.
      * @param peer_id The ID of the peer who left the group. This ID no longer designates a valid peer
      *     and cannot be used for API calls.
      * @param name The nickname of the peer who left the group.
      * @param part_message The parting message data.
      * @param length The length of the parting message.
      */
-    typedef void(uint32_t groupnumber, uint32_t peer_id, const uint8_t[name_length <= MAX_NAME_LENGTH] name, const uint8_t[length <= MAX_PART_LENGTH] part_message);
+    typedef void(uint32_t group_number, uint32_t peer_id, const uint8_t[name_length <= MAX_NAME_LENGTH] name, const uint8_t[length <= MAX_PART_LENGTH] part_message);
   }
 
   /**
@@ -3868,9 +3868,9 @@ namespace group {
    */
   event self_join {
     /**
-     * @param groupnumber The group number of the group that the client has joined.
+     * @param group_number The group number of the group that the client has joined.
      */
-    typedef void(uint32_t groupnumber);
+    typedef void(uint32_t group_number);
   }
 
   /**
@@ -3905,10 +3905,10 @@ namespace group {
    */
   event join_fail {
     /**
-     * @param groupnumber The group number of the group for which the join has failed.
+     * @param group_number The group number of the group for which the join has failed.
      * @param fail_type The type of group rejection.
      */
-    typedef void(uint32_t groupnumber, JOIN_FAIL fail_type);
+    typedef void(uint32_t group_number, JOIN_FAIL fail_type);
   }
 }
 
@@ -3929,13 +3929,13 @@ namespace group {
      * This function sets the groups password, creates a new group shared state including the change,
      * and distributes it to the rest of the group.
      *
-     * @param groupnumber The group number of the group for which we wish to set the password.
+     * @param group_number The group number of the group for which we wish to set the password.
      * @param password The password we want to set. Set password to NULL to unset the password.
      * @param length The length of the password. length must be no longer than $MAX_PASSWORD_SIZE.
      *
      * @return true on success.
      */
-    bool set_password(uint32_t groupnumber, const uint8_t[length <= MAX_PASSWORD_SIZE] password) {
+    bool set_password(uint32_t group_number, const uint8_t[length <= MAX_PASSWORD_SIZE] password) {
       /**
        * The group number passed did not designate a valid group.
        */
@@ -3963,12 +3963,12 @@ namespace group {
      * If an attempt is made to set the privacy state to the same state that the group is already
      * in, the function call will be successful and no action will be taken.
      *
-     * @param groupnumber The group number of the group for which we wish to change the privacy state.
+     * @param group_number The group number of the group for which we wish to change the privacy state.
      * @param privacy_state The privacy state we wish to set the group to.
      *
      * @return true on success.
      */
-    bool set_privacy_state(uint32_t groupnumber, PRIVACY_STATE privacy_state) {
+    bool set_privacy_state(uint32_t group_number, PRIVACY_STATE privacy_state) {
       /**
        * The group number passed did not designate a valid group.
        */
@@ -3998,12 +3998,12 @@ namespace group {
      * This function sets a limit for the number of peers who may be in the group, creates a new
      * group shared state including the change, and distributes it to the rest of the group.
      *
-     * @param groupnumber The group number of the group for which we wish to set the peer limit.
+     * @param group_number The group number of the group for which we wish to set the peer limit.
      * @param max_peers The maximum number of peers to allow in the group.
      *
      * @return true on success.
      */
-    bool set_peer_limit(uint32_t groupnumber, uint32_t max_peers) {
+    bool set_peer_limit(uint32_t group_number, uint32_t max_peers) {
       /**
        * The group number passed did not designate a valid group.
        */
@@ -4037,13 +4037,13 @@ namespace group {
   /**
    * Ignore or unignore a peer.
    *
-   * @param groupnumber The group number of the group the in which you wish to ignore a peer.
+   * @param group_number The group number of the group the in which you wish to ignore a peer.
    * @param peer_id The ID of the peer who shall be ignored or unignored.
    * @param ignore True to ignore the peer, false to unignore the peer.
    *
    * @return true on success.
    */
-  bool toggle_ignore(uint32_t groupnumber, uint32_t peer_id, bool ignore) {
+  bool toggle_ignore(uint32_t group_number, uint32_t peer_id, bool ignore) {
       /**
        * The group number passed did not designate a valid group.
        */
@@ -4063,13 +4063,13 @@ namespace group {
      * It will also send a packet to the rest of the group, requesting that they perform
      * the role reassignment. Note: peers cannot be set to the founder role.
      *
-     * @param groupnumber The group number of the group the in which you wish set the peer's role.
+     * @param group_number The group number of the group the in which you wish set the peer's role.
      * @param peer_id The ID of the peer whose role you wish to set.
      * @param role The role you wish to set the peer to.
      *
      * @return true on success.
      */
-    bool set_role(uint32_t groupnumber, uint32_t peer_id, ROLE role) {
+    bool set_role(uint32_t group_number, uint32_t peer_id, ROLE role) {
       /**
        * The group number passed did not designate a valid group.
        */
@@ -4101,13 +4101,13 @@ namespace group {
      * to the ban list. It will also send a packet to all group members requesting them
      * to do the same.
      *
-     * @param groupnumber The group number of the group the ban is intended for.
+     * @param group_number The group number of the group the ban is intended for.
      * @param peer_id The ID of the peer who will be kicked and/or added to the ban list.
      * @param set_ban Set to true if a ban shall be set on the peer's IP address.
      *
      * @return true on success.
      */
-    bool remove_peer(uint32_t groupnumber, uint32_t peer_id, bool set_ban) {
+    bool remove_peer(uint32_t group_number, uint32_t peer_id, bool set_ban) {
       /**
        * The group number passed did not designate a valid group.
        */
@@ -4141,12 +4141,12 @@ namespace group {
      * This function removes a ban entry from the ban list, and sends a packet to the rest of
      * the group requesting that they do the same.
      *
-     * @param groupnumber The group number of the group in which the ban is to be removed.
+     * @param group_number The group number of the group in which the ban is to be removed.
      * @param ban_id The ID of the ban entry that shall be removed.
      *
      * @return true on success
      */
-    bool remove_ban(uint32_t groupnumber, uint32_t ban_id) {
+    bool remove_ban(uint32_t group_number, uint32_t ban_id) {
       /**
        * The group number passed did not designate a valid group.
        */
@@ -4202,12 +4202,12 @@ namespace group {
    */
   event moderation {
     /**
-     * @param groupnumber The group number of the group the event is intended for.
+     * @param group_number The group number of the group the event is intended for.
      * @param source_peer_number The ID of the peer who initiated the event.
      * @param target_peer_number The ID of the peer who is the target of the event.
      * @param mod_type The type of event.
      */
-    typedef void(uint32_t groupnumber, uint32_t source_peer_number, uint32_t target_peer_number, MOD_EVENT mod_type);
+    typedef void(uint32_t group_number, uint32_t source_peer_number, uint32_t target_peer_number, MOD_EVENT mod_type);
   }
 
 }
@@ -4243,7 +4243,7 @@ namespace group {
        * Return the number of entries in the ban list for the group designated by
        * the given group number. If the group number is invalid, the return value is unspecified.
        */
-      size(uint32_t groupnumber) with error for query;
+      size(uint32_t group_number) with error for query;
 
       /**
        * Copy a list of valid ban list ID's into an array.
@@ -4255,17 +4255,17 @@ namespace group {
        *
        * @return true on success.
        */
-      get(uint32_t groupnumber) with error for query;
+      get(uint32_t group_number) with error for query;
     }
 
     uint8_t[length <= MAX_NAME_LENGTH] name {
 
       /**
        * Return the length of the name for the ban list entry designated by ban_id, in the
-       * group designated by the given group number. If either groupnumber or ban_id is invalid,
+       * group designated by the given group number. If either group_number or ban_id is invalid,
        * the return value is unspecified.
        */
-      size(uint32_t groupnumber, uint32_t ban_id) with error for query;
+      size(uint32_t group_number, uint32_t ban_id) with error for query;
 
       /**
        * Write the name of the ban entry designated by ban_id in the group designated by the
@@ -4275,7 +4275,7 @@ namespace group {
        *
        * @return true on success.
        */
-      get(uint32_t groupnumber, uint32_t ban_id) with error for query;
+      get(uint32_t group_number, uint32_t ban_id) with error for query;
     }
 
     uint64_t time_set {
@@ -4283,9 +4283,9 @@ namespace group {
       /**
        * Return a time stamp indicating the time the ban was set, for the ban list entry
        * designated by ban_id, in the group designated by the given group number.
-       * If either groupnumber or ban_id is invalid, the return value is unspecified.
+       * If either group_number or ban_id is invalid, the return value is unspecified.
        */
-      get(uint32_t groupnumber, uint32_t ban_id) with error for query;
+      get(uint32_t group_number, uint32_t ban_id) with error for query;
     }
   }
 }
