@@ -3674,7 +3674,7 @@ bool tox_group_founder_set_peer_limit(Tox *tox, uint32_t group_number, uint32_t 
         return 0;
     }
 
-    int ret = gc_founder_set_max_peers(chat, group_number, maxpeers);
+    int ret = gc_founder_set_max_peers(chat, maxpeers);
 
     switch (ret) {
         case 0:
