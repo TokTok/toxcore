@@ -91,10 +91,10 @@ struct GC_Connection {
     uint32_t    self_sent_shared_state_version;
 };
 
-/* Return connection object for peernumber.
- * Return NULL if peernumber is invalid.
+/* Return connection object for peer_number.
+ * Return NULL if peer_number is invalid.
  */
-GC_Connection *gcc_get_connection(const GC_Chat *chat, int peernumber);
+GC_Connection *gcc_get_connection(const GC_Chat *chat, int peer_number);
 
 /* Adds data of length to gconn's send_ary.
  *
@@ -111,7 +111,7 @@ int gcc_add_send_ary(const Mono_Time *mono_time, GC_Connection *gconn, const uin
  * Return 0 if message is a duplicate.
  * Return -1 on failure
  */
-int gcc_handle_recv_message(GC_Chat *chat, uint32_t peernumber, const uint8_t *data, uint32_t length,
+int gcc_handle_recv_message(GC_Chat *chat, uint32_t peer_number, const uint8_t *data, uint32_t length,
                             uint8_t packet_type, uint64_t message_id);
 
 /* Return ary index for message_id */
@@ -132,9 +132,9 @@ bool gcc_is_ip_set(GC_Connection *gconn);
  * Return 0 on success.
  * Return -1 on failure.
  */
-int gcc_check_recv_ary(struct Messenger *m, int groupnum, uint32_t peernumber);
+int gcc_check_recv_ary(struct Messenger *m, int groupnum, uint32_t peer_number);
 
-void gcc_resend_packets(struct Messenger *m, GC_Chat *chat, uint32_t peernumber);
+void gcc_resend_packets(struct Messenger *m, GC_Chat *chat, uint32_t peer_number);
 
 /* Return true if we have a direct connection with this group connection */
 bool gcc_connection_is_direct(const Mono_Time *mono_time, const GC_Connection *gconn);

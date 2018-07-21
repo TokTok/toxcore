@@ -40,16 +40,16 @@
 
 #ifndef VANILLA_NACL
 
-/* Returns group connection object for peernumber.
- * Returns NULL if peernumber is invalid.
+/* Returns group connection object for peer_number.
+ * Returns NULL if peer_number is invalid.
  */
-GC_Connection *gcc_get_connection(const GC_Chat *chat, int peernumber)
+GC_Connection *gcc_get_connection(const GC_Chat *chat, int peer_number)
 {
-    if (!peernumber_valid(chat, peernumber)) {
+    if (!peer_number_valid(chat, peer_number)) {
         return nullptr;
     }
 
-    return &chat->gcc[peernumber];
+    return &chat->gcc[peer_number];
 }
 
 /* Returns true if ary entry does not contain an active packet. */
@@ -179,10 +179,10 @@ bool gcc_is_ip_set(GC_Connection *gconn)
  * Return 0 if message is a duplicate.
  * Return -1 on failure
  */
-int gcc_handle_recv_message(GC_Chat *chat, uint32_t peernumber, const uint8_t *data, uint32_t length,
+int gcc_handle_recv_message(GC_Chat *chat, uint32_t peer_number, const uint8_t *data, uint32_t length,
                             uint8_t packet_type, uint64_t message_id)
 {
-    GC_Connection *gconn = gcc_get_connection(chat, peernumber);
+    GC_Connection *gconn = gcc_get_connection(chat, peer_number);
     if (!gconn) {
         return -1;
     }
@@ -213,21 +213,21 @@ int gcc_handle_recv_message(GC_Chat *chat, uint32_t peernumber, const uint8_t *d
     return 2;
 }
 
-/* Handles peernumber's array entry with appropriate handler and clears it from array.
+/* Handles peer_number's array entry with appropriate handler and clears it from array.
  *
  * Return 0 on success.
  * Return -1 on failure.
  */
-static int process_recv_ary_entry(GC_Chat *chat, Messenger *m, int groupnum, uint32_t peernumber,
+static int process_recv_ary_entry(GC_Chat *chat, Messenger *m, int groupnum, uint32_t peer_number,
                                   struct GC_Message_Ary_Entry *ary_entry)
 {
-    GC_Connection *gconn = gcc_get_connection(chat, peernumber);
+    GC_Connection *gconn = gcc_get_connection(chat, peer_number);
 
     if (gconn == nullptr) {
         return -1;
     }
 
-    int ret = handle_gc_lossless_helper(m, groupnum, peernumber, ary_entry->data, ary_entry->data_length,
+    int ret = handle_gc_lossless_helper(m, groupnum, peer_number, ary_entry->data, ary_entry->data_length,
                                         ary_entry->message_id, ary_entry->packet_type);
     clear_ary_entry(ary_entry);
 
@@ -248,7 +248,7 @@ static int process_recv_ary_entry(GC_Chat *chat, Messenger *m, int groupnum, uin
  * Return 0 on success.
  * Return -1 on failure.
  */
-int gcc_check_recv_ary(Messenger *m, int groupnum, uint32_t peernumber)
+int gcc_check_recv_ary(Messenger *m, int groupnum, uint32_t peer_number)
 {
     GC_Chat *chat = gc_get_group(m->group_handler, groupnum);
 
@@ -256,7 +256,7 @@ int gcc_check_recv_ary(Messenger *m, int groupnum, uint32_t peernumber)
         return -1;
     }
 
-    GC_Connection *gconn = gcc_get_connection(chat, peernumber);
+    GC_Connection *gconn = gcc_get_connection(chat, peer_number);
 
     if (gconn == nullptr) {
         return -1;
@@ -266,7 +266,7 @@ int gcc_check_recv_ary(Messenger *m, int groupnum, uint32_t peernumber)
     struct GC_Message_Ary_Entry *ary_entry = &gconn->recv_ary[idx];
 
     while (!ary_entry_is_empty(ary_entry)) {
-        if (process_recv_ary_entry(chat, m, groupnum, peernumber, ary_entry) == -1) {
+        if (process_recv_ary_entry(chat, m, groupnum, peer_number, ary_entry) == -1) {
             return -1;
         }
 
@@ -277,9 +277,9 @@ int gcc_check_recv_ary(Messenger *m, int groupnum, uint32_t peernumber)
     return 0;
 }
 
-void gcc_resend_packets(Messenger *m, GC_Chat *chat, uint32_t peernumber)
+void gcc_resend_packets(Messenger *m, GC_Chat *chat, uint32_t peer_number)
 {
-    GC_Connection *gconn = gcc_get_connection(chat, peernumber);
+    GC_Connection *gconn = gcc_get_connection(chat, peer_number);
 
     if (gconn == nullptr) {
         return;
@@ -309,7 +309,7 @@ void gcc_resend_packets(Messenger *m, GC_Chat *chat, uint32_t peernumber)
         }
 
         if (mono_time_is_timeout(m->mono_time, ary_entry->time_added, GC_CONFIRMED_PEER_TIMEOUT)) {
-            gc_peer_delete(m, chat->groupnumber, peernumber, (const uint8_t *)"Peer timed out", 14);
+            gc_peer_delete(m, chat->group_number, peer_number, (const uint8_t *)"Peer timed out", 14);
             return;
         }
     }
