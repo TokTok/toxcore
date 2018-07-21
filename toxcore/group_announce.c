@@ -38,7 +38,6 @@ void kill_gca(GC_Announces_List *announces_list)
     }
 
     free(announces_list);
-    announces_list = nullptr;
 }
 
 void do_gca(GC_Announces_List *gc_announces_list) {
@@ -151,7 +150,7 @@ static GC_Announces* get_announces_by_chat_id(const GC_Announces_List *gc_announ
         announces = announces->next_announce;
     }
 
-    return NULL;
+    return nullptr;
 }
 
 bool cleanup_gca(GC_Announces_List *gc_announces_list, const uint8_t *chat_id) {
@@ -377,7 +376,7 @@ GC_Peer_Announce* add_gc_announce(GC_Announces_List *gc_announces_list, const GC
         gc_announces_list->announces_count++;
         announces = (GC_Announces*)malloc(sizeof(GC_Announces));
         announces->index = 0;
-        announces->prev_announce = NULL;
+        announces->prev_announce = nullptr;
         if (gc_announces_list->announces) {
             gc_announces_list->announces->prev_announce = announces;
         }
