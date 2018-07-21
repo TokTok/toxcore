@@ -119,7 +119,7 @@ void print_peer(const GC_GroupPeer *peer, const GC_Connection *gconn)
 
 static bool is_tcp_only_mode(const GC_Session *session)
 {
-    return !DHT_isconnected(session->messenger->dht);  // TODO: get self connection status?
+    return !dht_isconnected(session->messenger->dht);  // TODO: get self connection status?
 }
 
 void pack_group_info(GC_Chat *chat, SAVED_GROUP *temp, bool can_use_cached_value)
