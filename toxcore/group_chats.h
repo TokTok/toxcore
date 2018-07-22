@@ -489,6 +489,8 @@ int gc_get_peer_nick_size(const GC_Chat *chat, uint32_t peer_id);
  */
 int gc_get_peer_public_key(const GC_Chat *chat, uint32_t peer_id, uint8_t *public_key);
 
+int gc_get_peer_public_key_by_peer_id(const GC_Chat *chat, uint32_t peer_id, uint8_t *public_key);
+
 /* Sets the caller's status to status
  *
  * Returns 0 on success.
