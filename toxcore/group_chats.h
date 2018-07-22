@@ -336,7 +336,7 @@ typedef struct GC_Session {
 
     void (*message)(struct Messenger *m, uint32_t, uint32_t, unsigned int, const uint8_t *, size_t, void *);
     void *message_userdata;
-    void (*private_message)(struct Messenger *m, uint32_t, uint32_t, const uint8_t *, size_t, void *);
+    void (*private_message)(struct Messenger *m, uint32_t, uint32_t, unsigned int, const uint8_t *, size_t, void *);
     void *private_message_userdata;
     void (*custom_packet)(struct Messenger *m, uint32_t, uint32_t, const uint8_t *, size_t, void *);
     void *custom_packet_userdata;
@@ -388,7 +388,7 @@ int gc_send_message(GC_Chat *chat, const uint8_t *message, uint16_t length, uint
  * Returns -4 if the sender has the observer role.
  * Returns -5 if the packet fails to send.
  */
-int gc_send_private_message(GC_Chat *chat, uint32_t peer_id, const uint8_t *message, uint16_t length);
+int gc_send_private_message(GC_Chat *chat, uint32_t peer_id, uint8_t type, const uint8_t *message, uint16_t length);
 
 /* Sends a custom packet to the group. If lossless is true, the packet will be lossless.
  *
@@ -586,7 +586,7 @@ void gc_callback_message(struct Messenger *m, void (*function)(struct Messenger 
                          const uint8_t *, size_t, void *), void *userdata);
 
 void gc_callback_private_message(struct Messenger *m, void (*function)(struct Messenger *m, uint32_t, uint32_t,
-                                 const uint8_t *,
+                                 unsigned int, const uint8_t *,
                                  size_t, void *), void *userdata);
 
 void gc_callback_custom_packet(struct Messenger *m, void (*function)(struct Messenger *m, uint32_t, uint32_t,

@@ -4189,6 +4189,8 @@ typedef enum TOX_ERR_GROUP_SEND_PRIVATE_MESSAGE {
      */
     TOX_ERR_GROUP_SEND_PRIVATE_MESSAGE_EMPTY,
 
+    TOX_ERR_GROUP_SEND_PRIVATE_MESSAGE_BAD_TYPE,
+
     /**
      * The caller does not have the required permissions to send group messages.
      */
@@ -4220,8 +4222,8 @@ typedef enum TOX_ERR_GROUP_SEND_PRIVATE_MESSAGE {
  *
  * @return true on success.
  */
-bool tox_group_send_private_message(Tox *tox, uint32_t group_number, uint32_t peer_id, const uint8_t *message,
-                                    size_t length, TOX_ERR_GROUP_SEND_PRIVATE_MESSAGE *error);
+bool tox_group_send_private_message(Tox *tox, uint32_t group_number, uint32_t peer_id, TOX_MESSAGE_TYPE type,
+                                    const uint8_t *message, size_t length, TOX_ERR_GROUP_SEND_PRIVATE_MESSAGE *error);
 
 typedef enum TOX_ERR_GROUP_SEND_CUSTOM_PACKET {
 
@@ -4311,8 +4313,8 @@ void tox_callback_group_message(Tox *tox, tox_group_message_cb *callback, void *
  * @param message The message data.
  * @param length The length of the message.
  */
-typedef void tox_group_private_message_cb(Tox *tox, uint32_t group_number, uint32_t peer_id, const uint8_t *message,
-        size_t length, void *user_data);
+typedef void tox_group_private_message_cb(Tox *tox, uint32_t group_number, uint32_t peer_id, TOX_MESSAGE_TYPE type,
+                                          const uint8_t *message, size_t length, void *user_data);
 
 
 /**
