@@ -207,7 +207,7 @@ START_TEST(test_text_all)
     /* All other peers join the group using the Chat ID and password */
     for (i = 2; i < NUM_GROUP_TOXES; ++i) {
         TOX_ERR_GROUP_JOIN join_err;
-        Group_Chat_Self_Peer_Info *self_peer_info = group_chat_self_peer_info_new(toxes[i], nullptr);
+        self_peer_info = group_chat_self_peer_info_new(toxes[i], nullptr);
         tox_group_join(toxes[i], chat_id, (const uint8_t *)PASSWORD, PASS_LEN, self_peer_info, &join_err);
         ck_assert_msg(join_err == TOX_ERR_GROUP_JOIN_OK, "tox_group_join failed: %d", join_err);
         c_sleep(1000);
