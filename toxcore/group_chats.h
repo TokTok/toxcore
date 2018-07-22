@@ -198,7 +198,7 @@ typedef struct GC_SavedPeerInfo {
 typedef struct GC_SelfPeerInfo {
     uint8_t nick[MAX_GC_NICK_SIZE];
     uint16_t nick_length;
-    GROUP_STATUS user_status;
+    Group_Status user_status;
 } GC_SelfPeerInfo;
 
 typedef struct GC_GroupPeer {
@@ -327,11 +327,14 @@ typedef struct GC_Chat {
     struct Saved_Group *save;
 } GC_Chat;
 
+#ifndef MESSENGER_DEFINED
+#define MESSENGER_DEFINED
 typedef struct Messenger Messenger;
+#endif /* MESSENGER_DEFINED */
 
 typedef void gc_message_cb(Messenger *m, uint32_t group_number, uint32_t peer_id, unsigned int type,
                            const uint8_t *data, size_t length, void *user_data);
-typedef void gc_private_message_cb(Messenger *m, uint32_t group_number, uint32_t peer_id,
+typedef void gc_private_message_cb(Messenger *m, uint32_t group_number, uint32_t peer_id, unsigned int type,
                                    const uint8_t *data, size_t length, void *user_data);
 typedef void gc_custom_packet_cb(Messenger *m, uint32_t group_number, uint32_t peer_id, const uint8_t *data,
                                  size_t length, void *user_data);
@@ -413,7 +416,7 @@ int gc_send_message(GC_Chat *chat, const uint8_t *message, uint16_t length, uint
  * Returns -4 if the sender has the observer role.
  * Returns -5 if the packet fails to send.
  */
-int gc_send_private_message(GC_Chat *chat, uint32_t peer_id, const uint8_t *message, uint16_t length);
+int gc_send_private_message(GC_Chat *chat, uint32_t peer_id, uint8_t type, const uint8_t *message, uint16_t length);
 
 /* Sends a custom packet to the group. If lossless is true, the packet will be lossless.
  *

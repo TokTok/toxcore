@@ -3427,7 +3427,7 @@ struct Group_Chat_Self_Peer_Info *group_chat_self_peer_info_new(Tox *tox, TOX_ER
  *   the group will attempt to announce itself to the DHT and anyone with the Chat ID may join.
  *   Otherwise a friend invite will be required to join the group.
  * @param group_name The name of the group. The name must be non-NULL.
- * @param length The length of the group name. This must be greater than zero and no larger than
+ * @param group_name_length The length of the group name. This must be greater than zero and no larger than
  *   TOX_GROUP_MAX_GROUP_NAME_LENGTH.
  *
  * @return group_number on success, UINT32_MAX on failure.
@@ -4230,6 +4230,8 @@ typedef enum TOX_ERR_GROUP_SEND_PRIVATE_MESSAGE {
      */
     TOX_ERR_GROUP_SEND_PRIVATE_MESSAGE_EMPTY,
 
+    TOX_ERR_GROUP_SEND_PRIVATE_MESSAGE_BAD_TYPE,
+
     /**
      * The caller does not have the required permissions to send group messages.
      */
@@ -4261,8 +4263,8 @@ typedef enum TOX_ERR_GROUP_SEND_PRIVATE_MESSAGE {
  *
  * @return true on success.
  */
-bool tox_group_send_private_message(Tox *tox, uint32_t group_number, uint32_t peer_id, const uint8_t *message,
-                                    size_t length, TOX_ERR_GROUP_SEND_PRIVATE_MESSAGE *error);
+bool tox_group_send_private_message(Tox *tox, uint32_t group_number, uint32_t peer_id, TOX_MESSAGE_TYPE type,
+                                    const uint8_t *message, size_t length, TOX_ERR_GROUP_SEND_PRIVATE_MESSAGE *error);
 
 typedef enum TOX_ERR_GROUP_SEND_CUSTOM_PACKET {
 
@@ -4352,8 +4354,8 @@ void tox_callback_group_message(Tox *tox, tox_group_message_cb *callback, void *
  * @param message The message data.
  * @param length The length of the message.
  */
-typedef void tox_group_private_message_cb(Tox *tox, uint32_t group_number, uint32_t peer_id, const uint8_t *message,
-        size_t length, void *user_data);
+typedef void tox_group_private_message_cb(Tox *tox, uint32_t group_number, uint32_t peer_id, TOX_MESSAGE_TYPE type,
+                                          const uint8_t *message, size_t length, void *user_data);
 
 
 /**

@@ -3610,7 +3610,7 @@ static int handle_bc_message(Messenger *m, int group_number, uint32_t peer_numbe
  * Returns -4 if the sender has the observer role.
  * Returns -5 if the packet fails to send.
  */
-int gc_send_private_message(GC_Chat *chat, uint32_t peer_id, const uint8_t *message, uint16_t length)
+int gc_send_private_message(GC_Chat *chat, uint32_t peer_id, uint8_t type, const uint8_t *message, uint16_t length)
 {
     if (length > MAX_GC_MESSAGE_SIZE) {
         return -1;
@@ -3628,24 +3628,32 @@ int gc_send_private_message(GC_Chat *chat, uint32_t peer_id, const uint8_t *mess
         return -3;
     }
 
-    if (chat->group[0].role >= GR_OBSERVER) {
+    if (type > MESSAGE_ACTION) {
         return -4;
     }
 
-    VLA(uint8_t, packet, length + GC_BROADCAST_ENC_HEADER_SIZE);
-    uint32_t packet_len = make_gc_broadcast_header(chat, message, length, packet, GM_PRIVATE_MESSAGE);
+    if (chat->group[0].role >= GR_OBSERVER) {
+        return -5;
+    }
+
+    uint8_t message_with_type[length + 1];
+    message_with_type[0] = type;
+    memcpy(message_with_type + 1, message, length);
+
+    uint8_t packet[length + 1 + GC_BROADCAST_ENC_HEADER_SIZE];
+    uint32_t packet_len = make_gc_broadcast_header(chat, message_with_type, length + 1, packet, GM_PRIVATE_MESSAGE);
 
     if (send_lossless_group_packet(chat, gconn, packet, packet_len, GP_BROADCAST) == -1) {
-        return -5;
+        return -6;
     }
 
     return 0;
 }
 
-static int handle_bc_private_message(Messenger *m, int group_number, uint32_t peer_number, const uint8_t *data,
+static int handle_gc_private_message(Messenger *m, int group_number, uint32_t peer_number, const uint8_t *data,
                                      uint32_t length)
 {
-    if (!data || length > MAX_GC_MESSAGE_SIZE || length == 0) {
+    if (!data || length > MAX_GC_MESSAGE_SIZE || length <= 1) {
         return -1;
     }
 
@@ -3660,8 +3668,14 @@ static int handle_bc_private_message(Messenger *m, int group_number, uint32_t pe
         return 0;
     }
 
+    unsigned int message_type = data[0];
+    if (message_type > MESSAGE_ACTION) {
+        return -1;
+    }
+
     if (c->private_message) {
-        (*c->private_message)(m, group_number, chat->group[peer_number].peer_id, data, length, c->private_message_userdata);
+        (*c->private_message)(m, group_number, chat->group[peer_number].peer_id, message_type,
+                              data + 1, length - 1, c->private_message_userdata);
     }
 
     return 0;
@@ -4166,7 +4180,7 @@ static int handle_gc_broadcast(Messenger *m, int group_number, uint32_t peer_num
             return handle_bc_message(m, group_number, peer_number, message, m_len, broadcast_type);
 
         case GM_PRIVATE_MESSAGE:
-            return handle_bc_private_message(m, group_number, peer_number, message, m_len);
+            return handle_gc_private_message(m, group_number, peer_number, message, m_len);
 
         case GM_PEER_EXIT:
             return handle_gc_peer_exit(m, group_number, peer_number, message, m_len);
@@ -5727,7 +5741,7 @@ static int init_gc_sanctions_creds(GC_Chat *chat)
     return 0;
 }
 
-void gc_load_peers(Messenger* m, GC_Chat* chat, GC_SavedPeerInfo *addrs, uint16_t num_addrs)
+static void gc_load_peers(Messenger* m, GC_Chat* chat, GC_SavedPeerInfo *addrs, uint16_t num_addrs)
 {
     int i;
     for (i = 0; i < num_addrs && i < MAX_GC_PEER_ADDRS; ++i) {
@@ -6244,7 +6258,7 @@ int handle_gc_invite_confirmed_packet(GC_Session *c, int friend_number, const ui
     return 0;
 }
 
-bool friend_was_invited(GC_Chat *chat, int friend_number)
+static bool friend_was_invited(GC_Chat *chat, int friend_number)
 {
     int i;
     for (i = 0; i < MAX_GC_SAVED_INVITES; i++) {
@@ -6539,7 +6553,7 @@ uint32_t gc_count_groups(const GC_Session *c)
 {
     uint32_t i, count = 0;
 
-    for (i = 0; i < c->num_chats; i++)
+    for (i = 0; i < c->num_chats; i++) {
         if (c->chats[i].connection_state > CS_NONE && c->chats[i].connection_state < CS_INVALID) {
             count++;
         }
