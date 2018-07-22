@@ -3172,7 +3172,7 @@ bool tox_group_peer_get_public_key(const Tox *tox, uint32_t group_number, uint32
         return 0;
     }
 
-    int ret = gc_get_peer_public_key(chat, peer_id, public_key);
+    int ret = gc_get_peer_public_key_by_peer_id(chat, peer_id, public_key);
 
     if (ret == -1) {
         SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_PEER_QUERY_PEER_NOT_FOUND);
