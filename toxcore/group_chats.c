@@ -1054,7 +1054,7 @@ static int handle_gc_sync_response(Messenger *m, int group_number, int peer_numb
     uint32_t num_peers;
     net_unpack_u32(data, &num_peers);
 
-    if (num_peers > MAX_GC_NUM_PEERS) {  // TODO: remove
+    if (num_peers > MAX_GC_NUM_PEERS) {
         fprintf(stderr, "peers overflow\n");
 
         return -1;
@@ -1078,32 +1078,32 @@ static int handle_gc_sync_response(Messenger *m, int group_number, int peer_numb
             }
 
             IP_Port *ip_port = curr_announce->ip_port_is_set ? &curr_announce->ip_port : nullptr;
-            int peer_number = peer_add(c->messenger, group_number, ip_port, curr_announce->peer_public_key);
-            if (peer_number < 0) {
+            int new_peer_number = peer_add(c->messenger, group_number, ip_port, curr_announce->peer_public_key);
+            if (new_peer_number < 0) {
                 continue;
             }
 
-            GC_Connection *peer_conn = gcc_get_connection(chat, peer_number);
-            if (!peer_conn) {
+            GC_Connection *peer_gconn = gcc_get_connection(chat, peer_number);
+            if (!peer_gconn) {
                 continue;
             }
 
             for (j = 0; j < announces->tcp_relays_count; j++) {
-                add_tcp_relay_connection(chat->tcp_conn, peer_conn->tcp_connection_num,
+                add_tcp_relay_connection(chat->tcp_conn, peer_gconn->tcp_connection_num,
                                          curr_announce->tcp_relays[j].ip_port,
                                          curr_announce->tcp_relays[j].public_key);
-                save_tcp_relay(peer_conn, &curr_announce->tcp_relays[j]);
+                save_tcp_relay(peer_gconn, &curr_announce->tcp_relays[j]);
             }
 
             fprintf(stderr, "handle_gc_sync_response - added peer %s\n", id_toa(curr_announce->peer_public_key));
 
             if (curr_announce->ip_port_is_set && !is_tcp_mode) {
-                send_gc_handshake_packet(chat, peer_number, GH_REQUEST, HS_PEER_INFO_EXCHANGE, chat->join_type);
+                send_gc_handshake_packet(chat, new_peer_number, GH_REQUEST, HS_PEER_INFO_EXCHANGE, chat->join_type);
                 gconn->send_message_id++;
             } else {
-                peer_conn->pending_handshake_type = HS_PEER_INFO_EXCHANGE;
-                peer_conn->is_pending_handshake_response = peer_conn->is_oob_handshake = false;
-                peer_conn->pending_handshake = mono_time_get(chat->mono_time) + HANDSHAKE_SENDING_TIMEOUT;
+                peer_gconn->pending_handshake_type = HS_PEER_INFO_EXCHANGE;
+                peer_gconn->is_pending_handshake_response = peer_gconn->is_oob_handshake = false;
+                peer_gconn->pending_handshake = mono_time_get(chat->mono_time) + HANDSHAKE_SENDING_TIMEOUT;
             }
         }
 
@@ -1233,7 +1233,7 @@ static int handle_gc_sync_request(const Messenger *m, int group_number, int peer
 
     uint8_t response[MAX_GC_PACKET_SIZE];
     net_pack_u32(response, chat->self_public_key_hash);
-    uint32_t len = HASH_ID_BYTES + sizeof(uint32_t);
+    uint32_t len = HASH_ID_BYTES;
 
     uint32_t i, num = 0;
     GC_Announce *existing_peers_announces = (GC_Announce *)malloc(sizeof(GC_Announce) * (chat->numpeers - 1));
@@ -1256,6 +1256,7 @@ static int handle_gc_sync_request(const Messenger *m, int group_number, int peer
     if (announce_length == -1) {
         return -1;
     }
+
     uint32_t sender_data_length = announce_length + HASH_ID_BYTES;
 
     for (i = 1; i < chat->numpeers; i++) {
@@ -1276,6 +1277,9 @@ static int handle_gc_sync_request(const Messenger *m, int group_number, int peer
             num++;
         }
     }
+
+    net_pack_u32(response + len, num);
+    len += sizeof(uint32_t);
 
     size_t packed_announces_length;
     int announces_count = pack_announces_list(response + len, sizeof(response) - len, existing_peers_announces,
@@ -2705,6 +2709,27 @@ int gc_get_peer_public_key(const GC_Chat *chat, uint32_t peer_number, uint8_t *p
 
     if (!public_key) {
         return -2;
+    }
+
+    memcpy(public_key, gconn->addr.public_key, ENC_PUBLIC_KEY);
+
+    return 0;
+}
+
+int gc_get_peer_public_key_by_peer_id(const GC_Chat *chat, uint32_t peer_id, uint8_t *public_key)
+{
+    int peer_number = get_peer_number_of_peer_id(chat, peer_id);
+    if (peer_number < 0) {
+        return -1;
+    }
+
+    GC_Connection *gconn = gcc_get_connection(chat, peer_number);
+    if (!gconn) {
+        return -2;
+    }
+
+    if (!public_key) {
+        return -3;
     }
 
     memcpy(public_key, gconn->addr.public_key, ENC_PUBLIC_KEY);
