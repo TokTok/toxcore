@@ -71,7 +71,7 @@ struct GC_Announces_List {
 };
 
 
-GC_Announces_List *new_gca_list();
+GC_Announces_List *new_gca_list(void);
 
 void kill_gca(GC_Announces_List *announces_list);
 
