@@ -4874,11 +4874,27 @@ typedef enum TOX_ERR_GROUP_MOD_REMOVE_PEER {
      */
     TOX_ERR_GROUP_MOD_REMOVE_PEER_FAIL_SEND,
 
+
+    TOX_ERR_GROUP_MOD_REMOVE_PEER_INVALID_BAN_TYPE,
+
 } TOX_ERR_GROUP_MOD_REMOVE_PEER;
 
 
+typedef enum TOX_GROUP_BAN_TYPE {
+
+    TOX_GROUP_BAN_TYPE_IP_PORT,
+
+    TOX_GROUP_BAN_TYPE_PUBLIC_KEY,
+
+    TOX_GROUP_BAN_TYPE_NICK
+
+} TOX_GROUP_BAN_TYPE;
+
+
+bool tox_group_mod_remove_peer(Tox *tox, uint32_t group_number, uint32_t peer_id, TOX_ERR_GROUP_MOD_REMOVE_PEER *error);
+
 /**
- * Kick/ban a peer.
+ * Kick a peer.
  *
  * This function will remove a peer from the caller's peer list and optionally add their IP address
  * to the ban list. It will also send a packet to all group members requesting them
@@ -4886,12 +4902,12 @@ typedef enum TOX_ERR_GROUP_MOD_REMOVE_PEER {
  *
  * @param group_number The group number of the group the ban is intended for.
  * @param peer_id The ID of the peer who will be kicked and/or added to the ban list.
- * @param set_ban Set to true if a ban shall be set on the peer's IP address.
+ * @param set_ban Set to true if a ban shall be set
  *
  * @return true on success.
  */
-bool tox_group_mod_remove_peer(Tox *tox, uint32_t group_number, uint32_t peer_id, bool set_ban,
-                               TOX_ERR_GROUP_MOD_REMOVE_PEER *error);
+bool tox_group_mod_ban_peer(Tox *tox, uint32_t group_number, uint32_t peer_id,
+                            TOX_GROUP_BAN_TYPE ban_type, TOX_ERR_GROUP_MOD_REMOVE_PEER *error);
 
 typedef enum TOX_ERR_GROUP_MOD_REMOVE_BAN {
 

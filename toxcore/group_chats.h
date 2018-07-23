@@ -566,7 +566,7 @@ int gc_founder_set_max_peers(GC_Chat *chat, uint32_t max_peers);
  * Returns -4 if the action failed.
  * Returns -5 if the packet failed to send.
  */
-int gc_remove_peer(struct Messenger *m, int group_number, uint32_t peer_id, bool set_ban);
+int gc_remove_peer(struct Messenger *m, int group_number, uint32_t peer_id, bool set_ban, uint8_t ban_type);
 
 /* Instructs all peers to remove ban_id from their ban list.
  *
