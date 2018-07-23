@@ -3632,11 +3632,46 @@ bool tox_group_mod_set_role(Tox *tox, uint32_t group_number, uint32_t peer_id, T
     return 0;
 }
 
-bool tox_group_mod_remove_peer(Tox *tox, uint32_t group_number, uint32_t peer_id, bool set_ban,
-                               Tox_Err_Group_Mod_Remove_Peer *error)
+bool tox_group_mod_remove_peer(Tox *tox, uint32_t group_number, uint32_t peer_id, Tox_Err_Group_Mod_Remove_Peer *error)
 {
     Messenger *m = tox->m;
-    int ret = gc_remove_peer(m, group_number, peer_id, set_ban);
+    int ret = gc_remove_peer(m, group_number, peer_id, false, -1);
+
+    switch (ret) {
+        case 0:
+        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_OK);
+            return 1;
+
+        case -1:
+        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_GROUP_NOT_FOUND);
+            return 0;
+
+        case -2:
+        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_PEER_NOT_FOUND);
+            return 0;
+
+        case -3:
+        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_PERMISSIONS);
+            return 0;
+
+        case -4:
+        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_FAIL_ACTION);
+            return 0;
+
+        case -5:
+        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_FAIL_SEND);
+            return 0;
+    }
+
+    /* can't happen */
+    return 0;
+}
+
+bool tox_group_mod_ban_peer(Tox *tox, uint32_t group_number, uint32_t peer_id,
+                            TOX_GROUP_BAN_TYPE ban_type, TOX_ERR_GROUP_MOD_REMOVE_PEER *error)
+{
+    Messenger *m = tox->m;
+    int ret = gc_remove_peer(m, group_number, peer_id, true, ban_type);
 
     switch (ret) {
         case 0:
@@ -3661,6 +3696,10 @@ bool tox_group_mod_remove_peer(Tox *tox, uint32_t group_number, uint32_t peer_id
 
         case -5:
             SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_FAIL_SEND);
+            return 0;
+
+        case -6:
+        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_INVALID_BAN_TYPE);
             return 0;
     }
 
