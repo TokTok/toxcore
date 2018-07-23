@@ -43,7 +43,7 @@ struct GC_Ban {
     };
 
     uint8_t     nick[MAX_GC_NICK_SIZE];
-    uint16_t    nick_len;
+    uint16_t    nick_length;
     uint32_t    id;
 };
 
@@ -223,6 +223,10 @@ void sanctions_list_cleanup(GC_Chat *chat);
 
 /* Returns true if the IP address is in the ban list. */
 bool sanctions_list_ip_banned(const GC_Chat *chat, IP_Port *ip_port);
+
+bool sanctions_list_pk_banned(const GC_Chat *chat, const uint8_t *public_key);
+
+bool sanctions_list_nick_banned(const GC_Chat *chat, const uint8_t *nick, size_t nick_length);
 
 /* Returns the number of sanctions list entries that are of type SA_BAN */
 uint32_t sanctions_list_num_banned(const GC_Chat *chat);
