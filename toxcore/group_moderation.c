@@ -138,7 +138,6 @@ bool mod_list_verify_sig_pk(const GC_Chat *chat, const uint8_t *sig_pk)
     }
 
     uint16_t i;
-
     for (i = 0; i < chat->moderation.num_mods; ++i) {
         if (memcmp(chat->moderation.mod_list[i], sig_pk, SIG_PUBLIC_KEY) == 0) {
             return true;
@@ -337,7 +336,7 @@ int sanctions_list_pack(uint8_t *data, uint16_t length, struct GC_Sanction *sanc
 
             memcpy(data + packed_len, sanctions[i].ban_info.nick, MAX_GC_NICK_SIZE);
             packed_len += MAX_GC_NICK_SIZE;
-            net_pack_u16(data + packed_len, sanctions[i].ban_info.nick_len);
+            net_pack_u16(data + packed_len, sanctions[i].ban_info.nick_length);
             packed_len += sizeof(uint16_t);
             net_pack_u32(data + packed_len, sanctions[i].ban_info.id);
             packed_len += sizeof(uint32_t);
@@ -434,7 +433,7 @@ int sanctions_list_unpack(struct GC_Sanction *sanctions, struct GC_Sanction_Cred
 
             memcpy(sanctions[num].ban_info.nick, data + len_processed, MAX_GC_NICK_SIZE);
             len_processed += MAX_GC_NICK_SIZE;
-            net_unpack_u16(data + len_processed, &sanctions[num].ban_info.nick_len);
+            net_unpack_u16(data + len_processed, &sanctions[num].ban_info.nick_length);
             len_processed += sizeof(uint16_t);
             net_unpack_u32(data + len_processed, &sanctions[num].ban_info.id);
             len_processed += sizeof(uint32_t);
@@ -521,7 +520,7 @@ static int sanctions_list_validate_entry(const GC_Chat *chat, struct GC_Sanction
     }
 
     if (sanction->type < SA_OBSERVER) {
-        if (sanction->ban_info.nick_len == 0 || sanction->ban_info.nick_len > MAX_GC_NICK_SIZE) {
+        if (sanction->ban_info.nick_length == 0 || sanction->ban_info.nick_length > MAX_GC_NICK_SIZE) {
             return -1;
         }
 
@@ -805,15 +804,18 @@ bool sanctions_list_is_observer(const GC_Chat *chat, const uint8_t *public_key)
 /* Returns true if sanction already exists in the sanctions list. */
 static bool sanctions_list_entry_exists(const GC_Chat *chat, struct GC_Sanction *sanction)
 {
-    if (sanction->type == SA_BAN_IP_PORT) {
-        return sanctions_list_ip_banned(chat, &sanction->ban_info.ip_port);
+    switch (sanction->type) {
+        case SA_BAN_IP_PORT:
+            return sanctions_list_ip_banned(chat, &sanction->ban_info.ip_port);
+        case SA_BAN_PUBLIC_KEY:
+            return sanctions_list_pk_banned(chat, sanction->ban_info.target_pk);
+        case SA_BAN_NICK:
+            return sanctions_list_nick_banned(chat, sanction->ban_info.nick, sanction->ban_info.nick_length);
+        case SA_OBSERVER:
+            return sanctions_list_is_observer(chat, sanction->ban_info.target_pk);
+        default:
+            return false;
     }
-
-    if (sanction->type == SA_OBSERVER) {
-        return sanctions_list_is_observer(chat, sanction->ban_info.target_pk);
-    }
-
-    return false;
 }
 
 static int sanctions_list_sign_entry(const GC_Chat *chat, struct GC_Sanction *sanction);
@@ -1005,7 +1007,7 @@ int sanctions_list_make_entry(GC_Chat *chat, uint32_t peer_number, struct GC_San
     }
 
     memcpy(sanction->ban_info.nick, chat->group[peer_number].nick, MAX_GC_NICK_SIZE);
-    sanction->ban_info.nick_len = chat->group[peer_number].nick_len;
+    sanction->ban_info.nick_length = chat->group[peer_number].nick_length;
     sanction->ban_info.id = get_new_ban_id(chat);
 
     memcpy(sanction->public_sig_key, get_sig_pk(chat->self_public_key), SIG_PUBLIC_KEY);
@@ -1077,6 +1079,10 @@ void sanctions_list_cleanup(GC_Chat *chat)
  */
 bool sanctions_list_ip_banned(const GC_Chat *chat, IP_Port *ip_port)
 {
+    if (!ip_port) {
+        return false;
+    }
+
     uint32_t i;
 
     for (i = 0; i < chat->moderation.num_sanctions; ++i) {
@@ -1085,6 +1091,44 @@ bool sanctions_list_ip_banned(const GC_Chat *chat, IP_Port *ip_port)
         }
 
         if (ip_equal(&chat->moderation.sanctions[i].ban_info.ip_port.ip, &ip_port->ip)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool sanctions_list_pk_banned(const GC_Chat *chat, const uint8_t *public_key)
+{
+    uint32_t i;
+
+    for (i = 0; i < chat->moderation.num_sanctions; ++i) {
+        if (chat->moderation.sanctions[i].type != SA_BAN_PUBLIC_KEY) {
+            continue;
+        }
+
+        if (!memcpy(chat->moderation.sanctions[i].ban_info.target_pk, public_key, ENC_PUBLIC_KEY)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool sanctions_list_nick_banned(const GC_Chat *chat, const uint8_t *nick, size_t nick_length)
+{
+    uint32_t i;
+
+    for (i = 0; i < chat->moderation.num_sanctions; ++i) {
+        if (chat->moderation.sanctions[i].type != SA_BAN_NICK) {
+            continue;
+        }
+
+        if (nick_length != chat->moderation.sanctions[i].ban_info.nick_length) {
+            continue;
+        }
+
+        if (!memcpy(chat->moderation.sanctions[i].ban_info.nick, nick, nick_length)) {
             return true;
         }
     }
@@ -1135,7 +1179,7 @@ uint16_t sanctions_list_get_ban_nick_length(const GC_Chat *chat, uint32_t ban_id
         }
 
         if (chat->moderation.sanctions[i].ban_info.id == ban_id) {
-            return chat->moderation.sanctions[i].ban_info.nick_len;
+            return chat->moderation.sanctions[i].ban_info.nick_length;
         }
     }
 

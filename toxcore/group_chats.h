@@ -204,7 +204,7 @@ typedef struct GC_SelfPeerInfo {
 typedef struct {
     uint8_t     role;
     uint8_t     nick[MAX_GC_NICK_SIZE];
-    uint16_t    nick_len;
+    uint16_t    nick_length;
     uint8_t     status;
 
     /* Below variables are not sent to other peers */
