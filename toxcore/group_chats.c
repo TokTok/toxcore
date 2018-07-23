@@ -3856,7 +3856,7 @@ static int send_gc_remove_peer(GC_Chat *chat, GC_Connection *gconn, struct GC_Sa
  * Returns -4 if the action failed.
  * Returns -5 if the packet failed to send.
  */
-int gc_remove_peer(Messenger *m, int group_number, uint32_t peer_id, bool set_ban)
+int gc_remove_peer(Messenger *m, int group_number, uint32_t peer_id, bool set_ban, uint8_t ban_type)
 {
     GC_Session *c = m->group_handler;
     GC_Chat *chat = gc_get_group(m->group_handler, group_number);
@@ -3868,7 +3868,6 @@ int gc_remove_peer(Messenger *m, int group_number, uint32_t peer_id, bool set_ba
     int peer_number = get_peer_number_of_peer_id(chat, peer_id);
 
     GC_Connection *gconn = gcc_get_connection(chat, peer_number);
-
     if (gconn == nullptr) {
         return -2;
     }
@@ -3889,6 +3888,10 @@ int gc_remove_peer(Messenger *m, int group_number, uint32_t peer_id, bool set_ba
         return -2;
     }
 
+    if (ban_type >= SA_OBSERVER && set_ban) {
+        return -6;
+    }
+
     if (chat->group[peer_number].role == GR_MODERATOR || chat->group[peer_number].role == GR_OBSERVER) {
         /* this first removes peer from any lists they're on and broadcasts new lists to group */
         if (gc_set_peer_role(m, group_number, peer_id, GR_USER) < 0) {
@@ -3900,7 +3903,7 @@ int gc_remove_peer(Messenger *m, int group_number, uint32_t peer_id, bool set_ba
     struct GC_Sanction sanction;
 
     if (set_ban) {
-        if (sanctions_list_make_entry(chat, peer_number, &sanction, SA_BAN) == -1) {
+        if (sanctions_list_make_entry(chat, peer_number, &sanction, ban_type) == -1) {
             fprintf(stderr, "sanctions_list_make_entry failed\n");
             return -4;
         }
