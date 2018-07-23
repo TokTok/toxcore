@@ -29,22 +29,23 @@
 #define GC_SANCTIONS_CREDENTIALS_SIZE (sizeof(uint32_t) + GC_MODERATION_HASH_SIZE + SIG_PUBLIC_KEY + SIGNATURE_SIZE)
 
 typedef enum Group_Sanction_Type {
-    SA_BAN,
+    SA_BAN_IP_PORT,
+    SA_BAN_PUBLIC_KEY,
+    SA_BAN_NICK,
     SA_OBSERVER,
     SA_INVALID,
 } Group_Sanction_Type;
 
 struct GC_Ban {
-    IP_Port     ip_port;
+    union {
+        IP_Port ip_port;
+        uint8_t target_pk[ENC_PUBLIC_KEY];
+    };
+
     uint8_t     nick[MAX_GC_NICK_SIZE];
     uint16_t    nick_len;
     uint32_t    id;
 };
-
-typedef union GC_Sanction_Info {
-    struct GC_Ban ban_info;    /* Used if type is SA_BAN */
-    uint8_t       target_pk[ENC_PUBLIC_KEY];    /* Used if type is SA_OBSERVER */
-} GC_Sanction_Info;
 
 /* Holds data pertaining to a peer who has been banned or demoted to observer. */
 struct GC_Sanction {
@@ -52,7 +53,7 @@ struct GC_Sanction {
     uint64_t    time_set;
 
     uint8_t     type;
-    GC_Sanction_Info info;
+    struct GC_Ban ban_info;
 
     /* Signature of all above packed data signed by the owner of public_sig_key */
     uint8_t     signature[SIGNATURE_SIZE];
