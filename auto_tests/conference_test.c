@@ -61,13 +61,6 @@ static void handle_conference_invite(
     tox_conference_join(tox, friendnumber, data, length, &err);
     ck_assert_msg(err != TOX_ERR_CONFERENCE_JOIN_OK,
                   "tox #%d: joining groupchat twice should be impossible.", id);
-
-    if (tox_self_get_friend_list_size(tox) > 1) {
-        printf("tox #%d: inviting next friend\n", id);
-        ck_assert_msg(tox_conference_invite(tox, 1, g_num, nullptr) != 0, "failed to invite friend");
-    } else {
-        printf("tox #%d was the last tox, no further invites happening\n", id);
-    }
 }
 
 static uint16_t num_recv;
@@ -212,10 +205,18 @@ static void test_many_group(void)
     ck_assert_msg(tox_conference_set_title(toxes[0], 0, (const uint8_t *)"Gentoo", sizeof("Gentoo") - 1, nullptr) != 0,
                   "failed to set group title");
 
-    // One iteration for all the invitations to happen.
+
     for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
-        tox_iterate(toxes[i], &tox_index[i]);
+        if (tox_self_get_friend_list_size(toxes[i]) > 1) {
+            while (tox_conference_invite(toxes[i], 1, 0, nullptr) == 0) {
+                for (uint16_t j = 0; j < NUM_GROUP_TOX; ++j) {
+                    tox_iterate(toxes[j], &tox_index[j]);
+                }
+            }
+            printf("tox #%d: invited next friend\n", tox_index[i]);
+        }
     }
+    printf("no further invites happening\n");
 
     cur_time = time(nullptr);
     printf("waiting for all toxes to be in the group\n");

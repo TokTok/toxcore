@@ -1062,6 +1062,7 @@ static unsigned int send_lossy_group_peer(Friend_Connections *fr_c, int friendco
  * return 0 on success.
  * return -1 if groupnumber is invalid.
  * return -2 if invite packet failed to send.
+ * return -3 if we are not connected to the group chat.
  */
 int invite_friend(Group_Chats *g_c, uint32_t friendnumber, uint32_t groupnumber)
 {
@@ -1069,6 +1070,10 @@ int invite_friend(Group_Chats *g_c, uint32_t friendnumber, uint32_t groupnumber)
 
     if (!g) {
         return -1;
+    }
+
+    if (g->status != GROUPCHAT_STATUS_CONNECTED) {
+        return -3;
     }
 
     uint8_t invite[INVITE_PACKET_SIZE];
@@ -1081,7 +1086,6 @@ int invite_friend(Group_Chats *g_c, uint32_t friendnumber, uint32_t groupnumber)
         return 0;
     }
 
-    wipe_group_chat(g_c, groupnumber);
     return -2;
 }
 
