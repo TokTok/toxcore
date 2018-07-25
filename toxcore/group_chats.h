@@ -89,12 +89,12 @@ typedef enum GROUP_ROLE {
     GR_INVALID
 } GROUP_ROLE;
 
-typedef enum GROUP_STATUS {
+typedef enum GROUP_PEER_STATUS {
     GS_NONE,
     GS_AWAY,
     GS_BUSY,
     GS_INVALID
-} GROUP_STATUS;
+} GROUP_PEER_STATUS;
 
 typedef enum GROUP_CONNECTION_STATE {
     CS_NONE,
@@ -198,7 +198,7 @@ typedef struct GC_SavedPeerInfo {
 typedef struct GC_SelfPeerInfo {
     uint8_t nick[MAX_GC_NICK_SIZE];
     uint16_t nick_length;
-    GROUP_STATUS user_status;
+    GROUP_PEER_STATUS user_status;
 } GC_SelfPeerInfo;
 
 typedef struct {
