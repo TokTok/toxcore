@@ -2719,43 +2719,36 @@ void tox_callback_group_join_fail(Tox *tox, tox_group_join_fail_cb *function, vo
     tox->group_join_fail_callback = function;
 }
 
-struct Group_Chat_Self_Peer_Info *group_chat_self_peer_info_new(Tox *tox, TOX_ERR_GC_SELF_PEER_INFO *error)
+struct Group_Chat_Self_Peer_Info *tox_group_self_peer_info_new(TOX_ERR_GC_SELF_PEER_INFO *error)
 {
-    Group_Chat_Self_Peer_Info *peer_info = (Group_Chat_Self_Peer_Info*)malloc(sizeof(Group_Chat_Self_Peer_Info));
+    Group_Chat_Self_Peer_Info *peer_info = (Group_Chat_Self_Peer_Info*)calloc(0, sizeof(Group_Chat_Self_Peer_Info));
 
-    if (peer_info) {
-        Messenger *m = tox->m;
-        memcpy(&peer_info->nick, &m->name, m->name_length);
-        peer_info->nick_length = m->name_length;
-        peer_info->user_status = (TOX_USER_STATUS)m->userstatus;
-
-        SET_ERROR_PARAMETER(error, TOX_ERR_GC_SELF_PEER_INFO_OK);
-        return peer_info;
-    }
-
-    SET_ERROR_PARAMETER(error, TOX_ERR_GC_SELF_PEER_INFO_MALLOC);
-    return NULL;
+    SET_ERROR_PARAMETER(error, peer_info ? TOX_ERR_GC_SELF_PEER_INFO_OK : TOX_ERR_GC_SELF_PEER_INFO_MALLOC);
+    return peer_info;
 }
 
 static GC_SelfPeerInfo* create_self_peer_info(const struct Group_Chat_Self_Peer_Info *peer_info)
 {
-    if (!peer_info || !peer_info->nick || !peer_info->nick_length || peer_info->nick_length > TOX_MAX_GC_PEER_LENGTH) {
+    if (!peer_info ||
+        !peer_info->nick ||
+        !peer_info->nick_length ||
+        peer_info->nick_length > TOX_MAX_GC_PEER_LENGTH ||
+        peer_info->user_status > TOX_USER_STATUS_BUSY) {
         return NULL;
     }
 
-    GC_SelfPeerInfo *self_peer_info = (GC_SelfPeerInfo *)malloc(sizeof(GC_SelfPeerInfo));
+    GC_SelfPeerInfo *self_peer_info = (GC_SelfPeerInfo *)calloc(0, sizeof(GC_SelfPeerInfo));
     if (self_peer_info) {
-        self_peer_info->user_status = (Group_Status)peer_info->user_status;
+        self_peer_info->user_status = (Group_Peer_Status)peer_info->user_status;
         self_peer_info->nick_length = peer_info->nick_length;
-        memcpy(&self_peer_info->nick, &peer_info->nick, peer_info->nick_length);
+        memcpy(self_peer_info->nick, peer_info->nick, peer_info->nick_length);
     }
 
     return self_peer_info;
 }
 
-uint32_t tox_group_new(Tox *tox, Tox_Group_Privacy_State privacy_state, const uint8_t *group_name, size_t group_name_length,
-                       struct Group_Chat_Self_Peer_Info *peer_info,
-                       Tox_Err_Group_New *error)
+uint32_t tox_group_new(Tox *tox, Tox_Group_Privacy_State privacy_state, const uint8_t *group_name,
+                       size_t group_name_length, struct Group_Chat_Self_Peer_Info *peer_info, Tox_Err_Group_New *error)
 {
     Messenger *m = tox->m;
     GC_SelfPeerInfo *self_peer_info = create_self_peer_info(peer_info);
@@ -2802,8 +2795,7 @@ uint32_t tox_group_new(Tox *tox, Tox_Group_Privacy_State privacy_state, const ui
 }
 
 uint32_t tox_group_join(Tox *tox, const uint8_t *chat_id, const uint8_t *password, size_t password_length,
-                        struct Group_Chat_Self_Peer_Info *peer_info,
-                        Tox_Err_Group_Join *error)
+                        struct Group_Chat_Self_Peer_Info *peer_info, Tox_Err_Group_Join *error)
 {
     Messenger *m = tox->m;
     GC_SelfPeerInfo *self_peer_info = create_self_peer_info(peer_info);
