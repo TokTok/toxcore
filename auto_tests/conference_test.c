@@ -83,7 +83,6 @@ static void handle_conference_peer_list_changed(
     // we become so
     TOX_ERR_CONFERENCE_PEER_QUERY peer_err;
     tox_conference_peer_number_is_ours(tox, 0, 0, &peer_err);
-
     if (peer_err != TOX_ERR_CONFERENCE_PEER_QUERY_OK) {
         return;
     }
