@@ -3394,8 +3394,8 @@ typedef enum TOX_ERR_GROUP_NEW {
 
 
 struct Group_Chat_Self_Peer_Info {
-    uint8_t nick[TOX_MAX_GC_PEER_LENGTH];
-    uint16_t nick_length;
+    const uint8_t *nick;
+    uint8_t nick_length;
     TOX_USER_STATUS user_status;
 };
 
@@ -3415,7 +3415,7 @@ typedef enum TOX_ERR_GC_SELF_PEER_INFO_NEW {
 
 } TOX_ERR_GC_SELF_PEER_INFO;
 
-struct Group_Chat_Self_Peer_Info *group_chat_self_peer_info_new(Tox *tox, TOX_ERR_GC_SELF_PEER_INFO *error);
+struct Group_Chat_Self_Peer_Info *tox_group_self_peer_info_new(TOX_ERR_GC_SELF_PEER_INFO *error);
 
 /**
  * Creates a new group chat.
