@@ -1774,10 +1774,8 @@ static void handle_direct_packet(Group_Chats *g_c, uint32_t groupnumber, const u
                 return;
             }
 
-            if (!g->close[close_index].closest) {
-                g->close[close_index].type = GROUPCHAT_CLOSE_NONE;
-                kill_friend_connection(g_c->fr_c, g->close[close_index].number);
-            }
+            g->close[close_index].type = GROUPCHAT_CLOSE_NONE;
+            kill_friend_connection(g_c->fr_c, g->close[close_index].number);
         }
 
         break;
