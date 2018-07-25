@@ -70,7 +70,9 @@ typedef enum Groupchat_Close_Type {
 
 typedef struct Groupchat_Close {
     uint8_t type; /* GROUPCHAT_CLOSE_* */
-    uint8_t closest;
+    bool closest; /* connected to peer because it is one of our closest peers */
+    bool introducer; /* connected to peer because it introduced us to the group */
+    bool introduced; /* connected to peer because we introduced it to the group */
     uint32_t number;
     uint16_t group_number;
 } Groupchat_Close;
@@ -91,6 +93,7 @@ typedef struct Group_c {
     Group_Peer *group;
     uint32_t numpeers;
 
+    /* TODO(zugz) rename close to something more accurate - "connected"? */
     Groupchat_Close close[MAX_GROUP_CONNECTIONS];
 
     uint8_t real_pk[CRYPTO_PUBLIC_KEY_SIZE];

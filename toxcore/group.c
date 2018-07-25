@@ -405,8 +405,11 @@ static int connect_to_closest(Group_Chats *g_c, uint32_t groupnumber, void *user
         get_friendcon_public_keys(real_pk, dht_temp_pk, g_c->fr_c, g->close[i].number);
 
         if (!pk_in_closest_peers(g, real_pk)) {
-            g->close[i].type = GROUPCHAT_CLOSE_NONE;
-            kill_friend_connection(g_c->fr_c, g->close[i].number);
+            g->close[i].closest = false;
+            if (!g->close[i].introducer && !g->close[i].introduced) {
+                g->close[i].type = GROUPCHAT_CLOSE_NONE;
+                kill_friend_connection(g_c->fr_c, g->close[i].number);
+            }
         }
     }
 
@@ -740,7 +743,7 @@ static int add_conn_to_groupchat(Group_Chats *g_c, int friendcon_id, uint32_t gr
         }
 
         if (g->close[i].number == (uint32_t)friendcon_id) {
-            g->close[i].closest = closest;
+            g->close[i].closest |= closest;
             return i; /* Already in list. */
         }
     }
@@ -756,6 +759,8 @@ static int add_conn_to_groupchat(Group_Chats *g_c, int friendcon_id, uint32_t gr
     g->close[ind].type = GROUPCHAT_CLOSE_CONNECTION;
     g->close[ind].number = friendcon_id;
     g->close[ind].closest = closest;
+    g->close[ind].introducer = false;
+    g->close[ind].introduced = false;
     // TODO(irungentoo):
     friend_connection_callbacks(g_c->m->fr_c, friendcon_id, GROUPCHAT_CALLBACK_INDEX, &g_handle_status, &g_handle_packet,
                                 &handle_lossy, g_c, friendcon_id);
@@ -1152,6 +1157,7 @@ int join_groupchat(Group_Chats *g_c, uint32_t friendnumber, uint8_t expected_typ
             g->close[close_index].group_number = other_groupnum;
             g->close[close_index].type = GROUPCHAT_CLOSE_ONLINE;
             g->number_joined = friendcon_id;
+            g->close[close_index].introducer = true;
         }
 
         send_peer_query(g_c, friendcon_id, other_groupnum);
@@ -1507,6 +1513,7 @@ static void handle_friend_invite_packet(Messenger *m, uint32_t friendnumber, con
             if (close_index != -1) {
                 g->close[close_index].group_number = other_groupnum;
                 g->close[close_index].type = GROUPCHAT_CLOSE_ONLINE;
+                g->close[close_index].introduced = true;
             }
 
             group_new_peer_send(g_c, groupnum, peer_number, real_pk, temp_pk);
@@ -1609,21 +1616,6 @@ static int handle_packet_online(Group_Chats *g_c, int friendcon_id, const uint8_
     g->close[index].group_number = other_groupnum;
     g->close[index].type = GROUPCHAT_CLOSE_ONLINE;
     send_packet_online(g_c->fr_c, friendcon_id, groupnumber, g->identifier);
-
-    if (g->number_joined != -1 && count_close_connected(g) >= DESIRED_CLOSE_CONNECTIONS) {
-        int fr_close_index = friend_in_close(g, g->number_joined);
-
-        if (fr_close_index == -1) {
-            return -1;
-        }
-
-        if (!g->close[fr_close_index].closest) {
-            g->close[fr_close_index].type = GROUPCHAT_CLOSE_NONE;
-            send_peer_kill(g_c, g->close[fr_close_index].number, g->close[fr_close_index].group_number);
-            kill_friend_connection(g_c->fr_c, g->close[fr_close_index].number);
-            g->number_joined = -1;
-        }
-    }
 
     return 0;
 }
@@ -2065,6 +2057,27 @@ static void handle_message_packet_group(Group_Chats *g_c, uint32_t groupnumber, 
           (They would not have relayed it if they didn't know the peer.) */
         send_peer_query(g_c, g->close[close_index].number, g->close[close_index].group_number);
         return;
+    }
+
+    if (g->number_joined != -1 && count_close_connected(g) >= DESIRED_CLOSE_CONNECTIONS) {
+        int fr_close_index = friend_in_close(g, g->number_joined);
+
+        if (fr_close_index >= 0 && fr_close_index != close_index && !g->close[fr_close_index].closest) {
+            uint8_t real_pk[CRYPTO_PUBLIC_KEY_SIZE];
+            get_friendcon_public_keys(real_pk, nullptr, g_c->fr_c, g->close[fr_close_index].number);
+
+            if (id_equal(g->group[index].real_pk, real_pk)) {
+                /* Received message from peer relayed via another peer, so
+                 * the introduction was successful */
+                g->number_joined = -1;
+                g->close[fr_close_index].introducer = false;
+                if (!g->close[fr_close_index].closest && !g->close[fr_close_index].introduced) {
+                    g->close[fr_close_index].type = GROUPCHAT_CLOSE_NONE;
+                    send_peer_kill(g_c, g->close[fr_close_index].number, g->close[fr_close_index].group_number);
+                    kill_friend_connection(g_c->fr_c, g->close[fr_close_index].number);
+                }
+            }
+        }
     }
 
     uint32_t message_number;
