@@ -227,7 +227,7 @@ static void test_many_group(void)
         printf("]\n");
         fflush(stdout);
 
-        c_sleep(1000);
+        c_sleep(200);
     }
 
     for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
