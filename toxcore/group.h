@@ -39,12 +39,21 @@ typedef enum Groupchat_Type {
 
 #define MAX_LOSSY_COUNT 256
 
+typedef struct Message_Info {
+    uint32_t message_number;
+    uint8_t  message_id;
+} Message_Info;
+
+#define MAX_LAST_MESSAGE_INFOS 8
+
 typedef struct Group_Peer {
     uint8_t     real_pk[CRYPTO_PUBLIC_KEY_SIZE];
     uint8_t     temp_pk[CRYPTO_PUBLIC_KEY_SIZE];
 
     uint64_t    last_recv;
-    uint32_t    last_message_number;
+
+    Message_Info    last_message_infos[MAX_LAST_MESSAGE_INFOS]; /* received messages, strictly decreasing in message_number */
+    uint8_t         num_last_message_infos;
 
     uint8_t     nick[MAX_NAME_LENGTH];
     uint8_t     nick_len;

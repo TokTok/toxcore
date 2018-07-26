@@ -2033,6 +2033,46 @@ int send_group_lossy_packet(const Group_Chats *g_c, uint32_t groupnumber, const 
     return 0;
 }
 
+/* Stores message info in peer->last_message_infos.
+ *
+ * return true if message should be processed;
+ * return false otherwise.
+ */
+static bool check_message_info(uint32_t message_number, uint8_t message_id, Group_Peer *peer)
+{
+    bool ignore_older = (message_id == GROUP_MESSAGE_NAME_ID || message_id == GROUP_MESSAGE_TITLE_ID);
+
+    Message_Info *i;
+    for (i = peer->last_message_infos; i < peer->last_message_infos + peer->num_last_message_infos; ++i) {
+        if (message_number > i->message_number) {
+            break;
+        }
+        if (message_number == i->message_number) {
+            return false;
+        }
+        if (ignore_older && message_id == i->message_id) {
+            return false;
+        }
+    }
+
+    if (i == peer->last_message_infos + MAX_LAST_MESSAGE_INFOS) {
+        return false;
+    }
+
+    if (peer->num_last_message_infos < MAX_LAST_MESSAGE_INFOS) {
+        ++peer->num_last_message_infos;
+    }
+
+    for (Message_Info *j = peer->last_message_infos + peer->num_last_message_infos - 1; j > i; --j) {
+        *j = *(j-1);
+    }
+
+    i->message_number = message_number;
+    i->message_id = message_id;
+
+    return true;
+}
+
 static void handle_message_packet_group(Group_Chats *g_c, uint32_t groupnumber, const uint8_t *data, uint16_t length,
                                         int close_index, void *userdata)
 {
@@ -2084,18 +2124,14 @@ static void handle_message_packet_group(Group_Chats *g_c, uint32_t groupnumber, 
     memcpy(&message_number, data + sizeof(uint16_t), sizeof(message_number));
     message_number = net_ntohl(message_number);
 
-    if (g->group[index].last_message_number == 0) {
-        g->group[index].last_message_number = message_number;
-    } else if (message_number - g->group[index].last_message_number > 64 ||
-               message_number == g->group[index].last_message_number) {
-        return;
-    }
-
-    g->group[index].last_message_number = message_number;
-
     uint8_t message_id = data[sizeof(uint16_t) + sizeof(message_number)];
     const uint8_t *msg_data = data + sizeof(uint16_t) + sizeof(message_number) + 1;
     uint16_t msg_data_len = length - (sizeof(uint16_t) + sizeof(message_number) + 1);
+
+    // FIXME(zugz) update discussion of message numbers in the spec
+    if (!check_message_info(message_number, message_id, &g->group[index])) {
+        return;
+    }
 
     switch (message_id) {
         case GROUP_MESSAGE_PING_ID: {
