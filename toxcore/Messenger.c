@@ -153,16 +153,30 @@ void getaddress(const Messenger *m, uint8_t *address)
     memcpy(address + CRYPTO_PUBLIC_KEY_SIZE + sizeof(nospam), &checksum, sizeof(checksum));
 }
 
+/*
+ * -- CAPABILITIES --
+ */
 static int send_online_packet(Messenger *m, int32_t friendnumber)
 {
     if (friend_not_valid(m, friendnumber)) {
         return 0;
     }
 
+    uint8_t buf[TOX_CAPABILITIES_SIZE + 1];
+    buf[0] = PACKET_ID_ONLINE;
+    net_pack_u64(buf[1], TOX_CAPABILITIES_CURRENT);
+
+    int64_t res = write_cryptpacket(m->net_crypto, friend_connection_crypt_connection_id(m->fr_c,
+                                    m->friendlist[friendnumber].friendcon_id), buf, TOX_CAPABILITIES_SIZE + 1, 0);
+    // TODO: what to do if res == -1 ?
+
     uint8_t packet = PACKET_ID_ONLINE;
     return write_cryptpacket(m->net_crypto, friend_connection_crypt_connection_id(m->fr_c,
                              m->friendlist[friendnumber].friendcon_id), &packet, sizeof(packet), 0) != -1;
 }
+/*
+ * -- CAPABILITIES --
+ */
 
 static int send_offline_packet(Messenger *m, int friendcon_id)
 {
@@ -184,6 +198,7 @@ static int32_t init_new_friend(Messenger *m, const uint8_t *real_pk, uint8_t sta
     }
 
     memset(&m->friendlist[m->numfriends], 0, sizeof(Friend));
+    m->friendlist[m->numfriends].toxcore_capabilities = TOX_CAPABILITY_BASIC;
 
     int friendcon_id = new_friend_connection(m->fr_c, real_pk);
 
@@ -203,6 +218,7 @@ static int32_t init_new_friend(Messenger *m, const uint8_t *real_pk, uint8_t sta
             m->friendlist[i].userstatus = USERSTATUS_NONE;
             m->friendlist[i].is_typing = 0;
             m->friendlist[i].message_id = 0;
+            m->friendlist[i].toxcore_capabilities = TOX_CAPABILITY_BASIC;
             friend_connection_callbacks(m->fr_c, friendcon_id, MESSENGER_CALLBACK_INDEX, &m_handle_status, &m_handle_packet,
                                         &m_handle_lossy_packet, m, i);
 
@@ -2159,6 +2175,23 @@ static int m_handle_status(void *object, int i, uint8_t status, void *userdata)
     return 0;
 }
 
+/* get capabilities of friend's toxcore
+ * return TOX_CAPABILITY_BASIC on any error
+ */
+uint64_t m_get_friend_toxcore_capabilities(const Messenger *m, int32_t friendnumber)
+{
+    if (friend_not_valid(m, friendnumber)) {
+        return TOX_CAPABILITY_BASIC;
+    }
+
+    // TODO: maybe also return the value for OFFLINE friends?
+    if (m->friendlist[friendnumber].status == FRIEND_ONLINE) {
+        return m->friendlist[friendnumber].toxcore_capabilities;
+    }
+
+    return TOX_CAPABILITY_BASIC;
+}
+
 static int m_handle_packet(void *object, int i, const uint8_t *temp, uint16_t len, void *userdata)
 {
     if (len == 0) {
@@ -2171,7 +2204,14 @@ static int m_handle_packet(void *object, int i, const uint8_t *temp, uint16_t le
     uint32_t data_length = len - 1;
 
     if (m->friendlist[i].status != FRIEND_ONLINE) {
-        if (packet_id == PACKET_ID_ONLINE && len == 1) {
+        if (packet_id == PACKET_ID_ONLINE) {
+
+            if ((len >= 1) && (len == TOX_CAPABILITIES_SIZE)) {
+                uint64_t received_caps = TOX_CAPABILITY_BASIC;
+                net_unpack_u64(data, &received_caps);
+                m->friendlist[i].toxcore_capabilities = received_caps;
+            }
+
             set_friend_status(m, i, FRIEND_ONLINE, userdata);
             send_online_packet(m, i);
         } else {

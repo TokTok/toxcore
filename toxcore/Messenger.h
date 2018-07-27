@@ -88,6 +88,17 @@ typedef struct Messenger_Options {
 } Messenger_Options;
 
 
+enum ToxCapabilitiesFlags {
+    TOX_CAPABILITY_BASIC = 1 << 0,
+    TOX_CAPABILITY_PGC = 1 << 1,
+    TOX_CAPABILITY_H264 = 1 << 2,
+    TOX_CAPABILITY_MESSAGE_V2 = 1 << 3,
+};
+
+#define TOX_CAPABILITIES_CURRENT (uint64_t)(TOX_CAPABILITY_BASIC)
+#define TOX_CAPABILITIES_SIZE sizeof(uint64_t)
+
+
 struct Receipts {
     uint32_t packet_num;
     uint32_t msg_id;
@@ -249,6 +260,7 @@ typedef struct Friend {
 
     struct Receipts *receipts_start;
     struct Receipts *receipts_end;
+    uint64_t toxcore_capabilities;
 } Friend;
 
 struct Messenger {
@@ -483,6 +495,11 @@ int m_copy_self_statusmessage(const Messenger *m, uint8_t *buf);
 uint8_t m_get_userstatus(const Messenger *m, int32_t friendnumber);
 uint8_t m_get_self_userstatus(const Messenger *m);
 
+
+/* get capabilities of friend's toxcore
+ * return TOX_CAPABILITY_BASIC on any error
+ */
+uint64_t m_get_friend_toxcore_capabilities(const Messenger *m, int32_t friendnumber);
 
 /* returns timestamp of last time friendnumber was seen online or 0 if never seen.
  * if friendnumber is invalid this function will return UINT64_MAX.
