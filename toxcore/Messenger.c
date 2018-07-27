@@ -164,7 +164,7 @@ static int send_online_packet(Messenger *m, int32_t friendnumber)
 
     uint8_t buf[TOX_CAPABILITIES_SIZE + 1];
     buf[0] = PACKET_ID_ONLINE;
-    net_pack_u64(buf[1], TOX_CAPABILITIES_CURRENT);
+    net_pack_u64(buf + 1, TOX_CAPABILITIES_CURRENT);
 
     int64_t res = write_cryptpacket(m->net_crypto, friend_connection_crypt_connection_id(m->fr_c,
                                     m->friendlist[friendnumber].friendcon_id), buf, TOX_CAPABILITIES_SIZE + 1, 0);
