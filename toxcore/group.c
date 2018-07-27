@@ -790,7 +790,6 @@ int add_groupchat(Group_Chats *g_c, uint8_t type)
     Group_c *g = &g_c->chats[groupnumber];
 
     g->status = GROUPCHAT_STATUS_CONNECTED;
-    g->number_joined = -1;
     g->type = type;
     new_symmetric_key(g->id);
     g->peer_number = 0; /* Founder is peer 0. */
@@ -1143,7 +1142,6 @@ int join_groupchat(Group_Chats *g_c, uint32_t friendnumber, uint8_t expected_typ
 
     uint16_t group_num = net_htons(groupnumber);
     g->status = GROUPCHAT_STATUS_VALID;
-    g->number_joined = -1;
     memcpy(g->real_pk, nc_get_self_public_key(g_c->m->net_crypto), CRYPTO_PUBLIC_KEY_SIZE);
 
     uint8_t response[INVITE_RESPONSE_PACKET_SIZE];
@@ -1162,7 +1160,7 @@ int join_groupchat(Group_Chats *g_c, uint32_t friendnumber, uint8_t expected_typ
         if (close_index != -1) {
             g->close[close_index].group_number = other_groupnum;
             g->close[close_index].type = GROUPCHAT_CLOSE_ONLINE;
-            g->number_joined = friendcon_id;
+            ++g->num_introducer_connections;
             g->close[close_index].introducer = true;
         }
 
@@ -1774,6 +1772,9 @@ static void handle_direct_packet(Group_Chats *g_c, uint32_t groupnumber, const u
                 return;
             }
 
+            if (g->close[close_index].introducer) {
+                --g->num_introducer_connections;
+            }
             g->close[close_index].type = GROUPCHAT_CLOSE_NONE;
             kill_friend_connection(g_c->fr_c, g->close[close_index].number);
         }
@@ -2115,23 +2116,33 @@ static void handle_message_packet_group(Group_Chats *g_c, uint32_t groupnumber, 
         return;
     }
 
-    if (g->number_joined != -1 && count_close_connected(g) >= DESIRED_CLOSE_CONNECTIONS) {
-        const int fr_close_index = friend_in_close(g, g->number_joined);
+    if (g->num_introducer_connections > 0 && count_close_connected(g) >= DESIRED_CLOSE_CONNECTIONS) {
+        for (uint32_t i = 0; i < MAX_GROUP_CONNECTIONS; ++i) {
+            if (g->close[i].type ==  GROUPCHAT_CLOSE_NONE || !g->close[i].introducer
+                    || i == close_index) {
+                continue;
+            }
 
-        if (fr_close_index >= 0 && fr_close_index != close_index && !g->close[fr_close_index].closest) {
             uint8_t real_pk[CRYPTO_PUBLIC_KEY_SIZE];
-            get_friendcon_public_keys(real_pk, nullptr, g_c->fr_c, g->close[fr_close_index].number);
+            get_friendcon_public_keys(real_pk, nullptr, g_c->fr_c, g->close[i].number);
 
             if (id_equal(g->group[index].real_pk, real_pk)) {
                 /* Received message from peer relayed via another peer, so
                  * the introduction was successful */
-                g->number_joined = -1;
-                g->close[fr_close_index].introducer = false;
+                --g->num_introducer_connections;
+                g->close[i].introducer = false;
 
-                if (!g->close[fr_close_index].closest && !g->close[fr_close_index].introduced) {
-                    g->close[fr_close_index].type = GROUPCHAT_CLOSE_NONE;
-                    send_peer_kill(g_c, g->close[fr_close_index].number, g->close[fr_close_index].group_number);
-                    kill_friend_connection(g_c->fr_c, g->close[fr_close_index].number);
+                /* TODO(zugz): connections which are both introduced and
+                 * introducer, which arise when mutually frozen peers rejoin
+                 * each other, never get killed. This is fairly harmless, but a
+                 * blemish. It could be fixed with a new packet indicating that
+                 * the connection is no longer needed by one side, or just with
+                 * a timeout.
+                 */
+                if (!g->close[i].closest && !g->close[i].introduced) {
+                    g->close[i].type = GROUPCHAT_CLOSE_NONE;
+                    send_peer_kill(g_c, g->close[i].number, g->close[i].group_number);
+                    kill_friend_connection(g_c->fr_c, g->close[i].number);
                 }
             }
         }
