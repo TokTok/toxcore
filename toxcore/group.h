@@ -123,7 +123,7 @@ typedef struct Group_c {
 
     uint64_t last_sent_ping;
 
-    int number_joined; /* friendcon_id of person that invited us to the chat. (-1 means none) */
+    uint32_t num_introducer_connections;
 
     void *object;
 
