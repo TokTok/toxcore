@@ -166,8 +166,8 @@ static int send_online_packet(Messenger *m, int32_t friendnumber)
     buf[0] = PACKET_ID_ONLINE;
     net_pack_u64(buf + 1, TOX_CAPABILITIES_CURRENT);
 
-    int64_t res = write_cryptpacket(m->net_crypto, friend_connection_crypt_connection_id(m->fr_c,
-                                    m->friendlist[friendnumber].friendcon_id), buf, TOX_CAPABILITIES_SIZE + 1, 0);
+    write_cryptpacket(m->net_crypto, friend_connection_crypt_connection_id(m->fr_c,
+                      m->friendlist[friendnumber].friendcon_id), buf, TOX_CAPABILITIES_SIZE + 1, 0);
     // TODO: what to do if res == -1 ?
 
     uint8_t packet = PACKET_ID_ONLINE;
