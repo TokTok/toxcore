@@ -2039,6 +2039,7 @@ Message_Info *find_message_slot_or_reject(uint32_t message_number, uint8_t messa
     const bool ignore_older = (message_id == GROUP_MESSAGE_NAME_ID || message_id == GROUP_MESSAGE_TITLE_ID);
 
     Message_Info *i;
+
     for (i = peer->last_message_infos; i < peer->last_message_infos + peer->num_last_message_infos; ++i) {
         if (message_number > i->message_number) {
             break;
@@ -2052,6 +2053,7 @@ Message_Info *find_message_slot_or_reject(uint32_t message_number, uint8_t messa
             return nullptr;
         }
     }
+
     return i;
 }
 
@@ -2076,7 +2078,7 @@ static bool check_message_info(uint32_t message_number, uint8_t message_id, Grou
         ++peer->num_last_message_infos;
     }
 
-    memmove(i+1, i, ((peer->last_message_infos + peer->num_last_message_infos - 1) - i) * sizeof(Message_Info));
+    memmove(i + 1, i, ((peer->last_message_infos + peer->num_last_message_infos - 1) - i) * sizeof(Message_Info));
 
     i->message_number = message_number;
     i->message_id = message_id;
