@@ -1042,6 +1042,113 @@ void tox_iterate(Tox *tox, void *user_data);
 
 /*******************************************************************************
  *
+ * :: Monitoring / collecting statistics
+ *
+ ******************************************************************************/
+
+
+
+/**
+ * The data type of a metric.
+ *
+ * Clients should be able to deal with unknown types outside the range of this
+ * list. If the client does not know about a type, it should ignore that
+ * metric.
+ */
+typedef enum TOX_METRIC_TYPE {
+
+    /**
+     * A boolean metric.
+     */
+    TOX_METRIC_TYPE_BOOL,
+
+    /**
+     * An integral metric represented as 32 bit signed integer.
+     */
+    TOX_METRIC_TYPE_INT,
+
+} TOX_METRIC_TYPE;
+
+
+/**
+ * Get the number of metrics exported by this toxcore.
+ *
+ * Valid metric IDs range from 0 to tox_metric_get_count()-1.
+ */
+uint32_t tox_metric_get_count(const Tox *tox);
+
+/**
+ * Get the name of a metric.
+ *
+ * Metric names are lowercase and words are separated by slashes. E.g.
+ * "net/udp/outgoing/bytes/total". Names can be understood as paths, so
+ * anything starting with "net/" is related to networking, while "sys/" is
+ * related to system calls.
+ *
+ * Metric names or counts do not change throughout a single program
+ * execution, but may change arbitrarily between toxcore versions. Client
+ * code should thus not rely on these names or counts being constant across
+ * program executions.
+ *
+ * @param id The metric id. Must be less than tox_metric_get_count().
+ * @return a valid C string if the id is valid. If the id is out of range,
+ *   this function returns NULL.
+ */
+const char *tox_metric_get_name(const Tox *tox, uint32_t id);
+
+/**
+ * Return the data type of a metric.
+ */
+TOX_METRIC_TYPE tox_metric_get_type(const Tox *tox, uint32_t id);
+
+typedef enum TOX_ERR_METRIC_VALUE {
+
+    /**
+     * The function returned successfully.
+     */
+    TOX_ERR_METRIC_VALUE_OK,
+
+    /**
+     * The metric ID is out of range.
+     */
+    TOX_ERR_METRIC_VALUE_NOT_FOUND,
+
+    /**
+     * The metric with the given ID was not of the type requested.
+     */
+    TOX_ERR_METRIC_VALUE_BAD_TYPE,
+
+} TOX_ERR_METRIC_VALUE;
+
+
+/**
+ * Returns the current value for a boolean metric.
+ *
+ * @param id The metric id. Must be less than tox_metric_get_count().
+ * @return true or false.
+ */
+bool tox_metric_get_bool_value(const Tox *tox, uint32_t id, TOX_ERR_METRIC_VALUE *error);
+
+/**
+ * Returns the current value for an integer metric.
+ *
+ * Values range from INT32_MIN to INT32_MAX.
+ *
+ * Counter values such as ".../bytes/total" may overflow and wrap to 0 at
+ * any point. Monitoring client code should account for this. Note in
+ * particular that internal counters may be uint16_t, so counters may
+ * overflow well before an int32_t would overflow.
+ *
+ * @param id The metric id. Must be less than tox_metric_get_count().
+ * @return a possibly zero integer value if the id is valid. If the id is
+ *   out of range or not referencing an integer metric, the return value is
+ *   unspecified.
+ */
+int32_t tox_metric_get_int_value(const Tox *tox, uint32_t id, TOX_ERR_METRIC_VALUE *error);
+
+
+/*******************************************************************************
+ *
  * :: Internal client information (Tox address/id)
  *
  ******************************************************************************/

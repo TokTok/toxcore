@@ -885,6 +885,113 @@ void iterate(any user_data);
 
 /*******************************************************************************
  *
+ * :: Monitoring / collecting statistics
+ *
+ ******************************************************************************/
+
+
+namespace metric {
+
+  /**
+   * The data type of a metric.
+   *
+   * Clients should be able to deal with unknown types outside the range of this
+   * list. If the client does not know about a type, it should ignore that
+   * metric.
+   */
+  enum class TYPE {
+    /**
+     * A boolean metric.
+     */
+    BOOL,
+    /**
+     * An integral metric represented as 32 bit signed integer.
+     */
+    INT,
+  }
+
+  uint32_t count {
+    /**
+     * Get the number of metrics exported by this toxcore.
+     *
+     * Valid metric IDs range from 0 to $get()-1.
+     */
+    get();
+  }
+
+  string name {
+    /**
+     * Get the name of a metric.
+     *
+     * Metric names are lowercase and words are separated by slashes. E.g.
+     * "net/udp/outgoing/bytes/total". Names can be understood as paths, so
+     * anything starting with "net/" is related to networking, while "sys/" is
+     * related to system calls.
+     *
+     * Metric names or counts do not change throughout a single program
+     * execution, but may change arbitrarily between toxcore versions. Client
+     * code should thus not rely on these names or counts being constant across
+     * program executions.
+     *
+     * @param id The metric id. Must be less than ${count.get}().
+     * @return a valid C string if the id is valid. If the id is out of range,
+     *   this function returns NULL.
+     */
+    get(uint32_t id);
+  }
+
+  TYPE type {
+    /**
+     * Return the data type of a metric.
+     */
+    get(uint32_t id);
+  }
+
+  error for value {
+    /**
+     * The metric ID is out of range.
+     */
+    NOT_FOUND,
+    /**
+     * The metric with the given ID was not of the type requested.
+     */
+    BAD_TYPE,
+  }
+
+  bool bool_value {
+    /**
+     * Returns the current value for a boolean metric.
+     *
+     * @param id The metric id. Must be less than ${count.get}().
+     * @return true or false.
+     */
+    get(uint32_t id) with error for value;
+  }
+
+  int32_t int_value {
+    /**
+     * Returns the current value for an integer metric.
+     *
+     * Values range from INT32_MIN to INT32_MAX.
+     *
+     * Counter values such as ".../bytes/total" may overflow and wrap to 0 at
+     * any point. Monitoring client code should account for this. Note in
+     * particular that internal counters may be uint16_t, so counters may
+     * overflow well before an int32_t would overflow.
+     *
+     * @param id The metric id. Must be less than ${count.get}().
+     * @return a possibly zero integer value if the id is valid. If the id is
+     *   out of range or not referencing an integer metric, the return value is
+     *   unspecified.
+     */
+    get(uint32_t id) with error for value;
+  }
+
+}
+
+
+/*******************************************************************************
+ *
  * :: Internal client information (Tox address/id)
  *
  ******************************************************************************/
