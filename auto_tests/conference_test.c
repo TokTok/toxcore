@@ -76,7 +76,7 @@ static void handle_conference_message(
 
 static void run_conference_tests(Tox **toxes, uint32_t *tox_index)
 {
-    for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
+    for (uint32_t i = 0; i < NUM_GROUP_TOX; ++i) {
         tox_callback_conference_message(toxes[i], &handle_conference_message);
     }
 
@@ -90,7 +90,7 @@ static void run_conference_tests(Tox **toxes, uint32_t *tox_index)
     num_recv = 0;
 
     for (uint8_t j = 0; j < 20; ++j) {
-        for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
+        for (uint32_t i = 0; i < NUM_GROUP_TOX; ++i) {
             tox_iterate(toxes[i], &tox_index[i]);
         }
 
@@ -100,25 +100,25 @@ static void run_conference_tests(Tox **toxes, uint32_t *tox_index)
     c_sleep(25);
     ck_assert_msg(num_recv == NUM_GROUP_TOX, "failed to recv group messages");
 
-    for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
-        for (uint16_t j = 0; j < NUM_GROUP_TOX; ++j) {
+    for (uint32_t i = 0; i < NUM_GROUP_TOX; ++i) {
+        for (uint32_t j = 0; j < NUM_GROUP_TOX; ++j) {
             const int len = tox_conference_peer_get_name_size(toxes[i], 0, j, nullptr);
             ck_assert_msg(len == NAMELEN, "name of #%d according to #%d has incorrect length %d", tox_index[j], tox_index[i], len);
         }
     }
 
-    for (uint16_t k = NUM_GROUP_TOX; k != 0 ; --k) {
+    for (uint32_t k = NUM_GROUP_TOX; k != 0 ; --k) {
         tox_conference_delete(toxes[k - 1], 0, nullptr);
 
         for (uint8_t j = 0; j < 10; ++j) {
-            for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
+            for (uint32_t i = 0; i < NUM_GROUP_TOX; ++i) {
                 tox_iterate(toxes[i], &tox_index[i]);
             }
 
             c_sleep(50);
         }
 
-        for (uint16_t i = 0; i < k - 1; ++i) {
+        for (uint32_t i = 0; i < k - 1; ++i) {
             uint32_t peer_count = tox_conference_peer_count(toxes[i], 0, nullptr);
             ck_assert_msg(peer_count == (k - 1), "\n\tBad number of group peers (post check)."
                           "\n\t\t\tExpected: %u but tox_instance(%u) only has: %u\n\n",
@@ -140,7 +140,7 @@ static void test_many_group(void)
 
     printf("creating %d toxes\n", NUM_GROUP_TOX);
 
-    for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
+    for (uint32_t i = 0; i < NUM_GROUP_TOX; ++i) {
         TOX_ERR_NEW err;
         tox_index[i] = i + 1;
         toxes[i] = tox_new_log(opts, &err, &tox_index[i]);
@@ -186,7 +186,7 @@ static void test_many_group(void)
     while (online_count != NUM_GROUP_TOX) {
         online_count = 0;
 
-        for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
+        for (uint32_t i = 0; i < NUM_GROUP_TOX; ++i) {
             tox_iterate(toxes[i], &tox_index[i]);
             online_count += tox_friend_get_connection_status(toxes[i], 0, nullptr) != TOX_CONNECTION_NONE;
         }
@@ -206,10 +206,10 @@ static void test_many_group(void)
                   "failed to set group title");
 
 
-    for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
+    for (uint32_t i = 0; i < NUM_GROUP_TOX; ++i) {
         if (tox_self_get_friend_list_size(toxes[i]) > 1) {
             while (tox_conference_invite(toxes[i], 1, 0, nullptr) == 0) {
-                for (uint16_t j = 0; j < NUM_GROUP_TOX; ++j) {
+                for (uint32_t j = 0; j < NUM_GROUP_TOX; ++j) {
                     tox_iterate(toxes[j], &tox_index[j]);
                 }
             }
@@ -228,7 +228,7 @@ static void test_many_group(void)
         invited_count = 0;
         printf("current peer counts: [");
 
-        for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
+        for (uint32_t i = 0; i < NUM_GROUP_TOX; ++i) {
             tox_iterate(toxes[i], &tox_index[i]);
             uint32_t peer_count = tox_conference_peer_count(toxes[i], 0, nullptr);
             invited_count += peer_count == NUM_GROUP_TOX;
@@ -246,7 +246,7 @@ static void test_many_group(void)
         c_sleep(200);
     }
 
-    for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
+    for (uint32_t i = 0; i < NUM_GROUP_TOX; ++i) {
         uint32_t peer_count = tox_conference_peer_count(toxes[i], 0, nullptr);
 
         ck_assert_msg(peer_count == NUM_GROUP_TOX, "\n\tBad number of group peers (pre check)."
@@ -266,7 +266,7 @@ static void test_many_group(void)
 
     printf("tearing down toxes\n");
 
-    for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
+    for (uint32_t i = 0; i < NUM_GROUP_TOX; ++i) {
         tox_kill(toxes[i]);
     }
 
