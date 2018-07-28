@@ -1,12 +1,11 @@
 # Proposal
-We add one new invite packet type:
+We add one new packet type:
 
-Rejoin packet
+Rejoin Conference packet
 
 | Length | Contents                        |
 |:-------|:--------------------------------|
-| `1`    | `uint8_t` (0x60)                |
-| `1`    | `uint8_t` (0x04)                |
+| `1`    | `uint8_t` (0x64)                |
 | `33`   | Group chat identifier           |
 
 
@@ -30,18 +29,18 @@ message but send a Peer Query packet back to the peer who directly sent us the
 message. (This is current behaviour; it's mentioned here because it's important
 and not currently mentioned in the spec.)
 
-If we receive a New Peer message for a peer with public key that of an
+If we receive a New Peer message for a peer with public key that of a
 frozen peer, we thaw the peer and update its dht key.
 
 If we receive a Rejoin packet from a peer we thaw the peer if it is frozen,
-update its dht key, and proceed as for an Invite Response, except that we do
-not give the peer a new peer number. In particular, we send out a New Peer
-message and add a temporary groupchat connection for the peer.
+update its dht key, add a temporary groupchat connection for the peer, and,
+once the connection is online, send out a New Peer message announcing the
+peer.
 
 Whenever we make a new friend connection, we check if the public key is that 
-of any frozen peer. If so, we behave as if we were accepting an invite from
-that peer, but with the new packet: namely, we send it a Rejoin packet, add a
-temporary groupchat connection for it, and send it a Peer Query packet.
+of any frozen peer. If so, we send it a Rejoin packet, add a temporary
+groupchat connection for it, and, once the connection is online, send the
+peer a Peer Query packet.
 
 We do the same with a peer when we are setting it as frozen if we have a
 friend connection to it.
