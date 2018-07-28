@@ -2067,9 +2067,7 @@ static bool check_message_info(uint32_t message_number, uint8_t message_id, Grou
         ++peer->num_last_message_infos;
     }
 
-    for (Message_Info *j = peer->last_message_infos + peer->num_last_message_infos - 1; j > i; --j) {
-        *j = *(j - 1);
-    }
+    memmove(i+1, i, ((peer->last_message_infos + peer->num_last_message_infos - 1) - i) * sizeof(Message_Info));
 
     i->message_number = message_number;
     i->message_id = message_id;
