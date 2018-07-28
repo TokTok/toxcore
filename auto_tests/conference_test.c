@@ -18,7 +18,9 @@
 #define NUM_GROUP_TOX 16
 #define GROUP_MESSAGE "Install Gentoo"
 
-#define NAMELEN (5+4)
+#define NAME_FORMAT_STR "Tox #%4d"
+#define NAMELEN 9
+#define NAME_FORMAT "%9s"
 
 static void handle_self_connection_status(
     Tox *tox, TOX_CONNECTION connection_status, void *user_data)
@@ -104,6 +106,13 @@ static void run_conference_tests(Tox **toxes, uint32_t *tox_index)
         for (uint32_t j = 0; j < NUM_GROUP_TOX; ++j) {
             const int len = tox_conference_peer_get_name_size(toxes[i], 0, j, nullptr);
             ck_assert_msg(len == NAMELEN, "name of #%d according to #%d has incorrect length %d", tox_index[j], tox_index[i], len);
+            uint8_t name[NAMELEN];
+            tox_conference_peer_get_name(toxes[i], 0, j, name, nullptr);
+            char expected_name[NAMELEN + 1];
+            snprintf(expected_name, NAMELEN + 1, NAME_FORMAT_STR, tox_index[j]);
+            ck_assert_msg(memcmp(name, expected_name, NAMELEN) == 0,
+                    "name of #%d according to #%d is \"" NAME_FORMAT "\"; expected \"%s\"",
+                    tox_index[j], tox_index[i], name, expected_name);
         }
     }
 
@@ -151,7 +160,7 @@ static void test_many_group(void)
         tox_callback_conference_invite(toxes[i], &handle_conference_invite);
 
         char name[NAMELEN + 1];
-        snprintf(name, NAMELEN + 1, "Tox #%4d", tox_index[i]);
+        snprintf(name, NAMELEN + 1, NAME_FORMAT_STR, tox_index[i]);
         tox_self_set_name(toxes[i], (const uint8_t *) name, NAMELEN, nullptr);
 
         if (i != 0) {
