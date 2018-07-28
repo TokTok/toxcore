@@ -2034,6 +2034,27 @@ int send_group_lossy_packet(const Group_Chats *g_c, uint32_t groupnumber, const 
     return 0;
 }
 
+Message_Info *find_message_slot_or_reject(uint32_t message_number, uint8_t message_id, Group_Peer *peer)
+{
+    const bool ignore_older = (message_id == GROUP_MESSAGE_NAME_ID || message_id == GROUP_MESSAGE_TITLE_ID);
+
+    Message_Info *i;
+    for (i = peer->last_message_infos; i < peer->last_message_infos + peer->num_last_message_infos; ++i) {
+        if (message_number > i->message_number) {
+            break;
+        }
+
+        if (message_number == i->message_number) {
+            return nullptr;
+        }
+
+        if (ignore_older && message_id == i->message_id) {
+            return nullptr;
+        }
+    }
+    return i;
+}
+
 /* Stores message info in peer->last_message_infos.
  *
  * return true if message should be processed;
@@ -2041,22 +2062,10 @@ int send_group_lossy_packet(const Group_Chats *g_c, uint32_t groupnumber, const 
  */
 static bool check_message_info(uint32_t message_number, uint8_t message_id, Group_Peer *peer)
 {
-    const bool ignore_older = (message_id == GROUP_MESSAGE_NAME_ID || message_id == GROUP_MESSAGE_TITLE_ID);
+    Message_Info *i = find_message_slot_or_reject(message_number, message_id, peer);
 
-    Message_Info *i;
-
-    for (i = peer->last_message_infos; i < peer->last_message_infos + peer->num_last_message_infos; ++i) {
-        if (message_number > i->message_number) {
-            break;
-        }
-
-        if (message_number == i->message_number) {
-            return false;
-        }
-
-        if (ignore_older && message_id == i->message_id) {
-            return false;
-        }
+    if (i == nullptr) {
+        return false;
     }
 
     if (i == peer->last_message_infos + MAX_LAST_MESSAGE_INFOS) {
