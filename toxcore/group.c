@@ -2039,7 +2039,16 @@ static void handle_direct_packet(Group_Chats *g_c, uint32_t groupnumber, const u
         break;
 
         case PEER_TITLE_ID: {
-            settitle(g_c, groupnumber, -1, data + 1, length - 1, userdata);
+            Group_c *g = get_group_c(g_c, groupnumber);
+
+            if (!g) {
+                break;
+            }
+
+            if (g->title_len == 0 || g->title_stale) {
+                settitle(g_c, groupnumber, -1, data + 1, length - 1, userdata);
+                g->title_stale = false;
+            }
         }
 
         break;
@@ -2788,6 +2797,9 @@ static int groupchat_freeze_timedout(Group_Chats *g_c, uint32_t groupnumber, voi
             try_send_rejoin(g_c, groupnumber, g->group[i].real_pk);
             delpeer(g_c, groupnumber, i, true, userdata);
         }
+    }
+    if (g->numpeers <= 1) {
+        g->title_stale = true;
     }
 
     return 0;

@@ -103,6 +103,7 @@ typedef struct Group_c {
     uint8_t status;
 
     bool need_send_name;
+    bool title_stale;
 
     Group_Peer *group;
     uint32_t numpeers;
