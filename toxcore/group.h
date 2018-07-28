@@ -49,6 +49,7 @@ typedef struct Message_Info {
 typedef struct Group_Peer {
     uint8_t     real_pk[CRYPTO_PUBLIC_KEY_SIZE];
     uint8_t     temp_pk[CRYPTO_PUBLIC_KEY_SIZE];
+    bool        temp_pk_updated;
 
     uint64_t    last_recv;
 
@@ -101,8 +102,13 @@ typedef void group_on_delete_cb(void *object, uint32_t conference_number);
 typedef struct Group_c {
     uint8_t status;
 
+    bool need_send_name;
+
     Group_Peer *group;
     uint32_t numpeers;
+
+    Group_Peer *frozen;
+    uint32_t numfrozen;
 
     /* TODO(zugz) rename close to something more accurate - "connected"? */
     Groupchat_Close close[MAX_GROUP_CONNECTIONS];
