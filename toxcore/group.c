@@ -2041,7 +2041,7 @@ int send_group_lossy_packet(const Group_Chats *g_c, uint32_t groupnumber, const 
  */
 static bool check_message_info(uint32_t message_number, uint8_t message_id, Group_Peer *peer)
 {
-    bool ignore_older = (message_id == GROUP_MESSAGE_NAME_ID || message_id == GROUP_MESSAGE_TITLE_ID);
+    const bool ignore_older = (message_id == GROUP_MESSAGE_NAME_ID || message_id == GROUP_MESSAGE_TITLE_ID);
 
     Message_Info *i;
 
