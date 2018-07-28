@@ -406,6 +406,7 @@ static int connect_to_closest(Group_Chats *g_c, uint32_t groupnumber, void *user
 
         if (!pk_in_closest_peers(g, real_pk)) {
             g->close[i].closest = false;
+
             if (!g->close[i].introducer && !g->close[i].introduced) {
                 g->close[i].type = GROUPCHAT_CLOSE_NONE;
                 kill_friend_connection(g_c->fr_c, g->close[i].number);
@@ -2043,13 +2044,16 @@ static bool check_message_info(uint32_t message_number, uint8_t message_id, Grou
     bool ignore_older = (message_id == GROUP_MESSAGE_NAME_ID || message_id == GROUP_MESSAGE_TITLE_ID);
 
     Message_Info *i;
+
     for (i = peer->last_message_infos; i < peer->last_message_infos + peer->num_last_message_infos; ++i) {
         if (message_number > i->message_number) {
             break;
         }
+
         if (message_number == i->message_number) {
             return false;
         }
+
         if (ignore_older && message_id == i->message_id) {
             return false;
         }
@@ -2064,7 +2068,7 @@ static bool check_message_info(uint32_t message_number, uint8_t message_id, Grou
     }
 
     for (Message_Info *j = peer->last_message_infos + peer->num_last_message_infos - 1; j > i; --j) {
-        *j = *(j-1);
+        *j = *(j - 1);
     }
 
     i->message_number = message_number;
@@ -2111,6 +2115,7 @@ static void handle_message_packet_group(Group_Chats *g_c, uint32_t groupnumber, 
                  * the introduction was successful */
                 g->number_joined = -1;
                 g->close[fr_close_index].introducer = false;
+
                 if (!g->close[fr_close_index].closest && !g->close[fr_close_index].introduced) {
                     g->close[fr_close_index].type = GROUPCHAT_CLOSE_NONE;
                     send_peer_kill(g_c, g->close[fr_close_index].number, g->close[fr_close_index].group_number);
@@ -2178,6 +2183,7 @@ static void handle_message_packet_group(Group_Chats *g_c, uint32_t groupnumber, 
             if (setnick(g_c, groupnumber, index, msg_data, msg_data_len, userdata, true) == -1) {
                 return;
             }
+
             /* TODO(zugz): it is theoretically possible to receive a Name
              * message from a new peer before the corresponding New Peer
              * message. In this case we send a Query back and so still obtain

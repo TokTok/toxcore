@@ -150,8 +150,8 @@ static void test_many_group(void)
         tox_callback_friend_connection_status(toxes[i], &handle_friend_connection_status);
         tox_callback_conference_invite(toxes[i], &handle_conference_invite);
 
-        char name[NAMELEN+1];
-        snprintf(name,NAMELEN+1,"Tox #%4d",tox_index[i]);
+        char name[NAMELEN + 1];
+        snprintf(name, NAMELEN + 1, "Tox #%4d", tox_index[i]);
         tox_self_set_name(toxes[i], name, NAMELEN, nullptr);
 
         if (i != 0) {
@@ -213,9 +213,11 @@ static void test_many_group(void)
                     tox_iterate(toxes[j], &tox_index[j]);
                 }
             }
+
             printf("tox #%d: invited next friend\n", tox_index[i]);
         }
     }
+
     printf("no further invites happening\n");
 
     cur_time = time(nullptr);

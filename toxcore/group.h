@@ -52,7 +52,8 @@ typedef struct Group_Peer {
 
     uint64_t    last_recv;
 
-    Message_Info    last_message_infos[MAX_LAST_MESSAGE_INFOS]; /* received messages, strictly decreasing in message_number */
+    Message_Info
+    last_message_infos[MAX_LAST_MESSAGE_INFOS]; /* received messages, strictly decreasing in message_number */
     uint8_t         num_last_message_infos;
 
     uint8_t     nick[MAX_NAME_LENGTH];
