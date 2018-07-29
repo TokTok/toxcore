@@ -2206,7 +2206,7 @@ static int m_handle_packet(void *object, int i, const uint8_t *temp, uint16_t le
     if (m->friendlist[i].status != FRIEND_ONLINE) {
         if (packet_id == PACKET_ID_ONLINE) {
             if (len == TOX_CAPABILITIES_SIZE) {
-                uint64_t received_caps = TOX_CAPABILITY_BASIC;
+                uint64_t received_caps;
                 net_unpack_u64(data, &received_caps);
                 m->friendlist[i].toxcore_capabilities = received_caps;
             }
