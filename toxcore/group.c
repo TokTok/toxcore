@@ -2196,16 +2196,6 @@ static void handle_message_packet_group(Group_Chats *g_c, uint32_t groupnumber, 
             if (setnick(g_c, groupnumber, index, msg_data, msg_data_len, userdata, true) == -1) {
                 return;
             }
-
-            /* TODO(zugz): it is theoretically possible to receive a Name
-             * message from a new peer before the corresponding New Peer
-             * message. In this case we send a Query back and so still obtain
-             * the correct name, but we do not forward the Name message to our
-             * peers, meaning that the message might not be properly
-             * disseminated throughout the group and so some peers might not
-             * corectly set the name. Some mechanism should be added to deal
-             * with this possibility.
-             */
         }
         break;
 
