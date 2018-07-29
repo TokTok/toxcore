@@ -780,7 +780,30 @@ static int settitle(Group_Chats *g_c, uint32_t groupnumber, int peer_index, cons
     return 0;
 }
 
-static void set_conns_type_close(Group_Chats *g_c, uint32_t groupnumber, int friendcon_id, uint8_t type)
+/* Check if the group has no online connection, and freeze all peers if so */
+static void check_disconnected(Group_Chats *g_c, uint32_t groupnumber, void *userdata)
+{
+    Group_c *g = get_group_c(g_c, groupnumber);
+
+    if (!g) {
+        return;
+    }
+
+    for (uint32_t i = 0; i < MAX_GROUP_CONNECTIONS; ++i) {
+        if (g->close[i].type == GROUPCHAT_CLOSE_ONLINE) {
+            return;
+        }
+    }
+
+    for (uint32_t i = 0; i < g->numpeers; ++i) {
+        if (id_equal(g->group[i].real_pk, g->real_pk)) {
+            continue;
+        }
+        delpeer(g_c, groupnumber, i, true, userdata);
+    }
+}
+
+static void set_conns_type_close(Group_Chats *g_c, uint32_t groupnumber, int friendcon_id, uint8_t type, void *userdata)
 {
     Group_c *g = get_group_c(g_c, groupnumber);
 
@@ -803,14 +826,15 @@ static void set_conns_type_close(Group_Chats *g_c, uint32_t groupnumber, int fri
             send_packet_online(g_c->fr_c, friendcon_id, groupnumber, g->type, g->id);
         } else {
             g->close[i].type = type;
+            check_disconnected(g_c, groupnumber, userdata);
         }
     }
 }
 /* Set the type for all close connections with friendcon_id */
-static void set_conns_status_groups(Group_Chats *g_c, int friendcon_id, uint8_t type)
+static void set_conns_status_groups(Group_Chats *g_c, int friendcon_id, uint8_t type, void *userdata)
 {
     for (uint16_t i = 0; i < g_c->num_chats; ++i) {
-        set_conns_type_close(g_c, i, friendcon_id, type);
+        set_conns_type_close(g_c, i, friendcon_id, type, userdata);
     }
 }
 
@@ -842,10 +866,10 @@ static int g_handle_status(void *object, int friendcon_id, uint8_t status, void 
     Group_Chats *g_c = (Group_Chats *)object;
 
     if (status) { /* Went online */
-        set_conns_status_groups(g_c, friendcon_id, GROUPCHAT_CLOSE_ONLINE);
+        set_conns_status_groups(g_c, friendcon_id, GROUPCHAT_CLOSE_ONLINE, userdata);
         rejoin_frozen_friend(g_c, friendcon_id);
     } else { /* Went offline */
-        set_conns_status_groups(g_c, friendcon_id, GROUPCHAT_CLOSE_CONNECTION);
+        set_conns_status_groups(g_c, friendcon_id, GROUPCHAT_CLOSE_CONNECTION, userdata);
         // TODO(irungentoo): remove timedout connections?
     }
 
