@@ -15,7 +15,7 @@
 #include "../toxcore/util.h"
 #include "check_compat.h"
 
-#define NUM_GROUP_TOX 16
+#define NUM_GROUP_TOX 32
 #define GROUP_MESSAGE "Install Gentoo"
 
 #define NAME_FORMAT_STR "Tox #%4d"
