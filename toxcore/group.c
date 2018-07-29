@@ -447,7 +447,8 @@ static int connect_to_closest(Group_Chats *g_c, uint32_t groupnumber, void *user
     return 0;
 }
 
-static int get_frozen_index(Group_c *g, uint16_t peer_number) {
+static int get_frozen_index(Group_c *g, uint16_t peer_number)
+{
     for (uint32_t i = 0; i < g->numfrozen; ++i) {
         if (g->frozen[i].peer_number == peer_number) {
             return i;
@@ -571,6 +572,7 @@ static int addpeer(Group_Chats *g_c, uint32_t groupnumber, const uint8_t *real_p
             }
             return peer_index;
         }
+
         return -1;
     }
 
@@ -799,6 +801,7 @@ static void check_disconnected(Group_Chats *g_c, uint32_t groupnumber, void *use
         if (id_equal(g->group[i].real_pk, g->real_pk)) {
             continue;
         }
+
         delpeer(g_c, groupnumber, i, true, userdata);
     }
 }
@@ -1276,7 +1279,7 @@ static int try_send_rejoin(Group_Chats *g_c, uint32_t groupnumber, const uint8_t
     memcpy(packet + 1, g->identifier, GROUP_IDENTIFIER_LENGTH);
 
     if (write_cryptpacket(friendconn_net_crypto(g_c->fr_c), friend_connection_crypt_connection_id(g_c->fr_c, friendcon_id),
-                packet, sizeof(packet), 0) == -1) {
+                          packet, sizeof(packet), 0) == -1) {
         return -1;
     }
 
@@ -1352,6 +1355,7 @@ int join_groupchat(Group_Chats *g_c, uint32_t friendnumber, uint8_t expected_typ
         if (close_index != -1) {
             g->close[close_index].group_number = other_groupnum;
             g->close[close_index].type = GROUPCHAT_CLOSE_ONLINE;
+
             if (!g->close[close_index].introducer) {
                 ++g->num_introducer_connections;
                 g->close[close_index].introducer = true;
@@ -1833,6 +1837,7 @@ static int handle_packet_online(Group_Chats *g_c, int friendcon_id, const uint8_
         get_friendcon_public_keys(real_pk, temp_pk, g_c->fr_c, friendcon_id);
 
         int peer_index = peer_in_chat(g, real_pk);
+
         if (peer_index != -1) {
             group_new_peer_send(g_c, groupnumber, g->group[peer_index].peer_number, real_pk, temp_pk);
         }
@@ -1843,7 +1848,8 @@ static int handle_packet_online(Group_Chats *g_c, int friendcon_id, const uint8_
     return 0;
 }
 
-static int handle_packet_rejoin(Group_Chats *g_c, int friendcon_id, const uint8_t *data, uint16_t length, void *userdata)
+static int handle_packet_rejoin(Group_Chats *g_c, int friendcon_id, const uint8_t *data, uint16_t length,
+                                void *userdata)
 {
     if (length < GROUP_IDENTIFIER_LENGTH) {
         return -1;
@@ -2038,6 +2044,7 @@ static void handle_direct_packet(Group_Chats *g_c, uint32_t groupnumber, const u
             if (g->close[close_index].introducer) {
                 --g->num_introducer_connections;
             }
+
             g->close[close_index].type = GROUPCHAT_CLOSE_NONE;
             kill_friend_connection(g_c->fr_c, g->close[close_index].number);
         }
@@ -2383,6 +2390,7 @@ static void handle_message_packet_group(Group_Chats *g_c, uint32_t groupnumber, 
 
     if (index == -1) {
         index = thaw_frozen_peer(g_c, groupnumber, peer_number, userdata);
+
         if (index == -1) {
             /* We don't know the peer this packet came from so we query the list of peers from that peer.
                (They would not have relayed it if they didn't know the peer.) */
@@ -2817,11 +2825,13 @@ static int groupchat_freeze_timedout(Group_Chats *g_c, uint32_t groupnumber, voi
         if (g->group[i].peer_number == g->peer_number) {
             continue;
         }
+
         if (mono_time_is_timeout(g_c->mono_time, g->group[i].last_recv, GROUP_PING_INTERVAL * 3)) {
             try_send_rejoin(g_c, groupnumber, g->group[i].real_pk);
             delpeer(g_c, groupnumber, i, true, userdata);
         }
     }
+
     if (g->numpeers <= 1) {
         g->title_stale = true;
     }
@@ -2882,6 +2892,7 @@ void do_groupchats(Group_Chats *g_c, void *userdata)
             connect_to_closest(g_c, i, userdata);
             ping_groupchat(g_c, i);
             groupchat_freeze_timedout(g_c, i, userdata);
+
             if (g->need_send_name) {
                 group_name_send(g_c, i, g_c->m->name, g_c->m->name_length);
                 g->need_send_name = false;
