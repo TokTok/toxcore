@@ -161,7 +161,7 @@ static void test_many_group(void)
 
         char name[NAMELEN + 1];
         snprintf(name, NAMELEN + 1, NAME_FORMAT_STR, tox_index[i]);
-        tox_self_set_name(toxes[i], (const uint8_t *) name, NAMELEN, nullptr);
+        tox_self_set_name(toxes[i], (const uint8_t *)name, NAMELEN, nullptr);
 
         if (i != 0) {
             uint8_t dht_key[TOX_PUBLIC_KEY_SIZE];
