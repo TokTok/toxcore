@@ -2039,7 +2039,7 @@ int send_group_lossy_packet(const Group_Chats *g_c, uint32_t groupnumber, const 
     return 0;
 }
 
-Message_Info *find_message_slot_or_reject(uint32_t message_number, uint8_t message_id, Group_Peer *peer)
+static Message_Info *find_message_slot_or_reject(uint32_t message_number, uint8_t message_id, Group_Peer *peer)
 {
     const bool ignore_older = (message_id == GROUP_MESSAGE_NAME_ID || message_id == GROUP_MESSAGE_TITLE_ID);
 
