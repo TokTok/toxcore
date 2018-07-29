@@ -2184,12 +2184,8 @@ uint64_t m_get_friend_toxcore_capabilities(const Messenger *m, int32_t friendnum
         return TOX_CAPABILITY_BASIC;
     }
 
-    // TODO: maybe also return the value for OFFLINE friends?
-    if (m->friendlist[friendnumber].status == FRIEND_ONLINE) {
-        return m->friendlist[friendnumber].toxcore_capabilities;
-    }
-
-    return TOX_CAPABILITY_BASIC;
+    // return toxcore_capabilities for friend, not matter if ONLINE or OFFLINE
+    return m->friendlist[friendnumber].toxcore_capabilities;
 }
 
 static int m_handle_packet(void *object, int i, const uint8_t *temp, uint16_t len, void *userdata)
