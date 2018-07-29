@@ -58,6 +58,7 @@ typedef struct Group_Peer {
 
     uint8_t     nick[MAX_NAME_LENGTH];
     uint8_t     nick_len;
+    bool        nick_updated;
 
     uint16_t peer_number;
 

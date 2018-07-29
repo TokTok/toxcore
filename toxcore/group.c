@@ -622,6 +622,8 @@ static int setnick(Group_Chats *g_c, uint32_t groupnumber, int peer_index, const
         return -1;
     }
 
+    g->group[peer_index].nick_updated = true;
+
     /* same name as already stored? */
     if (g->group[peer_index].nick_len == nick_len) {
         if (nick_len == 0 || !memcmp(g->group[peer_index].nick, nick, nick_len)) {
@@ -1747,7 +1749,9 @@ static int handle_send_peers(Group_Chats *g_c, uint32_t groupnumber, const uint8
             return -1;
         }
 
-        setnick(g_c, groupnumber, peer_index, d, name_length, userdata, true);
+        if (!g->group[peer_index].nick_updated) {
+            setnick(g_c, groupnumber, peer_index, d, name_length, userdata, true);
+        }
         d += name_length;
     }
 
