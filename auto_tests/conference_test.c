@@ -15,10 +15,12 @@
 #include "../toxcore/util.h"
 #include "check_compat.h"
 
-#define NUM_GROUP_TOX 16
+#define NUM_GROUP_TOX 32
+#define NUM_DISCONNECT 8
 #define GROUP_MESSAGE "Install Gentoo"
 
-#define NAME_FORMAT_STR "Tox #%4u"
+#define NAME_FORMAT_STR "Old #%4u"
+#define NEW_NAME_FORMAT_STR "New #%4u"
 #define NAMELEN 9
 #define NAME_FORMAT "%9s"
 
@@ -99,6 +101,53 @@ static void handle_conference_message(
 
 static void run_conference_tests(Tox **toxes, State *state)
 {
+    printf("letting random toxes timeout\n");
+    uint16_t disconnect_toxes[NUM_DISCONNECT];
+
+    for (uint16_t i = 0; i < NUM_DISCONNECT; ++i) {
+        disconnect_toxes[i] = random_u32() % NUM_GROUP_TOX;
+        printf("disconnecting #%u\n", state[disconnect_toxes[i]].id);
+    }
+
+    for (uint16_t j = 0; j < 70 * 5; ++j) {
+        for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
+            bool disconnected = false;
+
+            for (uint16_t k = 0; k < NUM_DISCONNECT; ++k) {
+                if (disconnect_toxes[k] == i) {
+                    disconnected = true;
+                    break;
+                }
+            }
+
+            if (!disconnected) {
+                tox_iterate(toxes[i], &state[i].id);
+            }
+        }
+
+        c_sleep(200);
+    }
+
+    printf("changing names\n");
+
+    for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
+        char name[NAMELEN + 1];
+        snprintf(name, NAMELEN + 1, NEW_NAME_FORMAT_STR, state[i].id);
+        tox_self_set_name(toxes[i], (const uint8_t *)name, NAMELEN, nullptr);
+    }
+
+    printf("reconnecting toxes\n");
+
+    for (uint16_t j = 0; j < 120 * 5; ++j) {
+        for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
+            tox_iterate(toxes[i], &state[i]);
+        }
+
+        c_sleep(200);
+    }
+
+    printf("running conference tests\n");
+
     for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
         tox_callback_conference_message(toxes[i], &handle_conference_message);
     }
@@ -130,11 +179,9 @@ static void run_conference_tests(Tox **toxes, State *state)
                           (unsigned int)len);
             uint8_t name[NAMELEN];
             tox_conference_peer_get_name(toxes[i], 0, j, name, nullptr);
-            char expected_name[NAMELEN + 1];
-            snprintf(expected_name, NAMELEN + 1, NAME_FORMAT_STR, state[j].id);
-            ck_assert_msg(memcmp(name, expected_name, NAMELEN) == 0,
-                          "name of #%u according to #%u is \"" NAME_FORMAT "\"; expected \"%s\"",
-                          state[j].id, state[i].id, name, expected_name);
+            /* Note the toxes will have been reordered */
+            ck_assert_msg(memcmp(name, "New", 3) == 0,
+                          "name of #%u according to #%u not updated", state[j].id, state[i].id);
         }
     }
 

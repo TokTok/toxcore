@@ -566,10 +566,12 @@ static int addpeer(Group_Chats *g_c, uint32_t groupnumber, const uint8_t *real_p
     if (get_frozen_index(g, peer_number) != -1) {
         if (update_peer) {
             peer_index = thaw_frozen_peer(g_c, groupnumber, peer_number, userdata);
+
             if (peer_index != -1) {
                 id_copy(g->group[peer_index].temp_pk, temp_pk);
                 g->group[peer_index].temp_pk_updated = true;
             }
+
             return peer_index;
         }
 
