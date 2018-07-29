@@ -398,11 +398,6 @@ static int expand_chat_id(uint8_t *dest, const uint8_t *chat_id)
     return result;
 }
 
-/* copies GC_PeerAddress info from src to dest */
-static void copy_gc_peer_addr(GC_PeerAddress *dest, const GC_PeerAddress *src)
-{
-    memcpy(dest, src, sizeof(GC_PeerAddress));
-}
 
 /* Copies up to max_addrs peer addresses from chat to addrs.
  *
@@ -504,73 +499,6 @@ static int prune_gc_mod_list(GC_Chat *chat)
     }
 
     return 0;
-}
-
-/* Packs number of peer addresses into data of maxlength length.
- * Note: Only the encryption public key is packed.
- *
- * Return length of packed peer addresses on success.
- * Return -1 on failure.
- */
-static int pack_gc_addresses(uint8_t *data, uint16_t length, const GC_PeerAddress *addrs, uint16_t number)
-{
-    uint16_t i, packed_len = 0;
-
-    for (i = 0; i < number; ++i) {
-        int ipp_size = pack_ip_port(data + packed_len, length - packed_len, &addrs[i].ip_port);
-
-        if (ipp_size == -1) {
-            return -1;
-        }
-
-        packed_len += ipp_size;
-
-        if (packed_len + ENC_PUBLIC_KEY > length) {
-            return -1;
-        }
-
-        memcpy(data + packed_len, addrs[i].public_key, ENC_PUBLIC_KEY);
-        packed_len += ENC_PUBLIC_KEY;
-    }
-
-    return packed_len;
-}
-
-/* Unpack data of length into addrs of size max_num_addrs.
- * Put the length of the data processed in processed_data_len.
- * tcp_enabled sets if TCP nodes are expected (true) or not (false).
- *
- * return number of unpacked addresses on success.
- * return -1 on failure.
- */
-static int unpack_gc_addresses(GC_PeerAddress *addrs, uint16_t max_num_addrs, uint16_t *processed_data_len,
-                               const uint8_t *data, uint16_t length, uint8_t tcp_enabled)
-{
-    uint16_t num = 0, len_processed = 0;
-
-    while (num < max_num_addrs && len_processed < length) {
-        int ipp_size = unpack_ip_port(&addrs[num].ip_port, data + len_processed, length - len_processed, tcp_enabled);
-
-        if (ipp_size == -1) {
-            return -1;
-        }
-
-        len_processed += ipp_size;
-
-        if (len_processed + ENC_PUBLIC_KEY > length) {
-            return -1;
-        }
-
-        memcpy(addrs[num].public_key, data + len_processed, ENC_PUBLIC_KEY);
-        len_processed += ENC_PUBLIC_KEY;
-        ++num;
-    }
-
-    if (processed_data_len) {
-        *processed_data_len = len_processed;
-    }
-
-    return num;
 }
 
 /* Size of peer data that we pack for transfer (nick length must be accounted for separately).
@@ -1942,33 +1870,33 @@ static int send_gc_peer_exchange(const GC_Session *c, GC_Chat *chat, GC_Connecti
     return (ret1 == -1 || ret2 == -1) ? -1 : 0;
 }
 
-static int handle_gc_peer_announcement(Messenger *m, int groupnumber, const uint8_t *data, uint32_t length)
+static int handle_gc_peer_announcement(Messenger *m, int group_number, const uint8_t *data, uint32_t length)
 {
     if (length <= ENC_PUBLIC_KEY) {
         return -1;
     }
     fprintf(stderr, "in handle_gc_peer_announcement\n");
 
-    GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
+    GC_Chat *chat = gc_get_group(m->group_handler, group_number);
     if (!chat) {
         return -1;
     }
 
-    //TODO: check sender and peer pk?
-    uint8_t peer_pk[ENC_PUBLIC_KEY];
-    memcpy(peer_pk, data, ENC_PUBLIC_KEY);
-
-    int peer_number = peer_add(m, groupnumber, NULL, peer_pk);
-    if (peer_number == -2) {
-        return 0;
-    } else if (peer_number == -1) {
+    GC_Announce new_peer_announce;
+    int unpack_result = unpack_announce((uint8_t*)data, length, &new_peer_announce);
+    if (unpack_result == -1) {
         return -1;
     }
 
-    Node_format relays[1];
+    if (sanctions_list_pk_banned(chat, new_peer_announce.peer_public_key)) {
+        return -1;
+    }
 
-    int num_nodes = unpack_nodes(relays, 1, NULL, data + ENC_PUBLIC_KEY, length - ENC_PUBLIC_KEY, 1);
-    if (num_nodes != 1) {
+    IP_Port *ip_port = new_peer_announce.ip_port_is_set ? &new_peer_announce.ip_port : nullptr;
+    int peer_number = peer_add(m, group_number, ip_port, new_peer_announce.peer_public_key);
+    if (peer_number == -2) {
+        return 0;
+    } else if (peer_number == -1) {
         return -1;
     }
 
@@ -1977,9 +1905,17 @@ static int handle_gc_peer_announcement(Messenger *m, int groupnumber, const uint
         return -1;
     }
 
-    add_tcp_relay_connection(chat->tcp_conn, gconn->tcp_connection_num, relays->ip_port,
-                             relays->public_key);
-    save_tcp_relay(gconn, relays);
+    if (new_peer_announce.tcp_relays_count == 0) {
+        return 0;
+    }
+
+    int i;
+    for (i = 0; i < new_peer_announce.tcp_relays_count; i++) {
+        add_tcp_relay_connection(chat->tcp_conn, gconn->tcp_connection_num,
+                                 new_peer_announce.tcp_relays[i].ip_port,
+                                 new_peer_announce.tcp_relays[i].public_key);
+        save_tcp_relay(gconn, &new_peer_announce.tcp_relays[i]);
+    }
 
     return 0;
 }
