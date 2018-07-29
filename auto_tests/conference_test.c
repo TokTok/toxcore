@@ -111,8 +111,8 @@ static void run_conference_tests(Tox **toxes, uint32_t *tox_index)
             char expected_name[NAMELEN + 1];
             snprintf(expected_name, NAMELEN + 1, NAME_FORMAT_STR, tox_index[j]);
             ck_assert_msg(memcmp(name, expected_name, NAMELEN) == 0,
-                    "name of #%d according to #%d is \"" NAME_FORMAT "\"; expected \"%s\"",
-                    tox_index[j], tox_index[i], name, expected_name);
+                          "name of #%d according to #%d is \"" NAME_FORMAT "\"; expected \"%s\"",
+                          tox_index[j], tox_index[i], name, expected_name);
         }
     }
 

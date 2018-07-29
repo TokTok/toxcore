@@ -1752,6 +1752,7 @@ static int handle_send_peers(Group_Chats *g_c, uint32_t groupnumber, const uint8
         if (!g->group[peer_index].nick_updated) {
             setnick(g_c, groupnumber, peer_index, d, name_length, userdata, true);
         }
+
         d += name_length;
     }
 
