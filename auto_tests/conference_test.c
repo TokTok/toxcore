@@ -28,9 +28,9 @@ static void handle_self_connection_status(
     const uint16_t id = *(uint16_t *)user_data;
 
     if (connection_status != TOX_CONNECTION_NONE) {
-        printf("tox #%d: is now connected\n", id);
+        printf("tox #%u: is now connected\n", id);
     } else {
-        printf("tox #%d: is now disconnected\n", id);
+        printf("tox #%u: is now disconnected\n", id);
     }
 }
 
@@ -40,9 +40,9 @@ static void handle_friend_connection_status(
     const uint16_t id = *(uint16_t *)user_data;
 
     if (connection_status != TOX_CONNECTION_NONE) {
-        printf("tox #%d: is now connected to friend %d\n", id, friendnumber);
+        printf("tox #%u: is now connected to friend %u\n", id, friendnumber);
     } else {
-        printf("tox #%d: is now disconnected from friend %d\n", id, friendnumber);
+        printf("tox #%u: is now disconnected from friend %u\n", id, friendnumber);
     }
 }
 
@@ -51,18 +51,18 @@ static void handle_conference_invite(
     const uint8_t *data, size_t length, void *user_data)
 {
     const uint16_t id = *(uint16_t *)user_data;
-    ck_assert_msg(type == TOX_CONFERENCE_TYPE_TEXT, "tox #%d: wrong conference type: %d", id, type);
+    ck_assert_msg(type == TOX_CONFERENCE_TYPE_TEXT, "tox #%u: wrong conference type: %d", id, type);
 
     TOX_ERR_CONFERENCE_JOIN err;
     uint32_t g_num = tox_conference_join(tox, friendnumber, data, length, &err);
 
-    ck_assert_msg(err == TOX_ERR_CONFERENCE_JOIN_OK, "tox #%d: error joining group: %d", id, err);
-    ck_assert_msg(g_num == 0, "tox #%d: group number was not 0", id);
+    ck_assert_msg(err == TOX_ERR_CONFERENCE_JOIN_OK, "tox #%u: error joining group: %d", id, err);
+    ck_assert_msg(g_num == 0, "tox #%u: group number was not 0", id);
 
     // Try joining again. We should only be allowed to join once.
     tox_conference_join(tox, friendnumber, data, length, &err);
     ck_assert_msg(err != TOX_ERR_CONFERENCE_JOIN_OK,
-                  "tox #%d: joining groupchat twice should be impossible.", id);
+                  "tox #%u: joining groupchat twice should be impossible.", id);
 }
 
 static uint16_t num_recv;
@@ -105,13 +105,13 @@ static void run_conference_tests(Tox **toxes, uint32_t *tox_index)
     for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
         for (uint16_t j = 0; j < NUM_GROUP_TOX; ++j) {
             const size_t len = tox_conference_peer_get_name_size(toxes[i], 0, j, nullptr);
-            ck_assert_msg(len == NAMELEN, "name of #%d according to #%d has incorrect length %d", tox_index[j], tox_index[i], len);
+            ck_assert_msg(len == NAMELEN, "name of #%u according to #%u has incorrect length %u", tox_index[j], tox_index[i], len);
             uint8_t name[NAMELEN];
             tox_conference_peer_get_name(toxes[i], 0, j, name, nullptr);
             char expected_name[NAMELEN + 1];
             snprintf(expected_name, NAMELEN + 1, NAME_FORMAT_STR, tox_index[j]);
             ck_assert_msg(memcmp(name, expected_name, NAMELEN) == 0,
-                          "name of #%d according to #%d is \"" NAME_FORMAT "\"; expected \"%s\"",
+                          "name of #%u according to #%u is \"" NAME_FORMAT "\"; expected \"%s\"",
                           tox_index[j], tox_index[i], name, expected_name);
         }
     }
@@ -200,7 +200,7 @@ static void test_many_group(void)
             online_count += tox_friend_get_connection_status(toxes[i], 0, nullptr) != TOX_CONNECTION_NONE;
         }
 
-        printf("currently %d toxes are online\n", online_count);
+        printf("currently %u toxes are online\n", online_count);
         fflush(stdout);
 
         c_sleep(1000);
@@ -209,7 +209,7 @@ static void test_many_group(void)
     printf("friends connected, took %d seconds\n", (int)(time(nullptr) - cur_time));
 
     ck_assert_msg(tox_conference_new(toxes[0], nullptr) != UINT32_MAX, "failed to create group");
-    printf("tox #%d: inviting its first friend\n", tox_index[0]);
+    printf("tox #%u: inviting its first friend\n", tox_index[0]);
     ck_assert_msg(tox_conference_invite(toxes[0], 0, 0, nullptr) != 0, "failed to invite friend");
     ck_assert_msg(tox_conference_set_title(toxes[0], 0, (const uint8_t *)"Gentoo", sizeof("Gentoo") - 1, nullptr) != 0,
                   "failed to set group title");
@@ -223,7 +223,7 @@ static void test_many_group(void)
                 }
             }
 
-            printf("tox #%d: invited next friend\n", tox_index[i]);
+            printf("tox #%u: invited next friend\n", tox_index[i]);
         }
     }
 
@@ -246,7 +246,7 @@ static void test_many_group(void)
                 printf(", ");
             }
 
-            printf("%d", peer_count);
+            printf("%u", peer_count);
         }
 
         printf("]\n");
