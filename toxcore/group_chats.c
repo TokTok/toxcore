@@ -83,7 +83,7 @@ enum {
     GC_PING_PACKET_DATA_SIZE = sizeof(uint32_t) * 4,
 };
 
-static int group_number_valid(const GC_Session *c, int group_number);
+static bool group_number_valid(const GC_Session *c, int group_number);
 static int peer_add(Messenger *m, int group_number, IP_Port *ipp, const uint8_t *public_key);
 static int peer_update(Messenger *m, int group_number, GC_GroupPeer *peer, uint32_t peer_number);
 static int group_delete(GC_Session *c, GC_Chat *chat);
@@ -184,7 +184,7 @@ static bool is_peer_confirmed(const GC_Chat *chat, const uint8_t *peer_pk)
 
 static bool is_self_peer_info_valid(const GC_SelfPeerInfo *peer_info)
 {
-    return peer_info && peer_info->nick_length && peer_info->nick && peer_info->user_status < GS_INVALID;
+    return peer_info && peer_info->nick_length && peer_info->nick_length <= MAX_GC_NICK_SIZE && peer_info->nick && peer_info->user_status < GS_INVALID;
 }
 
 bool is_public_chat(const GC_Chat *chat)
@@ -5679,10 +5679,9 @@ static int init_gc_tcp_connection(Messenger *m, GC_Chat *chat)
     return 0;
 }
 
-static int create_new_group(GC_Session *c, const struct GC_SelfPeerInfo *peer_info, bool founder)
+static int create_new_group(GC_Session *c, const GC_SelfPeerInfo *peer_info, bool founder)
 {
     int group_number = get_new_group_index(c);
-
     if (group_number == -1) {
         return -1;
     }
@@ -5853,12 +5852,12 @@ int gc_group_load(GC_Session *c, struct Saved_Group *save, int group_number)
         return -1;
     }
 
+    memcpy(chat->gcc[0].addr.public_key, chat->self_public_key, EXT_PUBLIC_KEY);
     memcpy(chat->group[0].nick, save->self_nick, MAX_GC_NICK_SIZE);
     chat->group[0].nick_length = net_ntohs(save->self_nick_length);
     chat->group[0].role = save->self_role;
     chat->group[0].status = save->self_status;
     chat->gcc[0].confirmed = true;
-    memcpy(chat->gcc[0].addr.public_key, chat->self_public_key, EXT_PUBLIC_KEY);
 
     if (save->self_role == GR_FOUNDER) {
         if (init_gc_sanctions_creds(chat) == -1) {
@@ -5928,7 +5927,6 @@ int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name
     }
 
     GC_Chat *chat = gc_get_group(c, group_number);
-
     if (chat == nullptr) {
         return -4;
     }
@@ -6092,7 +6090,7 @@ bool gc_rejoin_group(GC_Session *c, GC_Chat *chat)
 
 bool check_group_invite(GC_Session *c, const uint8_t *data, uint32_t length)
 {
-    if (length < CHAT_ID_SIZE) {
+    if (length <= CHAT_ID_SIZE) {
         return false;
     }
 
@@ -6543,14 +6541,14 @@ void kill_dht_groupchats(GC_Session *c)
 /* Return 1 if group_number is a valid group chat index
  * Return 0 otherwise
  */
-static int group_number_valid(const GC_Session *c, int group_number)
+static bool group_number_valid(const GC_Session *c, int group_number)
 {
     if (group_number < 0 || group_number >= c->num_chats) {
-        return 0;
+        return false;
     }
 
     if (c->chats == nullptr) {
-        return 0;
+        return false;
     }
 
     return c->chats[group_number].connection_state != CS_NONE;
@@ -6564,12 +6562,24 @@ uint32_t gc_count_groups(const GC_Session *c)
 {
     uint32_t i, count = 0;
 
-    for (i = 0; i < c->num_chats; i++)
+    for (i = 0; i < c->num_chats; i++) {
         if (c->chats[i].connection_state > CS_NONE && c->chats[i].connection_state < CS_INVALID) {
             count++;
         }
+    }
 
     return count;
+}
+
+void gc_copy_groups_numbers(const GC_Session *c, uint32_t *list)
+{
+    uint32_t i, count = 0;
+
+    for (i = 0; i < c->num_chats; i++) {
+        if (c->chats[i].connection_state > CS_NONE && c->chats[i].connection_state < CS_INVALID) {
+            list[count++] = i;
+        }
+    }
 }
 
 /* Return group_number's GC_Chat pointer on success

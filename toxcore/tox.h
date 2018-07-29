@@ -4037,6 +4037,9 @@ bool tox_group_get_chat_id(const Tox *tox, uint32_t group_number, uint8_t *chat_
  */
 uint32_t tox_group_get_number_groups(const Tox *tox);
 
+void tox_groups_get_list(const Tox *tox, uint32_t *list);
+
+
 /**
  * Return the privacy state of the group designated by the given group number. If group number
  * is invalid, the return value is unspecified.
