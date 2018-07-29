@@ -2069,7 +2069,7 @@ static Message_Info *find_message_slot_or_reject(uint32_t message_number, uint8_
  */
 static bool check_message_info(uint32_t message_number, uint8_t message_id, Group_Peer *peer)
 {
-    Message_Info *i = find_message_slot_or_reject(message_number, message_id, peer);
+    Message_Info *const i = find_message_slot_or_reject(message_number, message_id, peer);
 
     if (i == nullptr) {
         return false;
@@ -2118,7 +2118,7 @@ static void handle_message_packet_group(Group_Chats *g_c, uint32_t groupnumber, 
     }
 
     if (g->number_joined != -1 && count_close_connected(g) >= DESIRED_CLOSE_CONNECTIONS) {
-        int fr_close_index = friend_in_close(g, g->number_joined);
+        const int fr_close_index = friend_in_close(g, g->number_joined);
 
         if (fr_close_index >= 0 && fr_close_index != close_index && !g->close[fr_close_index].closest) {
             uint8_t real_pk[CRYPTO_PUBLIC_KEY_SIZE];
