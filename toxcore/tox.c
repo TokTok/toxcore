@@ -2600,7 +2600,7 @@ struct Group_Chat_Self_Peer_Info *tox_group_self_peer_info_new(TOX_ERR_GC_SELF_P
     return peer_info;
 }
 
-static GC_SelfPeerInfo* create_self_peer_info(const struct Group_Chat_Self_Peer_Info *peer_info)
+static GC_SelfPeerInfo* create_self_peer_info(const Group_Chat_Self_Peer_Info *peer_info)
 {
     if (!peer_info ||
         !peer_info->nick ||
@@ -3169,6 +3169,14 @@ uint32_t tox_group_get_number_groups(const Tox *tox)
 {
     const Messenger *m = tox->m;
     return gc_count_groups(m->group_handler);
+}
+
+void tox_groups_get_list(const Tox *tox, uint32_t *list)
+{
+    const Messenger *m = tox->m;
+    const GC_Session *c = m->group_handler;
+
+    gc_copy_groups_numbers(c, list);
 }
 
 Tox_Group_Privacy_State tox_group_get_privacy_state(const Tox *tox, uint32_t group_number,
