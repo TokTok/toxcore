@@ -153,9 +153,6 @@ void getaddress(const Messenger *m, uint8_t *address)
     memcpy(address + CRYPTO_PUBLIC_KEY_SIZE + sizeof(nospam), &checksum, sizeof(checksum));
 }
 
-/*
- * -- CAPABILITIES --
- */
 static int send_online_packet(Messenger *m, int32_t friendnumber)
 {
     if (friend_not_valid(m, friendnumber)) {
@@ -166,17 +163,18 @@ static int send_online_packet(Messenger *m, int32_t friendnumber)
     buf[0] = PACKET_ID_ONLINE;
     net_pack_u64(buf + 1, TOX_CAPABILITIES_CURRENT);
 
-    write_cryptpacket(m->net_crypto, friend_connection_crypt_connection_id(m->fr_c,
-                      m->friendlist[friendnumber].friendcon_id), buf, TOX_CAPABILITIES_SIZE + 1, 0);
-    // TODO: what to do if res == -1 ?
+    int64_t result = write_cryptpacket(m->net_crypto, friend_connection_crypt_connection_id(m->fr_c,
+                                       m->friendlist[friendnumber].friendcon_id), buf, TOX_CAPABILITIES_SIZE + 1, 0);
+    if (result == -1)
+    {
+        return -1;
+    }
 
     uint8_t packet = PACKET_ID_ONLINE;
+    /* TODO: !! write_cryptpacket returns int64_t which is converted to int here !! */
     return write_cryptpacket(m->net_crypto, friend_connection_crypt_connection_id(m->fr_c,
                              m->friendlist[friendnumber].friendcon_id), &packet, sizeof(packet), 0) != -1;
 }
-/*
- * -- CAPABILITIES --
- */
 
 static int send_offline_packet(Messenger *m, int friendcon_id)
 {
