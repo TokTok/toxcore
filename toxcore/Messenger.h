@@ -90,13 +90,13 @@ typedef struct Messenger_Options {
 /* this means no special capabilities, ToxCapabilitiesFlags == 0 */
 #define TOX_CAPABILITY_BASIC 0
 
-enum ToxCapabilitiesFlags {
-    TOX_CAPABILITY_PGC = 1 << 0,
-    TOX_CAPABILITY_H264 = 1 << 1,
-    TOX_CAPABILITY_MESSAGE_V2 = 1 << 2,
-    TOX_CAPABILITY_NEXT_IMPLEMENTATION = ((uint64_t)1) << 63,
-};
+/* uint64_t ToxCapabilitiesFlags */
+#define TOX_CAPABILITY_PGC                            1  << 0
+#define TOX_CAPABILITY_H264                           1  << 1
+#define TOX_CAPABILITY_MESSAGE_V2                     1  << 2
+#define TOX_CAPABILITY_NEXT_IMPLEMENTATION ((uint64_t)1) << 63
 
+/* hardcoded capabilities of this version/branch of toxcore */
 #define TOX_CAPABILITIES_CURRENT (uint64_t)(TOX_CAPABILITY_BASIC)
 #define TOX_CAPABILITIES_SIZE sizeof(uint64_t)
 
