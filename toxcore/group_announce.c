@@ -25,7 +25,7 @@ static void remove_announces(GC_Announces_List *gc_announces_list, GC_Announces 
 
 GC_Announces_List *new_gca_list()
 {
-    GC_Announces_List *announces_list = (GC_Announces_List*)calloc(0, sizeof(GC_Announces_List));
+    GC_Announces_List *announces_list = (GC_Announces_List*)calloc(1, sizeof(GC_Announces_List));
 
     return announces_list;
 }
