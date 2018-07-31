@@ -18,6 +18,8 @@
 #define NUM_GROUP_TOX 5
 #define GROUP_MESSAGE "Install Gentoo"
 
+#define NAMELEN (5+4)
+
 static void handle_self_connection_status(
     Tox *tox, TOX_CONNECTION connection_status, void *user_data)
 {
@@ -105,6 +107,13 @@ static void run_conference_tests(Tox **toxes, uint32_t *tox_index)
     c_sleep(25);
     ck_assert_msg(num_recv == NUM_GROUP_TOX, "failed to recv group messages");
 
+    for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
+        for (uint16_t j = 0; j < NUM_GROUP_TOX; ++j) {
+            const int len = tox_conference_peer_get_name_size(toxes[i], 0, j, nullptr);
+            ck_assert_msg(len == NAMELEN, "name of #%d to #%d has incorrect length %d", tox_index[j], tox_index[i], len);
+        }
+    }
+
     for (uint16_t k = NUM_GROUP_TOX; k != 0 ; --k) {
         tox_conference_delete(toxes[k - 1], 0, nullptr);
 
@@ -147,6 +156,10 @@ static void test_many_group(void)
         tox_callback_self_connection_status(toxes[i], &handle_self_connection_status);
         tox_callback_friend_connection_status(toxes[i], &handle_friend_connection_status);
         tox_callback_conference_invite(toxes[i], &handle_conference_invite);
+
+        char name[NAMELEN+1];
+        snprintf(name,NAMELEN+1,"Tox #%4d",tox_index[i]);
+        tox_self_set_name(toxes[i], name, NAMELEN, nullptr);
 
         if (i != 0) {
             uint8_t dht_key[TOX_PUBLIC_KEY_SIZE];
