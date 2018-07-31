@@ -3415,7 +3415,7 @@ typedef enum TOX_ERR_GC_SELF_PEER_INFO_NEW {
 
 } TOX_ERR_GC_SELF_PEER_INFO;
 
-struct Group_Chat_Self_Peer_Info *tox_group_self_peer_info_new(TOX_ERR_GC_SELF_PEER_INFO *error);
+Group_Chat_Self_Peer_Info *tox_group_self_peer_info_new(TOX_ERR_GC_SELF_PEER_INFO *error);
 
 /**
  * Creates a new group chat.
@@ -3435,8 +3435,7 @@ struct Group_Chat_Self_Peer_Info *tox_group_self_peer_info_new(TOX_ERR_GC_SELF_P
  * @return group_number on success, UINT32_MAX on failure.
  */
 uint32_t tox_group_new(Tox *tox, TOX_GROUP_PRIVACY_STATE privacy_state, const uint8_t *group_name, size_t group_name_length,
-                       struct Group_Chat_Self_Peer_Info *peer_info,
-                       TOX_ERR_GROUP_NEW *error);
+                       Group_Chat_Self_Peer_Info *peer_info, TOX_ERR_GROUP_NEW *error);
 
 typedef enum TOX_ERR_GROUP_JOIN {
 
@@ -3478,8 +3477,7 @@ typedef enum TOX_ERR_GROUP_JOIN {
  * @return group_number on success, UINT32_MAX on failure.
  */
 uint32_t tox_group_join(Tox *tox, const uint8_t *chat_id, const uint8_t *password, size_t length,
-                        struct Group_Chat_Self_Peer_Info *peer_info,
-                        TOX_ERR_GROUP_JOIN *error);
+                        Group_Chat_Self_Peer_Info *peer_info, TOX_ERR_GROUP_JOIN *error);
 
 
 typedef enum TOX_ERR_GROUP_IS_CONNECTED {
