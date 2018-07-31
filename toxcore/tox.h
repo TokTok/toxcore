@@ -3417,6 +3417,8 @@ typedef enum TOX_ERR_GC_SELF_PEER_INFO_NEW {
 
 Group_Chat_Self_Peer_Info *tox_group_self_peer_info_new(TOX_ERR_GC_SELF_PEER_INFO *error);
 
+void tox_group_self_peer_info_free(Group_Chat_Self_Peer_Info *self_peer_info);
+
 /**
  * Creates a new group chat.
  *

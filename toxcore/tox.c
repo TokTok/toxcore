@@ -2593,10 +2593,15 @@ void tox_callback_group_join_fail(Tox *tox, tox_group_join_fail_cb *function, vo
 
 Group_Chat_Self_Peer_Info *tox_group_self_peer_info_new(TOX_ERR_GC_SELF_PEER_INFO *error)
 {
-    Group_Chat_Self_Peer_Info *peer_info = (Group_Chat_Self_Peer_Info*)calloc(0, sizeof(Group_Chat_Self_Peer_Info));
+    Group_Chat_Self_Peer_Info *peer_info = (Group_Chat_Self_Peer_Info*)calloc(1, sizeof(Group_Chat_Self_Peer_Info));
 
     SET_ERROR_PARAMETER(error, peer_info ? TOX_ERR_GC_SELF_PEER_INFO_OK : TOX_ERR_GC_SELF_PEER_INFO_MALLOC);
     return peer_info;
+}
+
+void tox_group_self_peer_info_free(Group_Chat_Self_Peer_Info *self_peer_info)
+{
+    free(self_peer_info);
 }
 
 static GC_SelfPeerInfo* create_self_peer_info(const Group_Chat_Self_Peer_Info *peer_info)
