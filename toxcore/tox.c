@@ -196,6 +196,8 @@ Tox *tox_new(const struct Tox_Options *options, Tox_Err_New *error)
     }
 
     unsigned int m_error;
+    m_options.state_plugins = NULL;
+    m_options.state_plugins_length = 0;
     Messenger *m = new_messenger(&m_options, &m_error);
 
     if (!new_groupchats(m)) {
