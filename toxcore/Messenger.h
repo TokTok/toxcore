@@ -29,6 +29,7 @@
 #include "friend_requests.h"
 #include "logger.h"
 #include "net_crypto.h"
+#include "state.h"
 
 #define MAX_NAME_LENGTH 128
 /* TODO(irungentoo): this must depend on other variable. */
@@ -52,9 +53,14 @@ typedef enum Message_Type {
 
 typedef struct Messenger Messenger;
 
+// Returns the size of the data
 typedef uint32_t m_state_size_cb(const Messenger *m);
-typedef void m_state_save_cb(const Messenger *m, uint8_t *data);
-typedef void m_state_load_cb(Messenger *m, const uint8_t *data, uint32_t length);
+
+//Returns the new pointer to data
+typedef uint8_t *m_state_save_cb(const Messenger *m, uint8_t *data);
+
+// Returns if there were any erros during loading
+typedef State_Load_Status m_state_load_cb(Messenger *m, const uint8_t *data, uint32_t length);
 
 typedef enum Messenger_State_Type {
     MESSENGER_STATE_TYPE_NOSPAMKEYS    = 1,
@@ -89,7 +95,7 @@ typedef struct Messenger_Options {
     void *log_context;
     void *log_user_data;
 
-    const Messenger_State_Plugin *state_plugins;
+    Messenger_State_Plugin *state_plugins;
     uint8_t state_plugins_length;
 } Messenger_Options;
 
@@ -782,6 +788,14 @@ void do_messenger(Messenger *m, void *userdata);
 uint32_t messenger_run_interval(const Messenger *m);
 
 /* SAVING AND LOADING FUNCTIONS: */
+
+/* Registers a state plugin for saving, loadding, and getting the size of a section of the save
+ *
+ * returns true on success
+ * returns false on error
+ */
+bool m_register_state_plugin(Messenger *m, Messenger_State_Type type, m_state_size_cb size_cb,
+                             m_state_load_cb load_cb, m_state_save_cb save_cb);
 
 /* return size of the messenger data (for saving). */
 uint32_t messenger_size(const Messenger *m);

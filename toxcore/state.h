@@ -34,6 +34,10 @@ typedef State_Load_Status state_load_cb(void *outer, const uint8_t *data, uint32
 int state_load(const Logger *log, state_load_cb *state_load_callback, void *outer,
                const uint8_t *data, uint32_t length, uint16_t cookie_inner);
 
+uint8_t *state_write_section_header(uint8_t *data, uint16_t cookie_type, uint32_t len, uint32_t section_type);
+
+uint8_t *state_write_cookie(uint8_t *data, uint32_t cookie, uint32_t length);
+
 // Utilities for state data serialisation.
 
 uint16_t lendian_to_host16(uint16_t lendian);
