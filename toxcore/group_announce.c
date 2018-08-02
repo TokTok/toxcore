@@ -46,7 +46,6 @@ void do_gca(const Mono_Time *mono_time, GC_Announces_List *gc_announces_list) {
 
     GC_Announces *announces = gc_announces_list->announces;
     while (announces) {
-        fprintf(stderr, "do_gca\n");
         if (announces->last_announce_received_timestamp <= mono_time_get(mono_time) - GC_ANNOUNCE_SAVING_TIMEOUT) {
             GC_Announces *announces_to_delete = announces;
             announces = announces->next_announce;
@@ -372,7 +371,6 @@ GC_Peer_Announce* add_gc_announce(const Mono_Time *mono_time, GC_Announces_List 
     if (!gc_announces_list || !announce) {
         return nullptr;
     }
-    fprintf(stderr, "add_gc_announce\n");
 
     GC_Announces *announces = get_announces_by_chat_id(gc_announces_list, announce->chat_public_key);
     if (!announces) {
@@ -395,4 +393,13 @@ GC_Peer_Announce* add_gc_announce(const Mono_Time *mono_time, GC_Announces_List 
     announces->index++;
     // TODO; lock
     return gc_peer_announce;
+}
+
+bool is_valid_announce(const GC_Announce *announce)
+{
+    if (!announce) {
+        return false;
+    }
+
+    return announce->tcp_relays_count || announce->ip_port_is_set;
 }
