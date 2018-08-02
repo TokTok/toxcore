@@ -1386,6 +1386,12 @@ void tox_callback_conference_invite(Tox *tox, tox_conference_invite_cb *callback
     tox->conference_invite_callback = callback;
 }
 
+void tox_callback_conference_connected(Tox *tox, tox_conference_connected_cb *callback)
+{
+    Messenger *m = tox;
+    g_callback_group_connected((Group_Chats *)m->conferences_object, (g_conference_connected_cb *)callback);
+}
+
 void tox_callback_conference_message(Tox *tox, tox_conference_message_cb *callback)
 {
     tox->conference_message_callback = callback;
