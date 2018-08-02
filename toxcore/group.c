@@ -1193,6 +1193,15 @@ void g_callback_group_invite(Group_Chats *g_c, g_conference_invite_cb *function)
     g_c->invite_callback = function;
 }
 
+/* Set the callback for group connection.
+ *
+ *  Function(Group_Chats *g_c, void *userdata)
+ */
+void g_callback_group_connected(Group_Chats *g_c, g_conference_connected_cb *function)
+{
+    g_c->connected_callback = function;
+}
+
 // TODO(sudden6): function signatures in comments are incorrect
 /* Set the callback for group messages.
  *
@@ -1733,6 +1742,11 @@ static int handle_send_peers(Group_Chats *g_c, uint32_t groupnumber, const uint8
                 && public_key_cmp(d, nc_get_self_public_key(g_c->m->net_crypto)) == 0) {
             g->peer_number = peer_num;
             g->status = GROUPCHAT_STATUS_CONNECTED;
+
+            if (g_c->connected_callback) {
+                g_c->connected_callback(g_c->m, groupnumber, userdata);
+            }
+
             group_name_send(g_c, groupnumber, g_c->m->name, g_c->m->name_length);
         }
 

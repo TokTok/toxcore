@@ -2136,6 +2136,17 @@ namespace conference {
 
 
   /**
+   * This event is triggered when the client successfully connects to a conference.
+   */
+  event connected const {
+    /**
+     * @param conference_number The conference number of the conference to which we have connected
+     */
+    typedef void(uint32_t conference_number);
+  }
+
+
+  /**
    * This event is triggered when the client receives a conference message.
    */
   event message const {

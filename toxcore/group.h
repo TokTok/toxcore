@@ -133,6 +133,7 @@ typedef struct Group_c {
 
 typedef void g_conference_invite_cb(Messenger *m, uint32_t friend_number, int type, const uint8_t *cookie,
                                     size_t length, void *user_data);
+typedef void g_conference_connected_cb(Messenger *m, uint32_t conference_number, void *user_data);
 typedef void g_conference_message_cb(Messenger *m, uint32_t conference_number, uint32_t peer_number, int type,
                                      const uint8_t *message, size_t length, void *user_data);
 typedef void peer_name_cb(Messenger *m, uint32_t conference_number, uint32_t peer_number, const uint8_t *name,
@@ -155,6 +156,7 @@ typedef struct Group_Chats {
     uint16_t num_chats;
 
     g_conference_invite_cb *invite_callback;
+    g_conference_connected_cb *connected_callback;
     g_conference_message_cb *message_callback;
     peer_name_cb *peer_name_callback;
     peer_list_changed_cb *peer_list_changed_callback;
@@ -170,6 +172,12 @@ typedef struct Group_Chats {
  *  data of length is what needs to be passed to join_groupchat().
  */
 void g_callback_group_invite(Group_Chats *g_c, g_conference_invite_cb *function);
+
+/* Set the callback for group connection.
+ *
+ *  Function(Group_Chats *g_c, void *userdata)
+ */
+void g_callback_group_connected(Group_Chats *g_c, g_conference_connected_cb *function);
 
 /* Set the callback for group messages.
  *
