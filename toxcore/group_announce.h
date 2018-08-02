@@ -135,4 +135,6 @@ int pack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce *ann
 
 int unpack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce *announce);
 
+bool is_valid_announce(const GC_Announce *announce);
+
 #endif /* GROUP_ANNOUNCE_H */
