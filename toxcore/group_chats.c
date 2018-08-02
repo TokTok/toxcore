@@ -1005,13 +1005,17 @@ static int handle_gc_sync_response(Messenger *m, int group_number, int peer_numb
                 continue;
             }
 
+            if (!is_valid_announce(curr_announce)) {
+                continue;
+            }
+
             IP_Port *ip_port = curr_announce->ip_port_is_set ? &curr_announce->ip_port : nullptr;
             int new_peer_number = peer_add(c->messenger, group_number, ip_port, curr_announce->peer_public_key);
             if (new_peer_number < 0) {
                 continue;
             }
 
-            GC_Connection *peer_gconn = gcc_get_connection(chat, peer_number);
+            GC_Connection *peer_gconn = gcc_get_connection(chat, new_peer_number);
             if (!peer_gconn) {
                 continue;
             }
@@ -1026,8 +1030,9 @@ static int handle_gc_sync_response(Messenger *m, int group_number, int peer_numb
             fprintf(stderr, "handle_gc_sync_response - added peer %s\n", id_toa(curr_announce->peer_public_key));
 
             if (curr_announce->ip_port_is_set && !is_tcp_mode) {
-                send_gc_handshake_packet(chat, new_peer_number, GH_REQUEST, HS_PEER_INFO_EXCHANGE, chat->join_type);
-                gconn->send_message_id++;
+                send_gc_handshake_packet(chat, (uint32_t)new_peer_number, GH_REQUEST, HS_PEER_INFO_EXCHANGE,
+                                         chat->join_type);
+                peer_gconn->send_message_id++;
             } else {
                 peer_gconn->pending_handshake_type = HS_PEER_INFO_EXCHANGE;
                 peer_gconn->is_pending_handshake_response = peer_gconn->is_oob_handshake = false;
@@ -1179,7 +1184,7 @@ static int handle_gc_sync_request(const Messenger *m, int group_number, int peer
 
     uint8_t sender_relay_data[MAX_GC_PACKET_SIZE];
     net_pack_u32(sender_relay_data, chat->self_public_key_hash);
-    int announce_length = pack_announce(sender_relay_data + HASH_ID_BYTES, MAX_GC_PACKET_SIZE - HASH_ID_BYTES,
+    int announce_length = pack_announce(sender_relay_data + HASH_ID_BYTES, sizeof(sender_relay_data) - HASH_ID_BYTES,
                                         &new_peer_announce);
     if (announce_length == -1) {
         return -1;
@@ -1885,21 +1890,30 @@ static int handle_gc_peer_announcement(Messenger *m, int group_number, const uin
     GC_Announce new_peer_announce;
     int unpack_result = unpack_announce((uint8_t*)data, length, &new_peer_announce);
     if (unpack_result == -1) {
+        fprintf(stderr, "in handle_gc_peer_announcement unpack error\n");
         return -1;
     }
 
     if (sanctions_list_pk_banned(chat, new_peer_announce.peer_public_key)) {
+        fprintf(stderr, "in handle_gc_peer_announcement banned\n");
         return -1;
     }
 
     IP_Port *ip_port = new_peer_announce.ip_port_is_set ? &new_peer_announce.ip_port : nullptr;
+    if (!ip_port && !new_peer_announce.tcp_relays_count) {
+        fprintf(stderr, "in handle_gc_peer_announcement invalid info\n");
+        return -1;
+    }
+
     int peer_number = peer_add(m, group_number, ip_port, new_peer_announce.peer_public_key);
     if (peer_number == -2) {
         return 0;
     } else if (peer_number == -1) {
+        fprintf(stderr, "peer add failed\n");
         return -1;
     }
 
+    fprintf(stderr, "peer add %s\n", id_toa(new_peer_announce.peer_public_key));
     GC_Connection *gconn = gcc_get_connection(chat, peer_number);
     if (!gconn) {
         return -1;
@@ -4479,10 +4493,12 @@ static int handle_gc_handshake_request(Messenger *m, int group_number, IP_Port *
         if (!is_public_chat(chat) && !is_peer_confirmed(chat, sender_pk)) {
             return -1; // peer is not allowed to join this chat
         }
+
         peer_number = peer_add(m, chat->group_number, ipp, sender_pk);
         if (peer_number < 0) {
             return -1;
         }
+
         is_new_peer = true;
     } else  {
         GC_Connection *gconn = gcc_get_connection(chat, peer_number);
@@ -4495,6 +4511,7 @@ static int handle_gc_handshake_request(Messenger *m, int group_number, IP_Port *
             if (peer_number < 0) {
                 return -1;
             }
+
             is_new_peer = true;
         }
     }
@@ -6584,6 +6601,10 @@ int add_peers_from_announces(const GC_Session *gc_session, GC_Chat *chat, GC_Ann
     int i, j, added_peers = 0;
     for (i = 0; i < gc_announces_count; i++) {
         GC_Announce *curr_announce = &announces[i];
+
+        if (!is_valid_announce(curr_announce)) {
+            continue;
+        }
 
         bool ip_port_set = curr_announce->ip_port_is_set;
         IP_Port *ip_port = ip_port_set ? &curr_announce->ip_port : nullptr;
