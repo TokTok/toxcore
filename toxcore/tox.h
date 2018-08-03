@@ -5064,13 +5064,16 @@ size_t tox_group_ban_get_list_size(const Tox *tox, uint32_t group_number, TOX_ER
  */
 bool tox_group_ban_get_list(const Tox *tox, uint32_t group_number, uint32_t *list, TOX_ERR_GROUP_BAN_QUERY *error);
 
+TOX_GROUP_BAN_TYPE tox_group_ban_get_type(const Tox *tox, uint32_t group_number, uint32_t ban_id,
+                                          TOX_ERR_GROUP_BAN_QUERY *error);
+
 /**
  * Return the length of the name for the ban list entry designated by ban_id, in the
  * group designated by the given group number. If either group_number or ban_id is invalid,
  * the return value is unspecified.
  */
-size_t tox_group_ban_get_name_size(const Tox *tox, uint32_t group_number, uint32_t ban_id,
-                                   TOX_ERR_GROUP_BAN_QUERY *error);
+size_t tox_group_ban_get_target_size(const Tox *tox, uint32_t group_number, uint32_t ban_id,
+                                     TOX_ERR_GROUP_BAN_QUERY *error);
 
 /**
  * Write the name of the ban entry designated by ban_id in the group designated by the
@@ -5080,8 +5083,8 @@ size_t tox_group_ban_get_name_size(const Tox *tox, uint32_t group_number, uint32
  *
  * @return true on success.
  */
-bool tox_group_ban_get_name(const Tox *tox, uint32_t group_number, uint32_t ban_id, uint8_t *name,
-                            TOX_ERR_GROUP_BAN_QUERY *error);
+bool tox_group_ban_get_target(const Tox *tox, uint32_t group_number, uint32_t ban_id, char *target,
+                              TOX_ERR_GROUP_BAN_QUERY *error);
 
 /**
  * Return a time stamp indicating the time the ban was set, for the ban list entry
