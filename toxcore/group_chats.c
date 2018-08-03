@@ -1984,7 +1984,7 @@ static int handle_gc_peer_info_response(Messenger *m, int group_number, uint32_t
     }
 
     if (chat->shared_state.version > 0
-        && sanctions_list_nick_banned(chat, peer.nick, peer.nick_length)
+        && sanctions_list_nick_banned(chat, peer.nick)
         && !mod_list_verify_sig_pk(chat, get_sig_pk(gconn->addr.public_key))) {
         return -1;
     }

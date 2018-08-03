@@ -39,11 +39,10 @@ typedef enum GROUP_SANCTION_TYPE {
 struct GC_Ban {
     union {
         IP_Port ip_port;
-        uint8_t target_pk[ENC_PUBLIC_KEY];
-    };
+        uint8_t pk[ENC_PUBLIC_KEY];
+        uint8_t nick[MAX_GC_NICK_SIZE];
+    } target;
 
-    uint8_t     nick[MAX_GC_NICK_SIZE];
-    uint16_t    nick_length;
     uint32_t    id;
 };
 
@@ -58,6 +57,9 @@ struct GC_Sanction {
     /* Signature of all above packed data signed by the owner of public_sig_key */
     uint8_t     signature[SIGNATURE_SIZE];
 };
+
+typedef struct GC_Ban GC_Ban;
+typedef struct GC_Sanction GC_Sanction;
 
 /* Unpacks data into the moderator list.
  * data should contain num_mods entries of size GC_MOD_LIST_ENTRY_SIZE.
@@ -226,10 +228,12 @@ bool sanctions_list_ip_banned(const GC_Chat *chat, IP_Port *ip_port);
 
 bool sanctions_list_pk_banned(const GC_Chat *chat, const uint8_t *public_key);
 
-bool sanctions_list_nick_banned(const GC_Chat *chat, const uint8_t *nick, size_t nick_length);
+bool sanctions_list_nick_banned(const GC_Chat *chat, const uint8_t *nick);
 
 /* Returns the number of sanctions list entries that are of type SA_BAN */
 uint32_t sanctions_list_num_banned(const GC_Chat *chat);
+
+int sanctions_list_get_ban_type(const GC_Chat *chat, uint32_t ban_id);
 
 /* Fills list with all valid ban ID's. */
 void sanctions_list_get_ban_list(const GC_Chat *chat, uint32_t *list);
@@ -237,14 +241,14 @@ void sanctions_list_get_ban_list(const GC_Chat *chat, uint32_t *list);
 /* Returns the nick length of the ban entry associted with ban_id on success.
  * Returns 0 if ban_id does not exist.
  */
-uint16_t sanctions_list_get_ban_nick_length(const GC_Chat *chat, uint32_t ban_id);
+uint16_t sanctions_list_get_ban_target_length(const GC_Chat *chat, uint32_t ban_id);
 
 /* Copies the nick associated with ban_id to nick.
  *
  * Returns 0 on success.
  * Returns -1 if ban_id does not exist.
  */
-int sanctions_list_get_ban_nick(const GC_Chat *chat, uint32_t ban_id, uint8_t *nick);
+bool sanctions_list_get_ban_target(const GC_Chat *chat, uint32_t ban_id, char *target);
 
 /* Returns a timestamp indicating when the ban designated by ban_id was set.
  * Returns 0 if ban_id does not exist.
