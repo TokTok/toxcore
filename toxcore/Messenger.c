@@ -2950,7 +2950,7 @@ bool m_register_state_plugin(Messenger *m, Messenger_State_Type type, m_state_si
     return true;
 }
 
-uint32_t m_plugin_size(const Messenger *m, Messenger_State_Type type){
+static uint32_t m_plugin_size(const Messenger *m, Messenger_State_Type type){
     for (uint8_t i = 0; i < m->options.state_plugins_length; i++) {
         const Messenger_State_Plugin plugin = m->options.state_plugins[i];
         if (plugin.type == type){
