@@ -2932,7 +2932,7 @@ bool m_register_state_plugin(Messenger *m, Messenger_State_Type type, m_state_si
         return false;
     }
 
-    m->options.state_plugins = temp;
+    m->options.state_plugins = (Messenger_State_Plugin *) temp;
     m->options.state_plugins_length++;
 
     const uint8_t index = m->options.state_plugins_length - 1;
@@ -2989,6 +2989,7 @@ void messenger_save(const Messenger *m, uint8_t *data)
 // nospam state plugin
 static uint32_t nospam_keys_size(const Messenger *m)
 {
+    (void) m;
     return (sizeof(uint32_t) + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_SECRET_KEY_SIZE);
 }
 
@@ -3196,6 +3197,7 @@ static State_Load_Status load_status_message(Messenger *m, const uint8_t *data, 
 // status state plugin
 static uint32_t status_size(const Messenger *m)
 {
+    (void) m;
     return 1;
 }
 
@@ -3220,6 +3222,7 @@ static State_Load_Status load_status(Messenger *m, const uint8_t *data, uint32_t
 // TCP Relay state plugin
 static uint32_t tcp_relay_size(const Messenger *m)
 {
+    (void) m;
     return NUM_SAVED_TCP_RELAYS * packed_node_size(net_family_tcp_ipv6);
 }
 
@@ -3253,6 +3256,7 @@ static State_Load_Status load_tcp_replays(Messenger *m, const uint8_t *data, uin
 // path node state plugin
 static uint32_t path_node_size(const Messenger *m)
 {
+    (void) m;
     return NUM_SAVED_PATH_NODES * packed_node_size(net_family_tcp_ipv6);
 }
 
@@ -3292,16 +3296,21 @@ static State_Load_Status load_path_nodes(Messenger *m, const uint8_t *data, uint
 // end state plugin
 static uint32_t end_size(const Messenger *m)
 {
+    (void) m;
     return 0;
 }
 
 static uint8_t *save_end(const Messenger *m, uint8_t *data)
 {
+    (void) m;
     return state_write_section_header(data, MESSENGER_STATE_COOKIE_TYPE, 0, MESSENGER_STATE_TYPE_END);
 }
 
 static State_Load_Status load_end(Messenger *m, const uint8_t *data, uint32_t length)
 {
+    (void) m;
+    (void) data;
+
     if (length != 0) {
         return STATE_LOAD_STATUS_ERROR;
     }
