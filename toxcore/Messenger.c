@@ -2946,6 +2946,19 @@ bool m_register_state_plugin(Messenger *m, Messenger_State_Type type, m_state_si
     return true;
 }
 
+uint32_t m_plugin_size(const Messenger *m, Messenger_State_Type type){
+    for (uint8_t i = 0; i < m->options.state_plugins_length; i++) {
+        const Messenger_State_Plugin plugin = m->options.state_plugins[i];
+        if (plugin.type == type){
+            return plugin.size(m);
+        }
+    }
+
+    LOGGER_ERROR(m->log, "Unknown type encountered: %u", type);
+
+    return UINT32_MAX;
+}
+
 /*  return size of the messenger data (for saving) */
 uint32_t messenger_size(const Messenger *m)
 {
@@ -2996,7 +3009,7 @@ static State_Load_Status load_nospam_keys(Messenger *m, const uint8_t *data, uin
 
 static uint8_t *save_nospam_keys(const Messenger *m, uint8_t *data)
 {
-    const uint32_t len = m->options.state_plugins[MESSENGER_STATE_TYPE_NOSPAMKEYS].size(m);
+    const uint32_t len = m_plugin_size(m, MESSENGER_STATE_TYPE_NOSPAMKEYS);
     assert(sizeof(get_nospam(m->fr)) == sizeof(uint32_t));
     data = state_write_section_header(data, MESSENGER_STATE_COOKIE_TYPE, len, MESSENGER_STATE_TYPE_NOSPAMKEYS);
     *(uint32_t *)data = get_nospam(m->fr);
@@ -3013,7 +3026,7 @@ static uint32_t m_dht_size(const Messenger *m)
 
 static uint8_t *save_dht(const Messenger *m, uint8_t *data)
 {
-    const uint32_t len = dht_size(m->dht);
+    const uint32_t len = m_plugin_size(m, MESSENGER_STATE_TYPE_DHT);
     data = state_write_section_header(data, MESSENGER_STATE_COOKIE_TYPE, len, MESSENGER_STATE_TYPE_DHT);
     dht_save(m->dht, data);
     data += len;
@@ -3034,7 +3047,7 @@ static uint32_t saved_friendslist_size(const Messenger *m)
 
 static uint8_t *friends_list_save(const Messenger *m, uint8_t *data)
 {
-    const uint32_t len = saved_friendslist_size(m);
+    const uint32_t len = m_plugin_size(m, MESSENGER_STATE_TYPE_FRIENDS);
     data = state_write_section_header(data, MESSENGER_STATE_COOKIE_TYPE, len, MESSENGER_STATE_TYPE_FRIENDS);
 
     uint32_t num = 0;
@@ -3139,7 +3152,7 @@ static uint32_t name_size(const Messenger *m)
 
 static uint8_t *save_name(const Messenger *m, uint8_t *data)
 {
-    const uint32_t len = m->name_length;
+    const uint32_t len = m_plugin_size(m, MESSENGER_STATE_TYPE_NAME);
     data = state_write_section_header(data, MESSENGER_STATE_COOKIE_TYPE, len, MESSENGER_STATE_TYPE_NAME);
     memcpy(data, m->name, len);
     data += len;
@@ -3163,7 +3176,7 @@ static uint32_t status_message_size(const Messenger *m)
 
 static uint8_t *save_status_message(const Messenger *m, uint8_t *data)
 {
-    const uint32_t len = m->statusmessage_length;
+    const uint32_t len = m_plugin_size(m, MESSENGER_STATE_TYPE_STATUSMESSAGE);
     data = state_write_section_header(data, MESSENGER_STATE_COOKIE_TYPE, len, MESSENGER_STATE_TYPE_STATUSMESSAGE);
     memcpy(data, m->statusmessage, len);
     data += len;
@@ -3187,7 +3200,7 @@ static uint32_t status_size(const Messenger *m)
 
 static uint8_t *save_status(const Messenger *m, uint8_t *data)
 {
-    const uint32_t len = 1;
+    const uint32_t len = m_plugin_size(m, MESSENGER_STATE_TYPE_STATUS);
     data = state_write_section_header(data, MESSENGER_STATE_COOKIE_TYPE, len, MESSENGER_STATE_TYPE_STATUS);
     *data = m->userstatus;
     data += len;
