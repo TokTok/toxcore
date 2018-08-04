@@ -2926,13 +2926,13 @@ static uint32_t m_state_plugins_size(const Messenger *m)
 bool m_register_state_plugin(Messenger *m, Messenger_State_Type type, m_state_size_cb size_cb, m_state_load_cb load_cb,
                              m_state_save_cb save_cb)
 {
-    void *temp = realloc(m->options.state_plugins, sizeof(Messenger_State_Plugin) * (m->options.state_plugins_length + 1));
+    Messenger_State_Plugin *temp = (Messenger_State_Plugin *) realloc(m->options.state_plugins, sizeof(Messenger_State_Plugin) * (m->options.state_plugins_length + 1));
 
     if (!temp) {
         return false;
     }
 
-    m->options.state_plugins = (Messenger_State_Plugin *) temp;
+    m->options.state_plugins = temp;
     m->options.state_plugins_length++;
 
     const uint8_t index = m->options.state_plugins_length - 1;
