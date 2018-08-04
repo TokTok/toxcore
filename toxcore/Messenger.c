@@ -2946,10 +2946,12 @@ bool m_register_state_plugin(Messenger *m, Messenger_State_Type type, m_state_si
     return true;
 }
 
-static uint32_t m_plugin_size(const Messenger *m, Messenger_State_Type type){
+static uint32_t m_plugin_size(const Messenger *m, Messenger_State_Type type)
+{
     for (uint8_t i = 0; i < m->options.state_plugins_length; i++) {
         const Messenger_State_Plugin plugin = m->options.state_plugins[i];
-        if (plugin.type == type){
+
+        if (plugin.type == type) {
             return plugin.size(m);
         }
     }
@@ -2987,12 +2989,12 @@ void messenger_save(const Messenger *m, uint8_t *data)
 // nospam state plugin
 static uint32_t nospam_keys_size(const Messenger *m)
 {
-    return sizeof(uint32_t) + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_SECRET_KEY_SIZE;
+    return (sizeof(uint32_t) + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_SECRET_KEY_SIZE);
 }
 
 static State_Load_Status load_nospam_keys(Messenger *m, const uint8_t *data, uint32_t length)
 {
-    if (length == CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_SECRET_KEY_SIZE + sizeof(uint32_t)) {
+    if (length == m_plugin_size(m, MESSENGER_STATE_TYPE_NOSPAMKEYS)) {
         set_nospam(m->fr, *(const uint32_t *)data);
         load_secret_key(m->net_crypto, (&data[sizeof(uint32_t)]) + CRYPTO_PUBLIC_KEY_SIZE);
 
@@ -3000,7 +3002,6 @@ static State_Load_Status load_nospam_keys(Messenger *m, const uint8_t *data, uin
             return STATE_LOAD_STATUS_ERROR;
         }
     } else {
-        printf("Invalid length: %u\n", length);
         return STATE_LOAD_STATUS_ERROR;    /* critical */
     }
 
@@ -3312,7 +3313,7 @@ static State_Load_Status messenger_load_state_callback(void *outer, const uint8_
 {
     Messenger *m = (Messenger *)outer;
 
-    for (size_t i = 0; i < m->options.state_plugins_length; i++) {
+    for (uint8_t i = 0; i < m->options.state_plugins_length; i++) {
         const Messenger_State_Plugin plugin = m->options.state_plugins[i];
 
         if (plugin.type == type) {
