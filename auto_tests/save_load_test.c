@@ -89,10 +89,20 @@ static void test_few_clients(void)
     printf("tox clients connected took %ld seconds\n", time(nullptr) - con_time);
 
     const size_t save_size1 = tox_get_savedata_size(tox2);
-    ck_assert_msg(save_size1 != 0, "save is invalid size %u", (unsigned)save_size1);
+    const size_t save_size2 = tox_get_savedata_size(tox2);
     printf("%u\n", (unsigned)save_size1);
+    ck_assert_msg(save_size1 != 0, "save is invalid size %u", (unsigned)save_size1);
+    ck_assert_msg(save_size1 == save_size2,
+                  "saving twice does not yield the same save data size: %u != %u", (unsigned)save_size1, (unsigned)save_size2);
+
     VLA(uint8_t, save1, save_size1);
     tox_get_savedata(tox2, save1);
+    VLA(uint8_t, save2, save_size2);
+    tox_get_savedata(tox2, save2);
+
+    ck_assert_msg(memcmp(save1, save2, save_size1) == 0,
+                  "saving twice does not result in the same save data");
+
     tox_kill(tox2);
 
     struct Tox_Options *const options = tox_options_new(nullptr);
@@ -100,6 +110,25 @@ static void test_few_clients(void)
     tox_options_set_savedata_data(options, save1, save_size1);
     tox_options_set_local_discovery_enabled(options, false);
     tox2 = tox_new_log(options, nullptr, &index[1]);
+
+    const size_t save_size3 = tox_get_savedata_size(tox2);
+    VLA(uint8_t, save3, save_size3);
+    tox_get_savedata(tox2, save3);
+
+    tox_kill(tox2);
+
+    tox_options_set_savedata_data(options, save3, save_size3);
+    tox2 = tox_new_log(options, nullptr, &index[1]);
+
+    const size_t save_size4 = tox_get_savedata_size(tox2);
+    ck_assert_msg(save_size4 == save_size3,
+                  "loaded savedata saved again is not the same size: %u != %u", (unsigned)save_size4, (unsigned)save_size3);
+    VLA(uint8_t, save4, save_size4);
+    tox_get_savedata(tox2, save4);
+
+    ck_assert_msg(memcmp(save4, save3, save_size3) == 0,
+                  "loaded savedata saved again is not the same data");
+
     cur_time = time(nullptr);
     off = 1;
 
