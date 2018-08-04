@@ -526,3 +526,7 @@ target_link_modules(Messenger_test toxcore misc_tools)
 add_executable(random_testing ${CPUFEATURES}
   testing/random_testing.cc)
 target_link_modules(random_testing toxcore misc_tools)
+
+add_executable(save-generator
+  other/save-generator.c)
+target_link_modules(save-generator toxcore misc_tools)
