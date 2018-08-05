@@ -90,33 +90,12 @@ int is_timeout(uint64_t timestamp, uint64_t timeout)
 }
 
 
-//!TOKSTYLE-
-// No global mutable state in Tokstyle.
-#ifdef OS_WIN32
-static uint64_t last_monotime;
-static uint64_t add_monotime;
-#endif
-//!TOKSTYLE+
-
 /* return current monotonic time in milliseconds (ms). */
 uint64_t current_time_monotonic(void)
 {
     uint64_t time;
 #ifdef OS_WIN32
-    uint64_t old_add_monotime = add_monotime;
-    time = (uint64_t)GetTickCount() + add_monotime;
-
-    /* Check if time has decreased because of 32 bit wrap from GetTickCount(), while avoiding false positives from race
-     * conditions when multiple threads call this function at once */
-    if (time + 0x10000 < last_monotime) {
-        uint32_t add = ~0;
-        /* use old_add_monotime rather than simply incrementing add_monotime, to handle the case that many threads
-         * simultaneously detect an overflow */
-        add_monotime = old_add_monotime + add;
-        time += add;
-    }
-
-    last_monotime = time;
+    time = GetTickCount64();
 #else
     struct timespec monotime;
 #if defined(__linux__) && defined(CLOCK_MONOTONIC_RAW)
