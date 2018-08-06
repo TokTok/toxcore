@@ -1121,6 +1121,10 @@ bool sanctions_list_ip_banned(const GC_Chat *chat, IP_Port *ip_port)
 
 bool sanctions_list_pk_banned(const GC_Chat *chat, const uint8_t *public_key)
 {
+    if (!public_key) {
+        return false;
+    }
+
     uint32_t i;
 
     for (i = 0; i < chat->moderation.num_sanctions; ++i) {
@@ -1140,6 +1144,10 @@ bool sanctions_list_pk_banned(const GC_Chat *chat, const uint8_t *public_key)
 
 bool sanctions_list_nick_banned(const GC_Chat *chat, const uint8_t *nick)
 {
+    if (!nick) {
+        return false;
+    }
+
     uint32_t i;
 
     for (i = 0; i < chat->moderation.num_sanctions; ++i) {
