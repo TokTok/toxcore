@@ -5197,8 +5197,9 @@ static int peer_update(Messenger *m, int group_number, GC_GroupPeer *peer, uint3
     }
 
     int nick_num = get_nick_peer_number(chat, peer->nick, peer->nick_length);
+    bool is_nick_banned = sanctions_list_nick_banned(chat, peer->nick);
 
-    if (nick_num != -1 && nick_num != peer_number) {   /* duplicate nick */
+    if ((nick_num != -1 && nick_num != peer_number) || is_nick_banned) {   /* duplicate or banned nick */
         if (c->peer_exit) {
             (*c->peer_exit)(m, group_number, chat->group[peer_number].peer_id, nullptr, 0, c->peer_exit_userdata);
         }
