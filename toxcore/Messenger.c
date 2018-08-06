@@ -2686,7 +2686,7 @@ static void try_pack_gc_data(const Messenger *m, const GC_Chat *chat, Onion_Frie
     GC_Public_Announce announce;
     int tcp_num = tcp_copy_connected_relays(chat->tcp_conn, announce.base_announce.tcp_relays,
                                             MAX_ANNOUNCED_TCP_RELAYS);
-    IP_Port self_ip_port = {0};
+    IP_Port self_ip_port = {{{0}}};
     int copy_ip_port_result = ipport_self_copy(m->dht, &self_ip_port);
     fprintf(stderr, "copy_ip_port_result %d tcp %d\n", copy_ip_port_result, tcp_num);
     bool ip_port_is_set = copy_ip_port_result == 0;
@@ -2710,6 +2710,7 @@ static void try_pack_gc_data(const Messenger *m, const GC_Chat *chat, Onion_Frie
         if (tcp_num > 0) {
             memcpy((void*)&chat->announced_node, &announce.base_announce.tcp_relays[0], sizeof(Node_format));
         }
+
         add_gc_announce(m->mono_time, m->group_announce, &announce);
         fprintf(stderr, "pack success\n");
     } else {
