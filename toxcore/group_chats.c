@@ -5195,9 +5195,11 @@ static int peer_update(Messenger *m, int group_number, GC_GroupPeer *peer, uint3
         return -1;
     }
 
-    peer->peer_id = chat->group[peer_number].peer_id;
-    memcpy(&chat->group[peer_number], peer, sizeof(GC_GroupPeer));
-    chat->group[peer_number].ignore = false;
+    GC_GroupPeer *curr_peer = &chat->group[peer_number];
+    curr_peer->role = peer->role;
+    curr_peer->status = peer->status;
+    curr_peer->nick_length = peer->nick_length;
+    memcpy(curr_peer->nick, peer->nick, MAX_GC_NICK_SIZE);
 
     return peer_number;
 }
