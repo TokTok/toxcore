@@ -8,7 +8,7 @@
 #include "../../toxcore/ping.h"
 #include "../../toxcore/util.h"
 #include "../../toxcore/Messenger.h"
-#include "../misc_tools.c"
+#include "../misc_tools.h"
 
 #include <stdio.h>
 #include <stdlib.h>

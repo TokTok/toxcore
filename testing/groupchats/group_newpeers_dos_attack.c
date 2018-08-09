@@ -9,10 +9,11 @@
 #include "../../toxcore/util.h"
 #include "../../toxcore/group_chats.h"
 #include "../../toxcore/Messenger.h"
-#include "../misc_tools.c"
+#include "../misc_tools.h"
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define min(a,b) ((a)>(b)?(b):(a))
 #define PEERCOUNT   20

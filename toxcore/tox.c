@@ -83,6 +83,8 @@
 
 struct Tox {
     Messenger *m;
+    void *non_const_user_data;
+
     tox_self_connection_status_cb *self_connection_status_callback;
     tox_friend_name_cb *friend_name_callback;
     tox_friend_status_message_cb *friend_status_message_callback;
@@ -104,6 +106,21 @@ struct Tox {
     tox_conference_peer_list_changed_cb *conference_peer_list_changed_callback;
     tox_friend_lossy_packet_cb *friend_lossy_packet_callback;
     tox_friend_lossless_packet_cb *friend_lossless_packet_callback;
+    tox_group_peer_name_cb *group_peer_name_callback;
+    tox_group_peer_status_cb *group_peer_status_callback;
+    tox_group_topic_cb *group_topic_callback;
+    tox_group_privacy_state_cb *group_privacy_state_callback;
+    tox_group_peer_limit_cb *group_peer_limit_callback;
+    tox_group_password_cb *group_password_callback;
+    tox_group_message_cb *group_message_callback;
+    tox_group_private_message_cb *group_private_message_callback;
+    tox_group_custom_packet_cb *group_custom_packet_callback;
+    tox_group_invite_cb *group_invite_callback;
+    tox_group_peer_join_cb *group_peer_join_callback;
+    tox_group_peer_exit_cb *group_peer_exit_callback;
+    tox_group_self_join_cb *group_self_join_callback;
+    tox_group_join_fail_cb *group_join_fail_callback;
+    tox_group_moderation_cb *group_moderation_callback;
 };
 
 struct Tox_Userdata {
@@ -316,6 +333,154 @@ static void tox_friend_lossless_packet_handler(Messenger *m, uint32_t friend_num
     }
 }
 
+static void tox_group_peer_name_handler(Messenger *m, uint32_t groupnumber, uint32_t peer_id, const uint8_t *name,
+                                        size_t length, void *user_data)
+{
+    Tox *tox = (Tox *)user_data;
+
+    if (tox->group_peer_name_callback != nullptr) {
+        tox->group_peer_name_callback(tox, groupnumber, peer_id, name, length, tox->non_const_user_data);
+    }
+}
+
+static void tox_group_peer_status_handler(Messenger *m, uint32_t groupnumber, uint32_t peer_id, unsigned int status,
+        void *user_data)
+{
+    Tox *tox = (Tox *)user_data;
+
+    if (tox->group_peer_status_callback != nullptr) {
+        tox->group_peer_status_callback(tox, groupnumber, peer_id, (TOX_USER_STATUS)status, tox->non_const_user_data);
+    }
+}
+
+static void tox_group_topic_handler(Messenger *m, uint32_t groupnumber, uint32_t peer_id, const uint8_t *topic,
+                                    size_t length, void *user_data)
+{
+    Tox *tox = (Tox *)user_data;
+
+    if (tox->group_topic_callback != nullptr) {
+        tox->group_topic_callback(tox, groupnumber, peer_id, topic, length, tox->non_const_user_data);
+    }
+}
+
+static void tox_group_privacy_state_handler(Messenger *m, uint32_t groupnumber, unsigned int privacy_state,
+        void *user_data)
+{
+    Tox *tox = (Tox *)user_data;
+
+    if (tox->group_privacy_state_callback != nullptr) {
+        tox->group_privacy_state_callback(tox, groupnumber, (TOX_GROUP_PRIVACY_STATE)privacy_state, tox->non_const_user_data);
+    }
+}
+
+static void tox_group_peer_limit_handler(Messenger *m, uint32_t groupnumber, uint32_t peer_limit, void *user_data)
+{
+    Tox *tox = (Tox *)user_data;
+
+    if (tox->group_peer_limit_callback != nullptr) {
+        tox->group_peer_limit_callback(tox, groupnumber, peer_limit, tox->non_const_user_data);
+    }
+}
+
+static void tox_group_password_handler(Messenger *m, uint32_t groupnumber, const uint8_t *password, size_t length,
+                                       void *user_data)
+{
+    Tox *tox = (Tox *)user_data;
+
+    if (tox->group_password_callback != nullptr) {
+        tox->group_password_callback(tox, groupnumber, password, length, tox->non_const_user_data);
+    }
+}
+
+static void tox_group_message_handler(Messenger *m, uint32_t groupnumber, uint32_t peer_id, unsigned int type,
+                                      const uint8_t *message, size_t length, void *user_data)
+{
+    Tox *tox = (Tox *)user_data;
+
+    if (tox->group_message_callback != nullptr) {
+        tox->group_message_callback(tox, groupnumber, peer_id, (TOX_MESSAGE_TYPE)type, message, length,
+                                    tox->non_const_user_data);
+    }
+}
+
+static void tox_group_private_message_handler(Messenger *m, uint32_t groupnumber, uint32_t peer_id,
+        const uint8_t *message, size_t length, void *user_data)
+{
+    Tox *tox = (Tox *)user_data;
+
+    if (tox->group_private_message_callback != nullptr) {
+        tox->group_private_message_callback(tox, groupnumber, peer_id, message, length, tox->non_const_user_data);
+    }
+}
+
+static void tox_group_custom_packet_handler(Messenger *m, uint32_t groupnumber, uint32_t peer_id, const uint8_t *data,
+        size_t length, void *user_data)
+{
+    Tox *tox = (Tox *)user_data;
+
+    if (tox->group_custom_packet_callback != nullptr) {
+        tox->group_custom_packet_callback(tox, groupnumber, peer_id, data, length, tox->non_const_user_data);
+    }
+}
+
+static void tox_group_invite_handler(Messenger *m, uint32_t friend_number, const uint8_t *invite_data, size_t length,
+                                     void *user_data)
+{
+    Tox *tox = (Tox *)user_data;
+
+    if (tox->group_invite_callback != nullptr) {
+        tox->group_invite_callback(tox, friend_number, invite_data, length, tox->non_const_user_data);
+    }
+}
+
+static void tox_group_peer_join_handler(Messenger *m, uint32_t groupnumber, uint32_t peer_id, void *user_data)
+{
+    Tox *tox = (Tox *)user_data;
+
+    if (tox->group_peer_join_callback != nullptr) {
+        tox->group_peer_join_callback(tox, groupnumber, peer_id, tox->non_const_user_data);
+    }
+}
+
+static void tox_group_peer_exit_handler(Messenger *m, uint32_t groupnumber, uint32_t peer_id,
+                                        const uint8_t *part_message, size_t length, void *user_data)
+{
+    Tox *tox = (Tox *)user_data;
+
+    if (tox->group_peer_exit_callback != nullptr) {
+        tox->group_peer_exit_callback(tox, groupnumber, peer_id, part_message, length, tox->non_const_user_data);
+    }
+}
+
+static void tox_group_self_join_handler(Messenger *m, uint32_t groupnumber, void *user_data)
+{
+    Tox *tox = (Tox *)user_data;
+
+    if (tox->group_self_join_callback != nullptr) {
+        tox->group_self_join_callback(tox, groupnumber, tox->non_const_user_data);
+    }
+}
+
+static void tox_group_join_fail_handler(Messenger *m, uint32_t groupnumber, unsigned int fail_type, void *user_data)
+{
+    Tox *tox = (Tox *)user_data;
+
+    if (tox->group_join_fail_callback != nullptr) {
+        tox->group_join_fail_callback(tox, groupnumber, (TOX_GROUP_JOIN_FAIL)fail_type, tox->non_const_user_data);
+    }
+}
+
+static void tox_group_moderation_handler(Messenger *m, uint32_t groupnumber, uint32_t source_peer_number,
+        uint32_t target_peer_number, unsigned int mod_type, void *user_data)
+{
+    Tox *tox = (Tox *)user_data;
+
+    if (tox->group_moderation_callback != nullptr) {
+        tox->group_moderation_callback(tox, groupnumber, source_peer_number, target_peer_number, (TOX_GROUP_MOD_EVENT)mod_type,
+                                       tox->non_const_user_data);
+    }
+}
+
 bool tox_version_is_compatible(uint32_t major, uint32_t minor, uint32_t patch)
 {
     return TOX_VERSION_IS_API_COMPATIBLE(major, minor, patch);
@@ -501,6 +666,23 @@ Tox *tox_new(const struct Tox_Options *options, Tox_Err_New *error)
     custom_lossy_packet_registerhandler(m, tox_friend_lossy_packet_handler);
     custom_lossless_packet_registerhandler(m, tox_friend_lossless_packet_handler);
 
+#ifndef VANILLA_NACL
+    m_callback_group_invite(m, tox_group_invite_handler, tox);
+    gc_callback_message(m, tox_group_message_handler, tox);
+    gc_callback_private_message(m, tox_group_private_message_handler, tox);
+    gc_callback_moderation(m, tox_group_moderation_handler, tox);
+    gc_callback_nick_change(m, tox_group_peer_name_handler, tox);
+    gc_callback_status_change(m, tox_group_peer_status_handler, tox);
+    gc_callback_topic_change(m, tox_group_topic_handler, tox);
+    gc_callback_privacy_state(m, tox_group_privacy_state_handler, tox);
+    gc_callback_peer_limit(m, tox_group_peer_limit_handler, tox);
+    gc_callback_password(m, tox_group_password_handler, tox);
+    gc_callback_peer_join(m, tox_group_peer_join_handler, tox);
+    gc_callback_peer_exit(m, tox_group_peer_exit_handler, tox);
+    gc_callback_self_join(m, tox_group_self_join_handler, tox);
+    gc_callback_rejected(m, tox_group_join_fail_handler, tox);
+#endif
+
     tox_options_free(default_options);
     return tox;
 }
@@ -653,6 +835,7 @@ void tox_iterate(Tox *tox, void *user_data)
 {
     Messenger *m = tox->m;
     struct Tox_Userdata tox_data = { tox, user_data };
+    tox->non_const_user_data = user_data;
     do_messenger(m, &tox_data);
     do_groupchats(m->conferences_object, &tox_data);
 }
@@ -1959,95 +2142,92 @@ uint16_t tox_self_get_tcp_port(const Tox *tox, Tox_Err_Get_Port *error)
 #ifndef VANILLA_NACL
 void tox_callback_group_invite(Tox *tox, tox_group_invite_cb *function, void *userdata)
 {
-    Messenger *m = tox;
-    m_callback_group_invite(m, function, userdata);
+    assert(userdata == nullptr);
+    tox->group_invite_callback = function;
 }
 
 void tox_callback_group_message(Tox *tox, tox_group_message_cb *function, void *userdata)
 {
-    Messenger *m = tox;
-    gc_callback_message(m, (void (*)(struct Messenger *, uint32_t, uint32_t, unsigned int, const uint8_t *, size_t,
-                                     void *))function, userdata);
+    assert(userdata == nullptr);
+    tox->group_message_callback = function;
 }
 
 void tox_callback_group_private_message(Tox *tox, tox_group_private_message_cb *function, void *userdata)
 {
-    Messenger *m = tox;
-    gc_callback_private_message(m, function, userdata);
+    assert(userdata == nullptr);
+    tox->group_private_message_callback = function;
 }
 
 void tox_callback_group_moderation(Tox *tox, tox_group_moderation_cb *function, void *userdata)
 {
-    Messenger *m = tox;
-    gc_callback_moderation(m, (void (*)(struct Messenger *, uint32_t, uint32_t, uint32_t, unsigned int, void *))function,
-                           userdata);
+    assert(userdata == nullptr);
+    tox->group_moderation_callback = function;
 }
 
 void tox_callback_group_peer_name(Tox *tox, tox_group_peer_name_cb *function, void *userdata)
 {
-    Messenger *m = tox;
-    gc_callback_nick_change(m, function, userdata);
+    assert(userdata == nullptr);
+    tox->group_peer_name_callback = function;
 }
 
 void tox_callback_group_peer_status(Tox *tox, tox_group_peer_status_cb *function, void *userdata)
 {
-    Messenger *m = tox;
-    gc_callback_status_change(m, (void (*)(struct Messenger *, uint32_t, uint32_t, unsigned int, void *))function,
-                              userdata);
+    assert(userdata == nullptr);
+    tox->group_peer_status_callback = function;
 }
 
 void tox_callback_group_topic(Tox *tox, tox_group_topic_cb *function, void *userdata)
 {
-    Messenger *m = tox;
-    gc_callback_topic_change(m, function, userdata);
+    assert(userdata == nullptr);
+    tox->group_topic_callback = function;
 }
 
 void tox_callback_group_privacy_state(Tox *tox, tox_group_privacy_state_cb *function, void *user_data)
 {
-    Messenger *m = tox;
-    gc_callback_privacy_state(m, (void (*)(struct Messenger *, uint32_t, unsigned int, void *))function, user_data);
+    assert(user_data == nullptr);
+    tox->group_privacy_state_callback = function;
 }
 
 void tox_callback_group_peer_limit(Tox *tox, tox_group_peer_limit_cb *function, void *user_data)
 {
-    Messenger *m = tox;
-    gc_callback_peer_limit(m, function, user_data);
+    assert(user_data == nullptr);
+    tox->group_peer_limit_callback = function;
 }
 
 void tox_callback_group_password(Tox *tox, tox_group_password_cb *function, void *user_data)
 {
-    Messenger *m = tox;
-    gc_callback_password(m, function, user_data);
+    assert(user_data == nullptr);
+    tox->group_password_callback = function;
 }
 
 void tox_callback_group_peer_join(Tox *tox, tox_group_peer_join_cb *function, void *userdata)
 {
-    Messenger *m = tox;
-    gc_callback_peer_join(m, function, userdata);
+    assert(userdata == nullptr);
+    tox->group_peer_join_callback = function;
 }
 
 void tox_callback_group_peer_exit(Tox *tox, tox_group_peer_exit_cb *function, void *userdata)
 {
-    Messenger *m = tox;
-    gc_callback_peer_exit(m, function, userdata);
+    assert(userdata == nullptr);
+    tox->group_peer_exit_callback = function;
 }
 
 void tox_callback_group_self_join(Tox *tox, tox_group_self_join_cb *function, void *userdata)
 {
-    Messenger *m = tox;
-    gc_callback_self_join(m, function, userdata);
+    assert(userdata == nullptr);
+    tox->group_self_join_callback = function;
 }
 
 void tox_callback_group_join_fail(Tox *tox, tox_group_join_fail_cb *function, void *userdata)
 {
-    Messenger *m = tox;
-    gc_callback_rejected(m, (void (*)(struct Messenger *, uint32_t, unsigned int, void *))function, userdata);
+    assert(userdata == nullptr);
+    tox->group_join_fail_callback = function;
 }
 
 uint32_t tox_group_new(Tox *tox, TOX_GROUP_PRIVACY_STATE privacy_state, const uint8_t *group_name, size_t length,
                        TOX_ERR_GROUP_NEW *error)
 {
-    Messenger *m = tox;
+    Messenger *m = tox->m;
     int ret = gc_group_add(m->group_handler, privacy_state, group_name, length);
 
     if (ret >= 0) {
@@ -2088,7 +2268,7 @@ uint32_t tox_group_new(Tox *tox, TOX_GROUP_PRIVACY_STATE privacy_state, const ui
 uint32_t tox_group_join(Tox *tox, const uint8_t *chat_id, const uint8_t *password, size_t length,
                         TOX_ERR_GROUP_JOIN *error)
 {
-    Messenger *m = tox;
+    Messenger *m = tox->m;
     int ret = gc_group_join(m->group_handler, chat_id, password, length);
 
     if (ret >= 0) {
@@ -2116,7 +2296,7 @@ uint32_t tox_group_join(Tox *tox, const uint8_t *chat_id, const uint8_t *passwor
 
 bool tox_group_reconnect(Tox *tox, uint32_t groupnumber, TOX_ERR_GROUP_RECONNECT *error)
 {
-    Messenger *m = tox;
+    Messenger *m = tox->m;
     GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -2132,7 +2312,7 @@ bool tox_group_reconnect(Tox *tox, uint32_t groupnumber, TOX_ERR_GROUP_RECONNECT
 bool tox_group_leave(Tox *tox, uint32_t groupnumber, const uint8_t *partmessage, size_t length,
                      TOX_ERR_GROUP_LEAVE *error)
 {
-    Messenger *m = tox;
+    Messenger *m = tox->m;
     GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -2167,7 +2347,7 @@ bool tox_group_leave(Tox *tox, uint32_t groupnumber, const uint8_t *partmessage,
 bool tox_group_self_set_name(Tox *tox, uint32_t groupnumber, const uint8_t *name, size_t length,
                              TOX_ERR_GROUP_SELF_NAME_SET *error)
 {
-    Messenger *m = tox;
+    Messenger *m = tox->m;
     int ret = gc_set_self_nick(m, groupnumber, name, length);
 
     switch (ret) {
@@ -2202,7 +2382,7 @@ bool tox_group_self_set_name(Tox *tox, uint32_t groupnumber, const uint8_t *name
 
 size_t tox_group_self_get_name_size(const Tox *tox, uint32_t groupnumber, TOX_ERR_GROUP_SELF_QUERY *error)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     const GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -2216,7 +2396,7 @@ size_t tox_group_self_get_name_size(const Tox *tox, uint32_t groupnumber, TOX_ER
 
 bool tox_group_self_get_name(const Tox *tox, uint32_t groupnumber, uint8_t *name, TOX_ERR_GROUP_SELF_QUERY *error)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     const GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -2232,7 +2412,7 @@ bool tox_group_self_get_name(const Tox *tox, uint32_t groupnumber, uint8_t *name
 bool tox_group_self_set_status(Tox *tox, uint32_t groupnumber, TOX_USER_STATUS status,
                                TOX_ERR_GROUP_SELF_STATUS_SET *error)
 {
-    Messenger *m = tox;
+    Messenger *m = tox->m;
     int ret = gc_set_self_status(m, groupnumber, status);
 
     switch (ret) {
@@ -2259,7 +2439,7 @@ bool tox_group_self_set_status(Tox *tox, uint32_t groupnumber, TOX_USER_STATUS s
 
 TOX_USER_STATUS tox_group_self_get_status(const Tox *tox, uint32_t groupnumber, TOX_ERR_GROUP_SELF_QUERY *error)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     const GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -2274,7 +2454,7 @@ TOX_USER_STATUS tox_group_self_get_status(const Tox *tox, uint32_t groupnumber, 
 
 TOX_GROUP_ROLE tox_group_self_get_role(const Tox *tox, uint32_t groupnumber, TOX_ERR_GROUP_SELF_QUERY *error)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     const GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -2289,7 +2469,7 @@ TOX_GROUP_ROLE tox_group_self_get_role(const Tox *tox, uint32_t groupnumber, TOX
 
 uint32_t tox_group_self_get_peer_id(const Tox *tox, uint32_t groupnumber, TOX_ERR_GROUP_SELF_QUERY *error)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     const GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -2304,7 +2484,7 @@ uint32_t tox_group_self_get_peer_id(const Tox *tox, uint32_t groupnumber, TOX_ER
 bool tox_group_self_get_public_key(const Tox *tox, uint32_t groupnumber, uint8_t *public_key,
                                    TOX_ERR_GROUP_SELF_QUERY *error)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     const GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -2320,7 +2500,7 @@ bool tox_group_self_get_public_key(const Tox *tox, uint32_t groupnumber, uint8_t
 size_t tox_group_peer_get_name_size(const Tox *tox, uint32_t groupnumber, uint32_t peer_id,
                                     TOX_ERR_GROUP_PEER_QUERY *error)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     const GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -2342,7 +2522,7 @@ size_t tox_group_peer_get_name_size(const Tox *tox, uint32_t groupnumber, uint32
 bool tox_group_peer_get_name(const Tox *tox, uint32_t groupnumber, uint32_t peer_id, uint8_t *name,
                              TOX_ERR_GROUP_PEER_QUERY *error)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     const GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -2364,7 +2544,7 @@ bool tox_group_peer_get_name(const Tox *tox, uint32_t groupnumber, uint32_t peer
 TOX_USER_STATUS tox_group_peer_get_status(const Tox *tox, uint32_t groupnumber, uint32_t peer_id,
         TOX_ERR_GROUP_PEER_QUERY *error)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     const GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -2386,7 +2566,7 @@ TOX_USER_STATUS tox_group_peer_get_status(const Tox *tox, uint32_t groupnumber, 
 TOX_GROUP_ROLE tox_group_peer_get_role(const Tox *tox, uint32_t groupnumber, uint32_t peer_id,
                                        TOX_ERR_GROUP_PEER_QUERY *error)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     const GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -2408,7 +2588,7 @@ TOX_GROUP_ROLE tox_group_peer_get_role(const Tox *tox, uint32_t groupnumber, uin
 bool tox_group_peer_get_public_key(const Tox *tox, uint32_t groupnumber, uint32_t peer_id, uint8_t *public_key,
                                    TOX_ERR_GROUP_PEER_QUERY *error)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     const GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -2430,7 +2610,7 @@ bool tox_group_peer_get_public_key(const Tox *tox, uint32_t groupnumber, uint32_
 bool tox_group_set_topic(Tox *tox, uint32_t groupnumber, const uint8_t *topic, size_t length,
                          TOX_ERR_GROUP_TOPIC_SET *error)
 {
-    Messenger *m = tox;
+    Messenger *m = tox->m;
     GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -2468,7 +2648,7 @@ bool tox_group_set_topic(Tox *tox, uint32_t groupnumber, const uint8_t *topic, s
 
 size_t tox_group_get_topic_size(const Tox *tox, uint32_t groupnumber, TOX_ERR_GROUP_STATE_QUERIES *error)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     const GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -2482,7 +2662,7 @@ size_t tox_group_get_topic_size(const Tox *tox, uint32_t groupnumber, TOX_ERR_GR
 
 bool tox_group_get_topic(const Tox *tox, uint32_t groupnumber, uint8_t *topic, TOX_ERR_GROUP_STATE_QUERIES *error)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     const GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -2497,7 +2677,7 @@ bool tox_group_get_topic(const Tox *tox, uint32_t groupnumber, uint8_t *topic, T
 
 size_t tox_group_get_name_size(const Tox *tox, uint32_t groupnumber, TOX_ERR_GROUP_STATE_QUERIES *error)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     const GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -2511,7 +2691,7 @@ size_t tox_group_get_name_size(const Tox *tox, uint32_t groupnumber, TOX_ERR_GRO
 
 bool tox_group_get_name(const Tox *tox, uint32_t groupnumber, uint8_t *groupname, TOX_ERR_GROUP_STATE_QUERIES *error)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     const GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -2526,7 +2706,7 @@ bool tox_group_get_name(const Tox *tox, uint32_t groupnumber, uint8_t *groupname
 
 bool tox_group_get_chat_id(const Tox *tox, uint32_t groupnumber, uint8_t *chat_id, TOX_ERR_GROUP_STATE_QUERIES *error)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     const GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -2541,14 +2721,14 @@ bool tox_group_get_chat_id(const Tox *tox, uint32_t groupnumber, uint8_t *chat_i
 
 uint32_t tox_group_get_number_groups(const Tox *tox)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     return gc_count_groups(m->group_handler);
 }
 
 TOX_GROUP_PRIVACY_STATE tox_group_get_privacy_state(const Tox *tox, uint32_t groupnumber,
         TOX_ERR_GROUP_STATE_QUERIES *error)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     const GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -2563,7 +2743,7 @@ TOX_GROUP_PRIVACY_STATE tox_group_get_privacy_state(const Tox *tox, uint32_t gro
 
 uint32_t tox_group_get_peer_limit(const Tox *tox, uint32_t groupnumber, TOX_ERR_GROUP_STATE_QUERIES *error)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     const GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -2577,7 +2757,7 @@ uint32_t tox_group_get_peer_limit(const Tox *tox, uint32_t groupnumber, TOX_ERR_
 
 size_t tox_group_get_password_size(const Tox *tox, uint32_t groupnumber, TOX_ERR_GROUP_STATE_QUERIES *error)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     const GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -2591,7 +2771,7 @@ size_t tox_group_get_password_size(const Tox *tox, uint32_t groupnumber, TOX_ERR
 
 bool tox_group_get_password(const Tox *tox, uint32_t groupnumber, uint8_t *password, TOX_ERR_GROUP_STATE_QUERIES *error)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     const GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -2607,7 +2787,7 @@ bool tox_group_get_password(const Tox *tox, uint32_t groupnumber, uint8_t *passw
 bool tox_group_send_message(Tox *tox, uint32_t groupnumber, TOX_MESSAGE_TYPE type, const uint8_t *message,
                             size_t length, TOX_ERR_GROUP_SEND_MESSAGE *error)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -2650,7 +2830,7 @@ bool tox_group_send_message(Tox *tox, uint32_t groupnumber, TOX_MESSAGE_TYPE typ
 bool tox_group_send_private_message(Tox *tox, uint32_t groupnumber, uint32_t peer_id, const uint8_t *message,
                                     size_t length, TOX_ERR_GROUP_SEND_PRIVATE_MESSAGE *error)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -2693,7 +2873,7 @@ bool tox_group_send_private_message(Tox *tox, uint32_t groupnumber, uint32_t pee
 bool tox_group_send_custom_packet(Tox *tox, uint32_t groupnumber, bool lossless, const uint8_t *data,
                                   size_t length, TOX_ERR_GROUP_SEND_CUSTOM_PACKET *error)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -2727,7 +2907,7 @@ bool tox_group_send_custom_packet(Tox *tox, uint32_t groupnumber, bool lossless,
 
 bool tox_group_invite_friend(Tox *tox, uint32_t groupnumber, uint32_t friend_number, TOX_ERR_GROUP_INVITE_FRIEND *error)
 {
-    Messenger *m = tox;
+    Messenger *m = tox->m;
     GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -2768,7 +2948,7 @@ bool tox_group_invite_friend(Tox *tox, uint32_t groupnumber, uint32_t friend_num
 uint32_t tox_group_invite_accept(Tox *tox, const uint8_t *invite_data, size_t length, const uint8_t *password,
                                  size_t password_length, TOX_ERR_GROUP_INVITE_ACCEPT *error)
 {
-    Messenger *m = tox;
+    Messenger *m = tox->m;
     int ret = gc_accept_invite(m->group_handler, invite_data, length, password, password_length);
 
     if (ret >= 0) {
@@ -2797,7 +2977,7 @@ uint32_t tox_group_invite_accept(Tox *tox, const uint8_t *invite_data, size_t le
 bool tox_group_founder_set_password(Tox *tox, uint32_t groupnumber, const uint8_t *password, size_t length,
                                     TOX_ERR_GROUP_FOUNDER_SET_PASSWORD *error)
 {
-    Messenger *m = tox;
+    Messenger *m = tox->m;
     GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -2832,7 +3012,7 @@ bool tox_group_founder_set_password(Tox *tox, uint32_t groupnumber, const uint8_
 bool tox_group_founder_set_privacy_state(Tox *tox, uint32_t groupnumber, TOX_GROUP_PRIVACY_STATE privacy_state,
         TOX_ERR_GROUP_FOUNDER_SET_PRIVACY_STATE *error)
 {
-    Messenger *m = tox;
+    Messenger *m = tox->m;
     int ret = gc_founder_set_privacy_state(m, groupnumber, privacy_state);
 
     switch (ret) {
@@ -2868,7 +3048,7 @@ bool tox_group_founder_set_privacy_state(Tox *tox, uint32_t groupnumber, TOX_GRO
 bool tox_group_founder_set_peer_limit(Tox *tox, uint32_t groupnumber, uint32_t maxpeers,
                                       TOX_ERR_GROUP_FOUNDER_SET_PEER_LIMIT *error)
 {
-    Messenger *m = tox;
+    Messenger *m = tox->m;
     GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -2903,7 +3083,7 @@ bool tox_group_founder_set_peer_limit(Tox *tox, uint32_t groupnumber, uint32_t m
 bool tox_group_toggle_ignore(Tox *tox, uint32_t groupnumber, uint32_t peer_id, bool ignore,
                              TOX_ERR_GROUP_TOGGLE_IGNORE *error)
 {
-    Messenger *m = tox;
+    Messenger *m = tox->m;
     GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -2925,7 +3105,7 @@ bool tox_group_toggle_ignore(Tox *tox, uint32_t groupnumber, uint32_t peer_id, b
 bool tox_group_mod_set_role(Tox *tox, uint32_t groupnumber, uint32_t peer_id, TOX_GROUP_ROLE role,
                             TOX_ERR_GROUP_MOD_SET_ROLE *error)
 {
-    Messenger *m = tox;
+    Messenger *m = tox->m;
     int ret = gc_set_peer_role(m, groupnumber, peer_id, role);
 
     switch (ret) {
@@ -2961,7 +3141,7 @@ bool tox_group_mod_set_role(Tox *tox, uint32_t groupnumber, uint32_t peer_id, TO
 bool tox_group_mod_remove_peer(Tox *tox, uint32_t groupnumber, uint32_t peer_id, bool set_ban,
                                TOX_ERR_GROUP_MOD_REMOVE_PEER *error)
 {
-    Messenger *m = tox;
+    Messenger *m = tox->m;
     int ret = gc_remove_peer(m, groupnumber, peer_id, set_ban);
 
     switch (ret) {
@@ -2996,7 +3176,7 @@ bool tox_group_mod_remove_peer(Tox *tox, uint32_t groupnumber, uint32_t peer_id,
 
 bool tox_group_mod_remove_ban(Tox *tox, uint32_t groupnumber, uint32_t ban_id, TOX_ERR_GROUP_MOD_REMOVE_BAN *error)
 {
-    Messenger *m = tox;
+    Messenger *m = tox->m;
     GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -3030,7 +3210,7 @@ bool tox_group_mod_remove_ban(Tox *tox, uint32_t groupnumber, uint32_t ban_id, T
 
 size_t tox_group_ban_get_list_size(const Tox *tox, uint32_t groupnumber, TOX_ERR_GROUP_BAN_QUERY *error)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     const GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -3044,7 +3224,7 @@ size_t tox_group_ban_get_list_size(const Tox *tox, uint32_t groupnumber, TOX_ERR
 
 bool tox_group_ban_get_list(const Tox *tox, uint32_t groupnumber, uint32_t *list, TOX_ERR_GROUP_BAN_QUERY *error)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     const GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -3060,7 +3240,7 @@ bool tox_group_ban_get_list(const Tox *tox, uint32_t groupnumber, uint32_t *list
 size_t tox_group_ban_get_name_size(const Tox *tox, uint32_t groupnumber, uint32_t ban_id,
                                    TOX_ERR_GROUP_BAN_QUERY *error)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     const GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -3082,7 +3262,7 @@ size_t tox_group_ban_get_name_size(const Tox *tox, uint32_t groupnumber, uint32_
 bool tox_group_ban_get_name(const Tox *tox, uint32_t groupnumber, uint32_t ban_id, uint8_t *name,
                             TOX_ERR_GROUP_BAN_QUERY *error)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     const GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {
@@ -3104,7 +3284,7 @@ bool tox_group_ban_get_name(const Tox *tox, uint32_t groupnumber, uint32_t ban_i
 uint64_t tox_group_ban_get_time_set(const Tox *tox, uint32_t groupnumber, uint32_t ban_id,
                                     TOX_ERR_GROUP_BAN_QUERY *error)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     const GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
 
     if (chat == nullptr) {

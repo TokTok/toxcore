@@ -9,7 +9,7 @@
 #include "../../toxcore/util.h"
 #include "../../toxcore/group_announce.h"
 #include "../../toxcore/Messenger.h"
-#include "../misc_tools.c"
+#include "../misc_tools.h"
 
 #include <assert.h>
 #include <stdio.h>
