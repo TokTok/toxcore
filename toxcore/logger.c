@@ -125,7 +125,7 @@ void logger_write(const Logger *log, Logger_Level level, const char *file, int l
 #endif
 
     // Format message
-    char msg[1024];
+    char msg[LOGGER_MAX_MSG_LENGTH];
     va_list args;
     va_start(args, format);
     vsnprintf(msg, sizeof(msg), format, args);

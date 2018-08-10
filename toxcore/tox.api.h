@@ -1697,6 +1697,15 @@ namespace file {
      * has no avatar.
      */
     AVATAR,
+    /**
+     * MessageV2 Filetransfers
+     *
+     * filetransfers of this type are always autoaccepted
+     * and the overall size is limited to TOX_MAX_FILETRANSFER_SIZE_MSGV2
+     */
+    MESSAGEV2_SEND,
+    MESSAGEV2_ANSWER,
+    MESSAGEV2_ALTER,
   }
 
 

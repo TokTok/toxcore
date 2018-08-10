@@ -1,6 +1,5 @@
 /*
- * Copyright © 2016-2017 The TokTok team.
- * Copyright © 2013-2015 Tox project.
+ * Copyright © 2018 zoff@zoff.cc
  *
  * This file is part of Tox, the free peer to peer instant messenger.
  *
@@ -17,22 +16,18 @@
  * You should have received a copy of the GNU General Public License
  * along with Tox.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef BWCONROLLER_H
-#define BWCONROLLER_H
 
-#include "../toxcore/Messenger.h"
+#ifndef DUMMY_NTP_H
+#define DUMMY_NTP_H
 
-typedef struct BWController_s BWController;
+#include <stdbool.h>
+#include <stdint.h>
 
-BWController *bwc_new(Messenger *m, uint32_t friendnumber,
-                      void (*mcb)(BWController *, uint32_t, float, void *),
-                      void *udata);
+/* NTP formula implementation */
+bool dntp_drift(int64_t *current_offset, const int64_t new_offset, const int64_t max_offset_for_drift);
+int64_t dntp_calc_offset(uint32_t remote_tstart, uint32_t remote_tend,
+                         uint32_t local_tstart, uint32_t local_tend);
+uint32_t dntp_calc_roundtrip_delay(uint32_t remote_tstart, uint32_t remote_tend,
+                                   uint32_t local_tstart, uint32_t local_tend);
 
-void bwc_kill(BWController *bwc);
-
-void bwc_feed_avg(BWController *bwc, uint32_t bytes);
-void bwc_add_lost(BWController *bwc, uint32_t bytes_lost);
-void bwc_add_lost_v3(BWController *bwc, uint32_t bytes, bool force_update_now);
-void bwc_add_recv(BWController *bwc, uint32_t recv_bytes);
-
-#endif /* BWCONROLLER_H */
+#endif /* DUMMY_NTP_H */

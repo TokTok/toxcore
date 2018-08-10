@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2018 The TokTok team.
+ * Copyright © 2016-2017 The TokTok team.
  * Copyright © 2013-2015 Tox project.
  *
  * This file is part of Tox, the free peer to peer instant messenger.
@@ -31,6 +31,10 @@
 extern "C" {
 #endif
 
+#define TOXAV_SKIP_FPS_RELEASE_AFTER_FRAMES 60
+// #define GENERAL_TS_DIFF (int)(100) // give x ms delay to video and audio streams (for buffering and syncing)
+
+
 /**
  * RTPHeader serialised size in bytes.
  */
@@ -40,7 +44,7 @@ extern "C" {
  * Number of 32 bit padding fields between \ref RTPHeader::offset_lower and
  * everything before it.
  */
-#define RTP_PADDING_FIELDS 11
+#define RTP_PADDING_FIELDS 6
 
 /**
  * Payload type identifier. Also used as rtp callback prefix.
@@ -50,6 +54,27 @@ enum {
     rtp_TypeVideo = 193,
 };
 
+
+enum {
+    video_frame_type_NORMALFRAME = 0,
+    video_frame_type_KEYFRAME = 1,
+};
+
+
+#define USED_RTP_WORKBUFFER_COUNT 10
+#define VIDEO_FRAGMENT_NUM_NO_FRAG (-1)
+
+
+#define VP8E_SET_CPUUSED_VALUE (16)
+/*
+Codec control function to set encoder internal speed settings.
+Changes in this value influences, among others, the encoder's selection of motion estimation methods.
+Values greater than 0 will increase encoder speed at the expense of quality.
+
+Note
+    Valid range for VP8: -16..16
+    Valid range for VP9: -8..8
+ */
 /**
  * A bit mask (up to 64 bits) specifying features of the current frame affecting
  * the behaviour of the decoder.
@@ -64,12 +89,23 @@ enum RTPFlags {
      * Whether the packet is part of a key frame.
      */
     RTP_KEY_FRAME = 1 << 1,
+
+    /**
+     * Whether H264 codec was used to encode this video frame
+     */
+    RTP_ENCODER_IS_H264 = 1 << 2,
+
+    /**
+     * Whether we have record-timestamp for this video frame
+     */
+    RTP_ENCODER_HAS_RECORD_TIMESTAMP = 1 << 3,
+
 };
 
 
 struct RTPHeader {
     /* Standard RTP header */
-    unsigned ve: 2; /* Version has only 2 bits! */
+    unsigned ve: 2; /* Version has only 2 bits! */ // was called "protocol_version" in V3
     unsigned pe: 1; /* Padding */
     unsigned xe: 1; /* Extra header */
     unsigned cc: 4; /* Contributing sources count */
@@ -104,14 +140,31 @@ struct RTPHeader {
      */
     uint32_t received_length_full;
 
+
+    // ---------------------------- //
+    //      custom fields here      //
+    // ---------------------------- //
+    uint64_t frame_record_timestamp; /* when was this frame actually recorded (this is a relative value!) */
+    int32_t  fragment_num; /* if using fragments, this is the fragment/partition number */
+    uint32_t real_frame_num; /* unused for now */
+    uint32_t encoder_bit_rate_used; /* what was the encoder bit rate used to encode this frame */
+    // ---------------------------- //
+    //      custom fields here      //
+    // ---------------------------- //
+
+
+    // ---------------------------- //
+    //    dont change below here    //
+    // ---------------------------- //
+
     /**
      * Data offset of the current part (lower bits).
      */
-    uint16_t offset_lower;
+    uint16_t offset_lower; // used to be called "cpart"
     /**
      * Total message length (lower bits).
      */
-    uint16_t data_length_lower;
+    uint16_t data_length_lower; // used to be called "tlen"
 };
 
 
@@ -127,8 +180,6 @@ struct RTPMessage {
     struct RTPHeader header;
     uint8_t data[];
 };
-
-#define USED_RTP_WORKBUFFER_COUNT 3
 
 /**
  * One slot in the work buffer list. Represents one frame that is currently
@@ -158,6 +209,7 @@ struct RTPWorkBufferList {
 };
 
 #define DISMISS_FIRST_LOST_VIDEO_PACKET_COUNT 10
+#define INCOMING_PACKETS_TS_ENTRIES 10
 
 /**
  * RTP control session.
@@ -171,6 +223,10 @@ typedef struct RTPSession {
     struct RTPMessage *mp; /* Expected parted message */
     struct RTPWorkBufferList *work_buffer_list;
     uint8_t  first_packets_counter; /* dismiss first few lost video packets */
+    uint32_t incoming_packets_ts[INCOMING_PACKETS_TS_ENTRIES];
+    int64_t incoming_packets_ts_last_ts;
+    uint16_t incoming_packets_ts_index;
+    uint32_t incoming_packets_ts_average;
     Messenger *m;
     uint32_t friend_number;
     BWController *bwc;
@@ -212,8 +268,9 @@ int rtp_stop_receiving(RTPSession *session);
  * @param is_keyframe Whether this video frame is a key frame. If it is an
  *   audio frame, this parameter is ignored.
  */
-int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length,
-                  bool is_keyframe, const Logger *log);
+int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length, bool is_keyframe,
+                  uint64_t frame_record_timestamp, int32_t fragment_num, uint32_t codec_used,
+                  uint32_t bit_rate_used, Logger *log);
 
 #ifdef __cplusplus
 }  // extern "C"

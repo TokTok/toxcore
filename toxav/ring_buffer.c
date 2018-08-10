@@ -21,15 +21,14 @@
  */
 #include "ring_buffer.h"
 
-#include "../toxcore/ccompat.h"
-
 #include <stdlib.h>
 
 struct RingBuffer {
-    uint16_t size; /* Max size */
-    uint16_t start;
-    uint16_t end;
-    void   **data;
+    uint16_t  size; /* Max size */
+    uint16_t  start;
+    uint16_t  end;
+    uint64_t  *type;
+    void    **data;
 };
 
 bool rb_full(const RingBuffer *b)
@@ -44,17 +43,18 @@ bool rb_empty(const RingBuffer *b)
 
 /*
  * returns: NULL on success
- *          input value "p" on FAILURE -> caller can free on failed rb_write
+ *          oldest element on FAILURE -> caller must free it on failed rb_write
  */
-void *rb_write(RingBuffer *b, void *p)
+void *rb_write(RingBuffer *b, void *p, uint64_t data_type_)
 {
-    void *rc = nullptr;
+    void *rc = NULL;
 
     if ((b->end + 1) % b->size == b->start) { /* full */
         rc = b->data[b->start];
     }
 
     b->data[b->end] = p;
+    b->type[b->end] = data_type_;
     b->end = (b->end + 1) % b->size;
 
     if (b->end == b->start) {
@@ -64,14 +64,16 @@ void *rb_write(RingBuffer *b, void *p)
     return rc;
 }
 
-bool rb_read(RingBuffer *b, void **p)
+bool rb_read(RingBuffer *b, void **p, uint64_t *data_type_)
 {
     if (b->end == b->start) { /* Empty */
-        *p = nullptr;
+        *p = NULL;
         return false;
     }
 
     *p = b->data[b->start];
+    *data_type_ = b->type[b->start];
+
     b->start = (b->start + 1) % b->size;
     return true;
 }
@@ -81,14 +83,20 @@ RingBuffer *rb_new(int size)
     RingBuffer *buf = (RingBuffer *)calloc(sizeof(RingBuffer), 1);
 
     if (!buf) {
-        return nullptr;
+        return NULL;
     }
 
     buf->size = size + 1; /* include empty elem */
 
     if (!(buf->data = (void **)calloc(buf->size, sizeof(void *)))) {
         free(buf);
-        return nullptr;
+        return NULL;
+    }
+
+    if (!(buf->type = (uint64_t *)calloc(buf->size, sizeof(uint64_t)))) {
+        free(buf->data);
+        free(buf);
+        return NULL;
     }
 
     return buf;
@@ -98,6 +106,7 @@ void rb_kill(RingBuffer *b)
 {
     if (b) {
         free(b->data);
+        free(b->type);
         free(b);
     }
 }
