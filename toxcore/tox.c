@@ -2614,7 +2614,7 @@ static GC_SelfPeerInfo* create_self_peer_info(const Group_Chat_Self_Peer_Info *p
         return NULL;
     }
 
-    GC_SelfPeerInfo *self_peer_info = (GC_SelfPeerInfo *)malloc(sizeof(GC_SelfPeerInfo));
+    GC_SelfPeerInfo *self_peer_info = (GC_SelfPeerInfo *)calloc(1, sizeof(GC_SelfPeerInfo));
     if (self_peer_info) {
         self_peer_info->user_status = (Group_Peer_Status)peer_info->user_status;
         self_peer_info->nick_length = peer_info->nick_length;
