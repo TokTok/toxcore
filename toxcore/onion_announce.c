@@ -125,7 +125,6 @@ int create_gc_announce_request(uint8_t *packet, uint16_t max_packet_length, cons
                                const uint8_t *client_id, const uint8_t *data_public_key, uint64_t sendback_data,
                                const uint8_t *gc_data, short gc_data_length)
 {
-    fprintf(stderr, "create_gc_announce_request\n");
     if (max_packet_length < ONION_ANNOUNCE_REQUEST_MAX_SIZE || gc_data_length <= 0) {
         return -1;
     }
