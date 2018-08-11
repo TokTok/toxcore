@@ -40,33 +40,37 @@
  * |id [1 byte]| |size [1 byte]| |data [$size bytes]| |...{repeat}| |0 {end byte}|
  */
 
-typedef enum {
-    IDRequest = 1,
-    IDError,
-    IDCapabilities,
+typedef enum MSIHeaderID {
+    ID_REQUEST = 1,
+    ID_ERROR,
+    ID_CAPABILITIES,
 } MSIHeaderID;
 
 
-typedef enum {
-    requ_init,
-    requ_push,
-    requ_pop,
+typedef enum MSIRequest {
+    REQU_INIT,
+    REQU_PUSH,
+    REQU_POP,
 } MSIRequest;
 
 
-#define GENERIC_HEADER(header, val_type) \
-typedef struct { \
-    val_type value; \
-    bool exists; \
-} MSIHeader##header
+typedef struct MSIHeaderRequest {
+    MSIRequest value;
+    bool exists;
+} MSIHeaderRequest;
+
+typedef struct MSIHeaderError {
+    MSIError value;
+    bool exists;
+} MSIHeaderError;
+
+typedef struct MSIHeaderCapabilities {
+    uint8_t value;
+    bool exists;
+} MSIHeaderCapabilities;
 
 
-GENERIC_HEADER(Request, MSIRequest);
-GENERIC_HEADER(Error, MSIError);
-GENERIC_HEADER(Capabilities, uint8_t);
-
-
-typedef struct {
+typedef struct MSIMessage {
     MSIHeaderRequest      request;
     MSIHeaderError        error;
     MSIHeaderCapabilities capabilities;
@@ -147,7 +151,7 @@ int msi_kill(MSISession *session, const Logger *log)
 
     if (session->calls) {
         MSIMessage msg;
-        msg_init(&msg, requ_pop);
+        msg_init(&msg, REQU_POP);
 
         MSICall *it = get_call(session, session->calls_head);
 
@@ -185,24 +189,26 @@ int msi_invite(MSISession *session, MSICall **call, uint32_t friend_number, uint
         return -1;
     }
 
-    (*call) = new_call(session, friend_number);
+    MSICall *temp = new_call(session, friend_number);
 
-    if (*call == nullptr) {
+    if (temp == nullptr) {
         pthread_mutex_unlock(session->mutex);
         return -1;
     }
 
-    (*call)->self_capabilities = capabilities;
+    temp->self_capabilities = capabilities;
 
     MSIMessage msg;
-    msg_init(&msg, requ_init);
+    msg_init(&msg, REQU_INIT);
 
     msg.capabilities.exists = true;
     msg.capabilities.value = capabilities;
 
-    send_message((*call)->session->messenger, (*call)->friend_number, &msg);
+    send_message(temp->session->messenger, temp->friend_number, &msg);
 
-    (*call)->state = msi_CallRequesting;
+    temp->state = MSI_CALL_REQUESTING;
+
+    *call = temp;
 
     LOGGER_DEBUG(session->messenger->log, "Invite sent");
     pthread_mutex_unlock(session->mutex);
@@ -224,14 +230,14 @@ int msi_hangup(MSICall *call)
         return -1;
     }
 
-    if (call->state == msi_CallInactive) {
+    if (call->state == MSI_CALL_INACTIVE) {
         LOGGER_ERROR(session->messenger->log, "Call is in invalid state!");
         pthread_mutex_unlock(session->mutex);
         return -1;
     }
 
     MSIMessage msg;
-    msg_init(&msg, requ_pop);
+    msg_init(&msg, REQU_POP);
 
     send_message(session->messenger, call->friend_number, &msg);
 
@@ -255,7 +261,7 @@ int msi_answer(MSICall *call, uint8_t capabilities)
         return -1;
     }
 
-    if (call->state != msi_CallRequested) {
+    if (call->state != MSI_CALL_REQUESTED) {
         /* Though sending in invalid state will not cause anything weird
          * Its better to not do it like a maniac */
         LOGGER_ERROR(session->messenger->log, "Call is in invalid state!");
@@ -266,14 +272,14 @@ int msi_answer(MSICall *call, uint8_t capabilities)
     call->self_capabilities = capabilities;
 
     MSIMessage msg;
-    msg_init(&msg, requ_push);
+    msg_init(&msg, REQU_PUSH);
 
     msg.capabilities.exists = true;
     msg.capabilities.value = capabilities;
 
     send_message(session->messenger, call->friend_number, &msg);
 
-    call->state = msi_CallActive;
+    call->state = MSI_CALL_ACTIVE;
     pthread_mutex_unlock(session->mutex);
 
     return 0;
@@ -294,7 +300,7 @@ int msi_change_capabilities(MSICall *call, uint8_t capabilities)
         return -1;
     }
 
-    if (call->state != msi_CallActive) {
+    if (call->state != MSI_CALL_ACTIVE) {
         LOGGER_ERROR(session->messenger->log, "Call is in invalid state!");
         pthread_mutex_unlock(session->mutex);
         return -1;
@@ -303,7 +309,7 @@ int msi_change_capabilities(MSICall *call, uint8_t capabilities)
     call->self_capabilities = capabilities;
 
     MSIMessage msg;
-    msg_init(&msg, requ_push);
+    msg_init(&msg, REQU_PUSH);
 
     msg.capabilities.exists = true;
     msg.capabilities.value = capabilities;
@@ -328,18 +334,27 @@ int msg_parse_in(const Logger *log, MSIMessage *dest, const uint8_t *data, uint1
 {
     /* Parse raw data received from socket into MSIMessage struct */
 
-#define CHECK_SIZE(bytes, constraint, size) \
-    if ((constraint -= (2 + size)) < 1) { LOGGER_ERROR(log, "Read over length!"); return -1; } \
-    if (bytes[1] != size) { LOGGER_ERROR(log, "Invalid data size!"); return -1; }
+#define CHECK_SIZE(bytes, constraint, size)          \
+    do {                                             \
+        constraint -= 2 + size;                      \
+        if (constraint < 1) {                        \
+            LOGGER_ERROR(log, "Read over length!");  \
+            return -1;                               \
+        }                                            \
+        if (bytes[1] != size) {                      \
+            LOGGER_ERROR(log, "Invalid data size!"); \
+            return -1;                               \
+        }                                            \
+    } while (0)
 
-#define CHECK_ENUM_HIGH(bytes, enum_high) /* Assumes size == 1 */ \
-    if (bytes[2] > enum_high) { LOGGER_ERROR(log, "Failed enum high limit!"); return -1; }
-
-#define SET_UINT8(type, bytes, header) do { \
-        header.value = (type)bytes[2]; \
-        header.exists = true; \
-        bytes += 3; \
-    } while(0)
+    /* Assumes size == 1 */
+#define CHECK_ENUM_HIGH(bytes, enum_high)                 \
+    do {                                                  \
+        if (bytes[2] > enum_high) {                       \
+            LOGGER_ERROR(log, "Failed enum high limit!"); \
+            return -1;                                    \
+        }                                                 \
+    } while (0)
 
     assert(dest);
 
@@ -355,21 +370,27 @@ int msg_parse_in(const Logger *log, MSIMessage *dest, const uint8_t *data, uint1
 
     while (*it) {/* until end byte is hit */
         switch (*it) {
-            case IDRequest:
+            case ID_REQUEST:
                 CHECK_SIZE(it, size_constraint, 1);
-                CHECK_ENUM_HIGH(it, requ_pop);
-                SET_UINT8(MSIRequest, it, dest->request);
+                CHECK_ENUM_HIGH(it, REQU_POP);
+                dest->request.value = (MSIRequest)it[2];
+                dest->request.exists = true;
+                it += 3;
                 break;
 
-            case IDError:
+            case ID_ERROR:
                 CHECK_SIZE(it, size_constraint, 1);
-                CHECK_ENUM_HIGH(it, msi_EUndisclosed);
-                SET_UINT8(MSIError, it, dest->error);
+                CHECK_ENUM_HIGH(it, MSI_E_UNDISCLOSED);
+                dest->error.value = (MSIError)it[2];
+                dest->error.exists = true;
+                it += 3;
                 break;
 
-            case IDCapabilities:
+            case ID_CAPABILITIES:
                 CHECK_SIZE(it, size_constraint, 1);
-                SET_UINT8(uint8_t, it, dest->capabilities);
+                dest->capabilities.value = it[2];
+                dest->capabilities.exists = true;
+                it += 3;
                 break;
 
             default:
@@ -383,11 +404,10 @@ int msg_parse_in(const Logger *log, MSIMessage *dest, const uint8_t *data, uint1
         return -1;
     }
 
-    return 0;
-
-#undef CHECK_SIZE
 #undef CHECK_ENUM_HIGH
-#undef SET_UINT8
+#undef CHECK_SIZE
+
+    return 0;
 }
 uint8_t *msg_parse_header_out(MSIHeaderID id, uint8_t *dest, const void *value, uint8_t value_len, uint16_t *length)
 {
@@ -397,9 +417,9 @@ uint8_t *msg_parse_header_out(MSIHeaderID id, uint8_t *dest, const void *value, 
     assert(value_len);
 
     *dest = id;
-    dest ++;
+    ++dest;
     *dest = value_len;
-    dest ++;
+    ++dest;
 
     memcpy(dest, value, value_len);
 
@@ -419,7 +439,7 @@ int send_message(Messenger *m, uint32_t friend_number, const MSIMessage *msg)
 
     if (msg->request.exists) {
         uint8_t cast = msg->request.value;
-        it = msg_parse_header_out(IDRequest, it, &cast,
+        it = msg_parse_header_out(ID_REQUEST, it, &cast,
                                   sizeof(cast), &size);
     } else {
         LOGGER_DEBUG(m->log, "Must have request field");
@@ -428,12 +448,12 @@ int send_message(Messenger *m, uint32_t friend_number, const MSIMessage *msg)
 
     if (msg->error.exists) {
         uint8_t cast = msg->error.value;
-        it = msg_parse_header_out(IDError, it, &cast,
+        it = msg_parse_header_out(ID_ERROR, it, &cast,
                                   sizeof(cast), &size);
     }
 
     if (msg->capabilities.exists) {
-        it = msg_parse_header_out(IDCapabilities, it, &msg->capabilities.value,
+        it = msg_parse_header_out(ID_CAPABILITIES, it, &msg->capabilities.value,
                                   sizeof(msg->capabilities.value), &size);
     }
 
@@ -443,7 +463,7 @@ int send_message(Messenger *m, uint32_t friend_number, const MSIMessage *msg)
     }
 
     *it = 0;
-    size ++;
+    ++size;
 
     if (m_msi_packet(m, friend_number, parsed, size)) {
         LOGGER_DEBUG(m->log, "Sent message");
@@ -460,7 +480,7 @@ int send_error(Messenger *m, uint32_t friend_number, MSIError error)
     LOGGER_DEBUG(m->log, "Sending error: %d to friend: %d", error, friend_number);
 
     MSIMessage msg;
-    msg_init(&msg, requ_pop);
+    msg_init(&msg, REQU_POP);
 
     msg.error.exists = true;
     msg.error.value = error;
@@ -489,8 +509,8 @@ FAILURE:
      * an error message will be sent to friend
      */
 
-    if (call->error == msi_ENone) {
-        call->error = msi_EHandle;
+    if (call->error == MSI_E_NONE) {
+        call->error = MSI_E_HANDLE;
     }
 
     return -1;
@@ -526,7 +546,8 @@ MSICall *new_call(MSISession *session, uint32_t friend_number)
             return nullptr;
         }
 
-        session->calls_tail = session->calls_head = friend_number;
+        session->calls_tail = friend_number;
+        session->calls_head = friend_number;
     } else if (session->calls_tail < friend_number) { /* Appending */
         MSICall **tmp = (MSICall **)realloc(session->calls, sizeof(MSICall *) * (friend_number + 1));
 
@@ -540,7 +561,7 @@ MSICall *new_call(MSISession *session, uint32_t friend_number)
         /* Set fields in between to null */
         uint32_t i = session->calls_tail + 1;
 
-        for (; i < friend_number; i ++) {
+        for (; i < friend_number; ++i) {
             session->calls[i] = nullptr;
         }
 
@@ -592,14 +613,14 @@ void kill_call(MSICall *call)
     return;
 
 CLEAR_CONTAINER:
-    session->calls_head = session->calls_tail = 0;
+    session->calls_head = 0;
+    session->calls_tail = 0;
     free(session->calls);
     free(call);
     session->calls = nullptr;
 }
 void on_peer_status(Messenger *m, uint32_t friend_number, uint8_t status, void *data)
 {
-    (void)m;
     MSISession *session = (MSISession *)data;
 
     switch (status) {
@@ -614,7 +635,7 @@ void on_peer_status(Messenger *m, uint32_t friend_number, uint8_t status, void *
                 return;
             }
 
-            invoke_callback(call, msi_OnPeerTimeout); /* Failure is ignored */
+            invoke_callback(call, MSI_ON_PEERTIMEOUT); /* Failure is ignored */
             kill_call(call);
             pthread_mutex_unlock(session->mutex);
         }
@@ -632,23 +653,23 @@ void handle_init(MSICall *call, const MSIMessage *msg)
 
     if (!msg->capabilities.exists) {
         LOGGER_WARNING(call->session->messenger->log, "Session: %p Invalid capabilities on 'init'", (void *)call->session);
-        call->error = msi_EInvalidMessage;
+        call->error = MSI_E_INVALID_MESSAGE;
         goto FAILURE;
     }
 
     switch (call->state) {
-        case msi_CallInactive: {
+        case MSI_CALL_INACTIVE: {
             /* Call requested */
             call->peer_capabilities = msg->capabilities.value;
-            call->state = msi_CallRequested;
+            call->state = MSI_CALL_REQUESTED;
 
-            if (invoke_callback(call, msi_OnInvite) == -1) {
+            if (invoke_callback(call, MSI_ON_INVITE) == -1) {
                 goto FAILURE;
             }
         }
         break;
 
-        case msi_CallActive: {
+        case MSI_CALL_ACTIVE: {
             /* If peer sent init while the call is already
              * active it's probable that he is trying to
              * re-call us while the call is not terminated
@@ -659,7 +680,7 @@ void handle_init(MSICall *call, const MSIMessage *msg)
             LOGGER_INFO(call->session->messenger->log, "Friend is recalling us");
 
             MSIMessage out_msg;
-            msg_init(&out_msg, requ_push);
+            msg_init(&out_msg, REQU_PUSH);
 
             out_msg.capabilities.exists = true;
             out_msg.capabilities.value = call->self_capabilities;
@@ -672,10 +693,10 @@ void handle_init(MSICall *call, const MSIMessage *msg)
         }
         break;
 
-        case msi_CallRequested: // fall-through
-        case msi_CallRequesting: {
+        case MSI_CALL_REQUESTED: // fall-through
+        case MSI_CALL_REQUESTING: {
             LOGGER_WARNING(call->session->messenger->log, "Session: %p Invalid state on 'init'", (void *)call->session);
-            call->error = msi_EInvalidState;
+            call->error = MSI_E_INVALID_STATE;
             goto FAILURE;
         }
     }
@@ -694,41 +715,41 @@ void handle_push(MSICall *call, const MSIMessage *msg)
 
     if (!msg->capabilities.exists) {
         LOGGER_WARNING(call->session->messenger->log, "Session: %p Invalid capabilities on 'push'", (void *)call->session);
-        call->error = msi_EInvalidMessage;
+        call->error = MSI_E_INVALID_MESSAGE;
         goto FAILURE;
     }
 
     switch (call->state) {
-        case msi_CallActive: {
+        case MSI_CALL_ACTIVE: {
             /* Only act if capabilities changed */
             if (call->peer_capabilities != msg->capabilities.value) {
                 LOGGER_INFO(call->session->messenger->log, "Friend is changing capabilities to: %u", msg->capabilities.value);
 
                 call->peer_capabilities = msg->capabilities.value;
 
-                if (invoke_callback(call, msi_OnCapabilities) == -1) {
+                if (invoke_callback(call, MSI_ON_CAPABILITIES) == -1) {
                     goto FAILURE;
                 }
             }
         }
         break;
 
-        case msi_CallRequesting: {
+        case MSI_CALL_REQUESTING: {
             LOGGER_INFO(call->session->messenger->log, "Friend answered our call");
 
             /* Call started */
             call->peer_capabilities = msg->capabilities.value;
-            call->state = msi_CallActive;
+            call->state = MSI_CALL_ACTIVE;
 
-            if (invoke_callback(call, msi_OnStart) == -1) {
+            if (invoke_callback(call, MSI_ON_START) == -1) {
                 goto FAILURE;
             }
         }
         break;
 
         /* Pushes during initialization state are ignored */
-        case msi_CallInactive: // fall-through
-        case msi_CallRequested: {
+        case MSI_CALL_INACTIVE: // fall-through
+        case MSI_CALL_REQUESTED: {
             LOGGER_WARNING(call->session->messenger->log, "Ignoring invalid push");
         }
         break;
@@ -752,32 +773,32 @@ void handle_pop(MSICall *call, const MSIMessage *msg)
     if (msg->error.exists) {
         LOGGER_WARNING(call->session->messenger->log, "Friend detected an error: %d", msg->error.value);
         call->error = msg->error.value;
-        invoke_callback(call, msi_OnError);
+        invoke_callback(call, MSI_ON_ERROR);
     } else {
         switch (call->state) {
-            case msi_CallInactive: {
+            case MSI_CALL_INACTIVE: {
                 LOGGER_ERROR(call->session->messenger->log, "Handling what should be impossible case");
                 abort();
             }
 
-            case msi_CallActive: {
+            case MSI_CALL_ACTIVE: {
                 /* Hangup */
                 LOGGER_INFO(call->session->messenger->log, "Friend hung up on us");
-                invoke_callback(call, msi_OnEnd);
+                invoke_callback(call, MSI_ON_END);
             }
             break;
 
-            case msi_CallRequesting: {
+            case MSI_CALL_REQUESTING: {
                 /* Reject */
                 LOGGER_INFO(call->session->messenger->log, "Friend rejected our call");
-                invoke_callback(call, msi_OnEnd);
+                invoke_callback(call, MSI_ON_END);
             }
             break;
 
-            case msi_CallRequested: {
+            case MSI_CALL_REQUESTED: {
                 /* Cancel */
                 LOGGER_INFO(call->session->messenger->log, "Friend canceled call invite");
-                invoke_callback(call, msi_OnEnd);
+                invoke_callback(call, MSI_ON_END);
             }
             break;
         }
@@ -794,7 +815,7 @@ void handle_msi_packet(Messenger *m, uint32_t friend_number, const uint8_t *data
 
     if (msg_parse_in(m->log, &msg, data, length) == -1) {
         LOGGER_WARNING(m->log, "Error parsing message");
-        send_error(m, friend_number, msi_EInvalidMessage);
+        send_error(m, friend_number, MSI_E_INVALID_MESSAGE);
         return;
     }
 
@@ -804,8 +825,8 @@ void handle_msi_packet(Messenger *m, uint32_t friend_number, const uint8_t *data
     MSICall *call = get_call(session, friend_number);
 
     if (call == nullptr) {
-        if (msg.request.value != requ_init) {
-            send_error(m, friend_number, msi_EStrayMessage);
+        if (msg.request.value != REQU_INIT) {
+            send_error(m, friend_number, MSI_E_STRAY_MESSAGE);
             pthread_mutex_unlock(session->mutex);
             return;
         }
@@ -813,22 +834,22 @@ void handle_msi_packet(Messenger *m, uint32_t friend_number, const uint8_t *data
         call = new_call(session, friend_number);
 
         if (call == nullptr) {
-            send_error(m, friend_number, msi_ESystem);
+            send_error(m, friend_number, MSI_E_SYSTEM);
             pthread_mutex_unlock(session->mutex);
             return;
         }
     }
 
     switch (msg.request.value) {
-        case requ_init:
+        case REQU_INIT:
             handle_init(call, &msg);
             break;
 
-        case requ_push:
+        case REQU_PUSH:
             handle_push(call, &msg);
             break;
 
-        case requ_pop:
+        case REQU_POP:
             handle_pop(call, &msg); /* always kills the call */
             break;
     }
