@@ -458,7 +458,12 @@ static int get_frozen_index(Group_c *g, uint16_t peer_number)
     return -1;
 }
 
-static int thaw_frozen_peer(Group_Chats *g_c, uint32_t groupnumber, uint16_t peer_number, void *userdata)
+/* Update last_active timestamp on peer, and thaw the peer if it is frozen.
+ *
+ * return peer index if peer is in the conference.
+ * return -1 otherwise, and on error.
+ */
+static int note_peer_active(Group_Chats *g_c, uint32_t groupnumber, uint16_t peer_number, void *userdata)
 {
     Group_c *g = get_group_c(g_c, groupnumber);
 
@@ -466,11 +471,20 @@ static int thaw_frozen_peer(Group_Chats *g_c, uint32_t groupnumber, uint16_t pee
         return -1;
     }
 
+    int peer_index = get_peer_index(g, peer_number);
+
+    if (peer_index != -1) {
+        g->group[peer_index].last_active = mono_time_get(g_c->mono_time);
+        return peer_index;
+    }
+
     int frozen_index = get_frozen_index(g, peer_number);
 
     if (frozen_index == -1) {
         return -1;
     }
+
+    /* Now thaw the peer */
 
     Group_Peer *temp = (Group_Peer *)realloc(g->group, sizeof(Group_Peer) * (g->numpeers + 1));
 
@@ -483,9 +497,7 @@ static int thaw_frozen_peer(Group_Chats *g_c, uint32_t groupnumber, uint16_t pee
     temp[g->numpeers].temp_pk_updated = false;
     g->group = temp;
 
-    // FIXME: rename last_recv to last_known, and update every time we check
-    // for thawing
-    g->group[g->numpeers].last_recv = unix_time();
+    g->group[g->numpeers].last_active = mono_time_get(g_c->mono_time);
 
     add_to_closest(g_c, groupnumber, g->group[g->numpeers].real_pk, g->group[g->numpeers].temp_pk);
 
@@ -525,6 +537,9 @@ static int thaw_frozen_peer(Group_Chats *g_c, uint32_t groupnumber, uint16_t pee
 
 /* Add a peer to the group chat, or update an existing peer.
  *
+ * fresh indicates whether we should consider this information on the peer to
+ * be current, and so should update temp_pk and consider the peer active.
+ *
  * do_gc_callback indicates whether we want to trigger callbacks set by the client
  * via the public API. This should be set to false if this function is called
  * from outside of the tox_iterate() loop.
@@ -533,7 +548,7 @@ static int thaw_frozen_peer(Group_Chats *g_c, uint32_t groupnumber, uint16_t pee
  * return -1 if error.
  */
 static int addpeer(Group_Chats *g_c, uint32_t groupnumber, const uint8_t *real_pk, const uint8_t *temp_pk,
-                   uint16_t peer_number, void *userdata, bool update_peer, bool do_gc_callback)
+                   uint16_t peer_number, void *userdata, bool fresh, bool do_gc_callback)
 {
     Group_c *g = get_group_c(g_c, groupnumber);
 
@@ -541,43 +556,26 @@ static int addpeer(Group_Chats *g_c, uint32_t groupnumber, const uint8_t *real_p
         return -1;
     }
 
-    // TODO(irungentoo):
-    int peer_index = peer_in_chat(g, real_pk);
+    int peer_index = -1;
+
+    if (fresh) {
+        peer_index = note_peer_active(g_c, groupnumber, peer_number, userdata);
+    } else {
+        peer_index = get_peer_index(g, peer_number);
+    }
 
     if (peer_index != -1) {
-        if (g->group[peer_index].peer_number != peer_number) {
+        if (!id_equal(g->group[peer_index].real_pk, real_pk)) {
             return -1;
         }
 
-        if (update_peer || !g->group[peer_index].temp_pk_updated) {
+        if (fresh || !g->group[peer_index].temp_pk_updated) {
             id_copy(g->group[peer_index].temp_pk, temp_pk);
             g->group[peer_index].temp_pk_updated = true;
         }
 
         return peer_index;
     }
-
-    peer_index = get_peer_index(g, peer_number);
-
-    if (peer_index != -1) {
-        return -1;
-    }
-
-    if (get_frozen_index(g, peer_number) != -1) {
-        if (update_peer) {
-            peer_index = thaw_frozen_peer(g_c, groupnumber, peer_number, userdata);
-
-            if (peer_index != -1) {
-                id_copy(g->group[peer_index].temp_pk, temp_pk);
-                g->group[peer_index].temp_pk_updated = true;
-            }
-
-            return peer_index;
-        }
-
-        return -1;
-    }
-
 
     Group_Peer *temp = (Group_Peer *)realloc(g->group, sizeof(Group_Peer) * (g->numpeers + 1));
 
@@ -593,7 +591,7 @@ static int addpeer(Group_Chats *g_c, uint32_t groupnumber, const uint8_t *real_p
     g->group[g->numpeers].temp_pk_updated = true;
     g->group[g->numpeers].peer_number = peer_number;
 
-    g->group[g->numpeers].last_recv = mono_time_get(g_c->mono_time);
+    g->group[g->numpeers].last_active = mono_time_get(g_c->mono_time);
     ++g->numpeers;
 
     add_to_closest(g_c, groupnumber, real_pk, temp_pk);
@@ -2388,17 +2386,13 @@ static void handle_message_packet_group(Group_Chats *g_c, uint32_t groupnumber, 
     memcpy(&peer_number, data, sizeof(uint16_t));
     peer_number = net_ntohs(peer_number);
 
-    int index = get_peer_index(g, peer_number);
+    int index = note_peer_active(g_c, groupnumber, peer_number, userdata);
 
     if (index == -1) {
-        index = thaw_frozen_peer(g_c, groupnumber, peer_number, userdata);
-
-        if (index == -1) {
-            /* We don't know the peer this packet came from so we query the list of peers from that peer.
-               (They would not have relayed it if they didn't know the peer.) */
-            send_peer_query(g_c, g->close[close_index].number, g->close[close_index].group_number);
-            return;
-        }
+        /* We don't know the peer this packet came from so we query the list of peers from that peer.
+           (They would not have relayed it if they didn't know the peer.) */
+        send_peer_query(g_c, g->close[close_index].number, g->close[close_index].group_number);
+        return;
     }
 
     if (g->num_introducer_connections > 0 && count_close_connected(g) >= DESIRED_CLOSE_CONNECTIONS) {
@@ -2447,14 +2441,8 @@ static void handle_message_packet_group(Group_Chats *g_c, uint32_t groupnumber, 
     }
 
     switch (message_id) {
-        case GROUP_MESSAGE_PING_ID: {
-            if (msg_data_len != 0) {
-                return;
-            }
-
-            g->group[index].last_recv = mono_time_get(g_c->mono_time);
-        }
-        break;
+        case GROUP_MESSAGE_PING_ID:
+            break;
 
         case GROUP_MESSAGE_NEW_PEER_ID: {
             if (msg_data_len != GROUP_MESSAGE_NEW_PEER_LENGTH) {
@@ -2828,7 +2816,7 @@ static int groupchat_freeze_timedout(Group_Chats *g_c, uint32_t groupnumber, voi
             continue;
         }
 
-        if (mono_time_is_timeout(g_c->mono_time, g->group[i].last_recv, GROUP_PING_INTERVAL * 3)) {
+        if (mono_time_is_timeout(g_c->mono_time, g->group[i].last_active, GROUP_PING_INTERVAL * 3)) {
             try_send_rejoin(g_c, groupnumber, g->group[i].real_pk);
             delpeer(g_c, groupnumber, i, true, userdata);
         }
