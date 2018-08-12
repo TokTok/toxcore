@@ -1,4 +1,6 @@
-# Proposal
+Minimal persistent conferences
+
+# Specification of changes from pre-existing conference specification
 We add one new packet type:
 
 Rejoin Conference packet
