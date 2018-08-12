@@ -27,6 +27,8 @@
 
 #include <stdbool.h>
 
+#include "../../../toxcore/ccompat.h"
+
 typedef enum LOG_BACKEND {
     LOG_BACKEND_STDOUT,
     LOG_BACKEND_SYSLOG
@@ -58,7 +60,7 @@ bool log_close(void);
  * @param ... Zero or more arguments, similar to printf function.
  * @return true on success, flase if log is closed.
  */
-bool log_write(LOG_LEVEL level, const char *format, ...);
+bool log_write(LOG_LEVEL level, const char *format, ...) GNU_PRINTF(2, 3);
 
 
 #endif // LOG_H
