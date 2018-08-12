@@ -100,3 +100,12 @@ frozen.
 The client would need to support this by understanding that these groups exist
 on start-up (e.g. starting windows for them), and by not automatically killing
 groups on closing the client.
+
+# Limitations
+If a peer disconnects from the group for a period short enough that group
+timeouts do not occur, and a name change occurs during this period, then the
+name change will never be propagated.
+
+One way to deal with this would be a general mechanism for storing and
+requesting missed group messages. But this is considered out of scope of this
+PR.
