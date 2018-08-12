@@ -2435,7 +2435,6 @@ static void handle_message_packet_group(Group_Chats *g_c, uint32_t groupnumber, 
     const uint8_t *msg_data = data + sizeof(uint16_t) + sizeof(message_number) + 1;
     uint16_t msg_data_len = length - (sizeof(uint16_t) + sizeof(message_number) + 1);
 
-    // FIXME(zugz) update discussion of message numbers in the spec
     if (!check_message_info(message_number, message_id, &g->group[index])) {
         return;
     }
