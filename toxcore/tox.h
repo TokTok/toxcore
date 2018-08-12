@@ -2421,6 +2421,12 @@ typedef enum TOX_CONFERENCE_TYPE {
  * or exits the conference.
  *
  * @param friend_number The friend who invited us.
+ *  if friend_number == UINT32_MAX then conference automatically joined.
+ *  On auto-join client must call tox_conference_join or toxav_join_av_groupchat
+ *  immediately in callback. For api compatibility reason, if client don't
+ *  call one these functions, conference will be deleted and toxcore
+ *  totally forget this conference.
+ *
  * @param type The conference type (text only or audio/video).
  * @param cookie A piece of data of variable length required to join the
  *   conference.
@@ -2567,6 +2573,75 @@ typedef enum TOX_ERR_CONFERENCE_DELETE {
  * @return true on success.
  */
 bool tox_conference_delete(Tox *tox, uint32_t conference_number, TOX_ERR_CONFERENCE_DELETE *error);
+
+typedef enum TOX_ERR_CONFERENCE_ENTER {
+
+    /**
+     * The function returned successfully.
+     */
+    TOX_ERR_CONFERENCE_ENTER_OK,
+
+    /**
+     * Conference already connected or enter process already started
+     */
+    TOX_ERR_CONFERENCE_ENTER_ALREADY,
+
+    /**
+     * The conference number passed did not designate a valid conference.
+     */
+    TOX_ERR_CONFERENCE_ENTER_NOT_FOUND,
+
+} TOX_ERR_CONFERENCE_ENTER;
+
+
+/**
+ * This function starts entering process.
+ * Call this function only if you leave conference using tox_conference_leave.
+ * No need to call this function for just created conferences
+ *
+ * @param conference_number The conference number of the conference to be entered.
+ * conference_number can be obtained by tox_conference_by_uid
+ *
+ * @return true on success.
+ */
+bool tox_conference_enter(Tox *tox, uint32_t conference_number, TOX_ERR_CONFERENCE_ENTER *error);
+
+typedef enum TOX_ERR_CONFERENCE_LEAVE {
+
+    /**
+     * The function returned successfully.
+     */
+    TOX_ERR_CONFERENCE_LEAVE_OK,
+
+    /**
+     * Conference already disconnected
+     */
+    TOX_ERR_CONFERENCE_LEAVE_ALREADY,
+
+    /**
+     * The conference number passed did not designate a valid conference.
+     */
+    TOX_ERR_CONFERENCE_LEAVE_NOT_FOUND,
+
+} TOX_ERR_CONFERENCE_LEAVE;
+
+
+/**
+ * This function disconnects conference.
+ * Call this function to disconnect conference without delete.
+ * Even error TOX_ERR_CONFERENCE_LEAVE_ALREADY, new keep_leave flag will be applied to conference
+ *
+ * @param conference_number The conference number of the conference to be disconnected.
+ * conference_number can be obtained by tox_conference_by_uid.
+ *
+ * @param keep_leave Set true to keep in leave state
+ * No one can invite you to this conference after you leave it with keep_leave is true.
+ * Also keep_leave == true means conference will not try to connect to other peers after restart.
+ * Call tox_conference_enter to enable auto connect and invite.
+ *
+ * @return true on success.
+ */
+bool tox_conference_leave(Tox *tox, uint32_t conference_number, bool keep_leave, TOX_ERR_CONFERENCE_LEAVE *error);
 
 /**
  * Error codes for peer info queries.
@@ -3149,6 +3224,8 @@ typedef TOX_ERR_FILE_SEND_CHUNK Tox_Err_File_Send_Chunk;
 typedef TOX_ERR_CONFERENCE_NEW Tox_Err_Conference_New;
 typedef TOX_ERR_CONFERENCE_DELETE Tox_Err_Conference_Delete;
 typedef TOX_ERR_CONFERENCE_PEER_QUERY Tox_Err_Conference_Peer_Query;
+typedef TOX_ERR_CONFERENCE_LEAVE Tox_Err_Conference_Leave;
+typedef TOX_ERR_CONFERENCE_ENTER Tox_Err_Conference_Enter;
 typedef TOX_ERR_CONFERENCE_BY_ID Tox_Err_Conference_By_Id;
 typedef TOX_ERR_CONFERENCE_BY_UID Tox_Err_Conference_By_Uid;
 typedef TOX_ERR_CONFERENCE_INVITE Tox_Err_Conference_Invite;

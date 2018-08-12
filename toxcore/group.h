@@ -26,192 +26,179 @@
 
 #include "Messenger.h"
 
-typedef enum Groupchat_Status {
-    GROUPCHAT_STATUS_NONE,
-    GROUPCHAT_STATUS_VALID,
-    GROUPCHAT_STATUS_CONNECTED
-} Groupchat_Status;
-
-typedef enum Groupchat_Type {
+enum {
     GROUPCHAT_TYPE_TEXT,
     GROUPCHAT_TYPE_AV
-} Groupchat_Type;
+};
 
 #define MAX_LOSSY_COUNT 256
 
-typedef struct Message_Info {
-    uint32_t message_number;
-    uint8_t  message_id;
-} Message_Info;
+/* number of group messages */
+#define NUM_GROUP_PACKET_IDS 9
 
-#define MAX_LAST_MESSAGE_INFOS 8
+typedef struct {
+    uint8_t     recv_lossy[MAX_LOSSY_COUNT];
+    uint16_t    bottom_lossy_number;
+    uint16_t    top_lossy_number;
+} Group_Peer_Lossy;
 
-typedef struct Group_Peer {
+typedef struct {
     uint8_t     real_pk[CRYPTO_PUBLIC_KEY_SIZE];
     uint8_t     temp_pk[CRYPTO_PUBLIC_KEY_SIZE];
 
+    Group_Peer_Lossy *lossy; /* rare use */
+    void *object;
+
     uint64_t    last_recv;
 
-    Message_Info
-    last_message_infos[MAX_LAST_MESSAGE_INFOS]; /* received messages, strictly decreasing in message_number */
-    uint8_t         num_last_message_infos;
+    uint8_t     *nick;
 
-    uint8_t     nick[MAX_NAME_LENGTH];
+    uint32_t    last_message_number[NUM_GROUP_PACKET_IDS];
+    int         friendcon_id;
+
+    signed      gid : 24; /* unique per-conference peer id */
     uint8_t     nick_len;
-    bool        nick_updated;
-
-    uint16_t peer_number;
-
-    uint8_t  recv_lossy[MAX_LOSSY_COUNT];
-    uint16_t bottom_lossy_number;
-    uint16_t top_lossy_number;
-
-    void *object;
+    uint16_t    group_number;
+    uint8_t     keep_connection; /* keep connection even not in ring (count down every incoming ping packet) */
+    unsigned    nick_changed : 1;
+    unsigned    title_changed : 1;
+    unsigned    auto_join : 1;
+    unsigned    need_send_peers : 1;
+    unsigned    connected : 1;
 } Group_Peer;
 
+typedef struct {
+    uint64_t    next_try_time;
+    uint8_t     real_pk[CRYPTO_PUBLIC_KEY_SIZE];
+    int8_t      fails;
+    unsigned    online : 1;
+    unsigned    unsubscribed : 1;
+} Group_Join_Peer;
+
 #define DESIRED_CLOSE_CONNECTIONS 4
-#define MAX_GROUP_CONNECTIONS 16
-#define GROUP_ID_LENGTH CRYPTO_SYMMETRIC_KEY_SIZE
+#define GROUP_IDENTIFIER_LENGTH (1 + CRYPTO_SYMMETRIC_KEY_SIZE) /* type + CRYPTO_SYMMETRIC_KEY_SIZE so we can use new_symmetric_key(...) to fill it */
 
-typedef enum Groupchat_Close_Type {
-    GROUPCHAT_CLOSE_NONE,
-    GROUPCHAT_CLOSE_CONNECTION,
-    GROUPCHAT_CLOSE_ONLINE
-} Groupchat_Close_Type;
-
-typedef struct Groupchat_Close {
-    uint8_t type; /* GROUPCHAT_CLOSE_* */
-    bool closest; /* connected to peer because it is one of our closest peers */
-    bool introducer; /* connected to peer because it introduced us to the group */
-    bool introduced; /* connected to peer because we introduced it to the group */
-    uint32_t number;
-    uint16_t group_number;
-} Groupchat_Close;
-
-typedef struct Groupchat_Close_Connection {
-    uint8_t entry;
-    uint8_t real_pk[CRYPTO_PUBLIC_KEY_SIZE];
-    uint8_t temp_pk[CRYPTO_PUBLIC_KEY_SIZE];
-} Groupchat_Close_Connection;
-
-typedef void peer_on_join_cb(void *object, uint32_t conference_number, uint32_t peer_number);
-typedef void peer_on_leave_cb(void *object, uint32_t conference_number, void *peer_object);
-typedef void group_on_delete_cb(void *object, uint32_t conference_number);
-
-typedef struct Group_c {
-    uint8_t status;
-
-    Group_Peer *group;
-    uint32_t numpeers;
-
-    /* TODO(zugz) rename close to something more accurate - "connected"? */
-    Groupchat_Close close[MAX_GROUP_CONNECTIONS];
-
-    uint8_t real_pk[CRYPTO_PUBLIC_KEY_SIZE];
-    Groupchat_Close_Connection closest_peers[DESIRED_CLOSE_CONNECTIONS];
-    uint8_t changed;
-
-    uint8_t type;
-    uint8_t id[GROUP_ID_LENGTH];
-
-    uint8_t title[MAX_NAME_LENGTH];
-    uint8_t title_len;
-
-    uint32_t message_number;
-    uint16_t lossy_message_number;
-    uint16_t peer_number;
-
-    uint64_t last_sent_ping;
-
-    int number_joined; /* friendcon_id of person that invited us to the chat. (-1 means none) */
-
+typedef struct {
+    Group_Peer *peers;
+    Group_Join_Peer *joinpeers;
+    uint16_t *peers_list;
     void *object;
 
-    peer_on_join_cb *peer_on_join;
-    peer_on_leave_cb *peer_on_leave;
-    group_on_delete_cb *group_on_delete;
+    uint32_t numpeers;
+    uint32_t numpeers_in_list;
+    uint32_t message_number;
+    uint16_t numjoinpeers;
+
+    uint64_t last_sent_ping;
+    uint64_t next_join_check_time;
+    uint64_t last_close_check_time;
+
+    uint8_t real_pk[CRYPTO_PUBLIC_KEY_SIZE];
+    uint8_t title[MAX_NAME_LENGTH];
+    uint16_t closest_peers[DESIRED_CLOSE_CONNECTIONS];
+
+    void (*peer_on_join)(void *, uint32_t, uint32_t);
+    void (*peer_on_leave)(void *, uint32_t, void *);
+    void (*group_on_delete)(void *, uint32_t);
+
+    uint8_t identifier[GROUP_IDENTIFIER_LENGTH];
+
+unsigned closest_peers_entry :
+    DESIRED_CLOSE_CONNECTIONS;
+    unsigned live : 1;
+    unsigned join_mode : 1;
+    unsigned fake_join : 1;
+    unsigned auto_join : 1;
+
+    unsigned title_len : 8;
+    unsigned lossy_message_number : 16;
+
+    signed keep_join_index : 24;
+
+    unsigned need_send_name : 1;
+    unsigned dirty_list : 1;
+    unsigned title_changed : 1;
+    unsigned invite_called : 1;
+    unsigned keep_leave : 1;
+    unsigned disable_auto_join : 1;
+    unsigned nick_changed : 1;
 } Group_c;
 
-/* Callback for group invites.
- *
- * data of length is what needs to be passed to join_groupchat().
- */
-typedef void g_conference_invite_cb(Messenger *m, uint32_t friend_number, int type, const uint8_t *cookie,
-                                    size_t length, void *user_data);
-
-/* Callback for group connection. */
-typedef void g_conference_connected_cb(Messenger *m, uint32_t conference_number, void *user_data);
-
-/* Callback for group messages. */
-typedef void g_conference_message_cb(Messenger *m, uint32_t conference_number, uint32_t peer_number, int type,
-                                     const uint8_t *message, size_t length, void *user_data);
-
-/* Callback for peer nickname changes. */
-typedef void peer_name_cb(Messenger *m, uint32_t conference_number, uint32_t peer_number, const uint8_t *name,
-                          size_t length, void *user_data);
-
-/* Set callback function for peer list changes. */
-typedef void peer_list_changed_cb(Messenger *m, uint32_t conference_number, void *user_data);
-
-/* Callback for title changes.
- *
- * If peer_number == -1, then author is unknown (e.g. initial joining the group).
- */
-typedef void title_cb(Messenger *m, uint32_t conference_number, uint32_t peer_number, const uint8_t *title,
-                      size_t length, void *user_data);
-
-/* Callback for lossy packets.
- *
- * NOTE: Handler must return 0 if packet is to be relayed, -1 if the packet should not be relayed.
- */
-typedef int lossy_packet_cb(void *object, uint32_t conference_number, uint32_t peer_number, void *peer_object,
-                            const uint8_t *packet, uint16_t length);
-
-typedef struct Group_Lossy_Handler {
-    lossy_packet_cb *function;
-} Group_Lossy_Handler;
+typedef void g_conference_invite_cb(Messenger *, uint32_t, int, const uint8_t *, size_t, void *);
+typedef void g_conference_message_cb(Messenger *m, uint32_t, uint32_t, int, const uint8_t *, size_t, void *);
 
 typedef struct Group_Chats {
     Messenger *m;
     Friend_Connections *fr_c;
 
+
     Group_c *chats;
     uint16_t num_chats;
+    unsigned is_online : 1;
+
 
     g_conference_invite_cb *invite_callback;
-    g_conference_connected_cb *connected_callback;
     g_conference_message_cb *message_callback;
-    peer_name_cb *peer_name_callback;
-    peer_list_changed_cb *peer_list_changed_callback;
-    title_cb *title_callback;
+    void (*peer_name_callback)(Messenger *m, uint32_t, uint32_t, const uint8_t *, size_t, void *);
+    void (*peer_list_changed_callback)(Messenger *m, uint32_t, void *);
+    void (*title_callback)(Messenger *m, uint32_t, uint32_t, const uint8_t *, size_t, void *);
 
-    Group_Lossy_Handler lossy_packethandlers[256];
+
+    /*
+    there is only one value currently used: 192 (GROUP_AUDIO_PACKET_ID)
+    no need to reserve 255 addition pointers to handlers never used
+    that is why irungentoo's array of pointers was replaced with only one ptr
+    if someone in future want to use another id of packet in addition to the 192
+    just return back this array... or write better code
+                                                            isotoxin.dev
+    struct {
+        int (*function)(void *, int, int, void *, const uint8_t *, uint16_t);
+    } lossy_packethandlers[256];
+    */
+
+    int(*lossy_packethandler)(void *, uint32_t, uint32_t, void *, const uint8_t *, uint16_t);
 } Group_Chats;
 
-/* Set the callback for group invites. */
-void g_callback_group_invite(Group_Chats *g_c, g_conference_invite_cb *function);
 
-/* Set the callback for group connection. */
-void g_callback_group_connected(Group_Chats *g_c, g_conference_connected_cb *function);
+/* Set the callback for group invites.
+ *
+ *  Function(Group_Chats *g_c, int32_t friendnumber, uint8_t type, uint8_t *data, uint16_t length, void *userdata)
+ *
+ *  data of length is what needs to be passed to join_groupchat().
+ */
+void g_callback_group_invite(Group_Chats *g_c, void (*function)(Messenger *m, uint32_t, int, const uint8_t *,
+                             size_t, void *));
 
-/* Set the callback for group messages. */
-void g_callback_group_message(Group_Chats *g_c, g_conference_message_cb *function);
+/* Set the callback for group messages.
+ *
+ *  Function(Group_Chats *g_c, int groupnumber, int friendgroupnumber, uint8_t * message, uint16_t length, void *userdata)
+ */
+void g_callback_group_message(Group_Chats *g_c, void (*function)(Messenger *m, uint32_t, uint32_t, int, const uint8_t *,
+                              size_t, void *));
 
 
-/* Set callback function for title changes. */
-void g_callback_group_title(Group_Chats *g_c, title_cb *function);
+/* Set callback function for title changes.
+ *
+ * Function(Group_Chats *g_c, int groupnumber, int friendgroupnumber, uint8_t * title, uint8_t length, void *userdata)
+ * if friendgroupnumber == -1, then author is unknown (e.g. initial joining the group)
+ */
+void g_callback_group_title(Group_Chats *g_c, void (*function)(Messenger *m, uint32_t, uint32_t, const uint8_t *,
+                            size_t, void *));
 
 /* Set callback function for peer nickname changes.
  *
  * It gets called every time a peer changes their nickname.
+ *  Function(Group_Chats *g_c, uint32_t groupnumber, uint32_t peernumber, const uint8_t *nick, size_t nick_len, void *userdata)
  */
-void g_callback_peer_name(Group_Chats *g_c, peer_name_cb *function);
+void g_callback_peer_name(Group_Chats *g_c, void (*function)(Messenger *m, uint32_t, uint32_t, const uint8_t *,
+                          size_t, void *));
 
 /* Set callback function for peer list changes.
  *
  * It gets called every time the name list changes(new peer, deleted peer)
+ *  Function(Group_Chats *g_c, uint32_t groupnumber, void *userdata)
  */
-void g_callback_peer_list_changed(Group_Chats *g_c, peer_list_changed_cb *function);
+void g_callback_peer_list_changed(Group_Chats *g_c, void (*function)(Messenger *m, uint32_t, void *));
 
 /* Creates a new groupchat and puts it in the chats array.
  *
@@ -220,40 +207,43 @@ void g_callback_peer_list_changed(Group_Chats *g_c, peer_list_changed_cb *functi
  * return group number on success.
  * return -1 on failure.
  */
-int add_groupchat(Group_Chats *g_c, uint8_t type);
+int add_groupchat(Group_Chats *g_c, uint8_t type, const uint8_t *uid /*can be NULL*/);
 
 /* Delete a groupchat from the chats array.
  *
  * return 0 on success.
  * return -1 if groupnumber is invalid.
  */
-int del_groupchat(Group_Chats *g_c, uint32_t groupnumber);
+int del_groupchat(Group_Chats *g_c, int groupnumber);
 
-/* Copy the public key of peernumber who is in groupnumber to pk.
+int enter_conference(Group_Chats *g_c, int groupnumber);
+int leave_conference(Group_Chats *g_c, int groupnumber, bool keep_leave);
+
+/* Copy the public key of peer_index who is in groupnumber to pk.
  * pk must be CRYPTO_PUBLIC_KEY_SIZE long.
  *
  * return 0 on success
  * return -1 if groupnumber is invalid.
- * return -2 if peernumber is invalid.
+ * return -2 if peer_index is invalid.
  */
-int group_peer_pubkey(const Group_Chats *g_c, uint32_t groupnumber, int peernumber, uint8_t *pk);
+int group_peer_pubkey(const Group_Chats *g_c, int groupnumber, int peer_index, uint8_t *pk);
 
 /*
- * Return the size of peernumber's name.
+ * Return the size of peer_index's name.
  *
  * return -1 if groupnumber is invalid.
- * return -2 if peernumber is invalid.
+ * return -2 if peer_index is invalid.
  */
-int group_peername_size(const Group_Chats *g_c, uint32_t groupnumber, int32_t peernumber);
+int group_peername_size(const Group_Chats *g_c, int groupnumber, int peer_index);
 
-/* Copy the name of peernumber who is in groupnumber to name.
+/* Copy the name of peer_index who is in groupnumber to name.
  * name must be at least MAX_NAME_LENGTH long.
  *
  * return length of name if success
  * return -1 if groupnumber is invalid.
- * return -2 if peernumber is invalid.
+ * return -2 if peer_index is invalid.
  */
-int group_peername(const Group_Chats *g_c, uint32_t groupnumber, int peernumber, uint8_t *name);
+int group_peername(const Group_Chats *g_c, int groupnumber, int peer_index, uint8_t *name);
 
 /* invite friendnumber to groupnumber
  *
@@ -261,7 +251,7 @@ int group_peername(const Group_Chats *g_c, uint32_t groupnumber, int peernumber,
  * return -1 if groupnumber is invalid.
  * return -2 if invite packet failed to send.
  */
-int invite_friend(Group_Chats *g_c, uint32_t friendnumber, uint32_t groupnumber);
+int invite_friend(Group_Chats *g_c, int32_t friendnumber, int groupnumber);
 
 /* Join a group (you need to have been invited first.)
  *
@@ -275,20 +265,19 @@ int invite_friend(Group_Chats *g_c, uint32_t friendnumber, uint32_t groupnumber)
  * return -5 if group instance failed to initialize.
  * return -6 if join packet fails to send.
  */
-int join_groupchat(Group_Chats *g_c, uint32_t friendnumber, uint8_t expected_type, const uint8_t *data,
-                   uint16_t length);
+int join_groupchat(Group_Chats *g_c, int32_t friendnumber, uint8_t expected_type, const uint8_t *data, uint16_t length);
 
 /* send a group message
  * return 0 on success
  * see: send_message_group() for error codes.
  */
-int group_message_send(const Group_Chats *g_c, uint32_t groupnumber, const uint8_t *message, uint16_t length);
+int group_message_send(const Group_Chats *g_c, int groupnumber, const uint8_t *message, uint16_t length);
 
 /* send a group action
  * return 0 on success
  * see: send_message_group() for error codes.
  */
-int group_action_send(const Group_Chats *g_c, uint32_t groupnumber, const uint8_t *action, uint16_t length);
+int group_action_send(const Group_Chats *g_c, int groupnumber, const uint8_t *action, uint16_t length);
 
 /* set the group's title, limited to MAX_NAME_LENGTH
  * return 0 on success
@@ -296,14 +285,14 @@ int group_action_send(const Group_Chats *g_c, uint32_t groupnumber, const uint8_
  * return -2 if title is too long or empty.
  * return -3 if packet fails to send.
  */
-int group_title_send(const Group_Chats *g_c, uint32_t groupnumber, const uint8_t *title, uint8_t title_len);
+int group_title_send(const Group_Chats *g_c, int groupnumber, const uint8_t *title, uint8_t title_len);
 
 
 /* return the group's title size.
  * return -1 of groupnumber is invalid.
  * return -2 if title is too long or empty.
  */
-int group_title_get_size(const Group_Chats *g_c, uint32_t groupnumber);
+int group_title_get_size(const Group_Chats *g_c, int groupnumber);
 
 /* Get group title from groupnumber and put it in title.
  * Title needs to be a valid memory location with a size of at least MAX_NAME_LENGTH (128) bytes.
@@ -312,20 +301,20 @@ int group_title_get_size(const Group_Chats *g_c, uint32_t groupnumber);
  * return -1 if groupnumber is invalid.
  * return -2 if title is too long or empty.
  */
-int group_title_get(const Group_Chats *g_c, uint32_t groupnumber, uint8_t *title);
+int group_title_get(const Group_Chats *g_c, int groupnumber, uint8_t *title);
 
 /* Return the number of peers in the group chat on success.
  * return -1 if groupnumber is invalid.
  */
-int group_number_peers(const Group_Chats *g_c, uint32_t groupnumber);
+int group_number_peers(const Group_Chats *g_c, int groupnumber);
 
-/* return 1 if the peernumber corresponds to ours.
- * return 0 if the peernumber is not ours.
+/* return 1 if the peer_index corresponds to ours.
+ * return 0 if the peer_index is not ours.
  * return -1 if groupnumber is invalid.
- * return -2 if peernumber is invalid.
+ * return -2 if peer_index is invalid.
  * return -3 if we are not connected to the group chat.
  */
-int group_peernumber_is_ours(const Group_Chats *g_c, uint32_t groupnumber, int peernumber);
+int group_peer_index_is_ours(const Group_Chats *g_c, int groupnumber, int peer_index);
 
 /* List all the peers in the group chat.
  *
@@ -337,18 +326,24 @@ int group_peernumber_is_ours(const Group_Chats *g_c, uint32_t groupnumber, int p
  *
  * return -1 on failure.
  */
-int group_names(const Group_Chats *g_c, uint32_t groupnumber, uint8_t names[][MAX_NAME_LENGTH], uint16_t lengths[],
+int group_names(const Group_Chats *g_c, int groupnumber, uint8_t names[][MAX_NAME_LENGTH], uint16_t lengths[],
                 uint16_t length);
 
-/* Set handlers for custom lossy packets. */
-void group_lossy_packet_registerhandler(Group_Chats *g_c, uint8_t byte, lossy_packet_cb *function);
+/* Set handlers for custom lossy packets.
+ *
+ * NOTE: Handler must return 0 if packet is to be relayed, -1 if the packet should not be relayed.
+ *
+ * Function(void *group object (set with group_set_object), int groupnumber, int friendgroupnumber, void *group peer object (set with group_peer_set_object), const uint8_t *packet, uint16_t length)
+ */
+void group_lossy_packet_registerhandler(Group_Chats *g_c, uint8_t byte, int (*function)(void *, uint32_t, uint32_t,
+                                        void *, const uint8_t *, uint16_t));
 
 /* High level function to send custom lossy packets.
  *
  * return -1 on failure.
  * return 0 on success.
  */
-int send_group_lossy_packet(const Group_Chats *g_c, uint32_t groupnumber, const uint8_t *data, uint16_t length);
+int send_group_lossy_packet(const Group_Chats *g_c, int groupnumber, const uint8_t *data, uint16_t length);
 
 /* Return the number of chats in the instance m.
  * You should use this to determine how much memory to allocate
@@ -368,16 +363,16 @@ uint32_t copy_chatlist(const Group_Chats *g_c, uint32_t *out_list, uint32_t list
  * return -1 on failure.
  * return type on success.
  */
-int group_get_type(const Group_Chats *g_c, uint32_t groupnumber);
+int group_get_type(const Group_Chats *g_c, int groupnumber);
 
-/* Copies the unique id of group_chat[groupnumber] into id.
+/* Copies the unique id of group_chat[groupnumber] into uid.
 *
 * return false on failure.
 * return true on success.
 */
-bool conference_get_id(const Group_Chats *g_c, uint32_t groupnumber, uint8_t *id);
+bool conference_get_id(const Group_Chats *g_c, int32_t groupnumber, uint8_t *uid);
 
-int32_t conference_by_id(const Group_Chats *g_c, const uint8_t *id);
+int32_t conference_by_uid(const Group_Chats *g_c, const uint8_t *uid);
 
 /* Send current name (set in messenger) to all online groups.
  */
@@ -388,49 +383,55 @@ void send_name_all_groups(Group_Chats *g_c);
  * return 0 on success.
  * return -1 on failure
  */
-int group_set_object(const Group_Chats *g_c, uint32_t groupnumber, void *object);
+int group_set_object(const Group_Chats *g_c, int groupnumber, void *object);
 
 /* Set the object that is tied to the group peer.
  *
  * return 0 on success.
  * return -1 on failure
  */
-int group_peer_set_object(const Group_Chats *g_c, uint32_t groupnumber, int peernumber, void *object);
+int group_peer_set_object(const Group_Chats *g_c, int groupnumber, int peernumber, void *object);
 
-/* Return the object tied to the group chat previously set by group_set_object.
+/* Return the object tide to the group chat previously set by group_set_object.
  *
  * return NULL on failure.
  * return object on success.
  */
-void *group_get_object(const Group_Chats *g_c, uint32_t groupnumber);
+void *group_get_object(const Group_Chats *g_c, int groupnumber);
 
-/* Return the object tied to the group chat peer previously set by group_peer_set_object.
+/* Return the object tide to the group chat peer previously set by group_peer_set_object.
  *
  * return NULL on failure.
  * return object on success.
  */
-void *group_peer_get_object(const Group_Chats *g_c, uint32_t groupnumber, int peernumber);
+void *group_peer_get_object(const Group_Chats *g_c, int groupnumber, int peernumber);
 
 /* Set a function to be called when a new peer joins a group chat.
  *
+ * Function(void *group object (set with group_set_object), int groupnumber, int friendgroupnumber)
+ *
  * return 0 on success.
  * return -1 on failure.
  */
-int callback_groupchat_peer_new(const Group_Chats *g_c, uint32_t groupnumber, peer_on_join_cb *function);
+int callback_groupchat_peer_new(const Group_Chats *g_c, int groupnumber, void (*function)(void *, uint32_t, uint32_t));
 
 /* Set a function to be called when a peer leaves a group chat.
  *
- * return 0 on success.
- * return -1 on failure.
- */
-int callback_groupchat_peer_delete(Group_Chats *g_c, uint32_t groupnumber, peer_on_leave_cb *function);
-
-/* Set a function to be called when the group chat is deleted.
+ * Function(void *group object (set with group_set_object), int groupnumber, int friendgroupnumber, void *group peer object (set with group_peer_set_object))
  *
  * return 0 on success.
  * return -1 on failure.
  */
-int callback_groupchat_delete(Group_Chats *g_c, uint32_t groupnumber, group_on_delete_cb *function);
+int callback_groupchat_peer_delete(Group_Chats *g_c, int groupnumber, void (*function)(void *, uint32_t, void *));
+
+/* Set a function to be called when the group chat is deleted.
+ *
+ * Function(void *group object (set with group_set_object), int groupnumber)
+ *
+ * return 0 on success.
+ * return -1 on failure.
+ */
+int callback_groupchat_delete(Group_Chats *g_c, int groupnumber, void (*function)(void *, uint32_t));
 
 /* Create new groupchat instance. */
 Group_Chats *new_groupchats(Messenger *m);

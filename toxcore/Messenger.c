@@ -2745,6 +2745,7 @@ void do_messenger(Messenger *m, void *userdata)
 #define MESSENGER_STATE_TYPE_STATUS        6
 #define MESSENGER_STATE_TYPE_TCP_RELAY     10
 #define MESSENGER_STATE_TYPE_PATH_NODE     11
+#define MESSENGER_STATE_TYPE_CONFERENCES   100
 #define MESSENGER_STATE_TYPE_END           255
 
 #define SAVED_FRIEND_REQUEST_SIZE 1024
@@ -2962,6 +2963,32 @@ static int friends_list_load(Messenger *m, const uint8_t *data, uint32_t length)
     return num;
 }
 
+// Empty definitions of the conference load/save functions. These are set if the
+// groups module is loaded. In tox_new, the group module is initialised, so
+// public API users will never see calls to these functions.
+static uint32_t saved_conferences_size_default(const Messenger *m)
+{
+    return 0;
+}
+static void conferences_save_default(const Messenger *m, uint8_t *data)
+{
+    return;
+}
+static int conferences_load_default(Messenger *m, const uint8_t *data, uint32_t length)
+{
+    return 0;
+}
+
+// HACK HACK HACK to make conferences load/save work.
+// TODO(robinlinden): Refactor this.
+//!TOKSTYLE-
+// Invalid in TokTok style, because we don't allow global mutable state.
+saved_conferences_size_cb *saved_conferences_size_ptr = saved_conferences_size_default;
+conferences_save_cb *conferences_save_ptr = conferences_save_default;
+conferences_load_cb *conferences_load_ptr = conferences_load_default;
+//!TOKSTYLE+
+
+
 /*  return size of the messenger data (for saving) */
 uint32_t messenger_size(const Messenger *m)
 {
@@ -2975,6 +3002,7 @@ uint32_t messenger_size(const Messenger *m)
              + sizesubhead + 1                                 // status
              + sizesubhead + NUM_SAVED_TCP_RELAYS * packed_node_size(net_family_tcp_ipv6) // TCP relays
              + sizesubhead + NUM_SAVED_PATH_NODES * packed_node_size(net_family_tcp_ipv6) // saved path nodes
+             + sizesubhead + saved_conferences_size_ptr(m)     // old group chats
              + sizesubhead;
 }
 
@@ -3066,6 +3094,12 @@ void messenger_save(const Messenger *m, uint8_t *data)
         data += len;
     }
 
+    len = saved_conferences_size_ptr(m);
+    type = MESSENGER_STATE_TYPE_CONFERENCES;
+    data = messenger_save_subheader(data, len, type);
+    conferences_save_ptr(m, data);
+    data += len;
+
     messenger_save_subheader(data, 0, MESSENGER_STATE_TYPE_END);
 }
 
@@ -3144,6 +3178,20 @@ static State_Load_Status messenger_load_state_callback(void *outer, const uint8_
             break;
         }
 
+        case MESSENGER_STATE_TYPE_CONFERENCES: {
+            int err = conferences_load_ptr(m, data, length);
+
+            /* No need to do something special if err < 0
+             * err < 0 just means that conferences data was damaged
+             * and skipped
+             */
+            if (err < 0) {
+                LOGGER_ERROR(m->log, "conference savedata was corrupted");
+            }
+
+            break;
+        }
+
         case MESSENGER_STATE_TYPE_END: {
             if (length != 0) {
                 return STATE_LOAD_STATUS_ERROR;
@@ -3153,7 +3201,7 @@ static State_Load_Status messenger_load_state_callback(void *outer, const uint8_
         }
 
         default:
-            LOGGER_ERROR(m->log, "Load state: contains unrecognized part (len %u, type %u)\n",
+            LOGGER_ERROR(m->log, "Load state: contains unrecognized part (len %u, type %u)",
                          length, type);
             break;
     }

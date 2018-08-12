@@ -2147,6 +2147,12 @@ namespace conference {
      * or exits the conference.
      *
      * @param friend_number The friend who invited us.
+     *  if friend_number == UINT32_MAX then conference automatically joined.
+     *  On auto-join client must call tox_conference_join or toxav_join_av_groupchat
+     *  immediately in callback. For api compatibility reason, if client don't
+     *  call one these functions, conference will be deleted and toxcore
+     *  totally forget this conference.
+     *
      * @param type The conference type (text only or audio/video).
      * @param cookie A piece of data of variable length required to join the
      *   conference.
@@ -2228,7 +2234,6 @@ namespace conference {
 
   }
 
-
   /**
    * Creates a new conference.
    *
@@ -2257,6 +2262,52 @@ namespace conference {
     CONFERENCE_NOT_FOUND,
   }
 
+  /**
+   * This function starts entering process.
+   * Call this function only if you leave conference using $leave.
+   * No need to call this function for just created conferences
+   *
+   * @param conference_number The conference number of the conference to be entered.
+   * conference_number can be obtained by $by_uid
+   *
+   * @return true on success.
+   */
+  bool enter(uint32_t conference_number) {
+    /**
+     * Conference already connected or enter process already started
+     */
+    ALREADY,
+    /**
+     * The conference number passed did not designate a valid conference.
+     */
+    NOT_FOUND,
+  }
+
+  /**
+   * This function disconnects conference.
+   * Call this function to disconnect conference without delete.
+   * Even error TOX_ERR_CONFERENCE_LEAVE_ALREADY, new keep_leave flag will be applied to conference
+   *
+   * @param conference_number The conference number of the conference to be disconnected.
+   * conference_number can be obtained by $by_uid.
+   *
+   * @param keep_leave Set true to keep in leave state
+   * No one can invite you to this conference after you leave it with keep_leave is true.
+   * Also keep_leave == true means conference will not try to connect to other peers after restart.
+   * Call $enter to enable auto connect and invite.
+   *
+   * @return true on success.
+   */
+  bool leave(uint32_t conference_number, bool keep_leave) {
+    /**
+     * Conference already disconnected
+     */
+    ALREADY,
+    /**
+     * The conference number passed did not designate a valid conference.
+     */
+    NOT_FOUND,
+  }
 
   namespace peer {
 
@@ -2754,6 +2805,8 @@ typedef TOX_ERR_FILE_SEND_CHUNK Tox_Err_File_Send_Chunk;
 typedef TOX_ERR_CONFERENCE_NEW Tox_Err_Conference_New;
 typedef TOX_ERR_CONFERENCE_DELETE Tox_Err_Conference_Delete;
 typedef TOX_ERR_CONFERENCE_PEER_QUERY Tox_Err_Conference_Peer_Query;
+typedef TOX_ERR_CONFERENCE_LEAVE Tox_Err_Conference_Leave;
+typedef TOX_ERR_CONFERENCE_ENTER Tox_Err_Conference_Enter;
 typedef TOX_ERR_CONFERENCE_BY_ID Tox_Err_Conference_By_Id;
 typedef TOX_ERR_CONFERENCE_BY_UID Tox_Err_Conference_By_Uid;
 typedef TOX_ERR_CONFERENCE_INVITE Tox_Err_Conference_Invite;

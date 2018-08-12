@@ -1,0 +1,15 @@
+#!/usr/bin/make -f
+
+RESULTS := $(foreach i,$(shell seq 0 10),$(shell printf "results/%02d.log" $i))
+
+.SILENT:
+run: $(RESULTS)
+
+results/%.log: auto_conference_test
+	echo "TEST $< > $@"
+	mkdir -p $(@D)
+	./auto_conference_test > $@ 2>&1
+
+.PHONY: auto_conference_test
+auto_conference_test:
+	$(MAKE) $@
