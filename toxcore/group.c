@@ -556,13 +556,9 @@ static int addpeer(Group_Chats *g_c, uint32_t groupnumber, const uint8_t *real_p
         return -1;
     }
 
-    int peer_index = -1;
-
-    if (fresh) {
-        peer_index = note_peer_active(g_c, groupnumber, peer_number, userdata);
-    } else {
-        peer_index = get_peer_index(g, peer_number);
-    }
+    const int peer_index = fresh ?
+                           note_peer_active(g_c, groupnumber, peer_number, userdata) :
+                           get_peer_index(g, peer_number);
 
     if (peer_index != -1) {
         if (!id_equal(g->group[peer_index].real_pk, real_pk)) {
