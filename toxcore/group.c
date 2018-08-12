@@ -471,14 +471,14 @@ static int note_peer_active(Group_Chats *g_c, uint32_t groupnumber, uint16_t pee
         return -1;
     }
 
-    int peer_index = get_peer_index(g, peer_number);
+    const int peer_index = get_peer_index(g, peer_number);
 
     if (peer_index != -1) {
         g->group[peer_index].last_active = mono_time_get(g_c->mono_time);
         return peer_index;
     }
 
-    int frozen_index = get_frozen_index(g, peer_number);
+    const int frozen_index = get_frozen_index(g, peer_number);
 
     if (frozen_index == -1) {
         return -1;
@@ -668,7 +668,7 @@ static int delpeer(Group_Chats *g_c, uint32_t groupnumber, int peer_index, bool 
 
     remove_from_closest(g, peer_index);
 
-    int friendcon_id = getfriend_conn_id_pk(g_c->fr_c, g->group[peer_index].real_pk);
+    const int friendcon_id = getfriend_conn_id_pk(g_c->fr_c, g->group[peer_index].real_pk);
 
     if (friendcon_id != -1 && !freeze) {
         remove_close_conn(g_c, groupnumber, friendcon_id);
@@ -1279,7 +1279,7 @@ static int try_send_rejoin(Group_Chats *g_c, uint32_t groupnumber, const uint8_t
         return -1;
     }
 
-    int close_index = add_conn_to_groupchat(g_c, friendcon_id, groupnumber, 0, 1);
+    const int close_index = add_conn_to_groupchat(g_c, friendcon_id, groupnumber, 0, 1);
 
     if (close_index != -1 && !g->close[close_index].introducer) {
         ++g->num_introducer_connections;
@@ -1614,7 +1614,7 @@ int group_title_get(const Group_Chats *g_c, uint32_t groupnumber, uint8_t *title
 
 static bool get_peer_number(const Group_c *g, const uint8_t *real_pk, uint16_t *peer_number)
 {
-    int peer_index = peer_in_chat(g, real_pk);
+    const int peer_index = peer_in_chat(g, real_pk);
 
     if (peer_index >= 0) {
         *peer_number = g->group[peer_index].peer_number;
@@ -1832,7 +1832,7 @@ static int handle_packet_online(Group_Chats *g_c, int friendcon_id, const uint8_
         uint8_t real_pk[CRYPTO_PUBLIC_KEY_SIZE], temp_pk[CRYPTO_PUBLIC_KEY_SIZE];
         get_friendcon_public_keys(real_pk, temp_pk, g_c->fr_c, friendcon_id);
 
-        int peer_index = peer_in_chat(g, real_pk);
+        const int peer_index = peer_in_chat(g, real_pk);
 
         if (peer_index != -1) {
             group_new_peer_send(g_c, groupnumber, g->group[peer_index].peer_number, real_pk, temp_pk);
@@ -1851,7 +1851,7 @@ static int handle_packet_rejoin(Group_Chats *g_c, int friendcon_id, const uint8_
         return -1;
     }
 
-    int32_t groupnum = get_group_num(g_c, data);
+    const int32_t groupnum = get_group_num(g_c, data);
 
     Group_c *g = get_group_c(g_c, groupnum);
 
@@ -1998,7 +1998,7 @@ static int handle_send_peers(Group_Chats *g_c, uint32_t groupnumber, const uint8
             group_name_send(g_c, groupnumber, g_c->m->name, g_c->m->name_length);
         }
 
-        int peer_index = addpeer(g_c, groupnumber, d, d + CRYPTO_PUBLIC_KEY_SIZE, peer_num, userdata, false, true);
+        const int peer_index = addpeer(g_c, groupnumber, d, d + CRYPTO_PUBLIC_KEY_SIZE, peer_num, userdata, false, true);
 
         if (peer_index == -1) {
             return -1;
@@ -2382,7 +2382,7 @@ static void handle_message_packet_group(Group_Chats *g_c, uint32_t groupnumber, 
     memcpy(&peer_number, data, sizeof(uint16_t));
     peer_number = net_ntohs(peer_number);
 
-    int index = note_peer_active(g_c, groupnumber, peer_number, userdata);
+    const int index = note_peer_active(g_c, groupnumber, peer_number, userdata);
 
     if (index == -1) {
         /* We don't know the peer this packet came from so we query the list of peers from that peer.
