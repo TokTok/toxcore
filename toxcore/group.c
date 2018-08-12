@@ -492,7 +492,7 @@ static int note_peer_active(Group_Chats *g_c, uint32_t groupnumber, uint16_t pee
         return -1;
     }
 
-    memcpy(&temp[g->numpeers], &g->frozen[frozen_index], sizeof(Group_Peer));
+    temp[g->numpeers] = g->frozen[frozen_index];
     temp[g->numpeers].nick_updated = false;
     temp[g->numpeers].temp_pk_updated = false;
     g->group = temp;
@@ -518,7 +518,7 @@ static int note_peer_active(Group_Chats *g_c, uint32_t groupnumber, uint16_t pee
         g->frozen = nullptr;
     } else {
         if (g->numfrozen != (uint32_t)frozen_index) {
-            memcpy(&g->frozen[frozen_index], &g->frozen[g->numfrozen], sizeof(Group_Peer));
+            g->frozen[frozen_index] = g->frozen[g->numfrozen];
         }
 
         Group_Peer *temp = (Group_Peer *)realloc(g->frozen, sizeof(Group_Peer) * (g->numfrozen));
@@ -665,7 +665,7 @@ static int delpeer(Group_Chats *g_c, uint32_t groupnumber, int peer_index, bool 
             return -1;
         }
 
-        memcpy(&temp[g->numfrozen], &g->group[peer_index], sizeof(Group_Peer));
+        temp[g->numfrozen] = g->group[peer_index];
         g->frozen = temp;
         ++g->numfrozen;
     }
@@ -687,7 +687,7 @@ static int delpeer(Group_Chats *g_c, uint32_t groupnumber, int peer_index, bool 
         g->group = nullptr;
     } else {
         if (g->numpeers != (uint32_t)peer_index) {
-            memcpy(&g->group[peer_index], &g->group[g->numpeers], sizeof(Group_Peer));
+            g->group[peer_index] = g->group[g->numpeers];
         }
 
         Group_Peer *temp = (Group_Peer *)realloc(g->group, sizeof(Group_Peer) * (g->numpeers));
