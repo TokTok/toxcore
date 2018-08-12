@@ -51,7 +51,7 @@ typedef struct Group_Peer {
     uint8_t     temp_pk[CRYPTO_PUBLIC_KEY_SIZE];
     bool        temp_pk_updated;
 
-    uint64_t    last_recv;
+    uint64_t    last_active;
 
     Message_Info
     last_message_infos[MAX_LAST_MESSAGE_INFOS]; /* received messages, strictly decreasing in message_number */

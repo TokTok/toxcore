@@ -9,33 +9,31 @@ Rejoin Conference packet
 | `33`   | Group chat identifier           |
 
 
-When a peer times out from a group (no ping received for 60s), we don't delete 
-it, but just flag the peer as _frozen_. Disconnected peers are disregarded for 
-all purposes except those discussed below - in particular no packets are sent 
-to them except as described below, they are omitted from the peer lists sent 
-to the client or in a Peer Response packet, and they are not considered when 
+A peer times out from a group if it has been inactive for 60s. When a peer
+times out, we flag it as _frozen_. Frozen peers are disregarded for all
+purposes except those discussed below - in particular no packets are sent to
+them except as described below, they are omitted from the peer lists sent to
+the client or in a Peer Response packet, and they are not considered when
 determining closest peers for establishing direct connections.
 
-Below we talk about _thawing_ frozen peers. This means we remove the
-'frozen' flag, and send a Name group message. (We can hold off on sending
-this message until the next tox\_iterate, and only send one message if many
-peers thaw at once).
+A peer is considered to be active if we receive a group message or Rejoin
+packet from it, or a New Peer message for it.
 
-If we receive a group message originating from a frozen peer, we thaw the
-peer and then process the message as usual.
+If a frozen peer is seen to be active, we remove its 'frozen' flag and send a
+Name group message. (We can hold off on sending this message until the next
+tox\_iterate, and only send one message if many frozen peers become active at
+once).
+
+If we receive a New Peer message for a peer, we update its dht key.
 
 If we receive a group message originating from an unknown peer, we drop the
 message but send a Peer Query packet back to the peer who directly sent us the
 message. (This is current behaviour; it's mentioned here because it's important
 and not currently mentioned in the spec.)
 
-If we receive a New Peer message for a peer with public key that of a
-frozen peer, we thaw the peer and update its dht key.
-
-If we receive a Rejoin packet from a peer we thaw the peer if it is frozen,
-update its dht key, add a temporary groupchat connection for the peer, and,
-once the connection is online, send out a New Peer message announcing the
-peer.
+If we receive a Rejoin packet from a peer we update its dht key, add a
+temporary groupchat connection for the peer, and, once the connection is
+online, send out a New Peer message announcing the peer.
 
 Whenever we make a new friend connection, we check if the public key is that 
 of any frozen peer. If so, we send it a Rejoin packet, add a temporary
