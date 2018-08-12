@@ -1,13 +1,13 @@
 if BUILD_TESTS
 
-TESTS = bootstrap_test conference_double_invite_test conference_peer_nick_test conference_simple_test conference_test \
+TESTS = disc_test bootstrap_test conference_double_invite_test conference_peer_nick_test conference_simple_test conference_test \
         conference_two_test crypto_test dht_test encryptsave_test file_saving_test file_transfer_test friend_connection_test \
         friend_request_test invalid_tcp_proxy_test invalid_udp_proxy_test lan_discovery_test lossless_packet_test \
         lossy_packet_test messenger_test network_test onion_test overflow_recvq_test overflow_sendq_test save_friend_test \
         save_load_test send_message_test set_name_test set_status_message_test skeleton_test tcp_relay_test TCP_test \
         tox_many_tcp_test tox_many_test tox_one_test tox_strncasecmp_test typing_test version_test
 
-check_PROGRAMS = bootstrap_test conference_double_invite_test conference_peer_nick_test conference_simple_test \
+check_PROGRAMS = disc_test bootstrap_test conference_double_invite_test conference_peer_nick_test conference_simple_test \
                  conference_test conference_two_test crypto_test dht_test encryptsave_test file_saving_test file_transfer_test \
                  friend_connection_test friend_request_test invalid_tcp_proxy_test invalid_udp_proxy_test lan_discovery_test \
                  lossless_packet_test lossy_packet_test messenger_test network_test onion_test overflow_recvq_test \
@@ -56,6 +56,10 @@ conference_simple_test_LDADD = $(AUTOTEST_LDADD)
 conference_test_SOURCES = ../auto_tests/bootstrap_test.c
 conference_test_CFLAGS = $(AUTO_TEST_CFLAGS)
 conference_test_LDADD = $(AUTOTEST_LDADD)
+
+disc_test_SOURCES = ../auto_tests/bootstrap_test.c
+disc_test_CFLAGS = $(AUTO_TEST_CFLAGS)
+disc_test_LDADD = $(AUTOTEST_LDADD)
 
 conference_two_test_SOURCES = ../auto_tests/bootstrap_test.c
 conference_two_test_CFLAGS = $(AUTO_TEST_CFLAGS)
