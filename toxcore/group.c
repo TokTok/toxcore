@@ -1270,9 +1270,10 @@ static int try_send_rejoin(Group_Chats *g_c, uint32_t groupnumber, const uint8_t
         return -1;
     }
 
-    uint8_t packet[1 + GROUP_IDENTIFIER_LENGTH];
+    uint8_t packet[1 + 1 + GROUP_ID_LENGTH];
     packet[0] = PACKET_ID_REJOIN_CONFERENCE;
-    memcpy(packet + 1, g->identifier, GROUP_IDENTIFIER_LENGTH);
+    packet[1] = g->type;
+    memcpy(packet + 2, g->id, GROUP_ID_LENGTH);
 
     if (write_cryptpacket(friendconn_net_crypto(g_c->fr_c), friend_connection_crypt_connection_id(g_c->fr_c, friendcon_id),
                           packet, sizeof(packet), 0) == -1) {
@@ -1847,11 +1848,11 @@ static int handle_packet_online(Group_Chats *g_c, int friendcon_id, const uint8_
 static int handle_packet_rejoin(Group_Chats *g_c, int friendcon_id, const uint8_t *data, uint16_t length,
                                 void *userdata)
 {
-    if (length < GROUP_IDENTIFIER_LENGTH) {
+    if (length < 1 + GROUP_ID_LENGTH) {
         return -1;
     }
 
-    const int32_t groupnum = get_group_num(g_c, data);
+    const int32_t groupnum = get_group_num(g_c, *data, data + 1);
 
     Group_c *g = get_group_c(g_c, groupnum);
 
@@ -1872,7 +1873,7 @@ static int handle_packet_rejoin(Group_Chats *g_c, int friendcon_id, const uint8_
     int close_index = add_conn_to_groupchat(g_c, friendcon_id, groupnum, 0, 1);
 
     if (close_index != -1) {
-        send_packet_online(g_c->fr_c, friendcon_id, groupnum, g->identifier);
+        send_packet_online(g_c->fr_c, friendcon_id, groupnum, g->type, g->id);
         g->close[close_index].introduced = true;
     }
 
