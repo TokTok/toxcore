@@ -521,13 +521,13 @@ static int note_peer_active(Group_Chats *g_c, uint32_t groupnumber, uint16_t pee
             g->frozen[frozen_index] = g->frozen[g->numfrozen];
         }
 
-        Group_Peer *temp = (Group_Peer *)realloc(g->frozen, sizeof(Group_Peer) * (g->numfrozen));
+        Group_Peer *frozen_temp = (Group_Peer *)realloc(g->frozen, sizeof(Group_Peer) * (g->numfrozen));
 
-        if (temp == nullptr) {
+        if (frozen_temp == nullptr) {
             return -1;
         }
 
-        g->frozen = temp;
+        g->frozen = frozen_temp;
     }
 
     g->need_send_name = true;
