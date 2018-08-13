@@ -492,11 +492,10 @@ static int note_peer_active(Group_Chats *g_c, uint32_t groupnumber, uint16_t pee
         return -1;
     }
 
-    temp[g->numpeers] = g->frozen[frozen_index];
-    temp[g->numpeers].nick_updated = false;
-    temp[g->numpeers].temp_pk_updated = false;
     g->group = temp;
-
+    g->group[g->numpeers] = g->frozen[frozen_index];
+    g->group[g->numpeers].nick_updated = false;
+    g->group[g->numpeers].temp_pk_updated = false;
     g->group[g->numpeers].last_active = mono_time_get(g_c->mono_time);
 
     add_to_closest(g_c, groupnumber, g->group[g->numpeers].real_pk, g->group[g->numpeers].temp_pk);
@@ -661,8 +660,8 @@ static int delpeer(Group_Chats *g_c, uint32_t groupnumber, int peer_index, bool 
             return -1;
         }
 
-        temp[g->numfrozen] = g->group[peer_index];
         g->frozen = temp;
+        g->frozen[g->numfrozen] = g->group[peer_index];
         ++g->numfrozen;
     }
 
@@ -991,6 +990,7 @@ int del_groupchat(Group_Chats *g_c, uint32_t groupnumber)
     }
 
     free(g->group);
+    free(g->frozen);
 
     if (g->group_on_delete) {
         g->group_on_delete(g->object, groupnumber);
