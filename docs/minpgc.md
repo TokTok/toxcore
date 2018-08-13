@@ -57,7 +57,7 @@ empty or if all peers became frozen since we last set the title.
 
 # Discussion
 ## Overview
-The intention is to recover seemlessly from splits in the group, the most 
+The intention is to recover seamlessly from splits in the group, the most 
 common form of which is a single peer losing their internet connection.
 
 If two peers in different connected components have a friend connection (due 
