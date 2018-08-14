@@ -642,6 +642,14 @@ static IP_Port return_ip_port_connection(Net_Crypto *c, int crypt_connection_id)
         return conn->ip_portv6;
     }
 
+    if (ip_is_lan(conn->ip_portv4.ip) == 0) {
+        return conn->ip_portv4;
+    }
+
+    if (net_family_is_ipv6(conn->ip_portv6.ip.family)) {
+        return conn->ip_portv6;
+    }
+
     if (net_family_is_ipv4(conn->ip_portv4.ip.family)) {
         return conn->ip_portv4;
     }
