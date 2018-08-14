@@ -16,18 +16,22 @@
 #include "check_compat.h"
 
 #define NUM_GROUP_TOX 32
-#define NUM_DISCONNECT 8
+#define NUM_DISCONNECT 16
 #define GROUP_MESSAGE "Install Gentoo"
 
-#define NAME_FORMAT_STR "Old #%4u"
-#define NEW_NAME_FORMAT_STR "New #%4u"
 #define NAMELEN 9
 #define NAME_FORMAT "%9s"
+#define NAME_FORMAT_STR "Old #%4u"
+#define NEW_NAME_FORMAT_STR "New #%4u"
+#define NEW_NAME_PREFIX "New"
+#define NEW_NAME_PREFIX_LEN 3
 
 typedef struct State {
-    uint32_t id;
+    uint32_t index;
     bool invited_next;
 } State;
+
+#include "run_auto_test.h"
 
 static void handle_self_connection_status(
     Tox *tox, TOX_CONNECTION connection_status, void *user_data)
@@ -35,9 +39,9 @@ static void handle_self_connection_status(
     const State *state = (State *)user_data;
 
     if (connection_status != TOX_CONNECTION_NONE) {
-        printf("tox #%u: is now connected\n", state->id);
+        printf("tox #%u: is now connected\n", state->index);
     } else {
-        printf("tox #%u: is now disconnected\n", state->id);
+        printf("tox #%u: is now disconnected\n", state->index);
     }
 }
 
@@ -47,9 +51,9 @@ static void handle_friend_connection_status(
     const State *state = (State *)user_data;
 
     if (connection_status != TOX_CONNECTION_NONE) {
-        printf("tox #%u: is now connected to friend %u\n", state->id, friendnumber);
+        printf("tox #%u: is now connected to friend %u\n", state->index, friendnumber);
     } else {
-        printf("tox #%u: is now disconnected from friend %u\n", state->id, friendnumber);
+        printf("tox #%u: is now disconnected from friend %u\n", state->index, friendnumber);
     }
 }
 
@@ -58,18 +62,18 @@ static void handle_conference_invite(
     const uint8_t *data, size_t length, void *user_data)
 {
     const State *state = (State *)user_data;
-    ck_assert_msg(type == TOX_CONFERENCE_TYPE_TEXT, "tox #%u: wrong conference type: %d", state->id, type);
+    ck_assert_msg(type == TOX_CONFERENCE_TYPE_TEXT, "tox #%u: wrong conference type: %d", state->index, type);
 
     TOX_ERR_CONFERENCE_JOIN err;
     uint32_t g_num = tox_conference_join(tox, friendnumber, data, length, &err);
 
-    ck_assert_msg(err == TOX_ERR_CONFERENCE_JOIN_OK, "tox #%u: error joining group: %d", state->id, err);
-    ck_assert_msg(g_num == 0, "tox #%u: group number was not 0", state->id);
+    ck_assert_msg(err == TOX_ERR_CONFERENCE_JOIN_OK, "tox #%u: error joining group: %d", state->index, err);
+    ck_assert_msg(g_num == 0, "tox #%u: group number was not 0", state->index);
 
     // Try joining again. We should only be allowed to join once.
     tox_conference_join(tox, friendnumber, data, length, &err);
     ck_assert_msg(err != TOX_ERR_CONFERENCE_JOIN_OK,
-                  "tox #%u: joining groupchat twice should be impossible.", state->id);
+                  "tox #%u: joining groupchat twice should be impossible.", state->index);
 }
 
 static void handle_conference_connected(
@@ -83,8 +87,8 @@ static void handle_conference_connected(
 
     TOX_ERR_CONFERENCE_INVITE err;
     tox_conference_invite(tox, 1, 0, &err);
-    ck_assert_msg(err == TOX_ERR_CONFERENCE_INVITE_OK, "tox #%u failed to invite next friend: err = %d", state->id, err);
-    printf("tox #%u: invited next friend\n", state->id);
+    ck_assert_msg(err == TOX_ERR_CONFERENCE_INVITE_OK, "tox #%u failed to invite next friend: err = %d", state->index, err);
+    printf("tox #%u: invited next friend\n", state->index);
     state->invited_next = true;
 }
 
@@ -99,51 +103,77 @@ static void handle_conference_message(
     }
 }
 
+static bool toxes_are_disconnected_from_group(uint32_t tox_count, Tox **toxes, int disconnected_count,
+        bool *disconnected)
+{
+    for (uint32_t i = 0; i < tox_count; i++) {
+        if (disconnected[i]) {
+            continue;
+        }
+
+        if (tox_conference_peer_count(toxes[i], 0, nullptr) > tox_count - NUM_DISCONNECT) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static bool all_connected_to_group(uint32_t tox_count, Tox **toxes)
+{
+    for (uint32_t i = 0; i < tox_count; i++) {
+        if (tox_conference_peer_count(toxes[i], 0, nullptr) < tox_count) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 static void run_conference_tests(Tox **toxes, State *state)
 {
     printf("letting random toxes timeout\n");
-    uint16_t disconnect_toxes[NUM_DISCONNECT];
+    bool disconnected[NUM_GROUP_TOX];
 
-    for (uint16_t i = 0; i < NUM_DISCONNECT; ++i) {
-        disconnect_toxes[i] = random_u32() % NUM_GROUP_TOX;
-        printf("disconnecting #%u\n", state[disconnect_toxes[i]].id);
+    for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
+        disconnected[i] = false;
     }
 
-    for (uint16_t j = 0; j < 70 * 5; ++j) {
+    for (uint16_t i = 0; i < NUM_DISCONNECT; ++i) {
+        uint16_t disconnect;
+
+        do {
+            disconnect = random_u16() % NUM_GROUP_TOX;
+        } while (disconnected[disconnect]);
+
+        disconnected[disconnect] = true;
+        printf("Disconnecting #%u\n", state[disconnect].index);
+    }
+
+    while (!toxes_are_disconnected_from_group(NUM_GROUP_TOX, toxes, NUM_DISCONNECT, disconnected)) {
         for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
-            bool disconnected = false;
-
-            for (uint16_t k = 0; k < NUM_DISCONNECT; ++k) {
-                if (disconnect_toxes[k] == i) {
-                    disconnected = true;
-                    break;
-                }
-            }
-
-            if (!disconnected) {
-                tox_iterate(toxes[i], &state[i].id);
+            if (!disconnected[i]) {
+                tox_iterate(toxes[i], &state[i]);
             }
         }
 
-        c_sleep(200);
+        c_sleep(ITERATION_INTERVAL);
     }
 
     printf("changing names\n");
 
     for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
         char name[NAMELEN + 1];
-        snprintf(name, NAMELEN + 1, NEW_NAME_FORMAT_STR, state[i].id);
+        snprintf(name, NAMELEN + 1, NEW_NAME_FORMAT_STR, state[i].index);
         tox_self_set_name(toxes[i], (const uint8_t *)name, NAMELEN, nullptr);
     }
 
     printf("reconnecting toxes\n");
 
-    for (uint16_t j = 0; j < 120 * 5; ++j) {
-        for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
-            tox_iterate(toxes[i], &state[i]);
-        }
+    while (!all_connected_to_group(NUM_GROUP_TOX, toxes)) {
+        iterate_all(NUM_GROUP_TOX, toxes, state);
 
-        c_sleep(200);
+        c_sleep(ITERATION_INTERVAL);
     }
 
     printf("running conference tests\n");
@@ -162,9 +192,7 @@ static void run_conference_tests(Tox **toxes, State *state)
     num_recv = 0;
 
     for (uint8_t j = 0; j < 20; ++j) {
-        for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
-            tox_iterate(toxes[i], &state[i]);
-        }
+        iterate_all(NUM_GROUP_TOX, toxes, state);
 
         c_sleep(25);
     }
@@ -175,13 +203,13 @@ static void run_conference_tests(Tox **toxes, State *state)
     for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
         for (uint16_t j = 0; j < NUM_GROUP_TOX; ++j) {
             const size_t len = tox_conference_peer_get_name_size(toxes[i], 0, j, nullptr);
-            ck_assert_msg(len == NAMELEN, "name of #%u according to #%u has incorrect length %u", state[j].id, state[i].id,
+            ck_assert_msg(len == NAMELEN, "name of #%u according to #%u has incorrect length %u", state[j].index, state[i].index,
                           (unsigned int)len);
             uint8_t name[NAMELEN];
             tox_conference_peer_get_name(toxes[i], 0, j, name, nullptr);
             /* Note the toxes will have been reordered */
             ck_assert_msg(memcmp(name, "New", 3) == 0,
-                          "name of #%u according to #%u not updated", state[j].id, state[i].id);
+                          "name of #%u according to #%u not updated", state[j].index, state[i].index);
         }
     }
 
@@ -189,9 +217,7 @@ static void run_conference_tests(Tox **toxes, State *state)
         tox_conference_delete(toxes[k - 1], 0, nullptr);
 
         for (uint8_t j = 0; j < 10; ++j) {
-            for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
-                tox_iterate(toxes[i], &state[i]);
-            }
+            iterate_all(NUM_GROUP_TOX, toxes, state);
 
             c_sleep(50);
         }
@@ -221,7 +247,7 @@ static void test_many_group(void)
 
     for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
         TOX_ERR_NEW err;
-        state[i].id = i + 1;
+        state[i].index = i + 1;
         toxes[i] = tox_new_log(opts, &err, &state[i]);
 
         ck_assert_msg(toxes[i] != nullptr, "failed to create tox instance %u: error %d", i, err);
@@ -231,7 +257,7 @@ static void test_many_group(void)
         tox_callback_conference_connected(toxes[i], &handle_conference_connected);
 
         char name[NAMELEN + 1];
-        snprintf(name, NAMELEN + 1, NAME_FORMAT_STR, state[i].id);
+        snprintf(name, NAMELEN + 1, NAME_FORMAT_STR, state[i].index);
         tox_self_set_name(toxes[i], (const uint8_t *)name, NAMELEN, nullptr);
 
         if (i != 0) {
@@ -280,7 +306,7 @@ static void test_many_group(void)
     printf("friends connected, took %d seconds\n", (int)(time(nullptr) - cur_time));
 
     ck_assert_msg(tox_conference_new(toxes[0], nullptr) != UINT32_MAX, "failed to create group");
-    printf("tox #%u: inviting its first friend\n", state[0].id);
+    printf("tox #%u: inviting its first friend\n", state[0].index);
     ck_assert_msg(tox_conference_invite(toxes[0], 0, 0, nullptr) != 0, "failed to invite friend");
     state[0].invited_next = true;
     ck_assert_msg(tox_conference_set_title(toxes[0], 0, (const uint8_t *)"Gentoo", sizeof("Gentoo") - 1, nullptr) != 0,
@@ -364,6 +390,8 @@ int main(void)
 {
     setvbuf(stdout, nullptr, _IONBF, 0);
 
+    /* TODO(zugz): adapt run_auto_test() to allow creating chains of toxes, so we
+     * can use it here. */
     test_many_group();
     return 0;
 }
