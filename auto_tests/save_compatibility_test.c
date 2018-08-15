@@ -5,7 +5,7 @@
 
 #include <string.h>
 
-#define SAVE_FILE "../data/save.tox"
+#define SAVE_FILE "../auto_tests/data/save.tox"
 
 // Information from the save file
 #define NAME "name"
@@ -20,7 +20,7 @@ size_t get_file_size(void)
 
     FILE *fp = fopen(SAVE_FILE, "r");
 
-    if (fp == NULL) {
+    if (fp == nullptr) {
         return size;
     }
 
@@ -37,26 +37,26 @@ static uint8_t *read_save(size_t *length)
     const size_t size = get_file_size();
 
     if (size == 0) {
-        return NULL;
+        return nullptr;
     }
 
     FILE *fp = fopen(SAVE_FILE, "r");
 
     if (!fp) {
-        return NULL;
+        return nullptr;
     }
 
-    uint8_t *data = malloc(size);
+    uint8_t *data = (uint8_t *)malloc(size);
 
     if (!data) {
         fclose(fp);
-        return NULL;
+        return nullptr;
     }
 
     if (fread(data, size, 1, fp) != 1) {
         free(data);
         fclose(fp);
-        return NULL;
+        return nullptr;
     }
 
     *length = size;
@@ -73,7 +73,7 @@ static void test_save_compatibility(void)
 
     size_t size = 0;
     uint8_t *save_data = read_save(&size);
-    ck_assert_msg(save_data != NULL, "Error while reading save file.");
+    ck_assert_msg(save_data != nullptr, "Error while reading save file.");
 
     options.savedata_data = save_data;
     options.savedata_length = size;
