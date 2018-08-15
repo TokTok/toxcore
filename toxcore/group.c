@@ -1837,6 +1837,8 @@ static int handle_packet_online(Group_Chats *g_c, int friendcon_id, const uint8_
         if (peer_index != -1) {
             group_new_peer_send(g_c, groupnumber, g->group[peer_index].peer_number, real_pk, temp_pk);
         }
+
+        group_name_send(g_c, groupnumber, g_c->m->name, g_c->m->name_length);
     }
 
     ping_groupchat(g_c, groupnumber);
@@ -2385,8 +2387,9 @@ static void handle_message_packet_group(Group_Chats *g_c, uint32_t groupnumber, 
     const int index = note_peer_active(g_c, groupnumber, peer_number, userdata);
 
     if (index == -1) {
-        /* We don't know the peer this packet came from so we query the list of peers from that peer.
-           (They would not have relayed it if they didn't know the peer.) */
+        /* If we don't know the peer this packet came from, then we query the
+         * list of peers from the relaying peer.
+         * (They would not have relayed it if they didn't know the peer.) */
         send_peer_query(g_c, g->close[close_index].number, g->close[close_index].group_number);
         return;
     }
