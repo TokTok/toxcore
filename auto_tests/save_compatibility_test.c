@@ -117,7 +117,8 @@ static void test_save_compatibility(void)
     char tox_id_str[TOX_ADDRESS_SIZE * 2];
     tox_self_get_address(tox, tox_id);
     to_hex(tox_id_str, tox_id, TOX_ADDRESS_SIZE);
-    ck_assert_msg(strncmp(tox_id_str, TOX_ID, TOX_ADDRESS_SIZE * 2) == 0, "Tox ids do not match, expected %s got %s", TOX_ID, tox_id_str);
+    ck_assert_msg(strncmp(tox_id_str, TOX_ID, TOX_ADDRESS_SIZE * 2) == 0, "Tox ids do not match, expected %s got %s",
+                  TOX_ID, tox_id_str);
 
     tox_kill(tox);
 }
