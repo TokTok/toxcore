@@ -494,7 +494,6 @@ static int note_peer_active(Group_Chats *g_c, uint32_t groupnumber, uint16_t pee
 
     g->group = temp;
     g->group[g->numpeers] = g->frozen[frozen_index];
-    g->group[g->numpeers].nick_updated = false;
     g->group[g->numpeers].temp_pk_updated = false;
     g->group[g->numpeers].last_active = mono_time_get(g_c->mono_time);
 
