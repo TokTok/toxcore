@@ -35,7 +35,7 @@ and not currently mentioned in the spec.)
 
 If we receive a Rejoin packet from a peer we update its dht key, add a
 temporary groupchat connection for the peer, and, once the connection is
-online, send out a New Peer message announcing the peer.
+online, send out a New Peer message announcing the peer, and a Name message.
 
 Whenever we make a new friend connection, we check if the public key is that 
 of any frozen peer. If so, we send it a Rejoin packet, add a temporary
