@@ -1,5 +1,6 @@
 //Tests to make sure new save code is compatible with old save files
 
+#include "../testing/misc_tools.h"
 #include "../toxcore/tox.h"
 #include "check_compat.h"
 
@@ -13,8 +14,10 @@
 #define STATUS_MESSAGE "Hello World"
 #define STATUS_MESSAGE_SIZE strlen(STATUS_MESSAGE)
 #define NUM_FRIENDS 1
+#define NOSPAM "4C762C7D"
+#define TOX_ID "B70E97D41F69B7F4C42A5BC7BD7A76B95B8030BE1B7C0E9E6FC19FC4ABEB195B4C762C7D800B"
 
-size_t get_file_size(void)
+static size_t get_file_size(void)
 {
     size_t size = 0;
 
@@ -103,6 +106,18 @@ static void test_save_compatibility(void)
     size_t num_friends = tox_self_get_friend_list_size(tox);
     ck_assert_msg(num_friends == NUM_FRIENDS, "Number of friends do not match, expected %d got %zu.", NUM_FRIENDS,
                   num_friends);
+
+    uint32_t nospam = tox_self_get_nospam(tox);
+    char nospam_str[(TOX_NOSPAM_SIZE * 2) + 1];
+    size_t length = snprintf(nospam_str, sizeof(nospam_str), "%08X", nospam);
+    nospam_str[length] = '\0';
+    ck_assert_msg(strcmp(nospam_str, NOSPAM) == 0, "Nospam does not match, expected %s got %s.", NOSPAM, nospam_str);
+
+    uint8_t tox_id[TOX_ADDRESS_SIZE];
+    char tox_id_str[TOX_ADDRESS_SIZE * 2];
+    tox_self_get_address(tox, tox_id);
+    to_hex(tox_id_str, tox_id, TOX_ADDRESS_SIZE);
+    ck_assert_msg(strncmp(tox_id_str, TOX_ID, TOX_ADDRESS_SIZE * 2) == 0, "Tox ids do not match, expected %s got %s", TOX_ID, tox_id_str);
 
     tox_kill(tox);
 }
