@@ -645,7 +645,7 @@ loop_top:
         IP_Port ip_port;
         ip_port.ip = get_loopback();
         ip_port.port = net_htons(DHT_DEFAULT_PORT + i);
-        dht_bootstrap(dhts[(i - 1) % NUM_DHT], ip_port, dhts[i]->self_public_key);
+        dht_bootstrap(dhts[i], ip_port, dhts[(i + 1) % NUM_DHT]->self_public_key);
     }
 
     while (1) {
