@@ -197,7 +197,7 @@ static void run_conference_tests(Tox **toxes, State *state)
         err == TOX_ERR_CONFERENCE_SEND_MESSAGE_OK, "failed to send group message");
     num_recv = 0;
 
-    for (uint8_t j = 0; j < 20; ++j) {
+    for (uint8_t j = 0; j < NUM_GROUP_TOX * 2; ++j) {
         iterate_all(NUM_GROUP_TOX, toxes, state);
 
         c_sleep(25);
