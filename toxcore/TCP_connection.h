@@ -24,6 +24,7 @@
 #ifndef TCP_CONNECTION_H
 #define TCP_CONNECTION_H
 
+#include <stdbool.h>
 #include "TCP_client.h"
 
 #define TCP_CONN_NONE 0
@@ -84,6 +85,9 @@ typedef struct TCP_Connections TCP_Connections;
 
 const uint8_t *tcp_connections_public_key(const TCP_Connections *tcp_c);
 
+uint32_t tcp_connections_count(const TCP_Connections *tcp_c);
+
+
 /* Send a packet to the TCP connection.
  *
  * return -1 on failure.
@@ -126,6 +130,9 @@ int set_tcp_onion_status(TCP_Connections *tcp_c, bool status);
 int tcp_send_oob_packet(TCP_Connections *tcp_c, unsigned int tcp_connections_number, const uint8_t *public_key,
                         const uint8_t *packet, uint16_t length);
 
+int tcp_send_oob_packet_using_relay(TCP_Connections *tcp_c, const uint8_t *relay_pk, const uint8_t *public_key,
+                                    const uint8_t *packet, uint16_t length);
+
 typedef int tcp_data_cb(void *object, int id, const uint8_t *data, uint16_t length, void *userdata);
 
 /* Set the callback for TCP data packets.
@@ -140,6 +147,12 @@ void set_onion_packet_tcp_connection_callback(TCP_Connections *tcp_c, tcp_onion_
 
 typedef int tcp_oob_cb(void *object, const uint8_t *public_key, unsigned int tcp_connections_number,
                        const uint8_t *data, uint16_t length, void *userdata);
+
+void set_connection_status_updated_callback(TCP_Connections *tcp_c,
+                                            void (*connection_status_updated_callback)(void *object,
+                                                                                       TCP_Connections *tcp_c,
+                                                                                       int status),
+                                            void *object);
 
 /* Set the callback for TCP oob data packets.
  */
@@ -197,6 +210,7 @@ int add_tcp_number_relay_connection(TCP_Connections *tcp_c, int connections_numb
  */
 int add_tcp_relay_connection(TCP_Connections *tcp_c, int connections_number, IP_Port ip_port, const uint8_t *relay_pk);
 
+
 /* Add a TCP relay to the instance.
  *
  * return 0 on success.
@@ -221,8 +235,9 @@ uint32_t tcp_copy_connected_relays(TCP_Connections *tcp_c, Node_format *tcp_rela
  */
 TCP_Connections *new_tcp_connections(const uint8_t *secret_key, TCP_Proxy_Info *proxy_info);
 
+int kill_tcp_relay_connection(TCP_Connections *tcp_c, int tcp_connections_number);
+
 void do_tcp_connections(TCP_Connections *tcp_c, void *userdata);
 void kill_tcp_connections(TCP_Connections *tcp_c);
 
 #endif
-

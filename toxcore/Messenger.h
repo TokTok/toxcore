@@ -27,6 +27,8 @@
 
 #include "friend_connection.h"
 #include "friend_requests.h"
+#include "group_chats.h"
+#include "group_announce.h"
 #include "logger.h"
 #include "net_crypto.h"
 
@@ -115,6 +117,12 @@ typedef enum Userstatus {
     USERSTATUS_BUSY,
     USERSTATUS_INVALID
 } Userstatus;
+
+typedef enum {
+    CONTACT_TYPE_FRIEND,
+    CONTACT_TYPE_GC
+}
+CONTACT_TYPE;
 
 #define FILE_ID_LENGTH 32
 
@@ -229,6 +237,8 @@ typedef struct Friend {
 
     struct Receipts *receipts_start;
     struct Receipts *receipts_end;
+
+    CONTACT_TYPE type;
 } Friend;
 
 struct Messenger {
@@ -259,6 +269,9 @@ struct Messenger {
 
     time_t lastdump;
 
+    GC_Session *group_handler;
+    GC_Announces_List *group_announce;
+
     uint8_t has_added_relays; // If the first connection has occurred in do_messenger
     Node_format loaded_relays[NUM_SAVED_TCP_RELAYS]; // Relays loaded from config
 
@@ -274,6 +287,9 @@ struct Messenger {
 
     struct Group_Chats *conferences_object; /* Set by new_groupchats()*/
     m_conference_invite_cb *conference_invite;
+
+    void (*group_invite)(struct Messenger *m, uint32_t, const uint8_t *, size_t, const uint8_t *, size_t, void *);
+    void *group_invite_userdata;
 
     m_file_recv_cb *file_sendrequest;
     m_file_recv_control_cb *file_filecontrol;
@@ -291,6 +307,13 @@ struct Messenger {
 
     Messenger_Options options;
 };
+
+/* determines if the friendnumber passed is valid in the Messenger object.
+ *
+ * Returns 1 if friendnumber does not designate a valid friend.
+ * Returns 0 otherwise.
+ */
+uint8_t friend_not_valid(const Messenger *m, int32_t friendnumber);
 
 /* Format: [real_pk (32 bytes)][nospam number (4 bytes)][checksum (2 bytes)]
  *
@@ -326,6 +349,10 @@ int32_t m_addfriend(Messenger *m, const uint8_t *address, const uint8_t *data, u
  *  return -8 if increasing the friend list size fails.
  */
 int32_t m_addfriend_norequest(Messenger *m, const uint8_t *real_pk);
+
+int32_t m_add_friend_gc(Messenger *m, GC_Chat *chat);
+
+int32_t m_remove_friend_gc(Messenger *m, const GC_Chat *chat);
 
 /*  return the friend number associated to that client id.
  *  return -1 if no such friend.
@@ -556,12 +583,28 @@ void m_callback_core_connection(Messenger *m, m_self_connection_status_cb *funct
  */
 void m_callback_conference_invite(Messenger *m, m_conference_invite_cb *function);
 
+/* Set the callback for group invites.
+ *
+ *  Function(Messenger *m, uint32_t friendnumber, const uint8_t *data, size_t length, void *userdata)
+ */
+void m_callback_group_invite(Messenger *m, void (*function)(Messenger *m, uint32_t, const uint8_t *, size_t,
+                                                            const uint8_t *, size_t, void *),
+                             void *userdata);
+
 /* Send a conference invite packet.
  *
- *  return 1 on success
- *  return 0 on failure
+ *  return 0 on success
+ *  return -1 on failure
  */
 int send_conference_invite_packet(const Messenger *m, int32_t friendnumber, const uint8_t *data, uint16_t length);
+
+/* Send a group invite packet.
+ *
+ *  return 0 on success
+ *  return -1 on failure
+ */
+int send_group_invite_packet(const Messenger *m, uint32_t friendnumber, const uint8_t *data, size_t length);
+
 
 /****************FILE SENDING*****************/
 

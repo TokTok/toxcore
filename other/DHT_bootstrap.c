@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
     }
 
     /* let user override default by cmdline */
-    uint8_t ipv6enabled = TOX_ENABLE_IPV6_DEFAULT; /* x */
+    bool ipv6enabled = TOX_ENABLE_IPV6_DEFAULT; /* x */
     int argvoffset = cmdline_parsefor_ipv46(argc, argv, &ipv6enabled);
 
     if (argvoffset < 0) {
@@ -118,7 +118,8 @@ int main(int argc, char *argv[])
     Logger *logger = logger_new();
     DHT *dht = new_dht(logger, new_networking(logger, ip, PORT), true);
     Onion *onion = new_onion(dht);
-    Onion_Announce *onion_a = new_onion_announce(dht);
+    GC_Announces_List *gc_announces_list = new_gca_list();
+    Onion_Announce *onion_a = new_onion_announce(dht, gc_announces_list);
 
 #ifdef DHT_NODE_EXTRA_PACKETS
     bootstrap_set_callbacks(dht_get_net(dht), DHT_VERSION_NUMBER, DHT_MOTD, sizeof(DHT_MOTD));

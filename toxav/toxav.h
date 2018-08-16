@@ -744,7 +744,7 @@ void toxav_callback_video_receive_frame(ToxAV *av, toxav_video_receive_frame_cb 
  * return -1 on failure.
  *
  * Audio data callback format:
- *   audio_callback(Tox *tox, uint32_t groupnumber, uint32_t peernumber, const int16_t *pcm, unsigned int samples, uint8_t channels, uint32_t sample_rate, void *userdata)
+ *   audio_callback(Tox *tox, uint32_t group_number, uint32_t peer_number, const int16_t *pcm, unsigned int samples, uint8_t channels, uint32_t sample_rate, void *userdata)
  *
  * Note that total size of pcm in bytes is equal to (samples * channels * sizeof(int16_t)).
  */
@@ -758,7 +758,7 @@ int toxav_add_av_groupchat(Tox *tox,
  * returns -1 on failure.
  *
  * Audio data callback format (same as the one for toxav_add_av_groupchat()):
- *   audio_callback(Tox *tox, uint32_t groupnumber, uint32_t peernumber, const int16_t *pcm, unsigned int samples, uint8_t channels, uint32_t sample_rate, void *userdata)
+ *   audio_callback(Tox *tox, uint32_t group_number, uint32_t peer_number, const int16_t *pcm, unsigned int samples, uint8_t channels, uint32_t sample_rate, void *userdata)
  *
  * Note that total size of pcm in bytes is equal to (samples * channels * sizeof(int16_t)).
  */
@@ -779,7 +779,7 @@ int toxav_join_av_groupchat(Tox *tox, uint32_t friendnumber, const uint8_t *data
  *
  * Recommended values are: samples = 960, channels = 1, sample_rate = 48000
  */
-int toxav_group_send_audio(Tox *tox, uint32_t groupnumber, const int16_t *pcm, unsigned int samples, uint8_t channels,
+int toxav_group_send_audio(Tox *tox, uint32_t group_number, const int16_t *pcm, unsigned int samples, uint8_t channels,
                            uint32_t sample_rate);
 
 #ifdef __cplusplus
