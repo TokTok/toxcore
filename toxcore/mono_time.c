@@ -34,45 +34,45 @@ struct Mono_Time {
 
 Mono_Time *mono_time_new(void)
 {
-    Mono_Time *monotime = (Mono_Time *)malloc(sizeof(Mono_Time));
+    Mono_Time *mono_time = (Mono_Time *)malloc(sizeof(Mono_Time));
 
-    if (monotime == nullptr) {
+    if (mono_time == nullptr) {
         return nullptr;
     }
 
-    monotime->time = 0;
-    monotime->custom_time_monotonic_function = nullptr;
-    monotime->base_time = ((uint64_t)time(nullptr) - (current_time_monotonic(monotime) / 1000ULL));
+    mono_time->time = 0;
+    mono_time->custom_time_monotonic_function = nullptr;
+    mono_time->base_time = ((uint64_t)time(nullptr) - (current_time_monotonic(mono_time) / 1000ULL));
 
-    mono_time_update(monotime);
+    mono_time_update(mono_time);
 
-    return monotime;
+    return mono_time;
 }
 
-void mono_time_free(Mono_Time *monotime)
+void mono_time_free(Mono_Time *mono_time)
 {
-    free(monotime);
+    free(mono_time);
 }
 
-void mono_time_update(Mono_Time *monotime)
+void mono_time_update(Mono_Time *mono_time)
 {
-    monotime->time = (current_time_monotonic(monotime) / 1000ULL) + monotime->base_time;
+    mono_time->time = (current_time_monotonic(mono_time) / 1000ULL) + mono_time->base_time;
 }
 
-uint64_t mono_time_get(const Mono_Time *monotime)
+uint64_t mono_time_get(const Mono_Time *mono_time)
 {
-    return monotime->time;
+    return mono_time->time;
 }
 
-bool mono_time_is_timeout(const Mono_Time *monotime, uint64_t timestamp, uint64_t timeout)
+bool mono_time_is_timeout(const Mono_Time *mono_time, uint64_t timestamp, uint64_t timeout)
 {
-    return timestamp + timeout <= mono_time_get(monotime);
+    return timestamp + timeout <= mono_time_get(mono_time);
 }
 
-void set_time_monotonic_function(Mono_Time *monotime,
+void set_time_monotonic_function(Mono_Time *mono_time,
                                  time_monotonic_function *custom_time_monotonic_function)
 {
-    monotime->custom_time_monotonic_function = custom_time_monotonic_function;
+    mono_time->custom_time_monotonic_function = custom_time_monotonic_function;
 }
 
 //!TOKSTYLE-
@@ -84,10 +84,10 @@ static uint64_t add_clock_mono;
 //!TOKSTYLE+
 
 /* return current monotonic time in milliseconds (ms). */
-uint64_t current_time_monotonic(const Mono_Time *monotime)
+uint64_t current_time_monotonic(const Mono_Time *mono_time)
 {
-    if (monotime->custom_time_monotonic_function) {
-        return monotime->custom_time_monotonic_function();
+    if (mono_time->custom_time_monotonic_function) {
+        return mono_time->custom_time_monotonic_function();
     }
 
     uint64_t time;
