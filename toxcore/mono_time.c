@@ -28,6 +28,8 @@
 struct Mono_Time {
     uint64_t time;
     uint64_t base_time;
+
+    time_monotonic_cb *custom_time_monotonic_callback;
 };
 
 Mono_Time *mono_time_new(void)
@@ -39,6 +41,7 @@ Mono_Time *mono_time_new(void)
     }
 
     mono_time->time = 0;
+    mono_time->custom_time_monotonic_callback = nullptr;
     mono_time->base_time = (uint64_t)time(nullptr) - (current_time_monotonic(mono_time) / 1000ULL);
 
     mono_time_update(mono_time);
@@ -66,6 +69,12 @@ bool mono_time_is_timeout(const Mono_Time *mono_time, uint64_t timestamp, uint64
     return timestamp + timeout <= mono_time_get(mono_time);
 }
 
+void set_time_monotonic_callback(Mono_Time *mono_time,
+                                 time_monotonic_cb *custom_time_monotonic_callback)
+{
+    mono_time->custom_time_monotonic_callback = custom_time_monotonic_callback;
+}
+
 //!TOKSTYLE-
 // No global mutable state in Tokstyle.
 #ifdef OS_WIN32
@@ -77,6 +86,10 @@ static uint64_t add_clock_mono;
 /* return current monotonic time in milliseconds (ms). */
 uint64_t current_time_monotonic(const Mono_Time *mono_time)
 {
+    if (mono_time->custom_time_monotonic_callback) {
+        return mono_time->custom_time_monotonic_callback();
+    }
+
     uint64_t time;
 #ifdef OS_WIN32
     uint64_t old_add_clock_mono = add_clock_mono;
