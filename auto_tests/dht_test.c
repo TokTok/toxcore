@@ -5,6 +5,7 @@
 #include "check_compat.h"
 #include "../testing/misc_tools.h"
 #include "../toxcore/crypto_core.h"
+#include "../toxcore/mono_time.h"
 
 #ifndef DHT_C_INCLUDED
 #include "../toxcore/DHT.c"
@@ -313,6 +314,12 @@ static void test_addto_lists_good(DHT            *dht,
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #endif
 
+static uint64_t test_clock;
+static uint64_t get_test_clock(void)
+{
+    return test_clock;
+}
+
 static void test_addto_lists(IP ip)
 {
     Logger *log = logger_new();
@@ -321,6 +328,9 @@ static void test_addto_lists(IP ip)
 
     Mono_Time *mono_time = mono_time_new();
     ck_assert_msg(mono_time != nullptr, "Failed to create Mono_Time");
+
+    test_clock = current_time_monotonic(mono_time);
+    set_time_monotonic_function(mono_time, get_test_clock);
 
     Networking_Core *net = new_networking(log, ip, TOX_PORT_DEFAULT);
     ck_assert_msg(net != nullptr, "Failed to create Networking_Core");
@@ -676,7 +686,7 @@ loop_top:
             do_dht(dhts[i]);
         }
 
-        c_sleep(500);
+        test_clock += 500;
     }
 
     for (i = 0; i < NUM_DHT; ++i) {
