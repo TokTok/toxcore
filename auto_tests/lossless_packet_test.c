@@ -54,7 +54,7 @@ static void test_lossless_packet(Tox **toxes, State *state)
         tox_iterate(toxes[0], nullptr);
         tox_iterate(toxes[1], &state[1]);
 
-        c_sleep(ITERATION_INTERVAL);
+        test_clock += ITERATION_INTERVAL;
     }
 }
 

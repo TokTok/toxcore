@@ -2,6 +2,15 @@
 
 #include "check_compat.h"
 #include "../testing/misc_tools.h"
+#include "../toxcore/Messenger.h"
+#include "../toxcore/mono_time.h"
+#include "../toxcore/util.h"
+
+static uint64_t test_clock;
+static uint64_t get_test_clock(void)
+{
+    return test_clock;
+}
 
 static bool all_connected(uint32_t tox_count, Tox **toxes)
 {
@@ -48,6 +57,9 @@ static void run_auto_test(uint32_t tox_count, void test(Tox **toxes, State *stat
         state[i].index = i;
         toxes[i] = tox_new_log(nullptr, nullptr, &state[i].index);
         ck_assert_msg(toxes[i], "failed to create %u tox instances", i + 1);
+        Mono_Time *mono_time = (*(Messenger **)toxes[i])->mono_time;
+        test_clock = max_u64(test_clock, current_time_monotonic(mono_time));
+        set_time_monotonic_function(mono_time, get_test_clock);
     }
 
     printf("toxes all add each other as friends\n");
@@ -75,7 +87,7 @@ static void run_auto_test(uint32_t tox_count, void test(Tox **toxes, State *stat
     while (!all_connected(tox_count, toxes)) {
         iterate_all(tox_count, toxes, state);
 
-        c_sleep(ITERATION_INTERVAL);
+        test_clock += ITERATION_INTERVAL;
     }
 
     printf("toxes are online\n");
@@ -83,7 +95,7 @@ static void run_auto_test(uint32_t tox_count, void test(Tox **toxes, State *stat
     while (!all_friends_connected(tox_count, toxes)) {
         iterate_all(tox_count, toxes, state);
 
-        c_sleep(ITERATION_INTERVAL);
+        test_clock += ITERATION_INTERVAL;
     }
 
     printf("tox clients connected\n");

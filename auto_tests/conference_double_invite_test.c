@@ -67,7 +67,7 @@ static void conference_double_invite_test(Tox **toxes, State *state)
         tox_iterate(toxes[0], &state[0]);
         tox_iterate(toxes[1], &state[1]);
 
-        c_sleep(ITERATION_INTERVAL);
+        test_clock += ITERATION_INTERVAL;
     }
 
     fprintf(stderr, "Invitations accepted\n");

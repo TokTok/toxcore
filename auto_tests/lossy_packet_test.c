@@ -49,7 +49,7 @@ static void test_lossy_packet(Tox **toxes, State *state)
     while (!state[1].custom_packet_received) {
         tox_iterate(toxes[0], nullptr);
         tox_iterate(toxes[1], &state[1]);
-        c_sleep(ITERATION_INTERVAL);
+        test_clock += ITERATION_INTERVAL;
     }
 }
 

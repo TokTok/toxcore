@@ -51,7 +51,7 @@ static void net_crypto_overflow_test(Tox **toxes, State *state)
     // messages arrive, so this test would always fail.
     for (uint32_t i = 0; i < 200; i++) {
         iterate_all(3, toxes, state);
-        c_sleep(ITERATION_INTERVAL);
+        test_clock += ITERATION_INTERVAL;
     }
 
     printf("tox%u received %u messages\n", state[0].index, state[0].recv_count);

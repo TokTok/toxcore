@@ -111,7 +111,7 @@ static void conference_peer_nick_test(Tox **toxes, State *state)
         tox_iterate(toxes[0], &state[0]);
         tox_iterate(toxes[1], &state[1]);
 
-        c_sleep(ITERATION_INTERVAL);
+        test_clock += ITERATION_INTERVAL;
     }
 
     fprintf(stderr, "Running tox0, but not tox1, waiting for tox1 to drop out\n");
@@ -122,7 +122,7 @@ static void conference_peer_nick_test(Tox **toxes, State *state)
         // Rebuild peer list after every iteration.
         rebuild_peer_list(toxes[0]);
 
-        c_sleep(ITERATION_INTERVAL);
+        test_clock += ITERATION_INTERVAL;
     }
 
     fprintf(stderr, "Invitations accepted\n");

@@ -105,9 +105,19 @@ int32_t min_s32(int32_t a, int32_t b)
     return a < b ? a : b;
 }
 
+uint32_t max_u32(uint32_t a, uint32_t b)
+{
+    return a > b ? a : b;
+}
+
 uint32_t min_u32(uint32_t a, uint32_t b)
 {
     return a < b ? a : b;
+}
+
+uint64_t max_u64(uint64_t a, uint64_t b)
+{
+    return a > b ? a : b;
 }
 
 uint64_t min_u64(uint64_t a, uint64_t b)
