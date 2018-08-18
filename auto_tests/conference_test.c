@@ -15,8 +15,8 @@
 #include "../toxcore/util.h"
 #include "check_compat.h"
 
-#define NUM_GROUP_TOX 32
-#define NUM_DISCONNECT 16
+#define NUM_GROUP_TOX 16
+#define NUM_DISCONNECT 8
 #define GROUP_MESSAGE "Install Gentoo"
 
 #define NAMELEN 9
