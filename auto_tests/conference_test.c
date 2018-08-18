@@ -225,7 +225,7 @@ static void run_conference_tests(Tox **toxes, State *state)
     for (uint16_t k = NUM_GROUP_TOX; k != 0 ; --k) {
         tox_conference_delete(toxes[k - 1], 0, nullptr);
 
-        for (uint8_t j = 0; j < 10; ++j) {
+        for (uint8_t j = 0; j < 10 || j < NUM_GROUP_TOX; ++j) {
             iterate_all(NUM_GROUP_TOX, toxes, state);
 
             c_sleep(50);
