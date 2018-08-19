@@ -501,14 +501,6 @@ static int note_peer_active(Group_Chats *g_c, uint32_t groupnumber, uint16_t pee
 
     ++g->numpeers;
 
-    if (g_c->peer_list_changed_callback) {
-        g_c->peer_list_changed_callback(g_c->m, groupnumber, userdata);
-    }
-
-    if (g->peer_on_join) {
-        g->peer_on_join(g->object, groupnumber, g->numpeers - 1);
-    }
-
     --g->numfrozen;
 
     if (g->numfrozen == 0) {
@@ -526,6 +518,14 @@ static int note_peer_active(Group_Chats *g_c, uint32_t groupnumber, uint16_t pee
         }
 
         g->frozen = frozen_temp;
+    }
+
+    if (g_c->peer_list_changed_callback) {
+        g_c->peer_list_changed_callback(g_c->m, groupnumber, userdata);
+    }
+
+    if (g->peer_on_join) {
+        g->peer_on_join(g->object, groupnumber, g->numpeers - 1);
     }
 
     g->need_send_name = true;
