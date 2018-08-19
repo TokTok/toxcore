@@ -513,7 +513,7 @@ static int note_peer_active(Group_Chats *g_c, uint32_t groupnumber, uint16_t pee
 
         Group_Peer *frozen_temp = (Group_Peer *)realloc(g->frozen, sizeof(Group_Peer) * (g->numfrozen));
 
-        if (frozen_temp == nullptr) {
+        if (frozen_temp == nullptr && g->numfrozen > 0) {
             return -1;
         }
 
@@ -700,7 +700,7 @@ static int delpeer(Group_Chats *g_c, uint32_t groupnumber, int peer_index, bool 
 
         Group_Peer *temp = (Group_Peer *)realloc(g->group, sizeof(Group_Peer) * (g->numpeers));
 
-        if (temp == nullptr) {
+        if (temp == nullptr && g->numpeers > 0) {
             return -1;
         }
 
