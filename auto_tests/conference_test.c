@@ -31,7 +31,14 @@ typedef struct State {
     bool invited_next;
 } State;
 
-#include "run_auto_test.h"
+static bool iterate_all(uint32_t tox_count, Tox **toxes, State *state)
+{
+    for (uint32_t i = 0; i < tox_count; i++) {
+        tox_iterate(toxes[i], &state[i]);
+    }
+
+    return true;
+}
 
 static void handle_self_connection_status(
     Tox *tox, TOX_CONNECTION connection_status, void *user_data)
