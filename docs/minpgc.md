@@ -59,8 +59,8 @@ When a connection is set as online as a result of an Online packet, we ping
 the group.
 
 When processing the reply to a Peer Query, we update the DHT pubkey of an
-existing peer if and only if it was frozen since we last set its DHT pubkey,
-and is now not frozen.
+existing peer if and only if it is frozen or has not had its DHT pubkey
+updated since it last stopped being frozen.
 
 When we receive a Title Response packet, we set the title if it is currently
 empty or if all peers became frozen since we last set the title.
@@ -118,4 +118,10 @@ One way to deal with this would be a general mechanism for storing and
 requesting missed group messages. But this is considered out of scope of this
 PR.
 
-The way DHT pubkeys are updated is not watertight.
+If a peer changes its DHT pubkey, the change might not be properly propagated
+under various circumstances - in particular, if connections do not go down
+long enough for the peer to become frozen.
+
+One way to deal with this would be to add a group message announcing the
+sending peer's current DHT pubkey, and treat it analogously to the Name
+message.

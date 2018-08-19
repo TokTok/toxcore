@@ -571,6 +571,20 @@ static int addpeer(Group_Chats *g_c, uint32_t groupnumber, const uint8_t *real_p
         return peer_index;
     }
 
+    if (!fresh) {
+        const int frozen_index = get_frozen_index(g, peer_number);
+
+        if (frozen_index != -1) {
+            if (!id_equal(g->frozen[frozen_index].real_pk, real_pk)) {
+                return -1;
+            }
+
+            id_copy(g->frozen[frozen_index].temp_pk, temp_pk);
+
+            return -1;
+        }
+    }
+
     Group_Peer *temp = (Group_Peer *)realloc(g->group, sizeof(Group_Peer) * (g->numpeers + 1));
 
     if (temp == nullptr) {
