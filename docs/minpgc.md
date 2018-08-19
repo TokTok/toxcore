@@ -1,6 +1,12 @@
-Minimal persistent conferences
+# Persistent conferences
 
-# Specification of changes from pre-existing conference specification
+This document describes the "minpgc" simple persistent conferences
+implementation of PR #1069.
+
+Many of the ideas derive from isotoxin's persistent conferences
+implementation, PR #826.
+
+## Specification of changes from pre-existing conference specification
 We add one new packet type:
 
 Rejoin Conference packet
@@ -26,14 +32,14 @@ Name group message. (We can hold off on sending this message until the next
 tox\_iterate, and only send one message if many frozen peers become active at
 once).
 
-If we receive a New Peer message for a peer, we update its dht key.
+If we receive a New Peer message for a peer, we update its DHT pubkey.
 
 If we receive a group message originating from an unknown peer, we drop the
 message but send a Peer Query packet back to the peer who directly sent us the
 message. (This is current behaviour; it's mentioned here because it's important
 and not currently mentioned in the spec.)
 
-If we receive a Rejoin packet from a peer we update its dht key, add a
+If we receive a Rejoin packet from a peer we update its DHT pubkey, add a
 temporary groupchat connection for the peer, and, once the connection is
 online, send out a New Peer message announcing the peer, and a Name message.
 
@@ -52,47 +58,49 @@ rather, an Online packet is sent when we handle a Rejoin packet.
 When a connection is set as online as a result of an Online packet, we ping
 the group.
 
+When processing the reply to a Peer Query, we update the DHT pubkey of an
+existing peer if and only if it was frozen since we last set its DHT pubkey,
+and is now not frozen.
+
 When we receive a Title Response packet, we set the title if it is currently
 empty or if all peers became frozen since we last set the title.
 
-# Discussion
-## Overview
+## Discussion
+### Overview
 The intention is to recover seamlessly from splits in the group, the most 
-common form of which is a single peer losing their internet connection.
+common form of which is a single peer temporarily losing all connectivity.
 
-If two peers in different connected components have a friend connection (due 
-to actually being friends, or due to a group connection surviving), by the 
-above process each will add the other's component to their peer list, and so 
-then through ping packets being forwarded the two components will remerge. The 
-Peer Query and List packets sent on thawing a peer are sufficient in
-most circumstances to ensure that any new peers which joined either component
-during the split will be properly incorporated, and the handling of a message
-from an unknown peer deals with the remaining exceptional circumstances. Peers
-who leave the group during a split will not be deleted by all peers after the
-merge, but they will be set as frozen due to ping timeouts, which is
-sufficient.
+To see how this works, first note that groups (even before the changes
+discussed here) have the property that for a group to be connected in the
+sense that any peer will receive the messages of any other peer and have them
+in their peerlist, it is necessary and sufficient that there is a path of
+direct group connections between any two peers.
 
-## Titles
+Now suppose the group is split into two connected components, with each member
+of one component frozen according to the members of the other. Suppose there
+are two peers, one in each component, which are using the above protocol, and
+suppose they establish a friend connection. Then each will rejoin the other,
+forming a direct group connection. Hence the whole group will become connected
+(even if all other peers are using the unmodified protocol).
+
+The Peer Query packet sent on rejoining hastens this process.
+
+Peers who leave the group during a split will not be deleted by all peers
+after the merge - but they will be set as frozen due to ping timeouts, which
+is sufficient.
+
+### Titles
 If we have a split into components each containing multiple peers, and the
 title is changed in one component, then peers will continue to disagree on the
 title after the split. Short of a complicated voting system, this seems the
 only reasonable behaviour.
 
-## Backwards compatibility
-In the simplest and most important case that one peer disconnects from the
-rest of the group, as long as the above protocol is being followed by both
-that disconnected peer and at least one other member of the group who is also
-a Tox friend of the disconnected peer, then the peer will successfully
-reintegrate into the group even if the rest of the group is using older
-versions of toxcore, and even if the group has added and/or lost members
-during the disconnection.
-
-## Implementation notes
+### Implementation notes
 Although I've described the logic in terms of an 'frozen' flag, it might 
 actually make more sense in the implementation to have a separate list for 
 frozen peers.
 
-# Saving
+## Saving
 Saving could be implemented by simply saving all live groups with their group
 numbers and full peer info for all peers. On reload, all peers would be set as
 frozen.
@@ -101,7 +109,7 @@ The client would need to support this by understanding that these groups exist
 on start-up (e.g. starting windows for them), and by not automatically killing
 groups on closing the client.
 
-# Limitations
+## Limitations
 If a peer disconnects from the group for a period short enough that group
 timeouts do not occur, and a name change occurs during this period, then the
 name change will never be propagated.
@@ -109,3 +117,5 @@ name change will never be propagated.
 One way to deal with this would be a general mechanism for storing and
 requesting missed group messages. But this is considered out of scope of this
 PR.
+
+The way DHT pubkeys are updated is not watertight.
