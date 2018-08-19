@@ -130,6 +130,20 @@ static bool all_connected_to_group(uint32_t tox_count, Tox **toxes)
     return true;
 }
 
+/* returns a random index at which a list of booleans is false
+ * (some such index is required to exist)
+ * */
+static uint32_t random_false_index(bool *list, const uint32_t length)
+{
+    uint32_t index;
+
+    do {
+        index = random_u32() % length;
+    } while (list[index]);
+
+    return index;
+}
+
 static void run_conference_tests(Tox **toxes, State *state)
 {
     /* disabling name propagation check for now, as it occasionally fails due
@@ -137,19 +151,12 @@ static void run_conference_tests(Tox **toxes, State *state)
     const bool check_name_propagation = false;
 
     printf("letting random toxes timeout\n");
-    bool disconnected[NUM_GROUP_TOX];
+    bool disconnected[NUM_GROUP_TOX] = {0};
 
-    for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
-        disconnected[i] = false;
-    }
+    ck_assert(NUM_DISCONNECT < NUM_GROUP_TOX);
 
     for (uint16_t i = 0; i < NUM_DISCONNECT; ++i) {
-        uint16_t disconnect;
-
-        do {
-            disconnect = random_u16() % NUM_GROUP_TOX;
-        } while (disconnected[disconnect]);
-
+        uint32_t disconnect = random_false_index(disconnected, NUM_GROUP_TOX);
         disconnected[disconnect] = true;
         printf("Disconnecting #%u\n", state[disconnect].index);
     }
