@@ -1277,7 +1277,7 @@ static int try_send_rejoin(Group_Chats *g_c, uint32_t groupnumber, const uint8_t
         return -1;
     }
 
-    int friendcon_id = getfriend_conn_id_pk(g_c->fr_c, real_pk);
+    const int friendcon_id = getfriend_conn_id_pk(g_c->fr_c, real_pk);
 
     if (friendcon_id == -1) {
         return -1;
