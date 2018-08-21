@@ -423,7 +423,8 @@ static int handle_announce_request(void *object, IP_Port source, const uint8_t *
         pl[0] = 0;
         memcpy(pl + 1, ping_id2, ONION_PING_ID_SIZE);
     } else {
-        if (public_key_cmp(onion_a->entries[index].public_key, packet_public_key) == 0) {
+        uint8_t zero_pk[CRYPTO_PUBLIC_KEY_SIZE] = {0};
+        if (public_key_cmp(zero_pk, data_public_key) != 0) {
             if (public_key_cmp(onion_a->entries[index].data_public_key, data_public_key) != 0) {
                 pl[0] = 0;
                 memcpy(pl + 1, ping_id2, ONION_PING_ID_SIZE);
