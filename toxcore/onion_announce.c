@@ -407,12 +407,12 @@ static int handle_announce_request(void *object, IP_Port source, const uint8_t *
         index = add_to_entries(onion_a, source, target_public_key, data_public_key,
                                packet + (ANNOUNCE_REQUEST_SIZE_RECV - ONION_RETURN_3));
     } else {
-        index = in_entries(onion_a, plain + ONION_PING_ID_SIZE);
+        index = in_entries(onion_a, target_public_key);
     }
 
     /*Respond with a announce response packet*/
     Node_format nodes_list[MAX_SENT_NODES];
-    unsigned int num_nodes = get_close_nodes(onion_a->dht, plain + ONION_PING_ID_SIZE, nodes_list, net_family_unspec,
+    unsigned int num_nodes = get_close_nodes(onion_a->dht, target_public_key, nodes_list, net_family_unspec,
                              ip_is_lan(source.ip) == 0, 1);
     uint8_t nonce[CRYPTO_NONCE_SIZE];
     random_nonce(nonce);
