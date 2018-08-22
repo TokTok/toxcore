@@ -1705,7 +1705,7 @@ static void handle_friend_invite_packet(Messenger *m, uint32_t friendnumber, con
 
             unsigned int tries = 0;
 
-            while (get_peer_index(g, peer_number) != -1) {
+            while (get_peer_index(g, peer_number) != -1 || get_frozen_index(g, peer_number) != -1) {
                 peer_number = random_u16();
                 ++tries;
 
