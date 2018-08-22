@@ -2430,6 +2430,9 @@ static void handle_message_packet_group(Group_Chats *g_c, uint32_t groupnumber, 
                  * blemish. It could be fixed with a new packet indicating that
                  * the connection is no longer needed by one side, or just with
                  * a timeout.
+                 * FIXME(zugz): actually no, it isn't harmless at all -
+                 * because lossy packets will be sent along all such
+                 * connections.
                  */
                 if (!g->close[i].closest && !g->close[i].introduced) {
                     g->close[i].type = GROUPCHAT_CLOSE_NONE;
