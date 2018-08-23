@@ -80,11 +80,13 @@ typedef enum Groupchat_Close_Type {
     GROUPCHAT_CLOSE_ONLINE
 } Groupchat_Close_Type;
 
+#define GROUPCHAT_CLOSE_REASON_CLOSEST     (1 << 0) /* Connection is to one of the closest DESIRED_CLOSE_CONNECTIONS peers */
+#define GROUPCHAT_CLOSE_REASON_INTRODUCING (1 << 1) /* Connection is to a peer we are introducing to the conference */
+#define GROUPCHAT_CLOSE_REASON_INTRODUCER  (1 << 2) /* Connection is to a peer who is introducing us to the conference */
+
 typedef struct Groupchat_Close {
     uint8_t type; /* GROUPCHAT_CLOSE_* */
-    bool closest; /* connected to peer because it is one of our closest peers */
-    bool introducer; /* connected to peer because it introduced us to the group */
-    bool introduced; /* connected to peer because we introduced it to the group */
+    uint8_t reasons; /* bit field with flags GROUPCHAT_CLOSE_REASON_* */
     uint32_t number;
     uint16_t group_number;
 } Groupchat_Close;
