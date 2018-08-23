@@ -230,4 +230,4 @@ endif
 endif
 
 
-EXTRA_DIST += $(top_srcdir)/auto_tests/check_compat.h
+EXTRA_DIST += $(top_srcdir)/auto_tests/check_compat.h $(top_srcdir)/auto_tests/run_auto_test.h
