@@ -1248,31 +1248,6 @@ static int save_tcp_relay(GC_Connection *gconn, Node_format *node)
 }
 
 
-static int send_gc_ip_port(DHT *dht, GC_Chat *chat, GC_Connection *gconn)
-{
-    GC_Announce_Node self_node;
-
-    if (make_self_gca_node(dht, &self_node, chat->self_public_key) == -1) {
-        return 1;
-    }
-
-    int length = sizeof(GC_Announce_Node);
-    uint8_t data[length];
-
-    int node_len = pack_gca_nodes(data, length, &self_node, 1);
-
-    if (node_len <= 0) {
-        return 2;
-    }
-
-    if (send_lossy_group_packet(chat, gconn, data, length, GP_IP_PORT) == -1) {
-        return 3;
-    }
-
-    gconn->last_ip_port_shared = mono_time_get(chat->mono_time);
-    return 0;
-}
-
 /* Shares our TCP relays with peer and adds shared relays to our connection with them.
  *
  * Returns 0 on success.
@@ -1297,7 +1272,6 @@ static int send_gc_tcp_relays(const Mono_Time *mono_time, GC_Chat *chat, GC_Conn
     }
 
     int nodes_len = pack_nodes(data + length, sizeof(data) - length, tcp_relays, num);
-
     if (nodes_len <= 0) {
         return -1;
     }
@@ -1309,41 +1283,6 @@ static int send_gc_tcp_relays(const Mono_Time *mono_time, GC_Chat *chat, GC_Conn
     }
 
     gconn->last_tcp_relays_shared = mono_time_get(mono_time);
-    return 0;
-}
-
-
-static int handle_gc_ip_port(Messenger *m, int group_number, GC_Connection *gconn,
-                             const uint8_t *data, uint32_t length)
-{
-    if (length == 0) {
-        return -1;
-    }
-
-    GC_Session *c = m->group_handler;
-    GC_Chat *chat = gc_get_group(c, group_number);
-
-    if (chat == nullptr) {
-        return -1;
-    }
-
-    if (chat->connection_state != CS_CONNECTED) {
-        return -1;
-    }
-
-    if (!gconn->confirmed) {
-        return -1;
-    }
-
-    GC_Announce_Node friend_node;
-
-    int node_len = unpack_gca_nodes(&friend_node, 1, nullptr, data, length, 0);
-
-    if (node_len != 1) {
-        return -1;
-    }
-
-    memcpy(&gconn->addr.ip_port, &friend_node.ip_port, sizeof(IP_Port));
 
     return 0;
 }
@@ -1376,8 +1315,8 @@ static int handle_gc_tcp_relays(Messenger *m, int group_number, GC_Connection *g
     }
 
     Node_format tcp_relays[GCC_MAX_TCP_SHARED_RELAYS];
-    int num_nodes = unpack_nodes(tcp_relays, GCC_MAX_TCP_SHARED_RELAYS, nullptr, data, length, 1);
 
+    int num_nodes = unpack_nodes(tcp_relays, GCC_MAX_TCP_SHARED_RELAYS, nullptr, data, length, 1);
     if (num_nodes <= 0) {
         return -1;
     }
@@ -4868,10 +4807,6 @@ static int handle_gc_lossy_message(Messenger *m, GC_Chat *chat, const uint8_t *p
             ret = handle_gc_tcp_relays(m, chat->group_number, gconn, real_data, len);
             break;
 
-        case GP_IP_PORT:
-            ret = handle_gc_ip_port(m, chat->group_number, gconn, real_data, len);
-            break;
-
         case GP_CUSTOM_PACKET:
             ret = handle_gc_custom_packet(m, chat->group_number, peer_number, real_data, len);
             break;
@@ -5326,10 +5261,6 @@ static void do_peer_connections(Messenger *m, int group_number)
         if (chat->gcc[i].confirmed) {
             if (mono_time_is_timeout(m->mono_time, chat->gcc[i].last_tcp_relays_shared, GCC_TCP_SHARED_RELAYS_TIMEOUT)) {
                 send_gc_tcp_relays(m->mono_time, chat, &chat->gcc[i]);
-            }
-
-            if (mono_time_is_timeout(m->mono_time, chat->gcc[i].last_ip_port_shared, GCC_IP_PORT_TIMEOUT)) {
-                send_gc_ip_port(m->dht, chat, &chat->gcc[i]);
             }
         }
 
@@ -6417,6 +6348,7 @@ static void group_cleanup(GC_Session *c, GC_Chat *chat)
 
     if (chat->group) {
         free(chat->group);
+        chat->group = nullptr;
     }
 }
 
