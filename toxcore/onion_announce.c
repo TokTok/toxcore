@@ -391,12 +391,12 @@ static int handle_announce_request(void *object, IP_Port source, const uint8_t *
     if ((uint32_t)len != sizeof(plain)) {
         return 1;
     }
-
+    const uint8_t *target_public_key = plain+ONION_PING_ID_SIZE;
     uint8_t ping_id1[ONION_PING_ID_SIZE];
-    generate_ping_id(onion_a, mono_time_get(onion_a->mono_time), packet_public_key, source, ping_id1);
+    generate_ping_id(onion_a, mono_time_get(onion_a->mono_time), target_public_key, source, ping_id1);
 
     uint8_t ping_id2[ONION_PING_ID_SIZE];
-    generate_ping_id(onion_a, mono_time_get(onion_a->mono_time) + PING_ID_TIMEOUT, packet_public_key, source, ping_id2);
+    generate_ping_id(onion_a, mono_time_get(onion_a->mono_time) + PING_ID_TIMEOUT, target_public_key, source, ping_id2);
 
     int index;
 
@@ -404,15 +404,15 @@ static int handle_announce_request(void *object, IP_Port source, const uint8_t *
 
     if (crypto_memcmp(ping_id1, plain, ONION_PING_ID_SIZE) == 0
             || crypto_memcmp(ping_id2, plain, ONION_PING_ID_SIZE) == 0) {
-        index = add_to_entries(onion_a, source, packet_public_key, data_public_key,
+        index = add_to_entries(onion_a, source, target_public_key, data_public_key,
                                packet + (ANNOUNCE_REQUEST_SIZE_RECV - ONION_RETURN_3));
     } else {
-        index = in_entries(onion_a, plain + ONION_PING_ID_SIZE);
+        index = in_entries(onion_a, target_public_key);
     }
 
     /*Respond with a announce response packet*/
     Node_format nodes_list[MAX_SENT_NODES];
-    unsigned int num_nodes = get_close_nodes(onion_a->dht, plain + ONION_PING_ID_SIZE, nodes_list, net_family_unspec,
+    unsigned int num_nodes = get_close_nodes(onion_a->dht, target_public_key, nodes_list, net_family_unspec,
                              ip_is_lan(source.ip) == 0, 1);
     uint8_t nonce[CRYPTO_NONCE_SIZE];
     random_nonce(nonce);
@@ -423,7 +423,8 @@ static int handle_announce_request(void *object, IP_Port source, const uint8_t *
         pl[0] = 0;
         memcpy(pl + 1, ping_id2, ONION_PING_ID_SIZE);
     } else {
-        if (public_key_cmp(onion_a->entries[index].public_key, packet_public_key) == 0) {
+        uint8_t zero_pk[CRYPTO_PUBLIC_KEY_SIZE] = {0};
+        if (public_key_cmp(zero_pk, data_public_key) != 0) {
             if (public_key_cmp(onion_a->entries[index].data_public_key, data_public_key) != 0) {
                 pl[0] = 0;
                 memcpy(pl + 1, ping_id2, ONION_PING_ID_SIZE);
