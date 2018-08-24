@@ -2582,7 +2582,7 @@ static GC_SelfPeerInfo* create_self_peer_info(const Group_Chat_Self_Peer_Info *p
         !peer_info->nick_length ||
         peer_info->nick_length > TOX_MAX_GC_PEER_LENGTH ||
         peer_info->user_status > TOX_USER_STATUS_BUSY) {
-        return NULL;
+        return nullptr;
     }
 
     GC_SelfPeerInfo *self_peer_info = (GC_SelfPeerInfo *)calloc(1, sizeof(GC_SelfPeerInfo));
