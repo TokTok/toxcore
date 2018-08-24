@@ -103,19 +103,6 @@ typedef enum {
     HS_PEER_INFO_EXCHANGE
 } GROUP_HANDSHAKE_REQUEST_TYPE;
 
-// for debugging
-void print_peer(const GC_GroupPeer *peer, const GC_Connection *gconn)
-{
-    char ip_str[IP_NTOA_LEN];
-    fprintf(stderr, "ENC PK: %s\n", id_toa(gconn->addr.public_key));
-    fprintf(stderr, "SIG PK: %s\n", id_toa(get_sig_pk(gconn->addr.public_key)));
-    fprintf(stderr, "IP: %s\n", ip_ntoa(&gconn->addr.ip_port.ip, ip_str, sizeof(ip_str)));
-    fprintf(stderr, "Nick: %s\n", peer->nick);
-    fprintf(stderr, "Nick len: %u\n", peer->nick_length);
-    fprintf(stderr, "Status: %u\n", peer->status);
-    fprintf(stderr, "Role: %u\n", peer->role);
-    fprintf(stderr, "Ignore: %d\n", peer->ignore);
-}
 
 static bool is_tcp_only_mode(const GC_Session *session)
 {
@@ -363,7 +350,6 @@ static bool peer_pk_hash_match(GC_Connection *gconn, uint32_t sender_pk_hash)
 static void self_gc_connected(const Mono_Time *mono_time, GC_Chat *chat)
 {
     chat->connection_state = CS_CONNECTED;
-    //chat->gcc[0].time_added = mono_time_get(mono_time);
 }
 
 /* Sets the password for the group (locally only).
