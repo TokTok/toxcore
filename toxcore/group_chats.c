@@ -6401,14 +6401,17 @@ void kill_dht_groupchats(GC_Session *c)
         if (c->chats[i].connection_state != CS_NONE) {
             GC_Chat *chat = &c->chats[i];
             send_gc_self_exit(chat, nullptr, 0);
-            kill_tcp_connections(chat->tcp_conn);
+            group_cleanup(c, chat);
         }
     }
 
     networking_registerhandler(c->messenger->net, NET_PACKET_GC_LOSSY, nullptr, nullptr);
     networking_registerhandler(c->messenger->net, NET_PACKET_GC_LOSSLESS, nullptr, nullptr);
     networking_registerhandler(c->messenger->net, NET_PACKET_GC_HANDSHAKE, nullptr, nullptr);
+
     kill_gca(c->announces_list);
+
+    free(c->chats);
     free(c);
 }
 
