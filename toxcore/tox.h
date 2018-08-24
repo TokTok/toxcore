@@ -3392,7 +3392,7 @@ typedef enum TOX_ERR_GROUP_NEW {
 
 
 struct Group_Chat_Self_Peer_Info {
-    const uint8_t *nick;
+    const char *nick;
     uint8_t nick_length;
     TOX_USER_STATUS user_status;
 };
