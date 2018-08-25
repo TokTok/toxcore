@@ -5943,6 +5943,11 @@ static bool gc_rejoin_connected_group(GC_Session *c, GC_Chat *chat)
         gc_peer_delete(c->messenger, chat->group_number, i, nullptr, 0);
     }
 
+    if (is_public_chat(chat)) {
+        m_remove_friend_gc(c->messenger, chat);
+        m_add_friend_gc(c->messenger, chat);
+    }
+
     gc_load_peers(c->messenger, chat, peers, num_addrs);
     chat->connection_state = CS_CONNECTING;
 
@@ -6110,7 +6115,7 @@ int handle_gc_invite_confirmed_packet(GC_Session *c, int friend_number, const ui
 
     Node_format tcp_relays[GCC_MAX_TCP_SHARED_RELAYS];
     int num_nodes = unpack_nodes(tcp_relays, GCC_MAX_TCP_SHARED_RELAYS,
-                                 NULL, data + ENC_PUBLIC_KEY + CHAT_ID_SIZE,
+                                 nullptr, data + ENC_PUBLIC_KEY + CHAT_ID_SIZE,
                                  length - GC_JOIN_DATA_LENGTH, 1);
 
     bool is_tcp_only = is_tcp_only_mode(c);
@@ -6288,8 +6293,7 @@ int gc_accept_invite(GC_Session *c, int32_t friend_number, const uint8_t *data, 
         }
     }
 
-    int peer_id = peer_add(c->messenger, group_number, NULL, invite_chat_pk);
-
+    int peer_id = peer_add(c->messenger, group_number, nullptr, invite_chat_pk);
     if (peer_id < 0) {
         return -1;
     }
