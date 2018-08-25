@@ -98,6 +98,55 @@ static void iterate_tox(Tox *bootstrap, Tox *Alice, Tox *Bob)
     tox_iterate(Bob, nullptr);
 }
 
+static void regular_call_flow(
+    Tox *Alice, Tox *Bob, Tox *bootstrap,
+    ToxAV *AliceAV, ToxAV *BobAV,
+    CallControl *AliceCC, CallControl *BobCC,
+    int a_br, int v_br)
+{
+    memset(AliceCC, 0, sizeof(CallControl));
+    memset(BobCC, 0, sizeof(CallControl));
+
+    TOXAV_ERR_CALL call_err;
+    toxav_call(AliceAV, 0, a_br, v_br, &call_err);
+
+    if (call_err != TOXAV_ERR_CALL_OK) {
+        printf("toxav_call failed: %d\n", call_err);
+        ck_assert(0);
+    }
+
+    time_t start_time = time(nullptr);
+
+    while (BobCC->state != TOXAV_FRIEND_CALL_STATE_FINISHED) {
+        if (BobCC->incoming) {
+            TOXAV_ERR_ANSWER answer_err;
+            toxav_answer(BobAV, 0, a_br, v_br, &answer_err);
+
+            if (answer_err != TOXAV_ERR_ANSWER_OK) {
+                printf("toxav_answer failed: %d\n", answer_err);
+                ck_assert(0);
+            }
+
+            BobCC->incoming = false;
+        } else { /* TODO(mannol): rtp */
+            if (time(nullptr) - start_time >= 1) {
+
+                TOXAV_ERR_CALL_CONTROL cc_err;
+                toxav_call_control(AliceAV, 0, TOXAV_CALL_CONTROL_CANCEL, &cc_err);
+
+                if (cc_err != TOXAV_ERR_CALL_CONTROL_OK) {
+                    printf("toxav_call_control failed: %d\n", cc_err);
+                    ck_assert(0);
+                }
+            }
+        }
+
+        iterate_tox(bootstrap, Alice, Bob);
+    }
+
+    printf("Success!\n");
+}
+
 static void test_av_flows(void)
 {
     Tox *Alice, *Bob, *bootstrap;
@@ -181,71 +230,23 @@ static void test_av_flows(void)
     printf("Created 2 instances of ToxAV\n");
     printf("All set after %llu seconds!\n", time(nullptr) - cur_time);
 
-
-#define REGULAR_CALL_FLOW(A_BR, V_BR) \
-    do { \
-        memset(&AliceCC, 0, sizeof(CallControl)); \
-        memset(&BobCC, 0, sizeof(CallControl)); \
-        \
-        TOXAV_ERR_CALL call_err; \
-        toxav_call(AliceAV, 0, A_BR, V_BR, &call_err); \
-        \
-        if (call_err != TOXAV_ERR_CALL_OK) { \
-            printf("toxav_call failed: %d\n", call_err); \
-            ck_assert(0); \
-        } \
-        \
-        \
-        long long unsigned int start_time = time(nullptr); \
-        \
-        \
-        while (BobCC.state != TOXAV_FRIEND_CALL_STATE_FINISHED) { \
-            \
-            if (BobCC.incoming) { \
-                TOXAV_ERR_ANSWER answer_err; \
-                toxav_answer(BobAV, 0, A_BR, V_BR, &answer_err); \
-                \
-                if (answer_err != TOXAV_ERR_ANSWER_OK) { \
-                    printf("toxav_answer failed: %d\n", answer_err); \
-                    ck_assert(0); \
-                } \
-                BobCC.incoming = false; \
-            } else { \
-                /* TODO(mannol): rtp */ \
-                \
-                if (time(nullptr) - start_time >= 1) { \
-                    \
-                    TOXAV_ERR_CALL_CONTROL cc_err; \
-                    toxav_call_control(AliceAV, 0, TOXAV_CALL_CONTROL_CANCEL, &cc_err); \
-                    \
-                    if (cc_err != TOXAV_ERR_CALL_CONTROL_OK) { \
-                        printf("toxav_call_control failed: %d\n", cc_err); \
-                        ck_assert(0); \
-                    } \
-                } \
-            } \
-             \
-            iterate_tox(bootstrap, Alice, Bob); \
-        } \
-        printf("Success!\n");\
-    } while(0)
-
     if (TEST_REGULAR_AV) {
         printf("\nTrying regular call (Audio and Video)...\n");
-        REGULAR_CALL_FLOW(48, 4000);
+        regular_call_flow(Alice, Bob, bootstrap, AliceAV, BobAV, &AliceCC, &BobCC,
+                          48, 4000);
     }
 
     if (TEST_REGULAR_A) {
         printf("\nTrying regular call (Audio only)...\n");
-        REGULAR_CALL_FLOW(48, 0);
+        regular_call_flow(Alice, Bob, bootstrap, AliceAV, BobAV, &AliceCC, &BobCC,
+                          48, 0);
     }
 
     if (TEST_REGULAR_V) {
         printf("\nTrying regular call (Video only)...\n");
-        REGULAR_CALL_FLOW(0, 4000);
+        regular_call_flow(Alice, Bob, bootstrap, AliceAV, BobAV, &AliceCC, &BobCC,
+                          0, 4000);
     }
-
-#undef REGULAR_CALL_FLOW
 
     if (TEST_REJECT) { /* Alice calls; Bob rejects */
         printf("\nTrying reject flow...\n");
