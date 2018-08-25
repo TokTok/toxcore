@@ -52,8 +52,7 @@ bool mono_time_is_timeout(const Mono_Time *mono_time, uint64_t timestamp, uint64
 /* return current monotonic time in milliseconds (ms). */
 uint64_t current_time_monotonic(const Mono_Time *mono_time);
 
-typedef uint64_t time_monotonic_cb(void);
-
+typedef uint64_t time_monotonic_cb(const Mono_Time *mono_time);
 
 /* Override implementation of current_time_monotonic() (for tests).
  *
@@ -61,7 +60,7 @@ typedef uint64_t time_monotonic_cb(void);
  * to increase monotonically.
  */
 void set_time_monotonic_callback(Mono_Time *mono_time,
-                                 time_monotonic_cb *custom_time_monotonic_callback);
+                                 time_monotonic_cb *time_monotonic_callback);
 
 #ifdef __cplusplus
 }
