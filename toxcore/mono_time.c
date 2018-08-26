@@ -43,10 +43,11 @@ Mono_Time *mono_time_new(void)
         return nullptr;
     }
 
-    mono_time->time = 0;
     mono_time->current_time_callback = current_time_monotonic_default;
-    mono_time->base_time = (uint64_t)time(nullptr) - (current_time_monotonic(mono_time) / 1000ULL);
     mono_time->user_data = nullptr;
+
+    mono_time->time = 0;
+    mono_time->base_time = (uint64_t)time(nullptr) - (current_time_monotonic(mono_time) / 1000ULL);
 
     mono_time_update(mono_time);
 
