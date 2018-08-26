@@ -78,11 +78,11 @@ void mono_time_set_current_time_callback(Mono_Time *mono_time,
 {
     if (current_time_callback == nullptr) {
         mono_time->current_time_callback = current_time_monotonic_default;
+        mono_time->user_data = nullptr;
     } else {
         mono_time->current_time_callback = current_time_callback;
+        mono_time->user_data = user_data;
     }
-
-    mono_time->user_data = user_data;
 }
 
 /* return current monotonic time in milliseconds (ms). */
