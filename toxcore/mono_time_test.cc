@@ -43,7 +43,7 @@ static uint64_t test_current_time_callback(void *user_data)
 TEST(Util, CustomTime) {
   Mono_Time *mono_time = mono_time_new();
 
-  uint64_t test_time = 42137;
+  uint64_t test_time = current_time_monotonic(mono_time) + 42137;
 
   mono_time_set_current_time_callback(mono_time, test_current_time_callback, &test_time);
   mono_time_update(mono_time);
