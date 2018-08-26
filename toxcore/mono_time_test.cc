@@ -35,4 +35,30 @@ TEST(Util, IsTimeout) {
   mono_time_free(mono_time);
 }
 
+static uint64_t test_time = 42137;
+static uint64_t test_current_time_callback(const Mono_Time* mono_time)
+{
+    return test_time;
+}
+
+TEST(Util, CustomTime) {
+  Mono_Time *mono_time = mono_time_new();
+
+  mono_time_set_current_time_callback(mono_time, test_current_time_callback);
+  mono_time_update(mono_time);
+
+  EXPECT_EQ(current_time_monotonic(mono_time), test_time );
+
+  uint64_t const start = mono_time_get(mono_time);
+
+  test_time += 7000;
+
+  mono_time_update(mono_time);
+  EXPECT_EQ(mono_time_get(mono_time) - start, 7);
+
+  EXPECT_EQ(current_time_monotonic(mono_time), test_time );
+
+  mono_time_free(mono_time);
+}
+
 }  // namespace
