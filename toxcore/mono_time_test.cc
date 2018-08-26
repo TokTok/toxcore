@@ -40,7 +40,7 @@ static uint64_t test_current_time_callback(void *user_data)
     return *(uint64_t *)user_data;
 }
 
-TEST(Util, CustomTime) {
+TEST(MonoTime, CustomTime) {
   Mono_Time *mono_time = mono_time_new();
 
   uint64_t test_time = current_time_monotonic(mono_time) + 42137;
