@@ -29,10 +29,10 @@ struct Mono_Time {
     uint64_t time;
     uint64_t base_time;
 
-    time_monotonic_cb *time_monotonic_callback;
+    mono_time_current_time_cb *current_time_callback;
 };
 
-static time_monotonic_cb current_time_monotonic_default;
+static mono_time_current_time_cb current_time_monotonic_default;
 
 Mono_Time *mono_time_new(void)
 {
@@ -43,7 +43,7 @@ Mono_Time *mono_time_new(void)
     }
 
     mono_time->time = 0;
-    mono_time->time_monotonic_callback = current_time_monotonic_default;
+    mono_time->current_time_callback = current_time_monotonic_default;
     mono_time->base_time = (uint64_t)time(nullptr) - (current_time_monotonic(mono_time) / 1000ULL);
 
     mono_time_update(mono_time);
@@ -71,20 +71,20 @@ bool mono_time_is_timeout(const Mono_Time *mono_time, uint64_t timestamp, uint64
     return timestamp + timeout <= mono_time_get(mono_time);
 }
 
-void set_time_monotonic_callback(Mono_Time *mono_time,
-                                 time_monotonic_cb *time_monotonic_callback)
+void mono_time_set_current_time_callback(Mono_Time *mono_time,
+        mono_time_current_time_cb *current_time_callback)
 {
-    if (time_monotonic_callback == nullptr) {
-        time_monotonic_callback = current_time_monotonic_default;
+    if (current_time_callback == nullptr) {
+        mono_time->current_time_callback = current_time_monotonic_default;
+    } else {
+        mono_time->current_time_callback = current_time_callback;
     }
-
-    mono_time->time_monotonic_callback = time_monotonic_callback;
 }
 
 /* return current monotonic time in milliseconds (ms). */
 uint64_t current_time_monotonic(const Mono_Time *mono_time)
 {
-    return mono_time->time_monotonic_callback(mono_time);
+    return mono_time->current_time_callback(mono_time);
 }
 
 //!TOKSTYLE-
