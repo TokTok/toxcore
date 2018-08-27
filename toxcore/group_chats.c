@@ -968,7 +968,7 @@ static int handle_gc_sync_response(Messenger *m, int group_number, int peer_numb
     uint32_t num_peers;
     net_unpack_u32(data, &num_peers);
 
-    if (num_peers > MAX_GC_NUM_PEERS) {
+    if (num_peers > chat->shared_state.maxpeers || num_peers > MAX_GC_NUM_PEERS) {
         fprintf(stderr, "peers overflow\n");
 
         return -1;
@@ -980,7 +980,7 @@ static int handle_gc_sync_response(Messenger *m, int group_number, int peer_numb
     if (num_peers) {
 
         GC_Announce *announces = (GC_Announce *)malloc(sizeof(GC_Announce) * num_peers);
-        uint8_t *announces_pointer = (uint8_t*)(data + sizeof(uint32_t));
+        uint8_t *announces_pointer = (uint8_t *)(data + sizeof(uint32_t));
         unpack_announces_list(announces_pointer, length - sizeof(uint32_t), announces, num_peers, nullptr);
 
         bool is_tcp_mode = is_tcp_only_mode(m->group_handler);
@@ -992,6 +992,7 @@ static int handle_gc_sync_response(Messenger *m, int group_number, int peer_numb
             }
 
             if (!is_valid_announce(curr_announce)) {
+                fprintf(stderr, "invalid ann\n");
                 continue;
             }
 
@@ -1022,7 +1023,7 @@ static int handle_gc_sync_response(Messenger *m, int group_number, int peer_numb
             } else {
                 peer_gconn->pending_handshake_type = HS_PEER_INFO_EXCHANGE;
                 peer_gconn->is_pending_handshake_response = peer_gconn->is_oob_handshake = false;
-                peer_gconn->pending_handshake = mono_time_get(chat->mono_time) + HANDSHAKE_SENDING_TIMEOUT;
+                peer_gconn->pending_handshake = gconn->last_received_ping_time = mono_time_get(chat->mono_time) + HANDSHAKE_SENDING_TIMEOUT;
             }
         }
 
@@ -4504,6 +4505,7 @@ static int handle_gc_handshake_request(Messenger *m, int group_number, IP_Port *
     } else {
         send_gc_handshake_response(chat, peer_number, request_type);
         gconn->send_message_id++;
+        gconn->pending_handshake = 0;
     }
 
 
@@ -5850,7 +5852,7 @@ int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name
 int gc_group_join(GC_Session *c, const uint8_t *chat_id, const uint8_t *passwd, uint16_t passwd_len,
                   const GC_SelfPeerInfo *peer_info)
 {
-    if (chat_id == nullptr || group_exists(c, chat_id)) {
+    if (chat_id == nullptr || group_exists(c, chat_id) || getfriend_id(c->messenger, chat_id) != -1) {
         return -2;
     }
 
@@ -6531,6 +6533,7 @@ int add_peers_from_announces(const GC_Session *gc_session, GC_Chat *chat, GC_Ann
         GC_Announce *curr_announce = &announces[i];
 
         if (!is_valid_announce(curr_announce)) {
+            fprintf(stderr, "invalid ann\n");
             continue;
         }
 

@@ -314,6 +314,10 @@ static int32_t m_add_contact_no_request(Messenger *m, const uint8_t *real_pk)
         return FAERR_ALREADYSENT;
     }
 
+    if (gc_get_group_by_public_key(m->group_handler, real_pk)) {
+        return FAERR_ALREADYSENT;
+    }
+
     if (id_equal(real_pk, nc_get_self_public_key(m->net_crypto))) {
         return FAERR_OWNKEY;
     }
