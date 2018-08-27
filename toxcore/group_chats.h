@@ -202,6 +202,7 @@ typedef struct {
 typedef struct GC_Connection GC_Connection;
 
 typedef struct GC_Chat {
+    const Mono_Time *mono_time;
     Networking_Core *net;
     TCP_Connections *tcp_conn;
 

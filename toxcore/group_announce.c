@@ -426,9 +426,9 @@ static size_t add_announced_nodes_helper(GC_Announce *announce, const uint8_t *c
     ipport_copy(&announce->announcements[idx].node.ip_port, &node.ip_port);
     memcpy(announce->announcements[idx].node.public_key, node.public_key, ENC_PUBLIC_KEY);
     memcpy(announce->announcements[idx].chat_id, chat_id, CHAT_ID_SIZE);
-    announce->announcements[idx].last_rcvd_ping = unix_time();
-    announce->announcements[idx].last_sent_ping = unix_time();
-    announce->announcements[idx].time_added = unix_time();
+    announce->announcements[idx].last_rcvd_ping = mono_time_get(announce->mono_time);
+    announce->announcements[idx].last_sent_ping = mono_time_get(announce->mono_time);
+    announce->announcements[idx].time_added = mono_time_get(announce->mono_time);
     announce->announcements[idx].self = self;
 
     return idx;
@@ -512,7 +512,7 @@ static void init_gca_self_request(GC_Announce *announce, const uint8_t *chat_id,
 
     memset(&announce->requests[idx], 0, sizeof(struct GC_AnnounceRequest));
     announce->requests[idx].req_id = req_id;
-    announce->requests[idx].time_added = unix_time();
+    announce->requests[idx].time_added = mono_time_get(announce->mono_time);
     memcpy(announce->requests[idx].chat_id, chat_id, CHAT_ID_SIZE);
     memcpy(announce->requests[idx].self_public_key, self_public_key, ENC_PUBLIC_KEY);
     memcpy(announce->requests[idx].self_secret_key, self_secret_key, ENC_SECRET_KEY);
@@ -530,7 +530,7 @@ static int add_gca_self_announce(GC_Announce *announce, const uint8_t *chat_id, 
 
     for (i = 0; i < MAX_GCA_SELF_ANNOUNCEMENTS; ++i) {
         if (!announce->self_announce[i].is_set) {
-            announce->self_announce[i].last_rcvd_ping = unix_time();
+            announce->self_announce[i].last_rcvd_ping = mono_time_get(announce->mono_time);
             announce->self_announce[i].is_set = true;
             memcpy(announce->self_announce[i].chat_id, chat_id, CHAT_ID_SIZE);
             memcpy(announce->self_announce[i].self_public_key, self_public_key, ENC_PUBLIC_KEY);
@@ -930,7 +930,7 @@ static int handle_gca_ping_response(void *object, IP_Port ipp, const uint8_t *pa
                 return -1;
             }
 
-            announce->announcements[i].last_rcvd_ping = unix_time();
+            announce->announcements[i].last_rcvd_ping = mono_time_get(announce->mono_time);
             return 0;
         }
     }
@@ -996,7 +996,7 @@ static int handle_gca_ping_request(void *object, IP_Port ipp, const uint8_t *pac
         return -1;
     }
 
-    announce->self_announce[i].last_rcvd_ping = unix_time();
+    announce->self_announce[i].last_rcvd_ping = mono_time_get(announce->mono_time);
 
     return send_gca_ping_response(dht, ipp, data, public_key);
 }
@@ -1045,7 +1045,7 @@ static void gca_do_rate_limit(GC_Announce *announce)
         return;
     }
 
-    uint64_t tm = unix_time();
+    uint64_t tm = mono_time_get(announce->mono_time);
 
     if (announce->relay_rate_timer < tm) {
         announce->relay_rate_timer = tm;
@@ -1062,13 +1062,14 @@ static void ping_gca_nodes(GC_Announce *announce)
             continue;
         }
 
-        if (announce->announcements[i].self || !is_timeout(announce->announcements[i].last_sent_ping, GCA_PING_INTERVAL)) {
+        if (announce->announcements[i].self
+                || !mono_time_is_timeout(announce->mono_time, announce->announcements[i].last_sent_ping, GCA_PING_INTERVAL)) {
             continue;
         }
 
         uint64_t ping_id = random_u64();
         announce->announcements[i].ping_id = ping_id;
-        announce->announcements[i].last_sent_ping = unix_time();
+        announce->announcements[i].last_sent_ping = mono_time_get(announce->mono_time);
         send_gca_ping_request(announce->dht, &announce->announcements[i].node, ping_id);
     }
 }
@@ -1085,8 +1086,8 @@ static void renew_gca_self_announces(GC_Announce *announce)
             continue;
         }
 
-        if (is_timeout(announce->self_announce[i].last_rcvd_ping, SELF_ANNOUNCE_TIMEOUT)) {
-            announce->self_announce[i].last_rcvd_ping = unix_time();
+        if (mono_time_is_timeout(announce->mono_time, announce->self_announce[i].last_rcvd_ping, SELF_ANNOUNCE_TIMEOUT)) {
+            announce->self_announce[i].last_rcvd_ping = mono_time_get(announce->mono_time);
             announce->self_announce[i].is_set = false;
             gca_send_announce_request(announce, announce->self_announce[i].self_public_key,
                                       announce->self_announce[i].self_secret_key,
@@ -1104,7 +1105,8 @@ static void check_gca_node_timeouts(GC_Announce *announce)
             continue;
         }
 
-        if (!announce->announcements[i].self && is_timeout(announce->announcements[i].last_rcvd_ping, GCA_NODES_EXPIRATION)) {
+        if (!announce->announcements[i].self
+                && mono_time_is_timeout(announce->mono_time, announce->announcements[i].last_rcvd_ping, GCA_NODES_EXPIRATION)) {
             memset(&announce->announcements[i], 0, sizeof(struct GC_AnnouncedNode));
         }
     }
@@ -1155,7 +1157,7 @@ void gca_cleanup(GC_Announce *announce, const uint8_t *chat_id)
     remove_gca_self_announce(announce, chat_id);
 }
 
-GC_Announce *new_gca(DHT *dht)
+GC_Announce *new_gca(Mono_Time *mono_time, DHT *dht)
 {
     GC_Announce *announce = (GC_Announce *)calloc(1, sizeof(GC_Announce));
 
@@ -1163,6 +1165,7 @@ GC_Announce *new_gca(DHT *dht)
         return nullptr;
     }
 
+    announce->mono_time = mono_time;
     announce->dht = dht;
     networking_registerhandler(dht_get_net(announce->dht), NET_PACKET_GCA_ANNOUNCE, &handle_gca_request, announce);
     networking_registerhandler(dht_get_net(announce->dht), NET_PACKET_GCA_GET_NODES, &handle_gc_get_announced_nodes_request,
