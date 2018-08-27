@@ -1,0 +1,71 @@
+#!/usr/bin/env python
+
+from __future__ import print_function
+
+import collections
+import re
+import subprocess
+import time
+
+INPUTS = "toxav/*.c toxcore/*.c toxencryptsave/*.c"
+CFLAGS = "-I/usr/include/opus -Itoxav -Itoxcore -Itoxencryptsave"
+
+def load_callgraph():
+    output = subprocess.check_output(
+            "cat {inputs} | "
+            "clang {cflags} -S -emit-llvm -xc - -o- | "
+            "opt -analyze -print-callgraph "
+            "2>&1".format(inputs=INPUTS, cflags=CFLAGS),
+            shell=True).split("\n")
+
+    graph = collections.defaultdict(set)
+    cur = None
+    for line in output:
+        found = re.search("Call graph node for function: '(.*)'", line)
+        if found:
+            cur = found.group(1)
+        if cur:
+            found = re.search("calls function '(.*)'", line)
+            if found:
+                graph[cur].add(found.group(1))
+
+    return {k: sorted(v) for k, v in graph.items()}
+
+def walk(visited, cg, cur, cycles, stack):
+    if cur in visited:
+        return
+    stack.append(cur)
+    for callee in cg.get(cur, ()):
+        try:
+            cycles.add(" -> ".join(stack[stack.index(callee):] + [callee]))
+        except ValueError:
+            walk(visited, cg, callee, cycles, stack)
+            visited.add(callee)
+    stack.pop()
+
+def get_time():
+    return int(round(time.time() * 1000))
+
+def find_recursion():
+    start = prev = get_time()
+    print("[+0000=0000] Generating callgraph")
+    cg = load_callgraph()
+
+    now = get_time()
+    print("[+%04d=%04d] Finding recursion" % (now - prev, now - start))
+    prev = now
+
+    cycles = set()
+    visited = set()
+    for func in sorted(cg.keys()):
+        walk(visited, cg, func, cycles, [])
+
+    now = get_time()
+    if cycles:
+        print("[+%04d=%04d] Recursion detected:" % (now - prev, now - start))
+        for cycle in sorted(cycles):
+            print(" - " + cycle)
+    else:
+        print("[+%04d=%04d] No recursion detected" % (now - prev, now - start))
+
+find_recursion()
