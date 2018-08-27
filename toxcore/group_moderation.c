@@ -1000,7 +1000,7 @@ int sanctions_list_make_entry(GC_Chat *chat, uint32_t peernumber, struct GC_Sanc
     }
 
     memcpy(sanction->public_sig_key, SIG_PK(chat->self_public_key), SIG_PUBLIC_KEY);
-    sanction->time_set = unix_time();
+    sanction->time_set = mono_time_get(chat->mono_time);
     sanction->type = type;
 
     if (sanctions_list_sign_entry(chat, sanction) == -1) {

@@ -30,9 +30,10 @@ int main(int argc, char *argv[])
     options.ipv6enabled = TOX_ENABLE_IPV6_DEFAULT;
 
     uint32_t index[PEERCOUNT];
+    Mono_Time *mono_times[PEERCOUNT];
     Messenger *tox[PEERCOUNT];
-    Messenger *chat;
-    chat = new_messenger(&options, 0);
+    Mono_Time *mono_time = mono_time_new();
+    Messenger *chat = new_messenger(mono_time, &options, 0);
     assert(chat != nullptr);
 
     for (int i = 0; i < PEERCOUNT; ++i) {
@@ -41,7 +42,8 @@ int main(int argc, char *argv[])
         options.log_user_data = &index[i];
 
         index[i] = i + 1;
-        tox[i] = new_messenger(&options, 0);
+        mono_times[i] = mono_time_new();
+        tox[i] = new_messenger(mono_times[i], &options, 0);
         assert(tox[i] != nullptr);
     }
 

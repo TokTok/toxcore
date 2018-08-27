@@ -2033,7 +2033,7 @@ Messenger *new_messenger(Mono_Time *mono_time, Messenger_Options *options, unsig
     }
 
 #ifndef VANILLA_NACL
-    m->group_announce = new_gca(m->dht);
+    m->group_announce = new_gca(m->mono_time, m->dht);
 
     if (m->group_announce == nullptr) {
         kill_networking(m->net);

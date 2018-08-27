@@ -50,7 +50,8 @@ int main(int argc, char *argv[])
     int i;
 
     for (i = 0; i < PEERCOUNT; i++) {
-        tox[i] = new_messenger(&options, 0);
+        Mono_Time *mono_time = mono_time_new();
+        tox[i] = new_messenger(mono_time, &options, 0);
         char nick[32];
         snprintf(nick, sizeof(nick), "Botik %d", rand());
         setname(tox[i], (const uint8_t *)nick, strlen(nick));
