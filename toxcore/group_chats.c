@@ -285,10 +285,10 @@ static bool peer_pk_hash_match(GC_Connection *gconn, uint32_t sender_pk_hash)
     return sender_pk_hash == gconn->public_key_hash;
 }
 
-static void self_gc_connected(GC_Chat *chat)
+static void self_gc_connected(const Mono_Time *mono_time, GC_Chat *chat)
 {
     chat->connection_state = CS_CONNECTED;
-    chat->gcc[0].time_added = unix_time();
+    chat->gcc[0].time_added = mono_time_get(mono_time);
 }
 
 /* Sets the password for the group (locally only).
@@ -988,7 +988,7 @@ static int send_lossless_group_packet(GC_Chat *chat, GC_Connection *gconn, const
         return -1;
     }
 
-    if (gcc_add_send_ary(gconn, packet, len, packet_type) == -1) {
+    if (gcc_add_send_ary(chat->mono_time, gconn, packet, len, packet_type) == -1) {
         return -1;
     }
 
@@ -1072,7 +1072,7 @@ static int handle_gc_sync_response(Messenger *m, int groupnumber, uint32_t peern
         return -1;
     }
 
-    unix_time_update();
+    mono_time_update(m->mono_time);
 
     unpacked_len += addrs_len;
 
@@ -1098,7 +1098,7 @@ static int handle_gc_sync_response(Messenger *m, int groupnumber, uint32_t peern
 
     gconn = gcc_get_connection(chat, peernumber);
 
-    self_gc_connected(chat);
+    self_gc_connected(c->messenger->mono_time, chat);
     send_gc_peer_exchange(c, chat, gconn);
     group_announce_request(c, chat);
 
@@ -1267,7 +1267,7 @@ static int sync_gc_announced_nodes(const GC_Session *c, GC_Chat *chat)
  * Returns 0 on success.
  * Returns -1 on failure.
  */
-static int send_gc_tcp_relays(GC_Chat *chat, GC_Connection *gconn)
+static int send_gc_tcp_relays(const Mono_Time *mono_time, GC_Chat *chat, GC_Connection *gconn)
 {
     Node_format tcp_relays[GCC_MAX_TCP_SHARED_RELAYS];
     unsigned int i, num = tcp_copy_connected_relays(chat->tcp_conn, tcp_relays, GCC_MAX_TCP_SHARED_RELAYS);
@@ -1297,7 +1297,7 @@ static int send_gc_tcp_relays(GC_Chat *chat, GC_Connection *gconn)
         return -1;
     }
 
-    gconn->last_tcp_relays_shared = unix_time();
+    gconn->last_tcp_relays_shared = mono_time_get(mono_time);
     return 0;
 }
 
@@ -1532,7 +1532,7 @@ static uint32_t make_gc_broadcast_header(GC_Chat *chat, const uint8_t *data, uin
     header_len += HASH_ID_BYTES;
     packet[header_len] = bc_type;
     header_len += sizeof(uint8_t);
-    U64_to_bytes(packet + header_len, unix_time());
+    U64_to_bytes(packet + header_len, mono_time_get(chat->mono_time));
     header_len += TIME_STAMP_SIZE;
 
     if (length > 0) {
@@ -1649,7 +1649,7 @@ static int handle_gc_ping(Messenger *m, int groupnumber, GC_Connection *gconn, c
     }
 
     do_gc_peer_state_sync(chat, gconn, data, length);
-    gconn->last_rcvd_ping = unix_time();
+    gconn->last_rcvd_ping = mono_time_get(m->mono_time);
 
     return 0;
 }
@@ -3849,7 +3849,7 @@ static int handle_gc_message_ack(GC_Chat *chat, GC_Connection *gconn, const uint
         return gcc_handle_ack(gconn, read_id);
     }
 
-    uint64_t tm = unix_time();
+    uint64_t tm = mono_time_get(chat->mono_time);
     uint16_t idx = get_ary_index(request_id);
 
     /* re-send requested packet */
@@ -4121,7 +4121,7 @@ static int send_gc_handshake_packet(GC_Chat *chat, uint32_t peernumber, uint8_t 
         return -1;
     }
 
-    if (gcc_add_send_ary(gconn, packet, length, -1) == -1) {
+    if (gcc_add_send_ary(chat->mono_time, gconn, packet, length, -1) == -1) {
         return -1;
     }
 
@@ -4390,7 +4390,7 @@ static int handle_gc_handshake_packet(Messenger *m, GC_Chat *chat, IP_Port *ipp,
     }
 
     if (peernumber > 0 && direct_conn) {
-        gconn->last_recv_direct_time = unix_time();
+        gconn->last_recv_direct_time = mono_time_get(chat->mono_time);
     }
 
     return peernumber;
@@ -4539,7 +4539,7 @@ static int handle_gc_lossless_message(Messenger *m, GC_Chat *chat, const uint8_t
         gcc_check_recv_ary(m, chat->groupnumber, peernumber);
 
         if (direct_conn) {
-            gconn->last_recv_direct_time = unix_time();
+            gconn->last_recv_direct_time = mono_time_get(chat->mono_time);
         }
     }
 
@@ -4621,7 +4621,7 @@ static int handle_gc_lossy_message(Messenger *m, GC_Chat *chat, const uint8_t *p
     }
 
     if (ret != -1 && direct_conn) {
-        gconn->last_recv_direct_time = unix_time();
+        gconn->last_recv_direct_time = mono_time_get(m->mono_time);
     }
 
     return ret;
@@ -5003,8 +5003,8 @@ static int peer_add(Messenger *m, int groupnumber, IP_Port *ipp, const uint8_t *
     memcpy(gconn->addr.public_key, public_key, ENC_PUBLIC_KEY);  /* we get the sig key in the handshake */
 
     gconn->public_key_hash = get_peer_key_hash(public_key);
-    gconn->last_rcvd_ping = unix_time() + (rand() % GC_PING_INTERVAL);
-    gconn->time_added = unix_time();
+    gconn->last_rcvd_ping = mono_time_get(chat->mono_time) + (rand() % GC_PING_INTERVAL);
+    gconn->time_added = mono_time_get(chat->mono_time);
     gconn->send_message_id = 1;
     gconn->send_ary_start = 1;
     gconn->recv_message_id = 0;
@@ -5026,11 +5026,11 @@ static void self_to_peer(const GC_Session *c, const GC_Chat *chat, GC_GroupPeer 
 /* Returns true if we haven't received a ping from this peer after T seconds.
  * T depends on whether or not the peer has been confirmed.
  */
-static bool peer_timed_out(const GC_Chat *chat, GC_Connection *gconn)
+static bool peer_timed_out(const Mono_Time *mono_time, const GC_Chat *chat, GC_Connection *gconn)
 {
-    return is_timeout(gconn->last_rcvd_ping, gconn->confirmed
-                      ? GC_CONFIRMED_PEER_TIMEOUT
-                      : GC_UNCONFRIMED_PEER_TIMEOUT);
+    return mono_time_is_timeout(mono_time, gconn->last_rcvd_ping, gconn->confirmed
+                                ? GC_CONFIRMED_PEER_TIMEOUT
+                                : GC_UNCONFRIMED_PEER_TIMEOUT);
 }
 
 static void do_peer_connections(Messenger *m, int groupnumber)
@@ -5045,12 +5045,12 @@ static void do_peer_connections(Messenger *m, int groupnumber)
 
     for (i = 1; i < chat->numpeers; ++i) {
         if (chat->gcc[i].confirmed) {
-            if (is_timeout(chat->gcc[i].last_tcp_relays_shared, GCC_TCP_SHARED_RELAYS_TIMEOUT)) {
-                send_gc_tcp_relays(chat, &chat->gcc[i]);
+            if (mono_time_is_timeout(m->mono_time, chat->gcc[i].last_tcp_relays_shared, GCC_TCP_SHARED_RELAYS_TIMEOUT)) {
+                send_gc_tcp_relays(m->mono_time, chat, &chat->gcc[i]);
             }
         }
 
-        if (peer_timed_out(chat, &chat->gcc[i])) {
+        if (peer_timed_out(m->mono_time, chat, &chat->gcc[i])) {
             gc_peer_delete(m, groupnumber, i, (const uint8_t *)"Timed out", 9);
         } else {
             gcc_resend_packets(m, chat, i);   // This function may delete the peer
@@ -5067,7 +5067,7 @@ static void do_peer_connections(Messenger *m, int groupnumber)
  */
 static void ping_group(GC_Chat *chat)
 {
-    if (!is_timeout(chat->last_sent_ping_time, GC_PING_INTERVAL)) {
+    if (!mono_time_is_timeout(chat->mono_time, chat->last_sent_ping_time, GC_PING_INTERVAL)) {
         return;
     }
 
@@ -5089,7 +5089,7 @@ static void ping_group(GC_Chat *chat)
         }
     }
 
-    chat->last_sent_ping_time = unix_time();
+    chat->last_sent_ping_time = mono_time_get(chat->mono_time);
 }
 
 /* Searches the DHT for nodes belonging to the group periodically in case of a split group.
@@ -5098,11 +5098,11 @@ static void ping_group(GC_Chat *chat)
 #define GROUP_SEARCH_ANNOUNCE_INTERVAL 180
 static void search_gc_announce(GC_Session *c, GC_Chat *chat)
 {
-    if (!is_timeout(chat->announce_search_timer, GROUP_SEARCH_ANNOUNCE_INTERVAL)) {
+    if (!mono_time_is_timeout(c->messenger->mono_time, chat->announce_search_timer, GROUP_SEARCH_ANNOUNCE_INTERVAL)) {
         return;
     }
 
-    chat->announce_search_timer = unix_time();
+    chat->announce_search_timer = mono_time_get(c->messenger->mono_time);
     uint32_t cnumpeers = get_gc_confirmed_numpeers(chat);
 
     if (random_int_range(cnumpeers) == 0) {
@@ -5117,7 +5117,7 @@ static void do_new_connection_cooldown(GC_Chat *chat)
         return;
     }
 
-    uint64_t tm = unix_time();
+    uint64_t tm = mono_time_get(chat->mono_time);
 
     if (chat->connection_cooldown_timer < tm) {
         chat->connection_cooldown_timer = tm;
@@ -5141,7 +5141,7 @@ static void do_group_tcp(GC_Chat *chat, void *userdata)
 
     for (i = 1; i < chat->numpeers; ++i) {
         GC_Connection *gconn = &chat->gcc[i];
-        bool tcp_set = gcc_connection_is_direct(gconn) ? false : true;
+        bool tcp_set = gcc_connection_is_direct(chat->mono_time, gconn) ? false : true;
         set_tcp_connection_to_status(chat->tcp_conn, gconn->tcp_connection_num, tcp_set);
     }
 }
@@ -5178,7 +5178,7 @@ void do_gc(GC_Session *c, void *userdata)
 
             case CS_CONNECTING: {
                 if (chat->get_nodes_attempts > GROUP_MAX_GET_NODES_ATTEMPTS) {
-                    self_gc_connected(chat);
+                    self_gc_connected(c->messenger->mono_time, chat);
 
                     /* If we can't get an invite we assume the group is empty */
                     if (chat->shared_state.version == 0 || group_announce_request(c, chat) == -1) {
@@ -5198,9 +5198,9 @@ void do_gc(GC_Session *c, void *userdata)
                     break;
                 }
 
-                if (is_timeout(chat->last_get_nodes_attempt, GROUP_GET_NEW_NODES_INTERVAL)) {
+                if (mono_time_is_timeout(c->messenger->mono_time, chat->last_get_nodes_attempt, GROUP_GET_NEW_NODES_INTERVAL)) {
                     ++chat->get_nodes_attempts;
-                    chat->last_get_nodes_attempt = unix_time();
+                    chat->last_get_nodes_attempt = mono_time_get(c->messenger->mono_time);
                     group_get_nodes_request(c, chat);
                 }
 
@@ -5209,12 +5209,13 @@ void do_gc(GC_Session *c, void *userdata)
             }
 
             case CS_DISCONNECTED: {
-                if (chat->num_addrs && is_timeout(chat->last_join_attempt, GROUP_JOIN_ATTEMPT_INTERVAL)) {
+                if (chat->num_addrs
+                        && mono_time_is_timeout(c->messenger->mono_time, chat->last_join_attempt, GROUP_JOIN_ATTEMPT_INTERVAL)) {
                     send_gc_handshake_request(c->messenger, i, chat->addr_list[chat->addrs_idx].ip_port,
                                               chat->addr_list[chat->addrs_idx].public_key, HS_INVITE_REQUEST,
                                               chat->join_type);
 
-                    chat->last_join_attempt = unix_time();
+                    chat->last_join_attempt = mono_time_get(c->messenger->mono_time);
                     chat->addrs_idx = (chat->addrs_idx + 1) % chat->num_addrs;
                 }
 
@@ -5280,7 +5281,7 @@ static int get_new_group_index(GC_Session *c)
 
 static int init_gc_tcp_connection(Messenger *m, GC_Chat *chat)
 {
-    chat->tcp_conn = new_tcp_connections(chat->self_secret_key, &m->options.proxy_info);
+    chat->tcp_conn = new_tcp_connections(m->mono_time, chat->self_secret_key, &m->options.proxy_info);
 
     if (chat->tcp_conn == nullptr) {
         return -1;
@@ -5321,9 +5322,10 @@ static int create_new_group(GC_Session *c, bool founder)
     chat->numpeers = 0;
     chat->connection_state = CS_DISCONNECTED;
     chat->net = m->net;
-    chat->last_get_nodes_attempt = unix_time();
-    chat->last_sent_ping_time = unix_time();
-    chat->announce_search_timer = unix_time();
+    chat->mono_time = m->mono_time;
+    chat->last_get_nodes_attempt = mono_time_get(m->mono_time);
+    chat->last_sent_ping_time = mono_time_get(m->mono_time);
+    chat->announce_search_timer = mono_time_get(m->mono_time);
 
     if (peer_add(m, groupnumber, nullptr, chat->self_public_key) != 0) {    /* you are always peernumber/index 0 */
         group_delete(c, chat);
@@ -5385,7 +5387,7 @@ int gc_group_load(GC_Session *c, struct SAVED_GROUP *save)
         return -1;
     }
 
-    uint64_t tm = unix_time();
+    uint64_t tm = mono_time_get(c->messenger->mono_time);
 
     Messenger *m = c->messenger;
     GC_Chat *chat = &c->chats[groupnumber];
@@ -5399,6 +5401,7 @@ int gc_group_load(GC_Session *c, struct SAVED_GROUP *save)
     chat->connection_state = CS_DISCONNECTED;
     chat->join_type = HJ_PRIVATE;
     chat->net = m->net;
+    chat->mono_time = m->mono_time;
     chat->last_get_nodes_attempt = tm;
     chat->last_sent_ping_time = tm;
     chat->announce_search_timer = tm;
@@ -5519,7 +5522,7 @@ int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name
 
     chat->chat_id_hash = get_chat_id_hash(CHAT_ID(chat->chat_public_key));
     chat->join_type = HJ_PRIVATE;
-    self_gc_connected(chat);
+    self_gc_connected(c->messenger->mono_time, chat);
 
     if (group_announce_request(c, chat) == -1) {
         group_delete(c, chat);
@@ -5591,10 +5594,11 @@ void gc_rejoin_group(GC_Session *c, GC_Chat *chat)
     }
 
     chat->connection_state = CS_DISCONNECTED;
-    chat->last_get_nodes_attempt = chat->num_addrs > 0 ? unix_time() : 0;  /* Reconnect using saved peers or DHT */
-    chat->last_sent_ping_time = unix_time();
-    chat->last_join_attempt = unix_time();
-    chat->announce_search_timer = unix_time();
+    chat->last_get_nodes_attempt = chat->num_addrs > 0 ? mono_time_get(c->messenger->mono_time) :
+                                   0;  /* Reconnect using saved peers or DHT */
+    chat->last_sent_ping_time = mono_time_get(c->messenger->mono_time);
+    chat->last_join_attempt = mono_time_get(c->messenger->mono_time);
+    chat->announce_search_timer = mono_time_get(c->messenger->mono_time);
     chat->get_nodes_attempts = 0;
 }
 
@@ -5673,7 +5677,7 @@ int gc_accept_invite(GC_Session *c, const uint8_t *data, uint16_t length, const 
     expand_chat_id(chat->chat_public_key, chat_id);
     chat->chat_id_hash = get_chat_id_hash(CHAT_ID(chat->chat_public_key));
     chat->join_type = HJ_PRIVATE;
-    chat->last_join_attempt = unix_time();
+    chat->last_join_attempt = mono_time_get(c->messenger->mono_time);
 
     if (passwd != nullptr && passwd_len > 0) {
         err = -3;

@@ -11,6 +11,7 @@
 
 typedef struct State {
     uint32_t index;
+    uint64_t clock;
     bool peer_joined;
     bool message_sent;
     bool message_received;
@@ -119,6 +120,6 @@ int main(void)
 {
     setvbuf(stdout, nullptr, _IONBF, 0);
 
-    run_auto_test(2, group_message_test);
+    run_auto_test(2, group_message_test, false);
     return 0;
 }

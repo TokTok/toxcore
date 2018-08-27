@@ -82,8 +82,8 @@ uint16_t get_ary_index(uint64_t message_id)
  * Return 0 on success.
  * Return -1 on failure.
  */
-static int create_ary_entry(struct GC_Message_Ary_Entry *ary_entry, const uint8_t *data, uint32_t length,
-                            uint8_t packet_type, uint64_t message_id)
+static int create_ary_entry(const Mono_Time *mono_time, struct GC_Message_Ary_Entry *ary_entry, const uint8_t *data,
+                            uint32_t length, uint8_t packet_type, uint64_t message_id)
 {
     if (length) {
         ary_entry->data = (uint8_t *)malloc(sizeof(uint8_t) * length);
@@ -98,8 +98,8 @@ static int create_ary_entry(struct GC_Message_Ary_Entry *ary_entry, const uint8_
     ary_entry->data_length = length;
     ary_entry->packet_type = packet_type;
     ary_entry->message_id = message_id;
-    ary_entry->time_added = unix_time();
-    ary_entry->last_send_try = unix_time();
+    ary_entry->time_added = mono_time_get(mono_time);
+    ary_entry->last_send_try = mono_time_get(mono_time);
 
     return 0;
 }
@@ -109,7 +109,8 @@ static int create_ary_entry(struct GC_Message_Ary_Entry *ary_entry, const uint8_
  * Returns 0 on success and increments gconn's send_message_id.
  * Returns -1 on failure.
  */
-int gcc_add_send_ary(GC_Connection *gconn, const uint8_t *data, uint32_t length, uint8_t packet_type)
+int gcc_add_send_ary(const Mono_Time *mono_time, GC_Connection *gconn, const uint8_t *data, uint32_t length,
+                     uint8_t packet_type)
 {
     /* check if send_ary is full */
     if ((gconn->send_message_id % GCC_BUFFER_SIZE) == (uint16_t)(gconn->send_ary_start - 1)) {
@@ -123,7 +124,7 @@ int gcc_add_send_ary(GC_Connection *gconn, const uint8_t *data, uint32_t length,
         return -1;
     }
 
-    if (create_ary_entry(ary_entry, data, length, packet_type, gconn->send_message_id) == -1) {
+    if (create_ary_entry(mono_time, ary_entry, data, length, packet_type, gconn->send_message_id) == -1) {
         return -1;
     }
 
@@ -195,7 +196,7 @@ int gcc_handle_recv_message(GC_Chat *chat, uint32_t peernumber, const uint8_t *d
             return -1;
         }
 
-        if (create_ary_entry(ary_entry, data, length, packet_type, message_id) == -1) {
+        if (create_ary_entry(chat->mono_time, ary_entry, data, length, packet_type, message_id) == -1) {
             return -1;
         }
 
@@ -279,7 +280,7 @@ void gcc_resend_packets(Messenger *m, GC_Chat *chat, uint32_t peernumber)
         return;
     }
 
-    uint64_t tm = unix_time();
+    uint64_t tm = mono_time_get(m->mono_time);
     uint16_t i, start = gconn->send_ary_start, end = gconn->send_message_id % GCC_BUFFER_SIZE;
 
     for (i = start; i != end; i = (i + 1) % GCC_BUFFER_SIZE) {
@@ -302,7 +303,7 @@ void gcc_resend_packets(Messenger *m, GC_Chat *chat, uint32_t peernumber)
             continue;
         }
 
-        if (is_timeout(ary_entry->time_added, GC_CONFIRMED_PEER_TIMEOUT)) {
+        if (mono_time_is_timeout(m->mono_time, ary_entry->time_added, GC_CONFIRMED_PEER_TIMEOUT)) {
             gc_peer_delete(m, chat->groupnumber, peernumber, (const uint8_t *)"Peer timed out", 14);
             return;
         }
@@ -324,7 +325,7 @@ int gcc_send_group_packet(const GC_Chat *chat, const GC_Connection *gconn, const
     bool direct_send_attempt = false;
 
     if (!net_family_is_unspec(gconn->addr.ip_port.ip.family)) {
-        if (gcc_connection_is_direct(gconn)) {
+        if (gcc_connection_is_direct(chat->mono_time, gconn)) {
             if ((uint16_t) sendpacket(chat->net, gconn->addr.ip_port, packet, length) == length) {
                 return 0;
             }
@@ -349,9 +350,9 @@ int gcc_send_group_packet(const GC_Chat *chat, const GC_Connection *gconn, const
 }
 
 /* Returns true if we have a direct connection with this group connection */
-bool gcc_connection_is_direct(const GC_Connection *gconn)
+bool gcc_connection_is_direct(const Mono_Time *mono_time, const GC_Connection *gconn)
 {
-    return ((GCC_UDP_DIRECT_TIMEOUT + gconn->last_recv_direct_time) > unix_time());
+    return ((GCC_UDP_DIRECT_TIMEOUT + gconn->last_recv_direct_time) > mono_time_get(mono_time));
 }
 
 /* called when a peer leaves the group */

@@ -70,6 +70,7 @@ struct GC_AnnouncedSelf {
 };
 
 struct GC_Announce {
+    Mono_Time *mono_time;
     DHT *dht;
     void (*update_addresses)(GC_Announce *, const uint8_t *, void *);
     void *update_addresses_obj;
@@ -118,7 +119,7 @@ void gca_peer_cleanup(GC_Announce *announce, const uint8_t *chat_id, const uint8
 /* Cleans up announcements related to chat_id (call on group exit or when privacy state is set to private) */
 void gca_cleanup(GC_Announce *announce, const uint8_t *chat_id);
 
-GC_Announce *new_gca(DHT *dht);
+GC_Announce *new_gca(Mono_Time *mono_time, DHT *dht);
 
 /* Called when associated Messenger object is killed. */
 void kill_gca(GC_Announce *announce);

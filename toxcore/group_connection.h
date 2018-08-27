@@ -85,7 +85,8 @@ GC_Connection *gcc_get_connection(const GC_Chat *chat, int peernumber);
  * Returns 0 on success and increments gconn's send_message_id.
  * Returns -1 on failure.
  */
-int gcc_add_send_ary(GC_Connection *gconn, const uint8_t *data, uint32_t length, uint8_t packet_type);
+int gcc_add_send_ary(const Mono_Time *mono_time, GC_Connection *gconn, const uint8_t *data, uint32_t length,
+                     uint8_t packet_type);
 
 /* Decides if message need to be put in recv_ary or immediately handled.
  *
@@ -118,7 +119,7 @@ int gcc_check_recv_ary(struct Messenger *m, int groupnum, uint32_t peernumber);
 void gcc_resend_packets(struct Messenger *m, GC_Chat *chat, uint32_t peernumber);
 
 /* Return true if we have a direct connection with this group connection */
-bool gcc_connection_is_direct(const GC_Connection *gconn);
+bool gcc_connection_is_direct(const Mono_Time *mono_time, const GC_Connection *gconn);
 
 /* Sends a packet to the peer associated with gconn.
  *
