@@ -751,7 +751,7 @@ int toxav_add_av_groupchat(Tox *tox, void (*audio_callback)(void *, uint32_t, ui
 /* Join a AV group (you need to have been invited first.)
  *
  * returns group number on success
- * returns < 0 on failure.
+ * returns -1 on failure.
  *
  * Audio data callback format (same as the one for toxav_add_av_groupchat()):
  *   audio_callback(Tox *tox, uint32_t group_number, uint32_t peer_number, const int16_t *pcm, unsigned int samples, uint8_t channels, uint32_t sample_rate, void *userdata)

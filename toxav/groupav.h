@@ -49,4 +49,3 @@ int join_av_groupchat(Logger *log, Group_Chats *g_c, uint32_t friendnumber, cons
  */
 int group_send_audio(Group_Chats *g_c, uint32_t group_number, const int16_t *pcm, unsigned int samples,
                      uint8_t channels, uint32_t sample_rate);
-
