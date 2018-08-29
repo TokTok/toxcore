@@ -98,6 +98,7 @@ typedef enum Saved_Group_Connection_State {
 
 typedef enum Group_Join_Rejected {
     GJ_NICK_TAKEN,
+    GJ_NICK_BANNED,
     GJ_GROUP_FULL,
     GJ_INVALID_PASSWORD,
     GJ_INVITE_FAILED,
