@@ -1019,6 +1019,7 @@ static int handle_gc_sync_response(Messenger *m, int group_number, int peer_numb
                 send_gc_handshake_packet(chat, (uint32_t)new_peer_number, GH_REQUEST, HS_PEER_INFO_EXCHANGE,
                                          chat->join_type);
                 peer_gconn->send_message_id++;
+                fprintf(stderr, "handle_gc_sync_response - send_message_id %d\n", peer_gconn->send_message_id);
             } else {
                 peer_gconn->pending_handshake_type = HS_PEER_INFO_EXCHANGE;
                 peer_gconn->is_pending_handshake_response = peer_gconn->is_oob_handshake = false;
@@ -1451,7 +1452,7 @@ int handle_gc_invite_request(Messenger *m, int group_number, uint32_t peer_numbe
     }
 
     uint8_t invite_error = GJ_INVITE_FAILED;
-    uint8_t nick[MAX_GC_NICK_SIZE];
+    uint8_t nick[MAX_GC_NICK_SIZE] = {0};
     uint16_t nick_len;
     int peer_number_by_nick;
 
@@ -1479,6 +1480,11 @@ int handle_gc_invite_request(Messenger *m, int group_number, uint32_t peer_numbe
     if (peer_number_by_nick != -1 && peer_number_by_nick != peer_number) { // in case of duplicate invite
         fprintf(stderr, "nick taken\n");
         invite_error = GJ_NICK_TAKEN;
+        goto failed_invite;
+    }
+
+    if (sanctions_list_nick_banned(chat, nick)) {
+        invite_error = GJ_NICK_BANNED;
         goto failed_invite;
     }
 
@@ -4501,6 +4507,7 @@ static int handle_gc_handshake_request(Messenger *m, int group_number, IP_Port *
         send_gc_handshake_response(chat, peer_number, request_type);
         gconn->send_message_id++;
         gconn->pending_handshake = 0;
+        fprintf(stderr, "in handle_gc_handshake_request gconn->send_message_id %d\n", gconn->send_message_id);
     }
 
 
@@ -4874,12 +4881,7 @@ int handle_gc_tcp_oob_packet(void *object, const uint8_t *public_key, unsigned i
         return -1;
     }
 
-    IP_Port ipp;
-    ipp.port = 0;
-    ipp.ip.family = net_family_tcp_family;
-    ipp.ip.ip.v6.uint32[0] = tcp_connections_number;
-
-    if (handle_gc_handshake_packet(m, chat, &ipp, packet, length, false) == -1) {
+    if (handle_gc_handshake_packet(m, chat, nullptr, packet, length, false) == -1) {
         return -1;
     }
 
@@ -5347,6 +5349,7 @@ static int send_pending_handshake(GC_Chat *chat, GC_Connection *gconn, uint32_t 
     }
 
     if (!result) {
+        fprintf(stderr, "in send pending handshake  increment %d\n", gconn->send_message_id);
         gconn->send_message_id++;
     }
 
@@ -5417,6 +5420,7 @@ void do_gc(GC_Session *c, void *userdata)
 
                 chat->last_join_attempt = unix_time();
                 chat->connection_state = CS_CONNECTING;
+
                 for (j = 1; j < chat->numpeers; j++) {
                     GC_Connection *gconn = &chat->gcc[j];
                     if (!gconn->handshaked && !gconn->pending_handshake) {
