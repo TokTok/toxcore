@@ -147,15 +147,20 @@ travis_install() {
 
     start_vm
 
-    # Login as root user
+    # Log in (although qemu prints "login:" and "Passowrd:" lines, they are not written into the screen's log
+    # file, so we can't use wait_for on them, we just use sleep to add hopefully enough delay.
+    sleep 5
+    # "login:"
     send_keys 'root
 
 '
-    wait_for "Password:"
+    sleep 5
+    # "Password:"
     send_keys '
+
 '
     # Wait for the prompt
-    wait_for "root@.*:~"
+    wait_for "root@.* ~"
 
     # Update system
     RUN PAGER=cat ASSUME_ALWAYS_YES=YES freebsd-update --not-running-from-cron fetch
