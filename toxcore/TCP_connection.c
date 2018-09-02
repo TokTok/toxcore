@@ -1471,9 +1471,10 @@ static void do_tcp_conns(const Logger *logger, TCP_Connections *tcp_c, void *use
                 tcp_relay_on_online(tcp_c, i);
             }
 
-            if (tcp_con->status == TCP_CONN_CONNECTED && !tcp_con->onion && tcp_con->lock_count
-                    && tcp_con->lock_count == tcp_con->sleep_count
-                    && mono_time_is_timeout(tcp_c->mono_time, tcp_con->connected_time, TCP_CONNECTION_ANNOUNCE_TIMEOUT)) {
+            if (tcp_con->status == TCP_CONN_CONNECTED
+                && !tcp_con->onion && tcp_con->lock_count
+                && tcp_con->lock_count == tcp_con->sleep_count
+                && mono_time_is_timeout(tcp_c->mono_time, tcp_con->connected_time, TCP_CONNECTION_ANNOUNCE_TIMEOUT)) {
                 sleep_tcp_relay_connection(tcp_c, i);
             }
         }
