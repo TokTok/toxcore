@@ -1468,40 +1468,43 @@ static void do_tcp_conns(TCP_Connections *tcp_c, void *userdata)
     for (i = 0; i < tcp_c->tcp_connections_length; ++i) {
         TCP_con *tcp_con = get_tcp_connection(tcp_c, i);
 
-        if (tcp_con) {
-            if (tcp_con->status != TCP_CONN_SLEEPING) {
-                do_TCP_connection(tcp_c->mono_time, tcp_con->connection, userdata);
+        if (!tcp_con) {
+            continue;
+        }
 
-                /* callbacks can change TCP connection address. */
-                tcp_con = get_tcp_connection(tcp_c, i);
+        if (tcp_con->status != TCP_CONN_SLEEPING) {
+            do_TCP_connection(tcp_c->mono_time, tcp_con->connection, userdata);
 
-                // Make sure the TCP connection wasn't dropped in any of the callbacks.
-                assert(tcp_con != nullptr);
+            /* callbacks can change TCP connection address. */
+            tcp_con = get_tcp_connection(tcp_c, i);
 
-                if (tcp_con_status(tcp_con->connection) == TCP_CLIENT_DISCONNECTED) {
-                    if (tcp_con->status == TCP_CONN_CONNECTED) {
-                        reconnect_tcp_relay_connection(tcp_c, i);
-                    } else {
-                        kill_tcp_relay_connection(tcp_c, i);
-                    }
+            // Make sure the TCP connection wasn't dropped in any of the callbacks.
+            assert(tcp_con != nullptr);
 
-                    continue;
+            if (tcp_con_status(tcp_con->connection) == TCP_CLIENT_DISCONNECTED) {
+                if (tcp_con->status == TCP_CONN_CONNECTED) {
+                    reconnect_tcp_relay_connection(tcp_c, i);
+                } else {
+                    kill_tcp_relay_connection(tcp_c, i);
                 }
 
-                if (tcp_con->status == TCP_CONN_VALID && tcp_con_status(tcp_con->connection) == TCP_CLIENT_CONFIRMED) {
-                    tcp_relay_on_online(tcp_c, i);
-                }
-
-                if (tcp_con->status == TCP_CONN_CONNECTED && !tcp_con->onion && tcp_con->lock_count
-                        && tcp_con->lock_count == tcp_con->sleep_count
-                        && mono_time_is_timeout(tcp_c->mono_time, tcp_con->connected_time, TCP_CONNECTION_ANNOUNCE_TIMEOUT)) {
-                    sleep_tcp_relay_connection(tcp_c, i);
-                }
+                continue;
             }
 
-            if (tcp_con->status == TCP_CONN_SLEEPING && tcp_con->unsleep) {
-                unsleep_tcp_relay_connection(tcp_c, i);
+            if (tcp_con->status == TCP_CONN_VALID && tcp_con_status(tcp_con->connection) == TCP_CLIENT_CONFIRMED) {
+                tcp_relay_on_online(tcp_c, i);
             }
+
+            if (tcp_con->status == TCP_CONN_CONNECTED
+                && !tcp_con->onion && tcp_con->lock_count
+                && tcp_con->lock_count == tcp_con->sleep_count
+                && mono_time_is_timeout(tcp_c->mono_time, tcp_con->connected_time, TCP_CONNECTION_ANNOUNCE_TIMEOUT)) {
+                sleep_tcp_relay_connection(tcp_c, i);
+            }
+        }
+
+        if (tcp_con->status == TCP_CONN_SLEEPING && tcp_con->unsleep) {
+            unsleep_tcp_relay_connection(tcp_c, i);
         }
     }
 }
