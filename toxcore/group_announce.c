@@ -1,4 +1,5 @@
 #include "group_announce.h"
+#include "LAN_discovery.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -25,7 +26,7 @@ static void remove_announces(GC_Announces_List *gc_announces_list, GC_Announces 
 
 GC_Announces_List *new_gca_list()
 {
-    GC_Announces_List *announces_list = (GC_Announces_List*)calloc(1, sizeof(GC_Announces_List));
+    GC_Announces_List *announces_list = (GC_Announces_List *)calloc(1, sizeof(GC_Announces_List));
 
     return announces_list;
 }
@@ -293,7 +294,7 @@ GC_Peer_Announce* add_gc_announce(const Mono_Time *mono_time, GC_Announces_List 
     GC_Announces *announces = get_announces_by_chat_id(gc_announces_list, announce->chat_public_key);
     if (!announces) {
         gc_announces_list->announces_count++;
-        announces = (GC_Announces*)malloc(sizeof(GC_Announces));
+        announces = (GC_Announces *)malloc(sizeof(GC_Announces));
         announces->index = 0;
         announces->prev_announce = nullptr;
         if (gc_announces_list->announces) {
@@ -319,5 +320,13 @@ bool is_valid_announce(const GC_Announce *announce)
         return false;
     }
 
-    return announce->tcp_relays_count || announce->ip_port_is_set;
+    if (announce->tcp_relays_count) {
+        return true;
+    }
+
+    if (!announce->ip_port_is_set) {
+        return false;
+    }
+
+    return (bool)ip_is_lan(announce->ip_port.ip);
 }
