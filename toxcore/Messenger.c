@@ -2662,7 +2662,7 @@ static void try_pack_gc_data(const Messenger *m, const GC_Chat *chat, Onion_Frie
     int copy_ip_port_result = ipport_self_copy(m->dht, &self_ip_port);
     fprintf(stderr, "copy_ip_port_result %d tcp %d\n", copy_ip_port_result, tcp_num);
     bool ip_port_is_set = copy_ip_port_result == 0;
-    bool can_publish_announce = true;
+    bool can_publish_announce = tcp_num > 0 || ip_port_is_set;
 
     if (!tcp_num && ip_port_is_set && !ip_is_lan(self_ip_port.ip)) {
         // we have only udp connection to network for now
@@ -2670,7 +2670,7 @@ static void try_pack_gc_data(const Messenger *m, const GC_Chat *chat, Onion_Frie
         can_publish_announce = false;
     }
 
-    if ((tcp_num > 0 || ip_port_is_set) && can_publish_announce) {
+    if (can_publish_announce) {
         announce.base_announce.tcp_relays_count = (uint8_t)tcp_num;
         announce.base_announce.ip_port_is_set = (uint8_t)(ip_port_is_set ? 1 : 0);
         if (ip_port_is_set) {
