@@ -224,7 +224,7 @@ static unsigned int send_relays(Friend_Connections *fr_c, int friendcon_id)
         return 0;
     }
 
-    Node_format nodes[MAX_SHARED_RELAYS];
+    Node_format nodes[MAX_SHARED_RELAYS] = {{{0}}};
     uint8_t data[1024];
 
     const int n = copy_connected_tcp_relays(fr_c->net_crypto, nodes, MAX_SHARED_RELAYS);
