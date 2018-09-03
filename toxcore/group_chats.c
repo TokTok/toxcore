@@ -92,6 +92,8 @@ static int get_nick_peer_number(const GC_Chat *chat, const uint8_t *nick, uint16
 static bool group_exists(const GC_Session *c, const uint8_t *chat_id);
 static int save_tcp_relay(GC_Connection *gconn, Node_format *node);
 int gcc_copy_tcp_relay(GC_Connection *gconn, Node_format *node);
+static void add_tcp_relays_to_chat(Messenger *m, GC_Chat *chat);
+
 
 typedef enum {
     GH_REQUEST,
@@ -4820,7 +4822,6 @@ static int handle_gc_lossy_message(Messenger *m, GC_Chat *chat, const uint8_t *p
 
 static bool group_can_handle_packets(GC_Chat *chat)
 {
-    fprintf(stderr, "chat state: %d\n", chat->connection_state);
     return chat->connection_state != CS_FAILED && chat->connection_state != CS_MANUALLY_DISCONNECTED;
 }
 
@@ -5386,6 +5387,7 @@ static void do_group_tcp(GC_Chat *chat, void *userdata)
 }
 
 #define GROUP_JOIN_ATTEMPT_INTERVAL 20
+#define TCP_RELAYS_TEST_COUNT 1
 
 /* CS_CONNECTED: Peers are pinged, unsent packets are resent, and timeouts are checked.
  * CS_CONNECTING: Look for new DHT nodes after an interval.
@@ -5422,6 +5424,12 @@ void do_gc(GC_Session *c, void *userdata)
             }
 
             case CS_DISCONNECTED: {
+                Node_format tcp_relays[TCP_RELAYS_TEST_COUNT];
+                int tcp_num = tcp_copy_connected_relays(chat->tcp_conn, tcp_relays, TCP_RELAYS_TEST_COUNT);
+                if (tcp_num != TCP_RELAYS_TEST_COUNT) {
+                    add_tcp_relays_to_chat(c->messenger, chat);
+                }
+
                 if (chat->numpeers <= 1 || !mono_time_is_timeout(c->messenger->mono_time, chat->last_join_attempt, GROUP_JOIN_ATTEMPT_INTERVAL)) {
                     break;
                 }
@@ -5532,14 +5540,8 @@ static void handle_connection_status_updated_callback(void *object, TCP_Connecti
     }
 }
 
-static int init_gc_tcp_connection(Messenger *m, GC_Chat *chat)
+static void add_tcp_relays_to_chat(Messenger *m, GC_Chat *chat)
 {
-    chat->tcp_conn = new_tcp_connections(m->mono_time, chat->self_secret_key, &m->options.proxy_info);
-
-    if (chat->tcp_conn == nullptr) {
-        return -1;
-    }
-
     uint16_t num_relays = tcp_connections_count(nc_get_tcp_c(m->net_crypto));
 
     if (num_relays == 0) {
@@ -5553,6 +5555,17 @@ static int init_gc_tcp_connection(Messenger *m, GC_Chat *chat)
     for (i = 0; i < num; ++i) {
         add_tcp_relay_global(chat->tcp_conn, tcp_relays[i].ip_port, tcp_relays[i].public_key);
     }
+}
+
+static int init_gc_tcp_connection(Messenger *m, GC_Chat *chat)
+{
+    chat->tcp_conn = new_tcp_connections(m->mono_time, chat->self_secret_key, &m->options.proxy_info);
+
+    if (chat->tcp_conn == nullptr) {
+        return -1;
+    }
+
+    add_tcp_relays_to_chat(m, chat);
 
     set_packet_tcp_connection_callback(chat->tcp_conn, &handle_gc_tcp_packet, m);
     set_oob_packet_tcp_connection_callback(chat->tcp_conn, &handle_gc_tcp_oob_packet, m);
