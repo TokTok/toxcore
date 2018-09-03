@@ -3663,7 +3663,10 @@ static int handle_gc_remove_peer(Messenger *m, int group_number, uint32_t peer_n
                              chat->group[target_peer_number].peer_id, mod_event, c->moderation_userdata);
         }
 
-        group_delete(c, chat);
+        while (chat->numpeers > 1) {
+            gc_peer_delete(m, group_number, 1, nullptr, 0);
+        }
+
         return 0;
     }
 
@@ -4438,6 +4441,9 @@ static int handle_gc_handshake_request(Messenger *m, int group_number, IP_Port *
             return -1;
         }
 
+
+
+
         if (gconn->handshaked) {
             peer_number = peer_reconnect(m, chat, sender_pk);
             if (peer_number < 0) {
@@ -4820,6 +4826,7 @@ static int handle_gc_lossy_message(Messenger *m, GC_Chat *chat, const uint8_t *p
 
 static bool group_can_handle_packets(GC_Chat *chat)
 {
+    fprintf(stderr, "chat state: %d\n", chat->connection_state);
     return chat->connection_state != CS_FAILED && chat->connection_state != CS_MANUALLY_DISCONNECTED;
 }
 
@@ -6358,10 +6365,6 @@ static int group_delete(GC_Session *c, GC_Chat *chat)
     }
 
     group_cleanup(c, chat);
-
-    if (chat->save) {
-        free(chat->save);
-    }
 
     memset(&(c->chats[chat->group_number]), 0, sizeof(GC_Chat));
 
