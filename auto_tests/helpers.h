@@ -9,12 +9,14 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifndef c_sleep
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #include <windows.h>
 #define c_sleep(x) Sleep(x)
 #else
 #include <unistd.h>
 #define c_sleep(x) usleep(1000 * (x))
+#endif
 #endif
 
 #define ITERATION_INTERVAL 200
@@ -43,7 +45,7 @@ static const char *tox_log_level_name(TOX_LOG_LEVEL level)
     return "<unknown>";
 }
 
-static void print_debug_log(Tox *m, TOX_LOG_LEVEL level, const char *path, uint32_t line, const char *func,
+static void print_debug_log(Tox *m, TOX_LOG_LEVEL level, const char *file, uint32_t line, const char *func,
                             const char *message, void *user_data)
 {
     if (level == TOX_LOG_LEVEL_TRACE) {
@@ -51,8 +53,6 @@ static void print_debug_log(Tox *m, TOX_LOG_LEVEL level, const char *path, uint3
     }
 
     uint32_t index = user_data ? *(uint32_t *)user_data : 0;
-    const char *file = strrchr(path, '/');
-    file = file ? file + 1 : path;
     fprintf(stderr, "[#%d] %s %s:%d\t%s:\t%s\n", index, tox_log_level_name(level), file, line, func, message);
 }
 

@@ -30,7 +30,7 @@ set(CMAKE_MODULE_PATH ${toxcore_SOURCE_DIR}/cmake)
 # versions in a synchronised way.
 set(PROJECT_VERSION_MAJOR "0")
 set(PROJECT_VERSION_MINOR "2")
-set(PROJECT_VERSION_PATCH "2")
+set(PROJECT_VERSION_PATCH "3")
 set(PROJECT_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
 
 # set .so library version / following libtool scheme
@@ -115,6 +115,8 @@ if(NOT MSVC)
       # Allows wine to display source code file names and line numbers on crash in its backtrace
       add_flag("-gdwarf-2")
     endif()
+    # Crash on signed integer overflow.
+    add_flag("-ftrapv")
   endif()
 
   option(WARNINGS "Enable additional compiler warnings" ON)
@@ -174,6 +176,7 @@ if(NOT MSVC)
     add_cxxflag("-Wno-old-style-cast")
 
     # Downgrade to warning so we still see it.
+    add_flag("-Wno-error=unreachable-code")
     add_flag("-Wno-error=unused-variable")
   endif()
 endif()
@@ -189,18 +192,14 @@ endif()
 
 option(ASAN "Enable address-sanitizer to detect invalid memory accesses" OFF)
 if(ASAN)
-  set(SAFE_CMAKE_REQUIRED_LIBRARIES "${CMAKE_REQUIRED_LIBRARIES}")
-  set(CMAKE_REQUIRED_LIBRARIES "-fsanitize=address")
   add_cflag("-fsanitize=address")
-  set(CMAKE_REQUIRED_LIBRARIES "${SAFE_CMAKE_REQUIRED_LIBRARIES}")
+  add_dllflag("-fsanitize=address")
+endif()
+
+if(LINUX)
+  add_dllflag("-Wl,-z,defs")
 else()
-  # Forbid undefined symbols in shared libraries. This is incompatible with
-  # asan, so it's in the else branch here.
-  if(LINUX)
-    add_dllflag("-Wl,-z,defs")
-  else()
-    add_dllflag("-undefined error")
-  endif()
+  add_dllflag("-undefined error")
 endif()
 
 option(USE_IPV6 "Use IPv6 in tests" ON)
@@ -459,19 +458,6 @@ unit_test(toxcore util)
 
 set(TEST_TIMEOUT_SECONDS "" CACHE STRING "Limit runtime of each test to the number of seconds specified")
 
-option(FORMAT_TEST "Require the format_test to be executed; fail cmake if it can't" OFF)
-
-if(ASTYLE)
-  add_test(
-    NAME format_test
-    COMMAND ${toxcore_SOURCE_DIR}/other/astyle/format-source
-      "${toxcore_SOURCE_DIR}"
-      "${ASTYLE}")
-  set_tests_properties(format_test PROPERTIES TIMEOUT "${TEST_TIMEOUT_SECONDS}")
-elseif(FORMAT_TEST)
-  message(FATAL_ERROR "format_test can not be run, because ASTYLE (${ASTYLE}) could not be found")
-endif()
-
 if(ANDROID_CPU_FEATURES)
   # We need to compile cpufeatures.c as many times as there are executables,
   # because libvpx doesn't include it although it depends on it. We can't get
@@ -500,7 +486,7 @@ endfunction()
 if(BUILD_TOXAV)
   add_definitions(-D__STDC_LIMIT_MACROS=1)
   add_executable(auto_monolith_test ${CPUFEATURES}
-    auto_tests/monolith_test.cpp)
+    auto_tests/monolith_test.cc)
   target_link_libraries(auto_monolith_test ${toxcore_LINK_MODULES})
   add_test(NAME monolith COMMAND ${CROSSCOMPILING_EMULATOR} auto_monolith_test)
 endif()
@@ -508,19 +494,22 @@ endif()
 auto_test(TCP)
 auto_test(bootstrap)
 auto_test(conference)
+auto_test(conference_two)
+auto_test(conference_double_invite)
 auto_test(crypto                        MSVC_DONT_BUILD)
 auto_test(dht                           MSVC_DONT_BUILD)
 auto_test(encryptsave)
 auto_test(file_transfer)
 auto_test(friend_request)
 auto_test(groupchat)
+auto_test(invalid_proxy)
+auto_test(invalid_tcp_proxy)
 auto_test(lan_discovery)
 auto_test(lossless_packet)
 auto_test(lossy_packet)
 auto_test(messenger                     MSVC_DONT_BUILD)
 auto_test(network)
 auto_test(onion)
-auto_test(resource_leak)
 auto_test(save_friend)
 auto_test(save_load)
 auto_test(send_message)
@@ -622,11 +611,18 @@ add_executable(Messenger_test ${CPUFEATURES}
   testing/Messenger_test.c)
 target_link_modules(Messenger_test toxcore)
 
-add_executable(group_announce_test testing/groupchats/group_announce_test.c)
+add_executable(group_announce_test ${CPUFEATURES}
+  testing/groupchats/group_announce_test.c)
 target_link_modules(group_announce_test toxcore)
 
-add_executable(group_bootstrap_n_chat testing/groupchats/group_bootstrap_n_chat.c)
+add_executable(group_bootstrap_n_chat ${CPUFEATURES}
+  testing/groupchats/group_bootstrap_n_chat.c)
 target_link_modules(group_bootstrap_n_chat toxcore)
 
-add_executable(group_newpeers_dos_attack testing/groupchats/group_newpeers_dos_attack.c)
+add_executable(group_newpeers_dos_attack ${CPUFEATURES}
+  testing/groupchats/group_newpeers_dos_attack.c)
 target_link_modules(group_newpeers_dos_attack toxcore)
+
+add_executable(random_testing ${CPUFEATURES}
+  testing/random_testing.cc)
+target_link_modules(random_testing toxcore)
