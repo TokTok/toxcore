@@ -278,7 +278,7 @@ static int random_path(const Onion_Client *onion_c, Onion_Client_Paths *onion_pa
     }
 
     if (path_timed_out(onion_c->mono_time, onion_paths, pathnum)) {
-        Node_format nodes[ONION_PATH_LENGTH];
+        Node_format nodes[ONION_PATH_LENGTH] = {{{0}}};
 
         if (random_nodes_path_onion(onion_c, nodes, ONION_PATH_LENGTH) != ONION_PATH_LENGTH) {
             return -1;
