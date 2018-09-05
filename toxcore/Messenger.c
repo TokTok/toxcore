@@ -2717,13 +2717,11 @@ static void try_pack_gc_data(const Messenger *m, const GC_Chat *chat, Onion_Frie
         }
 
         onion_friend->gc_data_length = (short)length;
-        fprintf(stderr, "pack success %d\n", length);
         if (tcp_num > 0) {
             memcpy((void*)&chat->announced_node, &announce.base_announce.tcp_relays[0], sizeof(Node_format));
         }
 
         add_gc_announce(m->mono_time, m->group_announce, &announce);
-        fprintf(stderr, "pack success\n");
     } else {
         fprintf(stderr, "pack error\n");
         onion_friend->gc_data_length = -1;  // new gc - no connected relays yet and no ip/port
