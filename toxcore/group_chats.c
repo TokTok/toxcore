@@ -4437,9 +4437,6 @@ static int handle_gc_handshake_request(Messenger *m, int group_number, IP_Port *
             return -1;
         }
 
-
-
-
         if (gconn->handshaked) {
             peer_number = peer_reconnect(m, chat, sender_pk);
             if (peer_number < 0) {
@@ -4471,16 +4468,18 @@ static int handle_gc_handshake_request(Messenger *m, int group_number, IP_Port *
         return -1;
     }
 
-    int add_tcp_result = add_tcp_relay_connection(chat->tcp_conn, gconn->tcp_connection_num,
-                                                  node->ip_port, node->public_key);
-    if (add_tcp_result < 0 && is_new_peer && !ipp) {
-        fprintf(stderr, "broken tcp relay for new peer\n");
-        gc_peer_delete(m, group_number, peer_number, nullptr, 0);
-        return -1;
-    }
+    if (nodes_count > 0) {
+        int add_tcp_result = add_tcp_relay_connection(chat->tcp_conn, gconn->tcp_connection_num,
+                                                      node->ip_port, node->public_key);
+        if (add_tcp_result < 0 && is_new_peer && !ipp) {
+            fprintf(stderr, "broken tcp relay for new peer\n");
+            gc_peer_delete(m, group_number, peer_number, nullptr, 0);
+            return -1;
+        }
 
-    if (add_tcp_result >= 0) {
-        save_tcp_relay(gconn, node);
+        if (add_tcp_result >= 0) {
+            save_tcp_relay(gconn, node);
+        }
     }
     fprintf(stderr, "in handle gc hs request6\n");
 
@@ -4691,6 +4690,12 @@ static int handle_gc_lossless_message(Messenger *m, GC_Chat *chat, const uint8_t
 
     const uint8_t *real_data = data + HASH_ID_BYTES;
     uint16_t real_len = len - HASH_ID_BYTES;
+
+    bool is_invite_packet = packet_type == GP_INVITE_REQUEST || packet_type == GP_INVITE_RESPONSE || packet_type == GP_INVITE_RESPONSE_REJECT;
+    if (message_id == 3 && is_invite_packet && gconn->received_message_id == 2) {
+        // probably we missed initial handshake packet. update received packets index
+        gconn->received_message_id++;
+    }
 
     int lossless_ret = gcc_handle_received_message(chat, peer_number, real_data, real_len, packet_type, message_id);
 
