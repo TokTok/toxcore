@@ -3970,8 +3970,7 @@ static int gc_send_hs_response_ack(GC_Chat *chat, GC_Connection *gconn)
  * Returns 0 on success.
  * Returns -1 on failure.
  */
-static int handle_gc_hs_response_ack(Messenger *m, int group_number, GC_Connection *gconn, const uint8_t *data,
-                                     uint32_t length)
+static int handle_gc_hs_response_ack(Messenger *m, int group_number, GC_Connection *gconn)
 {
     GC_Chat *chat = gc_get_group(m->group_handler, group_number);
     if (!chat) {
@@ -4632,7 +4631,7 @@ int handle_gc_lossless_helper(Messenger *m, int group_number, uint32_t peer_numb
             return handle_gc_sanctions_list(m, group_number, peer_number, data, length);
 
         case GP_HS_RESPONSE_ACK:
-            return handle_gc_hs_response_ack(m, group_number, gconn, data, length);
+            return handle_gc_hs_response_ack(m, group_number, gconn);
 
         case GP_CUSTOM_PACKET:
             return handle_gc_custom_packet(m, group_number, peer_number, data, length);
@@ -4694,6 +4693,7 @@ static int handle_gc_lossless_message(Messenger *m, GC_Chat *chat, const uint8_t
     bool is_invite_packet = packet_type == GP_INVITE_REQUEST || packet_type == GP_INVITE_RESPONSE || packet_type == GP_INVITE_RESPONSE_REJECT;
     if (message_id == 3 && is_invite_packet && gconn->received_message_id == 2) {
         // probably we missed initial handshake packet. update received packets index
+        fprintf(stderr, "oops\n");
         gconn->received_message_id++;
     }
 
@@ -5364,7 +5364,12 @@ static int send_pending_handshake(GC_Chat *chat, GC_Connection *gconn, uint32_t 
 
     if (!result) {
         fprintf(stderr, "in send pending handshake  increment %ld\n", gconn->send_message_id);
-        gconn->send_message_id = 2;
+        if (!gconn->is_pending_handshake_response) {
+            gconn->send_message_id = 2;
+        } else {
+            gconn->send_message_id++;
+        }
+
     }
 
     return 0;
