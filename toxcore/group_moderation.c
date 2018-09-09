@@ -133,7 +133,7 @@ int mod_list_index_of_sig_pk(const GC_Chat *chat, const uint8_t *public_sig_key)
 /* Returns true if the public signature key belongs to a moderator or the founder */
 bool mod_list_verify_sig_pk(const GC_Chat *chat, const uint8_t *sig_pk)
 {
-    if (memcmp(SIG_PK(chat->shared_state.founder_public_key), sig_pk, SIG_PUBLIC_KEY) == 0) {
+    if (memcmp(get_sig_pk(chat->shared_state.founder_public_key), sig_pk, SIG_PUBLIC_KEY) == 0) {
         return true;
     }
 
@@ -156,12 +156,12 @@ static bool mod_list_chosen_one(const GC_Chat *chat, const uint8_t *sig_pk)
     uint16_t i;
 
     for (i = 0; i < chat->moderation.num_mods; ++i) {
-        if (id_closest(CHAT_ID(chat->chat_public_key), sig_pk, chat->moderation.mod_list[i]) == 2) {
+        if (id_closest(get_chat_id(chat->chat_public_key), sig_pk, chat->moderation.mod_list[i]) == 2) {
             return false;
         }
     }
 
-    if (id_closest(CHAT_ID(chat->chat_public_key), sig_pk, SIG_PK(chat->shared_state.founder_public_key)) == 2) {
+    if (id_closest(get_chat_id(chat->chat_public_key), sig_pk, get_sig_pk(chat->shared_state.founder_public_key)) == 2) {
         return false;
     }
 
@@ -286,7 +286,7 @@ uint16_t sanctions_creds_pack(struct GC_Sanction_Creds *creds, uint8_t *data, ui
 
     uint16_t packed_len = 0;
 
-    U32_to_bytes(data + packed_len, creds->version);
+    u32_to_bytes(data + packed_len, creds->version);
     packed_len += sizeof(uint32_t);
     memcpy(data + packed_len, creds->hash, GC_MODERATION_HASH_SIZE);
     packed_len += GC_MODERATION_HASH_SIZE;
@@ -318,7 +318,7 @@ int sanctions_list_pack(uint8_t *data, uint16_t length, struct GC_Sanction *sanc
         packed_len += sizeof(uint8_t);
         memcpy(data + packed_len, sanctions[i].public_sig_key, SIG_PUBLIC_KEY);
         packed_len += SIG_PUBLIC_KEY;
-        U64_to_bytes(data + packed_len, sanctions[i].time_set);
+        u64_to_bytes(data + packed_len, sanctions[i].time_set);
         packed_len += TIME_STAMP_SIZE;
 
         if (sanctions[i].type == SA_BAN) {
@@ -331,9 +331,9 @@ int sanctions_list_pack(uint8_t *data, uint16_t length, struct GC_Sanction *sanc
             packed_len += ipp_size;
             memcpy(data + packed_len, sanctions[i].info.ban_info.nick, MAX_GC_NICK_SIZE);
             packed_len += MAX_GC_NICK_SIZE;
-            U16_to_bytes(data + packed_len, sanctions[i].info.ban_info.nick_len);
+            u16_to_bytes(data + packed_len, sanctions[i].info.ban_info.nick_len);
             packed_len += sizeof(uint16_t);
-            U32_to_bytes(data + packed_len, sanctions[i].info.ban_info.id);
+            u32_to_bytes(data + packed_len, sanctions[i].info.ban_info.id);
             packed_len += sizeof(uint32_t);
         } else if (sanctions[i].type == SA_OBSERVER) {
             if (packed_len + ENC_PUBLIC_KEY > length) {
@@ -559,12 +559,12 @@ int sanctions_list_make_creds(GC_Chat *chat)
 
     ++chat->moderation.sanctions_creds.version;
 
-    memcpy(chat->moderation.sanctions_creds.sig_pk, SIG_PK(chat->self_public_key), SIG_PUBLIC_KEY);
+    memcpy(chat->moderation.sanctions_creds.sig_pk, get_sig_pk(chat->self_public_key), SIG_PUBLIC_KEY);
     sanctions_list_make_hash(chat->moderation.sanctions, chat->moderation.sanctions_creds.version,
                              chat->moderation.num_sanctions, chat->moderation.sanctions_creds.hash);
 
     if (crypto_sign_detached(chat->moderation.sanctions_creds.sig, nullptr, chat->moderation.sanctions_creds.hash,
-                             GC_MODERATION_HASH_SIZE, SIG_SK(chat->self_secret_key)) == -1) {
+                             GC_MODERATION_HASH_SIZE, get_sig_sk(chat->self_secret_key)) == -1) {
         memcpy(&chat->moderation.sanctions_creds, &old_creds, sizeof(struct GC_Sanction_Creds));
         return -1;
     }
@@ -888,11 +888,11 @@ int sanctions_list_add_entry(GC_Chat *chat, struct GC_Sanction *sanction, struct
      * and re-distribute the fixed sanctions list. Otherwise we ignore it.
      */
     if (ret == -2) {
-        if (!mod_list_verify_sig_pk(chat, SIG_PK(chat->self_public_key))) {
+        if (!mod_list_verify_sig_pk(chat, get_sig_pk(chat->self_public_key))) {
             return -1;
         }
 
-        if (!mod_list_chosen_one(chat, SIG_PK(chat->self_public_key))) {
+        if (!mod_list_chosen_one(chat, get_sig_pk(chat->self_public_key))) {
             return -1;
         }
 
@@ -964,7 +964,7 @@ static int sanctions_list_sign_entry(const GC_Chat *chat, struct GC_Sanction *sa
     }
 
     return crypto_sign_detached(sanction->signature, nullptr, packed_data, packed_len - SIGNATURE_SIZE,
-                                SIG_SK(chat->self_secret_key));
+                                get_sig_sk(chat->self_secret_key));
 }
 
 /* Creates a new sanction entry for peernumber where type is one GROUP_SANCTION_TYPE.
@@ -999,7 +999,7 @@ int sanctions_list_make_entry(GC_Chat *chat, uint32_t peernumber, struct GC_Sanc
         return -1;
     }
 
-    memcpy(sanction->public_sig_key, SIG_PK(chat->self_public_key), SIG_PUBLIC_KEY);
+    memcpy(sanction->public_sig_key, get_sig_pk(chat->self_public_key), SIG_PUBLIC_KEY);
     sanction->time_set = mono_time_get(chat->mono_time);
     sanction->type = type;
 
@@ -1033,7 +1033,7 @@ uint32_t sanctions_list_replace_sig(GC_Chat *chat, const uint8_t *public_sig_key
             continue;
         }
 
-        memcpy(chat->moderation.sanctions[i].public_sig_key, SIG_PK(chat->self_public_key), SIG_PUBLIC_KEY);
+        memcpy(chat->moderation.sanctions[i].public_sig_key, get_sig_pk(chat->self_public_key), SIG_PUBLIC_KEY);
 
         if (sanctions_list_sign_entry(chat, &chat->moderation.sanctions[i]) != -1) {
             ++count;

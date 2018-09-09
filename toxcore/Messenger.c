@@ -3200,7 +3200,7 @@ static uint8_t *groups_save(const Messenger *m, uint8_t *data)
 static State_Load_Status groups_load(Messenger *m, const uint8_t *data, uint32_t length)
 {
     if (length % sizeof(struct Saved_Group) != 0) {
-        return -1;
+        return STATE_LOAD_STATUS_ERROR; // TODO(endoffile78): error or continue?
     }
 
     uint32_t i, num = length / sizeof(struct Saved_Group);

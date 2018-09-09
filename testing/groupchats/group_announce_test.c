@@ -81,7 +81,7 @@ static void basicannouncetest(void)
 
         peers[i].index = i + 1;
         peers[i].mono_time = mono_time_new();
-        peers[i].tox = new_messenger(peers[i].mono_time, &options, 0);
+        peers[i].tox = new_messenger(peers[i].mono_time, &options, nullptr);
         create_extended_keypair(peers[i].pk, peers[i].sk);
         printf("%s, %d\n", id_toa(dht_get_self_public_key(peers[i].tox->dht)), i);
     }

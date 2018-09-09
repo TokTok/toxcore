@@ -1,7 +1,6 @@
 /* Basic group chats testing
  */
 
-#define _XOPEN_SOURCE 600
 #include "../../toxcore/DHT.h"
 #include "../../toxcore/tox.h"
 #include "../../toxcore/network.h"
@@ -51,7 +50,7 @@ int main(int argc, char *argv[])
 
     for (i = 0; i < PEERCOUNT; i++) {
         Mono_Time *mono_time = mono_time_new();
-        tox[i] = new_messenger(mono_time, &options, 0);
+        tox[i] = new_messenger(mono_time, &options, nullptr);
         char nick[32];
         snprintf(nick, sizeof(nick), "Botik %d", rand());
         setname(tox[i], (const uint8_t *)nick, strlen(nick));
