@@ -36,21 +36,15 @@
 extern "C" {
 #endif
 
-#define POWER_OF_2(x) (((x) != 0) && (((x) & ((~(x)) + 1)) == (x)))
+bool is_power_of_2(uint64_t x);
 
-/* Enlarges static buffers returned by id_toa and ip_ntoa so that
- * they can be used multiple times in same output
- */
-#define STATIC_BUFFER_COPIES    10
-#define STATIC_BUFFER_DEFINE(name,len)  static char stat_buffer_##name[(len)*STATIC_BUFFER_COPIES]; \
-                                        static unsigned stat_buffer_counter_##name=0;
-#define STATIC_BUFFER_GETBUF(name,len)  (&stat_buffer_##name[(len)*(stat_buffer_counter_##name++%STATIC_BUFFER_COPIES)])
-
-/* Macros for groupchat extended keys */
-#define ENC_KEY(key) (key)
-#define SIG_PK(key) (key + ENC_PUBLIC_KEY)
-#define SIG_SK(key) (key + ENC_SECRET_KEY)
-#define CHAT_ID(key) (key + ENC_PUBLIC_KEY)
+/* Functions for groupchat extended keys */
+const uint8_t *get_enc_key(const uint8_t *key);
+const uint8_t *get_sig_pk(const uint8_t *key);
+void set_sig_pk(uint8_t *key, const uint8_t *sig_pk);
+const uint8_t *get_sig_sk(const uint8_t *key);
+void set_sig_sk(uint8_t *key, const uint8_t *sig_sk);
+const uint8_t *get_chat_id(const uint8_t *key);
 
 
 /* id functions */
@@ -80,13 +74,13 @@ void bytes_to_U32(uint32_t *dest, const uint8_t *bytes);
 void bytes_to_U16(uint16_t *dest, const uint8_t *bytes);
 
 /* Convert uint64_t to byte string of size 8 */
-void U64_to_bytes(uint8_t *dest, uint64_t value);
+void u64_to_bytes(uint8_t *dest, uint64_t value);
 
 /* Convert uint32_t to byte string of size 4 */
-void U32_to_bytes(uint8_t *dest, uint32_t value);
+void u32_to_bytes(uint8_t *dest, uint32_t value);
 
 /* Convert uint16_t to byte string of size 2 */
-void U16_to_bytes(uint8_t *dest, uint16_t value);
+void u16_to_bytes(uint8_t *dest, uint16_t value);
 
 /* Returns -1 if failed or 0 if success */
 int create_recursive_mutex(pthread_mutex_t *mutex);

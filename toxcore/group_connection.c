@@ -298,7 +298,7 @@ void gcc_resend_packets(Messenger *m, GC_Chat *chat, uint32_t peernumber)
         ary_entry->last_send_try = tm;
 
         /* if this occurrs less than once per second this won't be reliable */
-        if (delta > 1 && POWER_OF_2(delta)) {
+        if (delta > 1 && is_power_of_2(delta)) {
             gcc_send_group_packet(chat, gconn, ary_entry->data, ary_entry->data_length, ary_entry->packet_type);
             continue;
         }

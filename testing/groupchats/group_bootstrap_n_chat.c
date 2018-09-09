@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
     Mono_Time *mono_times[PEERCOUNT];
     Messenger *tox[PEERCOUNT];
     Mono_Time *mono_time = mono_time_new();
-    Messenger *chat = new_messenger(mono_time, &options, 0);
+    Messenger *chat = new_messenger(mono_time, &options, nullptr);
     assert(chat != nullptr);
 
     for (int i = 0; i < PEERCOUNT; ++i) {
@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
 
         index[i] = i + 1;
         mono_times[i] = mono_time_new();
-        tox[i] = new_messenger(mono_times[i], &options, 0);
+        tox[i] = new_messenger(mono_times[i], &options, nullptr);
         assert(tox[i] != nullptr);
     }
 
@@ -98,7 +98,8 @@ int main(int argc, char *argv[])
     }
 
     GC_Chat *ct = gc_get_group(chat->group_handler, groupnumber);
-    printf("CHAT ENC: %s\n CHAT SIG: %s\n", id_toa(ENC_KEY(ct->chat_public_key)), id_toa(SIG_PK(ct->chat_public_key)));
+    printf("CHAT ENC: %s\n CHAT SIG: %s\n", id_toa(get_enc_key(ct->chat_public_key)),
+           id_toa(get_sig_pk(ct->chat_public_key)));
 
     gc_callback_peer_join(chat, on_group_peer_join, nullptr);
 
