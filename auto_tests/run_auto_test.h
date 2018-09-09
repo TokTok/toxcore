@@ -1,3 +1,6 @@
+#ifndef C_TOXCORE_AUTO_TESTS_RUN_AUTO_TEST_H
+#define C_TOXCORE_AUTO_TESTS_RUN_AUTO_TEST_H
+
 #include <stdlib.h>  // calloc, free
 
 #include "check_compat.h"
@@ -124,3 +127,5 @@ static void run_auto_test(uint32_t tox_count, void test(Tox **toxes, State *stat
     free(state);
     free(toxes);
 }
+
+#endif
