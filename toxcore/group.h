@@ -306,6 +306,12 @@ int group_message_send(const Group_Chats *g_c, uint32_t groupnumber, const uint8
  */
 int group_action_send(const Group_Chats *g_c, uint32_t groupnumber, const uint8_t *action, uint16_t length);
 
+/* send message to announce leaving group
+ * return true on success
+ * return false on failure
+ */
+bool group_leave(const Group_Chats *g_c, uint32_t groupnumber);
+
 /* set the group's title, limited to MAX_NAME_LENGTH
  * return 0 on success
  * return -1 if groupnumber is invalid.
