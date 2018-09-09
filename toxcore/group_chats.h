@@ -286,7 +286,7 @@ typedef struct GC_Session {
 
 #define GROUP_SAVE_MAX_PEERS MAX_GC_PEER_ADDRS
 
-struct SAVED_GROUP {
+struct Saved_Group {
     /* Group shared state */
     uint8_t   founder_public_key[EXT_PUBLIC_KEY];
     uint16_t  maxpeers;
@@ -601,7 +601,7 @@ void kill_dht_groupchats(GC_Session *c);
  * Returns groupnumber on success.
  * Returns -1 on failure.
  */
-int gc_group_load(GC_Session *c, struct SAVED_GROUP *save);
+int gc_group_load(GC_Session *c, struct Saved_Group *save);
 
 /* Creates a new group.
  *

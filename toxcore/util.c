@@ -60,16 +60,11 @@ uint32_t id_copy(uint8_t *dest, const uint8_t *src)
     return CRYPTO_PUBLIC_KEY_SIZE;
 }
 
-STATIC_BUFFER_DEFINE(idtoa, CRYPTO_PUBLIC_KEY_SIZE * 2 + 1)
-
 char *id_toa(const uint8_t *id)
 {
-    int i;
-    char *str = STATIC_BUFFER_GETBUF(idtoa, CRYPTO_PUBLIC_KEY_SIZE * 2 + 1);
+    char *str = malloc(CRYPTO_PUBLIC_KEY_SIZE * 2 + 1);
 
-    str[CRYPTO_PUBLIC_KEY_SIZE * 2] = 0;
-
-    for (i = 0; i < CRYPTO_PUBLIC_KEY_SIZE; i++) {
+    for (int i = 0; i < CRYPTO_PUBLIC_KEY_SIZE; ++i) {
         sprintf(str + 2 * i, "%02x", id[i]);
     }
 
@@ -116,8 +111,8 @@ void free_uint8_t_pointer_array(uint8_t **ary, size_t n_items)
 /* Converts 8 bytes to uint64_t */
 void bytes_to_U64(uint64_t *dest, const uint8_t *bytes)
 {
-    *dest =
 #ifdef WORDS_BIGENDIAN
+    *dest =
         ((uint64_t) *  bytes)            |
         ((uint64_t) * (bytes + 1) <<  8) |
         ((uint64_t) * (bytes + 2) << 16) |
@@ -127,6 +122,7 @@ void bytes_to_U64(uint64_t *dest, const uint8_t *bytes)
         ((uint64_t) * (bytes + 6) << 48) |
         ((uint64_t) * (bytes + 7) << 56) ;
 #else
+    *dest =
         ((uint64_t) *  bytes      << 56) |
         ((uint64_t) * (bytes + 1) << 48) |
         ((uint64_t) * (bytes + 2) << 40) |
@@ -141,13 +137,14 @@ void bytes_to_U64(uint64_t *dest, const uint8_t *bytes)
 /* Converts 4 bytes to uint32_t */
 void bytes_to_U32(uint32_t *dest, const uint8_t *bytes)
 {
-    *dest =
 #ifdef WORDS_BIGENDIAN
+    *dest =
         ((uint32_t) *  bytes)            |
         ((uint32_t) * (bytes + 1) <<  8) |
         ((uint32_t) * (bytes + 2) << 16) |
         ((uint32_t) * (bytes + 3) << 24) ;
 #else
+    *dest =
         ((uint32_t) *  bytes      << 24) |
         ((uint32_t) * (bytes + 1) << 16) |
         ((uint32_t) * (bytes + 2) <<  8) |
@@ -158,11 +155,12 @@ void bytes_to_U32(uint32_t *dest, const uint8_t *bytes)
 /* Converts 2 bytes to uint16_t */
 void bytes_to_U16(uint16_t *dest, const uint8_t *bytes)
 {
-    *dest =
 #ifdef WORDS_BIGENDIAN
+    *dest =
         ((uint16_t) *  bytes)            |
         ((uint16_t) * (bytes + 1) <<  8) ;
 #else
+    *dest =
         ((uint16_t) *  bytes      <<  8) |
         ((uint16_t) * (bytes + 1));
 #endif

@@ -5379,7 +5379,7 @@ static int init_gc_sanctions_creds(GC_Chat *chat)
  * Returns groupnumber on success.
  * Returns -1 on failure.
  */
-int gc_group_load(GC_Session *c, struct SAVED_GROUP *save)
+int gc_group_load(GC_Session *c, struct Saved_Group *save)
 {
     int groupnumber = get_new_group_index(c);
 
