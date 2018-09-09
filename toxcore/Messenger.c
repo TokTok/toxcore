@@ -988,8 +988,7 @@ void m_callback_conference_invite(Messenger *m, m_conference_invite_cb *function
 }
 
 
-void m_callback_group_invite(Messenger *m, void (*function)(Messenger *m, uint32_t, const uint8_t *, size_t, void *),
-                             void *userdata)
+void m_callback_group_invite(Messenger *m, m_group_invite_cb *function, void *userdata)
 {
     m->group_invite = function;
     m->group_invite_userdata = userdata;
@@ -3143,7 +3142,7 @@ static State_Load_Status friends_list_load(Messenger *m, const uint8_t *data, ui
 #ifndef VANILLA_NACL
 static uint32_t saved_groups_size(const Messenger *m)
 {
-    return gc_count_groups(m->group_handler) * sizeof(struct SAVED_GROUP);
+    return gc_count_groups(m->group_handler) * sizeof(struct Saved_Group);
 }
 
 static uint8_t *groups_save(const Messenger *m, uint8_t *data)
@@ -3152,10 +3151,10 @@ static uint8_t *groups_save(const Messenger *m, uint8_t *data)
     uint32_t num = 0;
     GC_Session *c = m->group_handler;
 
-    for (i = 0; i < c->num_chats; i++) {
+    for (i = 0; i < c->num_chats; ++i) {
         if (c->chats[i].connection_state > CS_NONE && c->chats[i].connection_state < CS_INVALID) {
-            struct SAVED_GROUP temp;
-            memset(&temp, 0, sizeof(struct SAVED_GROUP));
+            struct Saved_Group temp;
+            memset(&temp, 0, sizeof(struct Saved_Group));
 
             memcpy(temp.founder_public_key, c->chats[i].shared_state.founder_public_key, EXT_PUBLIC_KEY);
             temp.group_name_len = net_htons(c->chats[i].shared_state.group_name_len);
@@ -3190,25 +3189,25 @@ static uint8_t *groups_save(const Messenger *m, uint8_t *data)
             temp.self_role = c->chats[i].group[0].role;
             temp.self_status = c->chats[i].group[0].status;
 
-            memcpy(data + num * sizeof(struct SAVED_GROUP), &temp, sizeof(struct SAVED_GROUP));
-            num++;
+            memcpy(data + num * sizeof(struct Saved_Group), &temp, sizeof(struct Saved_Group));
+            ++num;
         }
     }
 
-    return data + num * sizeof(struct SAVED_GROUP);
+    return data + num * sizeof(struct Saved_Group);
 }
 
 static State_Load_Status groups_load(Messenger *m, const uint8_t *data, uint32_t length)
 {
-    if (length % sizeof(struct SAVED_GROUP) != 0) {
+    if (length % sizeof(struct Saved_Group) != 0) {
         return -1;
     }
 
-    uint32_t i, num = length / sizeof(struct SAVED_GROUP);
+    uint32_t i, num = length / sizeof(struct Saved_Group);
 
     for (i = 0; i < num; ++i) {
-        struct SAVED_GROUP temp;
-        memcpy(&temp, data + i * sizeof(struct SAVED_GROUP), sizeof(struct SAVED_GROUP));
+        struct Saved_Group temp;
+        memcpy(&temp, data + i * sizeof(struct Saved_Group), sizeof(struct Saved_Group));
 
         int ret = gc_group_load(m->group_handler, &temp);
 
