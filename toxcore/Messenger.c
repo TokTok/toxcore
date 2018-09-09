@@ -3254,26 +3254,6 @@ static State_Load_Status load_path_nodes(Messenger *m, const uint8_t *data, uint
     return STATE_LOAD_STATUS_CONTINUE;
 }
 
-// end state plugin
-static uint32_t end_size(const Messenger *m)
-{
-    return 0;
-}
-
-static uint8_t *save_end(const Messenger *m, uint8_t *data)
-{
-    return state_write_section_header(data, MESSENGER_STATE_COOKIE_TYPE, 0, MESSENGER_STATE_TYPE_END);
-}
-
-static State_Load_Status load_end(Messenger *m, const uint8_t *data, uint32_t length)
-{
-    if (length != 0) {
-        return STATE_LOAD_STATUS_ERROR;
-    }
-
-    return STATE_LOAD_STATUS_END;
-}
-
 static void m_register_default_plugins(Messenger *m)
 {
     m_register_state_plugin(m, MESSENGER_STATE_TYPE_NOSPAMKEYS, nospam_keys_size, load_nospam_keys, save_nospam_keys);
@@ -3285,7 +3265,6 @@ static void m_register_default_plugins(Messenger *m)
     m_register_state_plugin(m, MESSENGER_STATE_TYPE_STATUS, status_size, load_status, save_status);
     m_register_state_plugin(m, MESSENGER_STATE_TYPE_TCP_RELAY, tcp_relay_size, load_tcp_relays, save_tcp_relays);
     m_register_state_plugin(m, MESSENGER_STATE_TYPE_PATH_NODE, path_node_size, load_path_nodes, save_path_nodes);
-    m_register_state_plugin(m, MESSENGER_STATE_TYPE_END, end_size, load_end, save_end);
 }
 
 static State_Load_Status messenger_load_state_callback(void *outer, const uint8_t *data, uint32_t length, uint16_t type)

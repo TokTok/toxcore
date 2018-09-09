@@ -71,6 +71,7 @@ typedef enum Messenger_State_Type {
     MESSENGER_STATE_TYPE_STATUS        = 6,
     MESSENGER_STATE_TYPE_TCP_RELAY     = 10,
     MESSENGER_STATE_TYPE_PATH_NODE     = 11,
+    MESSENGER_STATE_TYPE_CONFERENCES   = 20,
     MESSENGER_STATE_TYPE_END           = 255,
 } Messenger_State_Type;
 
