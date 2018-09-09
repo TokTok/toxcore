@@ -65,7 +65,7 @@ uint8_t *state_write_section_header(uint8_t *data, uint16_t cookie_type, uint32_
 {
     host_to_lendian32(data, len);
     data += sizeof(uint32_t);
-    host_to_lendian32(data, (host_tolendian16(cookie_type) << 16) | host_tolendian16(section_type));
+    host_to_lendian32(data, (host_to_lendian16(cookie_type) << 16) | host_to_lendian16(section_type));
     data += sizeof(uint32_t);
     return data;
 }
@@ -79,7 +79,7 @@ uint16_t lendian_to_host16(uint16_t lendian)
 #endif
 }
 
-uint16_t host_tolendian16(uint16_t host)
+uint16_t host_to_lendian16(uint16_t host)
 {
     return lendian_to_host16(host);
 }
