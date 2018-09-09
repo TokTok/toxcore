@@ -681,7 +681,7 @@ int gca_send_get_nodes_request(GC_Announce *announce, const uint8_t *self_public
     memcpy(data + 1, chat_id, CHAT_ID_SIZE);
 
     uint64_t request_id = random_u64();
-    U64_to_bytes(data + 1 + CHAT_ID_SIZE, request_id);
+    u64_to_bytes(data + 1 + CHAT_ID_SIZE, request_id);
 
     GC_Announce_Node self_node;
 
@@ -717,7 +717,7 @@ static int send_gca_get_nodes_response(GC_Announce *announce, uint64_t request_i
     /* packet contains: type, num_nodes, nodes, request_id */
     VLA(uint8_t, data, 1 + sizeof(uint32_t) + sizeof(GC_Announce_Node) * num_nodes + RAND_ID_SIZE);
     data[0] = NET_PACKET_GCA_SEND_NODES;
-    U32_to_bytes(data + 1, num_nodes);
+    u32_to_bytes(data + 1, num_nodes);
 
     int nodes_len = pack_gca_nodes(data + 1 + sizeof(uint32_t), sizeof(GC_Announce_Node) * num_nodes,
                                    nodes, num_nodes);
@@ -728,7 +728,7 @@ static int send_gca_get_nodes_response(GC_Announce *announce, uint64_t request_i
     }
 
     uint32_t plain_length = 1 + sizeof(uint32_t) + nodes_len + RAND_ID_SIZE;
-    U64_to_bytes(data + plain_length - RAND_ID_SIZE, request_id);
+    u64_to_bytes(data + plain_length - RAND_ID_SIZE, request_id);
 
     VLA(uint8_t, packet, plain_length + RAND_ID_SIZE + GCA_HEADER_SIZE + CRYPTO_MAC_SIZE);
     int packet_length = wrap_gca_packet(dht_get_self_public_key(dht), dht_get_self_secret_key(dht), receiver_pk, packet,
@@ -741,7 +741,7 @@ static int send_gca_get_nodes_response(GC_Announce *announce, uint64_t request_i
 
     /* insert request_id into packet header after the packet type and dht_pk */
     memmove(packet + 1 + ENC_PUBLIC_KEY + RAND_ID_SIZE, packet + 1 + ENC_PUBLIC_KEY, packet_length - 1 - ENC_PUBLIC_KEY);
-    U64_to_bytes(packet + 1 + ENC_PUBLIC_KEY, request_id);
+    u64_to_bytes(packet + 1 + ENC_PUBLIC_KEY, request_id);
     packet_length += RAND_ID_SIZE;
 
     return sendpacket(dht_get_net(dht), ipp, packet, packet_length);
