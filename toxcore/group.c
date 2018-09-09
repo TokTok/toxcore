@@ -1031,7 +1031,6 @@ int add_groupchat(Group_Chats *g_c, uint8_t type)
     return groupnumber;
 }
 
-static int group_kill_peer_send(const Group_Chats *g_c, uint32_t groupnumber, uint16_t peer_num);
 /* Delete a groupchat from the chats array.
  *
  * return 0 on success.
@@ -1044,8 +1043,6 @@ int del_groupchat(Group_Chats *g_c, uint32_t groupnumber)
     if (!g) {
         return -1;
     }
-
-    group_kill_peer_send(g_c, groupnumber, g->peer_number);
 
     for (uint32_t i = 0; i < MAX_GROUP_CONNECTIONS; ++i) {
         if (g->close[i].type == GROUPCHAT_CLOSE_NONE) {
@@ -1596,6 +1593,22 @@ static int group_name_send(const Group_Chats *g_c, uint32_t groupnumber, const u
 
     return -1;
 }
+
+/* send message to announce leaving group
+ * return true on success
+ * return false on failure
+ */
+bool group_leave(const Group_Chats *g_c, uint32_t groupnumber)
+{
+    Group_c *g = get_group_c(g_c, groupnumber);
+
+    if (!g) {
+        return false;
+    }
+
+    return (group_kill_peer_send(g_c, groupnumber, g->peer_number) == 0);
+}
+
 
 /* set the group's title, limited to MAX_NAME_LENGTH
  * return 0 on success
