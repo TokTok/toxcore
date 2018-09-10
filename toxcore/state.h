@@ -41,8 +41,11 @@ uint8_t *state_write_section_header(uint8_t *data, uint16_t cookie_type, uint32_
 uint16_t lendian_to_host16(uint16_t lendian);
 #define host_to_lendian16(x) lendian_to_host16(x)
 
-void host_to_lendian32(uint8_t *dest, uint32_t num);
-void lendian_to_host32(uint32_t *dest, const uint8_t *lendian);
+void host_to_lendian_bytes32(uint8_t *dest, uint32_t num);
+void lendian_bytes_to_host32(uint32_t *dest, const uint8_t *lendian);
+
+void host_to_lendian_bytes16(uint8_t *dest, uint16_t num);
+void lendian_bytes_to_host16(uint16_t *dest, const uint8_t *lendian);
 
 #ifdef __cplusplus
 }  // extern "C"

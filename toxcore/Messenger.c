@@ -2939,7 +2939,7 @@ void messenger_save(const Messenger *m, uint8_t *data)
     // write cookie
     memset(data, 0, size32);
     data += size32;
-    host_to_lendian32(data, MESSENGER_STATE_COOKIE_GLOBAL);
+    host_to_lendian_bytes32(data, MESSENGER_STATE_COOKIE_GLOBAL);
     data += size32;
 
     for (uint8_t i = 0; i < m->options.state_plugins_length; ++i) {
@@ -2961,7 +2961,7 @@ static State_Load_Status load_nospam_keys(Messenger *m, const uint8_t *data, uin
     }
 
     uint32_t nospam;
-    lendian_to_host32(&nospam, data);
+    lendian_bytes_to_host32(&nospam, data);
     set_nospam(m->fr, nospam);
     load_secret_key(m->net_crypto, data + sizeof(uint32_t) + CRYPTO_PUBLIC_KEY_SIZE);
 
@@ -2978,7 +2978,7 @@ static uint8_t *save_nospam_keys(const Messenger *m, uint8_t *data)
     assert(sizeof(get_nospam(m->fr)) == sizeof(uint32_t));
     data = state_write_section_header(data, MESSENGER_STATE_COOKIE_TYPE, len, MESSENGER_STATE_TYPE_NOSPAMKEYS);
     uint32_t nospam = get_nospam(m->fr);
-    host_to_lendian32(data, nospam);
+    host_to_lendian_bytes32(data, nospam);
     save_keys(m->net_crypto, data + sizeof(uint32_t));
     data += len;
     return data;
@@ -3296,7 +3296,7 @@ int messenger_load(Messenger *m, const uint8_t *data, uint32_t length)
     }
 
     memcpy(data32, data, sizeof(uint32_t));
-    lendian_to_host32(data32 + 1, data + sizeof(uint32_t));
+    lendian_bytes_to_host32(data32 + 1, data + sizeof(uint32_t));
 
     if (!data32[0] && (data32[1] == MESSENGER_STATE_COOKIE_GLOBAL)) {
         return state_load(m->log, messenger_load_state_callback, m, data + cookie_len,
