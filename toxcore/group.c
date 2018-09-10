@@ -2916,7 +2916,7 @@ static uint8_t *save_peer(const Group_Peer *peer, uint8_t *data)
     memcpy(data, peer->temp_pk, CRYPTO_PUBLIC_KEY_SIZE);
     data += CRYPTO_PUBLIC_KEY_SIZE;
 
-    *(uint16_t *)data = host_to_lendian16(peer->peer_number);
+    host_to_lendian_bytes16(data, peer->peer_number);
     data += sizeof(uint16_t);
 
     *data = peer->nick_len;
@@ -2954,7 +2954,7 @@ static uint32_t saved_conf_size(const Group_c *g)
 
 static uint8_t *save_conf(const Group_c *g, uint16_t groupnumber, uint8_t *data)
 {
-    *(uint16_t *)data = host_to_lendian16(groupnumber);
+    host_to_lendian_bytes16(data, groupnumber);
     data += sizeof(uint16_t);
 
     *data = g->type;
@@ -2963,16 +2963,16 @@ static uint8_t *save_conf(const Group_c *g, uint16_t groupnumber, uint8_t *data)
     memcpy(data, g->id, GROUP_ID_LENGTH);
     data += GROUP_ID_LENGTH;
 
-    host_to_lendian32(data, g->message_number);
+    host_to_lendian_bytes32(data, g->message_number);
     data += sizeof(uint32_t);
 
-    *(uint16_t *)data = host_to_lendian16(g->lossy_message_number);
+    host_to_lendian_bytes16(data, g->lossy_message_number);
     data += sizeof(uint16_t);
 
-    *(uint16_t *)data = host_to_lendian16(g->peer_number);
+    host_to_lendian_bytes16(data, g->peer_number);
     data += sizeof(uint16_t);
 
-    host_to_lendian32(data, g->numpeers - 1 + g->numfrozen);
+    host_to_lendian_bytes32(data, g->numpeers - 1 + g->numfrozen);
     data += sizeof(uint32_t);
 
     *data = g->title_len;
@@ -3043,7 +3043,7 @@ static State_Load_Status load_conferences(Group_Chats *g_c, const uint8_t *data,
 
     while (length >= (uint32_t)(data - init_data) + saved_conf_size_constant) {
         uint16_t groupnumber;
-        groupnumber = *(uint16_t *)data;
+        lendian_bytes_to_host16(&groupnumber, data);
         data += sizeof(uint16_t);
 
         if (groupnumber == UINT16_MAX) {
@@ -3071,16 +3071,16 @@ static State_Load_Status load_conferences(Group_Chats *g_c, const uint8_t *data,
         memcpy(g->id, data, GROUP_ID_LENGTH);
         data += GROUP_ID_LENGTH;
 
-        lendian_to_host32(&g->message_number, data);
+        lendian_bytes_to_host32(&g->message_number, data);
         data += sizeof(uint32_t);
 
-        g->lossy_message_number = *(uint16_t *)data;
+        lendian_bytes_to_host16(&g->lossy_message_number, data);
         data += sizeof(uint16_t);
 
-        g->peer_number = *(uint16_t *)data;
+        lendian_bytes_to_host16(&g->peer_number, data);
         data += sizeof(uint16_t);
 
-        lendian_to_host32(&g->numfrozen, data);
+        lendian_bytes_to_host32(&g->numfrozen, data);
         data += sizeof(uint32_t);
 
         g->frozen = (Group_Peer *)malloc(sizeof(Group_Peer) * g->numfrozen);
@@ -3112,7 +3112,7 @@ static State_Load_Status load_conferences(Group_Chats *g_c, const uint8_t *data,
             id_copy(peer->temp_pk, data);
             data += CRYPTO_PUBLIC_KEY_SIZE;
 
-            peer->peer_number = *(uint16_t *)data;
+            lendian_bytes_to_host16(&peer->peer_number, data);
             data += sizeof(uint16_t);
 
             peer->nick_len = *data;
