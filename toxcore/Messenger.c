@@ -2961,7 +2961,7 @@ static State_Load_Status load_nospam_keys(Messenger *m, const uint8_t *data, uin
     }
 
     uint32_t nospam;
-    lendian_to_host32(&nospam, data);
+    lendian_bytes_to_host32(&nospam, data);
     set_nospam(m->fr, nospam);
     load_secret_key(m->net_crypto, data + sizeof(uint32_t) + CRYPTO_PUBLIC_KEY_SIZE);
 
@@ -2978,7 +2978,7 @@ static uint8_t *save_nospam_keys(const Messenger *m, uint8_t *data)
     assert(sizeof(get_nospam(m->fr)) == sizeof(uint32_t));
     data = state_write_section_header(data, MESSENGER_STATE_COOKIE_TYPE, len, MESSENGER_STATE_TYPE_NOSPAMKEYS);
     uint32_t nospam = get_nospam(m->fr);
-    host_to_lendian32(data, nospam);
+    host_to_lendian_bytes32(data, nospam);
     save_keys(m->net_crypto, data + sizeof(uint32_t));
     data += len;
     return data;
