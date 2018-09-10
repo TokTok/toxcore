@@ -2901,11 +2901,11 @@ void send_name_all_groups(Group_Chats *g_c)
 }
 
 
-static const uint32_t saved_peer_size_constant = 2 * CRYPTO_PUBLIC_KEY_SIZE + 2 + 1;
+#define SAVED_PEER_SIZE_CONSTANT (2 * CRYPTO_PUBLIC_KEY_SIZE + 2 + 1)
 
 static uint32_t saved_peer_size(const Group_Peer *peer)
 {
-    return saved_peer_size_constant + peer->nick_len;
+    return SAVED_PEER_SIZE_CONSTANT + peer->nick_len;
 }
 
 static uint8_t *save_peer(const Group_Peer *peer, uint8_t *data)
@@ -2928,13 +2928,12 @@ static uint8_t *save_peer(const Group_Peer *peer, uint8_t *data)
     return data;
 }
 
-static const uint32_t saved_conf_size_constant
-    = sizeof(uint16_t) + 1 + GROUP_ID_LENGTH + sizeof(uint32_t)
-      + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint32_t) + 1;
+#define SAVED_CONF_SIZE_CONSTANT (sizeof(uint16_t) + 1 + GROUP_ID_LENGTH + sizeof(uint32_t) \
+      + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint32_t) + 1)
 
 static uint32_t saved_conf_size(const Group_c *g)
 {
-    uint32_t len = saved_conf_size_constant + g->title_len;
+    uint32_t len = SAVED_CONF_SIZE_CONSTANT + g->title_len;
 
     bool found_self = false;
 
@@ -3041,7 +3040,7 @@ static State_Load_Status load_conferences(Group_Chats *g_c, const uint8_t *data,
 {
     const uint8_t *init_data = data;
 
-    while (length >= (uint32_t)(data - init_data) + saved_conf_size_constant) {
+    while (length >= (uint32_t)(data - init_data) + SAVED_CONF_SIZE_CONSTANT) {
         uint16_t groupnumber;
         lendian_bytes_to_host16(&groupnumber, data);
         data += sizeof(uint16_t);
@@ -3100,7 +3099,7 @@ static State_Load_Status load_conferences(Group_Chats *g_c, const uint8_t *data,
         data += g->title_len;
 
         for (uint32_t j = 0; j < g->numfrozen; ++j) {
-            if (length < (uint32_t)(data - init_data) + saved_peer_size_constant) {
+            if (length < (uint32_t)(data - init_data) + SAVED_PEER_SIZE_CONSTANT) {
                 return STATE_LOAD_STATUS_ERROR;
             }
 
