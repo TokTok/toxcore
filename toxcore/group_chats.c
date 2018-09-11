@@ -6615,3 +6615,26 @@ int add_peers_from_announces(const GC_Session *gc_session, GC_Chat *chat, GC_Ann
 
     return added_peers;
 }
+
+size_t group_get_peers_list_size(const GC_Chat *chat)
+{
+    int i, count = 0;
+    for (i = 0; i < chat->numpeers; i++) {
+        if (chat->gcc[i].confirmed) {
+            count++;
+        }
+    }
+
+    return count * sizeof(uint32_t);
+}
+
+void group_get_peers_list(const GC_Chat *chat, uint32_t *peers_list)
+{
+    int i, index = 0;
+    for (i = 0; i < chat->numpeers; i++) {
+        if (chat->gcc[i].confirmed) {
+            peers_list[index] = chat->group[i].peer_id;
+            index++;
+        }
+    }
+}
