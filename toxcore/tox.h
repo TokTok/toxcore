@@ -3762,6 +3762,19 @@ bool tox_group_self_get_public_key(const Tox *tox, uint32_t group_number, uint8_
  *
  ******************************************************************************/
 
+typedef enum TOX_ERR_GROUP_PEER_LIST_QUERY {
+    TOX_ERR_GROUP_PEER_LIST_QUERY_OK,
+
+    TOX_ERR_GROUP_PEER_LIST_QUERY_GROUP_NOT_FOUND,
+
+    TOX_ERR_GROUP_PEER_LIST_QUERY_PARAMETER_IS_NULL
+} TOX_ERR_GROUP_PEER_LIST_QUERY;
+
+
+size_t tox_group_get_peers_list_size(const Tox *tox, uint32_t group_number, TOX_ERR_GROUP_PEER_LIST_QUERY *error);
+
+
+bool tox_group_get_peers_list(const Tox *tox, uint32_t group_number, uint32_t *peers_list, TOX_ERR_GROUP_PEER_LIST_QUERY *error);
 
 
 /**
@@ -3785,7 +3798,6 @@ typedef enum TOX_ERR_GROUP_PEER_QUERY {
     TOX_ERR_GROUP_PEER_QUERY_PEER_NOT_FOUND,
 
 } TOX_ERR_GROUP_PEER_QUERY;
-
 
 /**
  * Return the length of the peer's name. If the group number or ID is invalid, the
