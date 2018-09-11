@@ -3070,6 +3070,43 @@ bool tox_group_self_get_public_key(const Tox *tox, uint32_t group_number, uint8_
     return 1;
 }
 
+size_t tox_group_get_peers_list_size(const Tox *tox, uint32_t group_number, TOX_ERR_GROUP_PEER_LIST_QUERY *error)
+{
+    const Messenger *m = tox;
+    const GC_Chat *chat = gc_get_group(m->group_handler, group_number);
+
+    if (chat == nullptr) {
+        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_PEER_LIST_QUERY_GROUP_NOT_FOUND);
+        return 0;
+    }
+
+    SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_PEER_LIST_QUERY_OK);
+
+    return group_get_peers_list_size(chat);
+}
+
+bool tox_group_get_peers_list(const Tox *tox, uint32_t group_number, uint32_t *peers_list, TOX_ERR_GROUP_PEER_LIST_QUERY *error)
+{
+    const Messenger *m = tox;
+    const GC_Chat *chat = gc_get_group(m->group_handler, group_number);
+
+    if (chat == nullptr) {
+        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_PEER_LIST_QUERY_GROUP_NOT_FOUND);
+        return 0;
+    }
+
+    if (!peers_list) {
+        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_PEER_LIST_QUERY_PARAMETER_IS_NULL);
+        return 0;
+    }
+
+    SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_PEER_LIST_QUERY_OK);
+    group_get_peers_list(chat, peers_list);
+
+    return 1;
+}
+
+
 size_t tox_group_peer_get_name_size(const Tox *tox, uint32_t group_number, uint32_t peer_id,
                                     Tox_Err_Group_Peer_Query *error)
 {
