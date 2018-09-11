@@ -767,4 +767,9 @@ GC_Chat *gc_get_group_by_public_key(const GC_Session *c, const uint8_t *public_k
 
 int add_peers_from_announces(const GC_Session *gc_session, GC_Chat *chat, GC_Announce *announces, uint8_t gc_announces_count);
 
+
+size_t group_get_peers_list_size(const GC_Chat *chat);
+
+void group_get_peers_list(const GC_Chat *chat, uint32_t *peers_list);
+
 #endif  /* GROUP_CHATS_H */
