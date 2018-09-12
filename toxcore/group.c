@@ -2920,7 +2920,7 @@ static uint8_t *save_peer(const Group_Peer *peer, uint8_t *data)
     data += sizeof(uint16_t);
 
     *data = peer->nick_len;
-    data++;
+    ++data;
 
     memcpy(data, peer->nick, peer->nick_len);
     data += peer->nick_len;
@@ -2975,7 +2975,7 @@ static uint8_t *save_conf(const Group_c *g, uint16_t groupnumber, uint8_t *data)
     data += sizeof(uint32_t);
 
     *data = g->title_len;
-    data++;
+    ++data;
 
     memcpy(data, g->title, g->title_len);
     data += g->title_len;
@@ -3089,7 +3089,7 @@ static State_Load_Status load_conferences(Group_Chats *g_c, const uint8_t *data,
         }
 
         g->title_len = *data;
-        data++;
+        ++data;
 
         if (length < (uint32_t)(data - init_data) + g->title_len) {
             return STATE_LOAD_STATUS_ERROR;
@@ -3115,7 +3115,7 @@ static State_Load_Status load_conferences(Group_Chats *g_c, const uint8_t *data,
             data += sizeof(uint16_t);
 
             peer->nick_len = *data;
-            data++;
+            ++data;
 
             if (length < (uint32_t)(data - init_data) + peer->nick_len) {
                 return STATE_LOAD_STATUS_ERROR;
