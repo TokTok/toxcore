@@ -4691,8 +4691,9 @@ static int handle_gc_lossless_message(Messenger *m, GC_Chat *chat, const uint8_t
     uint16_t real_len = len - HASH_ID_BYTES;
 
     bool is_invite_packet = packet_type == GP_INVITE_REQUEST || packet_type == GP_INVITE_RESPONSE || packet_type == GP_INVITE_RESPONSE_REJECT;
-    if (message_id == 3 && is_invite_packet && gconn->received_message_id == 2) {
+    if (message_id == 3 && is_invite_packet && gconn->received_message_id == 1) {
         // probably we missed initial handshake packet. update received packets index
+        // TODO: FIXME
         fprintf(stderr, "oops\n");
         gconn->received_message_id++;
     }
@@ -6369,7 +6370,9 @@ static void group_cleanup(GC_Session *c, GC_Chat *chat)
 
     mod_list_cleanup(chat);
     sanctions_list_cleanup(chat);
-    kill_tcp_connections(chat->tcp_conn);
+    if (chat->tcp_conn) {
+        kill_tcp_connections(chat->tcp_conn);
+    }
     gcc_cleanup(chat);
 
     if (chat->group) {
@@ -6434,8 +6437,8 @@ void kill_dht_groupchats(GC_Session *c)
     uint32_t i;
 
     for (i = 0; i < c->num_chats; ++i) {
-        if (c->chats[i].connection_state != CS_NONE) {
-            GC_Chat *chat = &c->chats[i];
+        GC_Chat *chat = &c->chats[i];
+        if (chat->connection_state != CS_NONE && chat->connection_state != CS_MANUALLY_DISCONNECTED) {
             send_gc_self_exit(chat, nullptr, 0);
             group_cleanup(c, chat);
         }
