@@ -2086,10 +2086,9 @@ Messenger *new_messenger(Mono_Time *mono_time, Messenger_Options *options, unsig
 
     if (m->group_handler == nullptr) {
         kill_gca(m->group_announce);
+        kill_networking(m->net);
         kill_net_crypto(m->net_crypto);
         kill_dht(m->dht);
-        kill_gca(m->group_announce);
-        kill_networking(m->net);
         friendreq_kill(m->fr);
         logger_kill(m->log);
         free(m);
