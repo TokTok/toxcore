@@ -20,11 +20,16 @@ typedef struct State {
 #include "run_auto_test.h"
 
 static void group_invite_handler(Tox *tox, uint32_t friend_number, const uint8_t *invite_data, size_t length,
-                                 void *user_data)
+                                 const uint8_t *group_name, size_t group_name_length, void *user_data)
 {
+    Group_Chat_Self_Peer_Info self_info;
+    self_info.nick = "tox1";
+    self_info.nick_length = 4;
+    self_info.user_status = TOX_USER_STATUS_NONE;
+
     printf("invite arrived; accepting\n");
     TOX_ERR_GROUP_INVITE_ACCEPT err_accept;
-    tox_group_invite_accept(tox, friend_number, invite_data, length, nullptr, 0, &err_accept);
+    tox_group_invite_accept(tox, friend_number, invite_data, length, nullptr, 0, &self_info, &err_accept);
     ck_assert(err_accept == TOX_ERR_GROUP_INVITE_ACCEPT_OK);
 }
 
@@ -83,11 +88,15 @@ static void group_message_test(Tox **toxes, State *state)
     global_state_tox1 = &state[1];
 
     // tox0 makes new group.
+    Group_Chat_Self_Peer_Info self_info0;
+    self_info0.nick = "tox0";
+    self_info0.nick_length = 4;
+    self_info0.user_status = TOX_USER_STATUS_NONE;
     TOX_ERR_GROUP_NEW err_new;
     uint32_t group_number =
         tox_group_new(
             toxes[0], TOX_GROUP_PRIVACY_STATE_PRIVATE,
-            (const uint8_t *)"my cool group", strlen("my cool group"), &err_new);
+            (const uint8_t *)"my cool group", strlen("my cool group"), &self_info0, &err_new);
     ck_assert(err_new == TOX_ERR_GROUP_NEW_OK);
 
     // tox0 invites tox1
