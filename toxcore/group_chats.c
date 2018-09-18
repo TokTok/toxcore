@@ -6448,8 +6448,6 @@ void kill_dht_groupchats(GC_Session *c)
     networking_registerhandler(c->messenger->net, NET_PACKET_GC_LOSSLESS, nullptr, nullptr);
     networking_registerhandler(c->messenger->net, NET_PACKET_GC_HANDSHAKE, nullptr, nullptr);
 
-    kill_gca(c->announces_list);
-
     free(c->chats);
     free(c);
 }
