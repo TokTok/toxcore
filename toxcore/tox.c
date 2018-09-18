@@ -2915,7 +2915,7 @@ bool tox_group_self_get_public_key(const Tox *tox, uint32_t group_number, uint8_
 
 size_t tox_group_get_peers_list_size(const Tox *tox, uint32_t group_number, TOX_ERR_GROUP_PEER_LIST_QUERY *error)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     const GC_Chat *chat = gc_get_group(m->group_handler, group_number);
 
     if (chat == nullptr) {
@@ -2930,7 +2930,7 @@ size_t tox_group_get_peers_list_size(const Tox *tox, uint32_t group_number, TOX_
 
 bool tox_group_get_peers_list(const Tox *tox, uint32_t group_number, uint32_t *peers_list, TOX_ERR_GROUP_PEER_LIST_QUERY *error)
 {
-    const Messenger *m = tox;
+    const Messenger *m = tox->m;
     const GC_Chat *chat = gc_get_group(m->group_handler, group_number);
 
     if (chat == nullptr) {
