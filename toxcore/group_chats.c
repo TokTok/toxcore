@@ -5700,7 +5700,7 @@ void gc_load_peers(Messenger* m, GC_Chat* chat, GC_SavedPeerInfo *addrs, uint16_
  * Returns group number on success.
  * Returns -1 on failure.
  */
-int gc_group_load(GC_Session *c, struct Saved_Group *save, int group_number)
+int gc_group_load(GC_Session *c, Saved_Group *save, int group_number)
 {
     group_number = group_number == -1 ? get_new_group_index(c) : group_number;
     if (group_number == -1) {
@@ -5772,12 +5772,12 @@ int gc_group_load(GC_Session *c, struct Saved_Group *save, int group_number)
     }
 
     if (!is_active_chat) {
-        chat->save = (struct Saved_Group *)malloc(sizeof(struct Saved_Group));
+        chat->save = (Saved_Group *)malloc(sizeof(Saved_Group));
         if (!chat->save) {
             return -1;
         }
 
-        memcpy(chat->save, save, sizeof(struct Saved_Group));
+        memcpy(chat->save, save, sizeof(Saved_Group));
 
         return group_number;
     }
@@ -5932,7 +5932,7 @@ bool gc_disconnect_from_group(GC_Session *c, GC_Chat *chat)
     uint8_t previous_state = chat->connection_state;
     chat->connection_state = CS_MANUALLY_DISCONNECTED;
 
-    chat->save = (struct Saved_Group *)malloc(sizeof(struct Saved_Group));
+    chat->save = (Saved_Group *)malloc(sizeof(Saved_Group));
     if (!chat->save) {
         chat->connection_state = previous_state;
 
