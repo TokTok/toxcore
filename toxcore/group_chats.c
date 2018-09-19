@@ -1471,7 +1471,7 @@ int handle_gc_invite_request(Messenger *m, int group_number, uint32_t peer_numbe
 
     if (sanctions_list_nick_banned(chat, nick)) {
         invite_error = GJ_NICK_BANNED;
-        goto failed_invite;
+        goto FAILED_INVITE;
     }
 
     if (length - sizeof(uint16_t) - nick_len < MAX_GC_PASSWORD_SIZE) {
@@ -5545,7 +5545,7 @@ static void add_tcp_relays_to_chat(Messenger *m, GC_Chat *chat)
 
     if (num_relays == 0) {
         // TODO(iphydf): This should be an error, but for now TCP isn't working.
-        return 0;
+        return;
     }
 
     VLA(Node_format, tcp_relays, num_relays);
