@@ -3252,7 +3252,7 @@ static State_Load_Status friends_list_load(Messenger *m, const uint8_t *data, ui
 #ifndef VANILLA_NACL
 static uint32_t saved_groups_size(const Messenger *m)
 {
-    return gc_count_groups(m->group_handler) * sizeof(struct Saved_Group);
+    return gc_count_groups(m->group_handler) * sizeof(Saved_Group);
 }
 
 static uint8_t *groups_save(const Messenger *m, uint8_t *data)
@@ -3273,24 +3273,24 @@ static uint8_t *groups_save(const Messenger *m, uint8_t *data)
         Saved_Group temp;
         pack_group_info(chat, &temp, true);
 
-        memcpy(data + num * sizeof(struct Saved_Group), &temp, sizeof(struct Saved_Group));
+        memcpy(data + num * sizeof(Saved_Group), &temp, sizeof(Saved_Group));
         num++;
     }
 
-    return data + num * sizeof(struct Saved_Group);
+    return data + num * sizeof(Saved_Group);
 }
 
 static State_Load_Status groups_load(Messenger *m, const uint8_t *data, uint32_t length)
 {
-    if (length % sizeof(struct Saved_Group) != 0) {
-        return -1;
+    if (length % sizeof(Saved_Group) != 0) {
+        return STATE_LOAD_STATUS_ERROR; // TODO(endoffile78): error or continue?
     }
 
-    uint32_t i, num = length / sizeof(struct Saved_Group);
+    uint32_t i, num = length / sizeof(Saved_Group);
 
     for (i = 0; i < num; ++i) {
-        struct Saved_Group temp;
-        memcpy(&temp, data + i * sizeof(struct Saved_Group), sizeof(struct Saved_Group));
+        Saved_Group temp;
+        memcpy(&temp, data + i * sizeof(Saved_Group), sizeof(Saved_Group));
 
         int group_number = gc_group_load(m->group_handler, &temp, -1);
 
