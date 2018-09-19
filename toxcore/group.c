@@ -878,13 +878,23 @@ static void rejoin_frozen_friend(Group_Chats *g_c, int friendcon_id)
     }
 }
 
+static int g_handle_any_status(void *object, int friendcon_id, uint8_t status, void *userdata)
+{
+    Group_Chats *g_c = (Group_Chats *)object;
+
+    if (status) {
+        rejoin_frozen_friend(g_c, friendcon_id);
+    }
+
+    return 0;
+}
+
 static int g_handle_status(void *object, int friendcon_id, uint8_t status, void *userdata)
 {
     Group_Chats *g_c = (Group_Chats *)object;
 
     if (status) { /* Went online */
         set_conns_status_groups(g_c, friendcon_id, GROUPCHAT_CLOSE_ONLINE, userdata);
-        rejoin_frozen_friend(g_c, friendcon_id);
     } else { /* Went offline */
         set_conns_status_groups(g_c, friendcon_id, GROUPCHAT_CLOSE_CONNECTION, userdata);
         // TODO(irungentoo): remove timedout connections?
@@ -2892,6 +2902,8 @@ Group_Chats *new_groupchats(Mono_Time *mono_time, Messenger *m)
     temp->fr_c = m->fr_c;
     m->conferences_object = temp;
     m_callback_conference_invite(m, &handle_friend_invite_packet);
+
+    set_global_status_callback(m->fr_c, &g_handle_any_status, temp);
 
     return temp;
 }
