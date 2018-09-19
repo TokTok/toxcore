@@ -185,6 +185,8 @@ START_TEST(test_text_all)
     /* Tox1 creates a group and is a founder of a newly created group */
     TOX_ERR_GROUP_NEW new_err;
     Group_Chat_Self_Peer_Info *self_peer_info = tox_group_self_peer_info_new(nullptr);
+    self_peer_info->nick = "tox1";
+    self_peer_info->nick_length = 4;
     uint32_t groupnum = tox_group_new(toxes[1], TOX_GROUP_PRIVACY_STATE_PUBLIC, (const uint8_t *)GROUP_NAME, GROUP_NAME_LEN,
                                       self_peer_info, &new_err);
     ck_assert_msg(new_err == TOX_ERR_GROUP_NEW_OK, "tox_group_new failed: %d", new_err);
@@ -205,9 +207,13 @@ START_TEST(test_text_all)
     ck_assert_msg(id_err == TOX_ERR_GROUP_STATE_QUERIES_OK, "tox_group_get_chat_id failed %d", id_err);
 
     /* All other peers join the group using the Chat ID and password */
-    for (i = 2; i < NUM_GROUP_TOXES; ++i) {
+    for (int i = 2; i < NUM_GROUP_TOXES; ++i) {
         TOX_ERR_GROUP_JOIN join_err;
         Group_Chat_Self_Peer_Info *self_peer_info = tox_group_self_peer_info_new(nullptr);
+        char nick[5];
+        int length = snprintf(nick, sizeof(nick), "tox%d", i);
+        self_peer_info->nick = nick;
+        self_peer_info->nick_length = length;
         tox_group_join(toxes[i], chat_id, (const uint8_t *)PASSWORD, PASS_LEN, self_peer_info, &join_err);
         ck_assert_msg(join_err == TOX_ERR_GROUP_JOIN_OK, "tox_group_join failed: %d", join_err);
         c_sleep(1000);
