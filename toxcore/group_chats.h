@@ -324,7 +324,7 @@ typedef struct GC_Chat {
     bool should_update_self_announces;
     bool should_start_sending_handshakes;
 
-    struct Saved_Group *save;
+    Saved_Group *save;
 } GC_Chat;
 
 typedef struct GC_Session {
@@ -648,7 +648,7 @@ void kill_dht_groupchats(GC_Session *c);
  * Returns group_number on success.
  * Returns -1 on failure.
  */
-int gc_group_load(GC_Session *c, struct Saved_Group *save, int group_number);
+int gc_group_load(GC_Session *c, Saved_Group *save, int group_number);
 
 /* Creates a new group.
  *
