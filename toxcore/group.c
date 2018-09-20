@@ -141,33 +141,28 @@ static int32_t create_group_chat(Group_Chats *g_c)
     return id;
 }
 
-
-/* Wipe a groupchat.
- *
- * return -1 on failure.
- * return 0 on success.
+/*
+ * Trims any unused Group C's off the end of g_c
+ * Returns false upon failure.
+ * Returns true upon success.
  */
-static int wipe_group_chat(Group_Chats *g_c, uint32_t groupnumber)
+static bool trim_groupchats(Group_Chats *g_c)
 {
-    if (!is_groupnumber_valid(g_c, groupnumber)) {
-        return -1;
-    }
-
     uint16_t i;
-    crypto_memzero(&g_c->chats[groupnumber], sizeof(Group_c));
 
     for (i = g_c->num_chats; i != 0; --i) {
         if (g_c->chats[i - 1].status != GROUPCHAT_STATUS_NONE) {
+            --g_c->num_chats;
+        } else {
             break;
         }
     }
 
     if (g_c->num_chats != i) {
-        g_c->num_chats = i;
-        realloc_conferences(g_c, g_c->num_chats);
+        return realloc_conferences(g_c, g_c->num_chats);
     }
 
-    return 0;
+    return true;
 }
 
 static Group_c *get_group_c(const Group_Chats *g_c, uint32_t groupnumber)
@@ -1022,15 +1017,15 @@ int add_groupchat(Group_Chats *g_c, uint8_t type)
 static int group_kill_peer_send(const Group_Chats *g_c, uint32_t groupnumber, uint16_t peer_num);
 /* Delete a groupchat from the chats array.
  *
- * return 0 on success.
- * return -1 if groupnumber is invalid.
+ * Return true on success.
+ * Return false on failure.
  */
-int del_groupchat(Group_Chats *g_c, uint32_t groupnumber)
+bool del_groupchat(Group_Chats *g_c, uint32_t groupnumber)
 {
     Group_c *g = get_group_c(g_c, groupnumber);
 
     if (!g) {
-        return -1;
+        return false;
     }
 
     group_kill_peer_send(g_c, groupnumber, g->peer_number);
@@ -1057,7 +1052,8 @@ int del_groupchat(Group_Chats *g_c, uint32_t groupnumber)
         g->group_on_delete(g->object, groupnumber);
     }
 
-    return wipe_group_chat(g_c, groupnumber);
+    crypto_memzero(&g, sizeof(Group_c));
+    return trim_groupchats(g_c);
 }
 
 /* Copy the public key of peernumber who is in groupnumber to pk.
