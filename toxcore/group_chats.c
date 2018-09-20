@@ -109,7 +109,7 @@ typedef enum Group_Handshake_Request_Type {
 } Group_Handshake_Request_Type;
 
 
-void pack_group_info(GC_Chat *chat, Saved_Group *temp, bool can_use_cached_value)
+void pack_group_info(const GC_Chat *chat, Saved_Group *temp, bool can_use_cached_value)
 {
     // copy info from cached save struct if possible (for disconnected groups only)
     if (can_use_cached_value && chat->save) {
