@@ -3257,15 +3257,13 @@ static uint32_t saved_groups_size(const Messenger *m)
 
 static uint8_t *groups_save(const Messenger *m, uint8_t *data)
 {
-    uint32_t i;
-    uint32_t num = 0;
-    GC_Session *c = m->group_handler;
+    const GC_Session *c = m->group_handler;
 
     data = state_write_section_header(data, STATE_COOKIE_TYPE, saved_groups_size(m),
                                       STATE_TYPE_GROUPS);
 
-    for (i = 0; i < c->num_chats; ++i) {
-        GC_Chat *chat = &c->chats[i];
+    for (uint32_t i = 0; i < c->num_chats; ++i) {
+        const GC_Chat *chat = &c->chats[i];
         if (chat->connection_state <= CS_NONE || chat->connection_state >= CS_INVALID) {
             continue;
         }
@@ -3273,11 +3271,11 @@ static uint8_t *groups_save(const Messenger *m, uint8_t *data)
         Saved_Group temp;
         pack_group_info(chat, &temp, true);
 
-        memcpy(data + num * sizeof(Saved_Group), &temp, sizeof(Saved_Group));
-        num++;
+        memcpy(data, &temp, sizeof(Saved_Group));
+        data += sizeof(Saved_Group);
     }
 
-    return data + num * sizeof(Saved_Group);
+    return data;
 }
 
 static State_Load_Status groups_load(Messenger *m, const uint8_t *data, uint32_t length)
