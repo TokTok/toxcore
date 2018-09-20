@@ -88,19 +88,24 @@ static bool is_groupnumber_valid(const Group_Chats *g_c, uint32_t groupnumber)
     return true;
 }
 
-
-/* Set the size of the groupchat list to num.
- *
- *  return false if realloc fails.
- *  return true if it succeeds.
+/** Initializes address as a conference.
+ * @param g Pointer to conference you want setup.
  */
-static bool realloc_conferences(Group_Chats *g_c, uint16_t num)
+static void setup_conference(Group_c *g)
 {
-    if (num == 0) {
-        free(g_c->chats);
-        g_c->chats = nullptr;
-        return true;
-    }
+    memset(g, 0, sizeof(Group_c));
+}
+
+/** Set the size of the groupchat list to num.
+ *  @pre num > 0
+ *  @pre num != g_c->num_chats
+ *  @param g_c Group_Chats instance to be reallocated
+ *  @param num Number of Group_C's that g_c should be able to hold.
+ *  @return false if realloc fails.
+ *  @return true if it succeeds.
+ */
+static bool _realloc_conferences(Group_Chats *g_c, uint16_t num)
+{
 
     Group_c *newgroup_chats = (Group_c *)realloc(g_c->chats, num * sizeof(Group_c));
 
@@ -108,21 +113,67 @@ static bool realloc_conferences(Group_Chats *g_c, uint16_t num)
         return false;
     }
 
-    g_c->chats = newgroup_chats;
+    //There is a method to the madness.
+
+    if (g_c->num_chats <
+            num) { //If this check succeeds, I want the following while loop never to be attempted. Thus the convolution.
+        g_c->chats = newgroup_chats; //Re-point immediately, as the new memory can't hurt.
+
+        //We do not increment num_chats yet here. The conferences still need to be "set up".
+        do {
+            setup_conference(&g_c->chats[g_c->num_chats]);
+            ++g_c->num_chats; //Now it is safe for other loops to access this memory.
+        } while (g_c->num_chats != num);
+    } else { //num_chats now must be > num, because precondition excludes equality.
+        //Do not assign g_c->chats the new memory immediately. decrement num_chats first, so running programs don't access nonexistent memory space.
+        do {
+            crypto_memzero(&g_c->chats[g_c->num_chats - 1], sizeof(Group_c)); //Get rid of all conferences securely.
+            //We are tox. We don't fuck around with
+            //metadata.
+            --g_c->num_chats;
+        } while (g_c->num_chats != num);
+
+        g_c->chats = newgroup_chats; //g_c->num_chats == num, so we're ok using the new memory.
+    }
+
     return true;
 }
 
-static void setup_conference(Group_c *g)
+static void free_conference(Group_Chats *g_c)
 {
-    memset(g, 0, sizeof(Group_c));
+    g_c->num_chats = 0;
+    free(g_c->chats);
+    g_c->chats = nullptr;
 }
+
+/** Set the size of the groupchat list to num.
+ *
+ *  @param g_c Group_Chats instance to be reallocated
+ *  @param num Number of Group_C's that g_c should be able to hold.
+ *  @return false if realloc fails.
+ *  @return true if it succeeds.
+ */
+static bool realloc_conferences(Group_Chats *g_c, uint16_t num)
+{
+    if (num <= 0) {
+        free_conference(g_c);
+        return true;
+    }
+
+    if (g_c->num_chats == num) {
+        return true;
+    }
+
+    return _realloc_conferences(g_c, num);
+}
+
 
 /* Create a new empty groupchat connection.
  *
  * return -1 on failure.
  * return groupnumber on success.
  */
-static int32_t create_group_chat(Group_Chats *g_c)
+static uint16_t create_group_chat(Group_Chats *g_c)
 {
     for (uint16_t i = 0; i < g_c->num_chats; ++i) {
         if (g_c->chats[i].status == GROUPCHAT_STATUS_NONE) {
@@ -130,44 +181,28 @@ static int32_t create_group_chat(Group_Chats *g_c)
         }
     }
 
-    int32_t id = -1;
-
-    if (realloc_conferences(g_c, g_c->num_chats + 1)) {
-        id = g_c->num_chats;
-        ++g_c->num_chats;
-        setup_conference(&g_c->chats[id]);
-    }
-
-    return id;
-}
-
-
-/* Wipe a groupchat.
- *
- * return -1 on failure.
- * return 0 on success.
- */
-static int wipe_group_chat(Group_Chats *g_c, uint32_t groupnumber)
-{
-    if (!is_groupnumber_valid(g_c, groupnumber)) {
+    if (!realloc_conferences(g_c, (g_c->num_chats + 1))) {
         return -1;
     }
 
-    uint16_t i;
-    crypto_memzero(&g_c->chats[groupnumber], sizeof(Group_c));
+    return g_c->num_chats - 1;
+}
 
-    for (i = g_c->num_chats; i != 0; --i) {
-        if (g_c->chats[i - 1].status != GROUPCHAT_STATUS_NONE) {
-            break;
-        }
+/**
+ * Trims any unused Group C's off the end of g_c
+ * @param g_c A pointer to a Group_Chats instance to be trimmed.
+ * @return false upon failure.
+ * @return true upon success.
+ */
+static bool trim_groupchats(Group_Chats *g_c)
+{
+    uint16_t new_num_chats = g_c->num_chats;
+
+    while (new_num_chats != 0 && g_c->chats[new_num_chats - 1].status == GROUPCHAT_STATUS_NONE) {
+        --new_num_chats;
     }
 
-    if (g_c->num_chats != i) {
-        g_c->num_chats = i;
-        realloc_conferences(g_c, g_c->num_chats);
-    }
-
-    return 0;
+    return realloc_conferences(g_c, new_num_chats);
 }
 
 static Group_c *get_group_c(const Group_Chats *g_c, uint32_t groupnumber)
@@ -1022,17 +1057,20 @@ int add_groupchat(Group_Chats *g_c, uint8_t type)
 }
 
 static int group_kill_peer_send(const Group_Chats *g_c, uint32_t groupnumber, uint16_t peer_num);
-/* Delete a groupchat from the chats array.
+
+/** Delete a groupchat from the chats array.
  *
- * return 0 on success.
- * return -1 if groupnumber is invalid.
+ * @param g_c pointer to Groupchats instance
+ * @param groupnumber index of Groupchats instance
+ * @return true on success.
+ * @return false on failure.
  */
-int del_groupchat(Group_Chats *g_c, uint32_t groupnumber)
+bool del_groupchat(Group_Chats *g_c, uint32_t groupnumber)
 {
     Group_c *g = get_group_c(g_c, groupnumber);
 
     if (!g) {
-        return -1;
+        return false;
     }
 
     group_kill_peer_send(g_c, groupnumber, g->peer_number);
@@ -1059,7 +1097,8 @@ int del_groupchat(Group_Chats *g_c, uint32_t groupnumber)
         g->group_on_delete(g->object, groupnumber);
     }
 
-    return wipe_group_chat(g_c, groupnumber);
+    g->status = GROUPCHAT_STATUS_NONE;
+    return trim_groupchats(g_c);
 }
 
 /* Copy the public key of peernumber who is in groupnumber to pk.
@@ -2925,7 +2964,8 @@ void do_groupchats(Group_Chats *g_c, void *userdata)
 /* Free everything related with group chats. */
 void kill_groupchats(Group_Chats *g_c)
 {
-    for (uint16_t i = 0; i < g_c->num_chats; ++i) {
+    //num_chats gets modified in real time as we remove groupchats.
+    for (uint16_t i = g_c->num_chats - 1; i != 0; i = (g_c->num_chats - 1)) {
         del_groupchat(g_c, i);
     }
 

@@ -240,10 +240,10 @@ int add_groupchat(Group_Chats *g_c, uint8_t type);
 
 /* Delete a groupchat from the chats array.
  *
- * return 0 on success.
- * return -1 if groupnumber is invalid.
+ * return true on success.
+ * return false if groupnumber is invalid.
  */
-int del_groupchat(Group_Chats *g_c, uint32_t groupnumber);
+bool del_groupchat(Group_Chats *g_c, uint32_t groupnumber);
 
 /* Copy the public key of peernumber who is in groupnumber to pk.
  * pk must be CRYPTO_PUBLIC_KEY_SIZE long.

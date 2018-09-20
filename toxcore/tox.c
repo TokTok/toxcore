@@ -1458,9 +1458,8 @@ uint32_t tox_conference_new(Tox *tox, Tox_Err_Conference_New *error)
 bool tox_conference_delete(Tox *tox, uint32_t conference_number, Tox_Err_Conference_Delete *error)
 {
     Messenger *m = tox->m;
-    int ret = del_groupchat(m->conferences_object, conference_number);
 
-    if (ret == -1) {
+    if (!del_groupchat(m->conferences_object, conference_number)) {
         SET_ERROR_PARAMETER(error, TOX_ERR_CONFERENCE_DELETE_CONFERENCE_NOT_FOUND);
         return false;
     }
