@@ -32,11 +32,6 @@
 #define GC_ANNOUNCE_MAX_SIZE (sizeof(GC_Announce))
 #define GC_PUBLIC_ANNOUNCE_MAX_SIZE (sizeof(GC_Public_Announce))
 
-typedef struct GC_Announce_Node {
-    uint8_t public_key[ENC_PUBLIC_KEY];
-    IP_Port ip_port;
-} GC_Announce_Node;
-
 typedef struct GC_Announce GC_Announce;
 typedef struct GC_Peer_Announce GC_Peer_Announce;
 typedef struct GC_Announces GC_Announces;
