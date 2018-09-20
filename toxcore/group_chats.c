@@ -975,10 +975,23 @@ static int handle_gc_sync_response(Messenger *m, int group_number, int peer_numb
 
     fprintf(stderr, "got peers in response: %d\n", num_peers);
     if (num_peers) {
+        uint32_t peers_length = length - sizeof(uint32_t);
+        if (peers_length / GC_ANNOUNCE_MIN_SIZE < num_peers) { // num peers is invalid
+            return -1;
+        }
 
         GC_Announce *announces = (GC_Announce *)malloc(sizeof(GC_Announce) * num_peers);
+        if (!announces) {
+            return -1;
+        }
+
         uint8_t *announces_pointer = (uint8_t *)(data + sizeof(uint32_t));
-        unpack_announces_list(announces_pointer, length - sizeof(uint32_t), announces, num_peers, nullptr);
+        int unpacked_announces = unpack_announces_list(announces_pointer, peers_length, announces, num_peers, nullptr);
+        if (unpacked_announces == -1 || unpacked_announces != num_peers) {
+            free(announces);
+
+            return -1;
+        }
 
         int i, j;
         for (i = 0; i < num_peers; i++) {
@@ -1020,7 +1033,7 @@ static int handle_gc_sync_response(Messenger *m, int group_number, int peer_numb
             } else {
                 peer_gconn->pending_handshake_type = HS_PEER_INFO_EXCHANGE;
                 peer_gconn->is_pending_handshake_response = peer_gconn->is_oob_handshake = false;
-                peer_gconn->pending_handshake = gconn->last_received_ping_time = mono_time_get(chat->mono_time) + HANDSHAKE_SENDING_TIMEOUT;
+                peer_gconn->pending_handshake = peer_gconn->last_received_ping_time = mono_time_get(chat->mono_time) + HANDSHAKE_SENDING_TIMEOUT;
             }
         }
 
