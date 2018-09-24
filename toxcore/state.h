@@ -18,6 +18,22 @@
 extern "C" {
 #endif
 
+#define STATE_COOKIE_GLOBAL 0x15ed1b1f
+
+#define TOP_STATE_COOKIE_TYPE  0x01ce
+
+typedef enum Top_State_Type {
+    TOP_STATE_TYPE_NOSPAMKEYS    = 1,
+    TOP_STATE_TYPE_DHT           = 2,
+    TOP_STATE_TYPE_FRIENDS       = 3,
+    TOP_STATE_TYPE_NAME          = 4,
+    TOP_STATE_TYPE_STATUSMESSAGE = 5,
+    TOP_STATE_TYPE_STATUS        = 6,
+    TOP_STATE_TYPE_TCP_RELAY     = 10,
+    TOP_STATE_TYPE_PATH_NODE     = 11,
+    TOP_STATE_TYPE_END           = 255,
+} Top_State_Type;
+
 // Returned by the state_load_cb to instruct the loader on what to do next.
 typedef enum State_Load_Status {
     // Continue loading state data sections.
