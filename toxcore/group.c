@@ -2998,7 +2998,7 @@ static uint8_t *save_conf(const Group_c *g, uint16_t groupnumber, uint8_t *data)
     return data;
 }
 
-static uint32_t saved_conferences_size(const Group_Chats *g_c)
+static uint32_t conferences_section_size(const Group_Chats *g_c)
 {
     uint32_t len = 0;
 
@@ -3015,10 +3015,16 @@ static uint32_t saved_conferences_size(const Group_Chats *g_c)
     return len;
 }
 
-
-static uint8_t *save_conferences(const Group_Chats *g_c, uint8_t *data)
+uint32_t conferences_size(const Group_Chats *g_c)
 {
-    const uint32_t len = saved_conferences_size(g_c);
+    return 2 * sizeof(uint32_t) + conferences_section_size(g_c);
+}
+
+uint8_t *conferences_save(const Group_Chats *g_c, uint8_t *data)
+{
+    const uint32_t len = conferences_section_size(g_c);
+    data = state_write_section_header(data, TOP_STATE_COOKIE_TYPE, len, TOP_STATE_TYPE_CONFERENCES);
+
     const uint8_t *temp_data = data;
 
     for (uint16_t i = 0; i < g_c->num_chats; ++i) {
@@ -3140,46 +3146,16 @@ static State_Load_Status load_conferences(Group_Chats *g_c, const uint8_t *data,
     return STATE_LOAD_STATUS_CONTINUE;
 }
 
-
-// FIXME: rework saving architecture so groups saving is independent of
-// messenger
-#define MESSENGER_STATE_COOKIE_TYPE      0x01ce
-static uint32_t m_saved_conferences_size(const Messenger *m)
+bool conferences_load_state_section(Group_Chats *g_c, const uint8_t *data, uint32_t length, uint16_t type,
+                                    State_Load_Status *status)
 {
-    return saved_conferences_size(m->conferences_object);
-}
-static uint8_t *m_save_conferences(const Messenger *m, uint8_t *data)
-{
-    const uint32_t len = m_saved_conferences_size(m);
-    data = state_write_section_header(data, MESSENGER_STATE_COOKIE_TYPE, len, MESSENGER_STATE_TYPE_CONFERENCES);
-
-    return save_conferences(m->conferences_object, data);
-}
-static State_Load_Status m_load_conferences(Messenger *m, const uint8_t *data, uint32_t length)
-{
-    return load_conferences(m->conferences_object, data, length);
-}
-
-// end state plugin
-static uint32_t end_size(const Messenger *m)
-{
-    return 0;
-}
-
-static uint8_t *save_end(const Messenger *m, uint8_t *data)
-{
-    return state_write_section_header(data, MESSENGER_STATE_COOKIE_TYPE, 0, MESSENGER_STATE_TYPE_END);
-}
-
-static State_Load_Status load_end(Messenger *m, const uint8_t *data, uint32_t length)
-{
-    if (length != 0) {
-        return STATE_LOAD_STATUS_ERROR;
+    if (type != TOP_STATE_TYPE_CONFERENCES) {
+        return false;
     }
 
-    return STATE_LOAD_STATUS_END;
+    *status = load_conferences(g_c, data, length);
+    return true;
 }
-
 
 /* Create new groupchat instance. */
 Group_Chats *new_groupchats(Mono_Time *mono_time, Messenger *m)
@@ -3201,10 +3177,6 @@ Group_Chats *new_groupchats(Mono_Time *mono_time, Messenger *m)
     m_callback_conference_invite(m, &handle_friend_invite_packet);
 
     set_global_status_callback(m->fr_c, &g_handle_any_status, temp);
-
-    m_register_state_plugin(m, MESSENGER_STATE_TYPE_CONFERENCES, m_saved_conferences_size, m_load_conferences,
-                            m_save_conferences);
-    m_register_state_plugin(m, MESSENGER_STATE_TYPE_END, end_size, load_end, save_end);
 
     return temp;
 }
