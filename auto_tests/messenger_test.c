@@ -265,6 +265,8 @@ START_TEST(test_dht_state_saveloadsave)
 }
 END_TEST
 
+/* This test is disabled, because saving is now handled by Tox rather than Messenger. */
+#if 0
 START_TEST(test_messenger_state_saveloadsave)
 {
     /* validate that:
@@ -306,13 +308,13 @@ START_TEST(test_messenger_state_saveloadsave)
     ck_assert_msg(!memcmp(buffer + extra, buffer2, size), "Messenger state changed by store/load/store cycle");
 }
 END_TEST
+#endif
 
 static Suite *messenger_suite(void)
 {
     Suite *s = suite_create("Messenger");
 
     DEFTESTCASE(dht_state_saveloadsave);
-    DEFTESTCASE(messenger_state_saveloadsave);
 
     DEFTESTCASE(getself_name);
     DEFTESTCASE(m_get_userstatus_size);
