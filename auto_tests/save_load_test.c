@@ -88,16 +88,24 @@ static void test_few_clients(void)
     ck_assert_msg(connected_t1, "Tox1 isn't connected. %u", connected_t1);
     printf("tox clients connected took %lu seconds\n", (unsigned long)(time(nullptr) - con_time));
 
+    const size_t extra = 64;
     const size_t save_size1 = tox_get_savedata_size(tox2);
     ck_assert_msg(save_size1 != 0, "save is invalid size %u", (unsigned)save_size1);
     printf("%u\n", (unsigned)save_size1);
-    VLA(uint8_t, save1, save_size1);
-    tox_get_savedata(tox2, save1);
+    VLA(uint8_t, buffer, save_size1 + 2 * extra);
+    memset(buffer, 0xCD, extra);
+    memset(buffer + extra + save_size1, 0xCD, extra);
+    tox_get_savedata(tox2, buffer + extra);
     tox_kill(tox2);
+
+    for (size_t i = 0; i < extra; i++) {
+        ck_assert_msg(buffer[i] == 0xCD, "Buffer underwritten from tox_get_savedata() @%u", (unsigned)i);
+        ck_assert_msg(buffer[extra + save_size1 + i] == 0xCD, "Buffer overwritten from tox_get_savedata() @%u", (unsigned)i);
+    }
 
     struct Tox_Options *const options = tox_options_new(nullptr);
     tox_options_set_savedata_type(options, TOX_SAVEDATA_TYPE_TOX_SAVE);
-    tox_options_set_savedata_data(options, save1, save_size1);
+    tox_options_set_savedata_data(options, buffer + extra, save_size1);
     tox_options_set_local_discovery_enabled(options, false);
     tox2 = tox_new_log(options, nullptr, &index[1]);
     cur_time = time(nullptr);
