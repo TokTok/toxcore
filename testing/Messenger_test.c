@@ -100,10 +100,8 @@ int main(int argc, char *argv[])
     }
 
     /* with optional --ipvx, now it can be 1-4 arguments... */
-    if ((argc != argvoffset + 2) && (argc != argvoffset + 4)) {
+    if (argc != argvoffset + 4) {
         printf("Usage: %s [--ipv4|--ipv6] ip port public_key (of the DHT bootstrap node)\n", argv[0]);
-        printf("or\n");
-        printf("       %s [--ipv4|--ipv6] Save.bak (to read Save.bak as state file)\n", argv[0]);
         exit(0);
     }
 
@@ -134,7 +132,11 @@ int main(int argc, char *argv[])
             printf("Failed to convert \"%s\" into an IP address. Exiting...\n", argv[argvoffset + 1]);
             exit(1);
         }
-    } else {
+    }
+
+    /* Loading disabled, because loading is now handled by Tox rather than Messenger */
+#if 0
+    else {
         FILE *file = fopen(argv[argvoffset + 1], "rb");
 
         if (file == nullptr) {
@@ -148,6 +150,8 @@ int main(int argc, char *argv[])
         printf("Messenger loaded: %i\n", messenger_load(m, buffer, read));
         fclose(file);
     }
+
+#endif
 
     m_callback_friendrequest(m, print_request);
     m_callback_friendmessage(m, print_message);
