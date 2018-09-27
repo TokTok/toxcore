@@ -268,6 +268,8 @@ int main(int argc, char *argv[])
 
     Logger *logger = logger_new();
 
+    log_write(LOG_LEVEL_ERROR, "Toxcore logger level: %d\n", MIN_LOGGER_LEVEL);
+
     if (MIN_LOGGER_LEVEL == LOGGER_LEVEL_TRACE || MIN_LOGGER_LEVEL == LOGGER_LEVEL_DEBUG) {
         logger_callback_log(logger, toxcore_logger_callback, nullptr, nullptr);
     }
