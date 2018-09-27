@@ -102,13 +102,13 @@ actually make more sense in the implementation to have a separate list for
 frozen peers.
 
 ## Saving
-Saving could be implemented by simply saving all live groups with their group
-numbers and full peer info for all peers. On reload, all peers would be set as
-frozen.
+Saving is implemented by simply saving all live groups with their group numbers
+and full peer info for all peers. On reload, all peers are set as frozen.
 
-The client would need to support this by understanding that these groups exist
-on start-up (e.g. starting windows for them), and by not automatically killing
-groups on closing the client.
+Clients needs to support this by understanding that groups may exist on
+start-up. Clients should call tox\_conference\_get\_chatlist to obtain them. A
+group which is deleted (with tox\_conference\_delete) is removed permanently
+and will not be saved.
 
 ## Limitations
 If a peer disconnects from the group for a period short enough that group
