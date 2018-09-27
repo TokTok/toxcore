@@ -3019,6 +3019,7 @@ static uint8_t *friends_list_save(const Messenger *m, uint8_t *data)
                 temp.info_size = net_htons(m->friendlist[i].info_size);
                 temp.friendrequest_nospam = m->friendlist[i].friendrequest_nospam;
             } else {
+                temp.status = 3;
                 memcpy(temp.name, m->friendlist[i].name, m->friendlist[i].name_length);
                 temp.name_length = net_htons(m->friendlist[i].name_length);
                 memcpy(temp.statusmessage, m->friendlist[i].statusmessage, m->friendlist[i].statusmessage_length);
@@ -3178,6 +3179,11 @@ static uint8_t *save_tcp_relays(const Messenger *m, uint8_t *data)
     uint8_t *temp_data = data;
     data = state_write_section_header(temp_data, TOP_STATE_COOKIE_TYPE, 0, TOP_STATE_TYPE_TCP_RELAY);
     unsigned int num = copy_connected_tcp_relays(m->net_crypto, relays, NUM_SAVED_TCP_RELAYS);
+
+    if (!m->has_added_relays) {
+        memcpy(relays, m->loaded_relays, sizeof(Node_format) * (NUM_SAVED_TCP_RELAYS - num));
+    }
+
     int l = pack_nodes(data, NUM_SAVED_TCP_RELAYS * packed_node_size(net_family_tcp_ipv6), relays, num);
 
     if (l > 0) {
