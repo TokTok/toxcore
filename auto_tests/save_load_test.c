@@ -35,6 +35,62 @@ static void tox_connection_status(Tox *tox, Tox_Connection connection_status, vo
     connected_t1 = connection_status;
 }
 
+/* validate that:
+ * a) saving stays within the confined space
+ * b) a saved state can be loaded back successfully
+ * c) a second save is of equal size
+ * d) the second save is of equal content */
+static void reload_tox(Tox **tox, uint32_t *index)
+{
+    const size_t extra = 64;
+    const size_t save_size1 = tox_get_savedata_size(*tox);
+    ck_assert_msg(save_size1 != 0, "save is invalid size %u", (unsigned)save_size1);
+    printf("%u\n", (unsigned)save_size1);
+
+    uint8_t *buffer = (uint8_t *)malloc(save_size1 + 2 * extra);
+    ck_assert_msg(buffer != nullptr, "malloc failed");
+    memset(buffer, 0xCD, extra);
+    memset(buffer + extra + save_size1, 0xCD, extra);
+    tox_get_savedata(*tox, buffer + extra);
+    tox_kill(*tox);
+
+    for (size_t i = 0; i < extra; i++) {
+        ck_assert_msg(buffer[i] == 0xCD, "Buffer underwritten from tox_get_savedata() @%u", (unsigned)i);
+        ck_assert_msg(buffer[extra + save_size1 + i] == 0xCD, "Buffer overwritten from tox_get_savedata() @%u", (unsigned)i);
+    }
+
+    struct Tox_Options *const options = tox_options_new(nullptr);
+
+    tox_options_set_savedata_type(options, TOX_SAVEDATA_TYPE_TOX_SAVE);
+
+    tox_options_set_savedata_data(options, buffer + extra, save_size1);
+
+    tox_options_set_local_discovery_enabled(options, false);
+
+    *tox = tox_new_log(options, nullptr, index);
+
+    tox_options_free(options);
+
+    ck_assert_msg(*tox != nullptr, "Failed to load back stored buffer");
+
+    const size_t save_size2 = tox_get_savedata_size(*tox);
+
+    ck_assert_msg(save_size1 == save_size2, "Tox save data changed in size from a store/load cycle: %u -> %u",
+                  (unsigned)save_size1, (unsigned)save_size2);
+
+    uint8_t *buffer2 = (uint8_t *)malloc(save_size2);
+
+    ck_assert_msg(buffer2 != nullptr, "malloc failed");
+
+    tox_get_savedata(*tox, buffer2);
+
+    ck_assert_msg(!memcmp(buffer + extra, buffer2, save_size2), "Tox state changed by store/load/store cycle");
+
+    free(buffer2);
+
+    free(buffer);
+}
+
 static void test_few_clients(void)
 {
     uint32_t index[] = { 1, 2, 3 };
@@ -88,56 +144,7 @@ static void test_few_clients(void)
     ck_assert_msg(connected_t1, "Tox1 isn't connected. %u", connected_t1);
     printf("tox clients connected took %lu seconds\n", (unsigned long)(time(nullptr) - con_time));
 
-    /* validate that:
-     * a) saving stays within the confined space
-     * b) a saved state can be loaded back successfully
-     * c) a second save is of equal size
-     * d) the second save is of equal content */
-    const size_t extra = 64;
-    const size_t save_size1 = tox_get_savedata_size(tox2);
-    ck_assert_msg(save_size1 != 0, "save is invalid size %u", (unsigned)save_size1);
-    printf("%u\n", (unsigned)save_size1);
-
-    uint8_t *buffer = (uint8_t *)malloc(save_size1 + 2 * extra);
-    ck_assert_msg(buffer != nullptr, "malloc failed");
-    memset(buffer, 0xCD, extra);
-    memset(buffer + extra + save_size1, 0xCD, extra);
-    tox_get_savedata(tox2, buffer + extra);
-    tox_kill(tox2);
-
-    for (size_t i = 0; i < extra; i++) {
-        ck_assert_msg(buffer[i] == 0xCD, "Buffer underwritten from tox_get_savedata() @%u", (unsigned)i);
-        ck_assert_msg(buffer[extra + save_size1 + i] == 0xCD, "Buffer overwritten from tox_get_savedata() @%u", (unsigned)i);
-    }
-
-    struct Tox_Options *const options = tox_options_new(nullptr);
-
-    tox_options_set_savedata_type(options, TOX_SAVEDATA_TYPE_TOX_SAVE);
-
-    tox_options_set_savedata_data(options, buffer + extra, save_size1);
-
-    tox_options_set_local_discovery_enabled(options, false);
-
-    tox2 = tox_new_log(options, nullptr, &index[1]);
-
-    ck_assert_msg(tox2 != nullptr, "Failed to load back stored buffer");
-
-    const size_t save_size2 = tox_get_savedata_size(tox2);
-
-    ck_assert_msg(save_size1 == save_size2, "Tox save data changed in size from a store/load cycle: %u -> %u",
-                  (unsigned)save_size1, (unsigned)save_size2);
-
-    uint8_t *buffer2 = (uint8_t *)malloc(save_size2);
-
-    ck_assert_msg(buffer != nullptr, "malloc failed");
-
-    tox_get_savedata(tox2, buffer2);
-
-    ck_assert_msg(!memcmp(buffer + extra, buffer2, save_size2), "Tox state changed by store/load/store cycle");
-
-    free(buffer2);
-
-    free(buffer);
+    reload_tox(&tox2, &index[1]);
 
     cur_time = time(nullptr);
 
@@ -169,7 +176,6 @@ static void test_few_clients(void)
 
     printf("test_few_clients succeeded, took %lu seconds\n", (unsigned long)(time(nullptr) - cur_time));
 
-    tox_options_free(options);
     tox_kill(tox1);
     tox_kill(tox2);
     tox_kill(tox3);
