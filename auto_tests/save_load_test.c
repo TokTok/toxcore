@@ -111,26 +111,36 @@ static void test_few_clients(void)
     }
 
     struct Tox_Options *const options = tox_options_new(nullptr);
+
     tox_options_set_savedata_type(options, TOX_SAVEDATA_TYPE_TOX_SAVE);
+
     tox_options_set_savedata_data(options, buffer + extra, save_size1);
+
     tox_options_set_local_discovery_enabled(options, false);
+
     tox2 = tox_new_log(options, nullptr, &index[1]);
+
     ck_assert_msg(tox2 != nullptr, "Failed to load back stored buffer");
 
     const size_t save_size2 = tox_get_savedata_size(tox2);
+
     ck_assert_msg(save_size1 == save_size2, "Tox save data changed in size from a store/load cycle: %u -> %u",
                   (unsigned)save_size1, (unsigned)save_size2);
 
     uint8_t *buffer2 = (uint8_t *)malloc(save_size2);
+
     ck_assert_msg(buffer != nullptr, "malloc failed");
 
     tox_get_savedata(tox2, buffer2);
+
     ck_assert_msg(!memcmp(buffer + extra, buffer2, save_size2), "Tox state changed by store/load/store cycle");
 
     free(buffer2);
+
     free(buffer);
 
     cur_time = time(nullptr);
+
     off = 1;
 
     while (true) {
