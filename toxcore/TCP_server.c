@@ -222,6 +222,23 @@ static int add_accepted(TCP_Server *tcp_server, const Mono_Time *mono_time, cons
     return index;
 }
 
+static void wipe_priority_list(TCP_Secure_Connection *con)
+{
+    TCP_Priority_List *p = con->priority_queue_start;
+
+    while (p) {
+        TCP_Priority_List *pp = p;
+        p = p->next;
+        free(pp);
+    }
+}
+
+static void wipe_secure_connection(TCP_Secure_Connection *con)
+{
+    wipe_priority_list(con);
+    crypto_memzero(con, sizeof(TCP_Secure_Connection));
+}
+
 /* Delete accepted connection from list.
  *
  * return 0 on success
@@ -241,7 +258,7 @@ static int del_accepted(TCP_Server *tcp_server, int index)
         return -1;
     }
 
-    crypto_memzero(&tcp_server->accepted_connection_array[index], sizeof(TCP_Secure_Connection));
+    wipe_secure_connection(&tcp_server->accepted_connection_array[index]);
     --tcp_server->num_accepted_connections;
 
     if (tcp_server->num_accepted_connections == 0) {
@@ -513,7 +530,7 @@ static int write_packet_TCP_secure_connection(TCP_Secure_Connection *con, const 
 static void kill_TCP_secure_connection(TCP_Secure_Connection *con)
 {
     kill_sock(con->sock);
-    crypto_memzero(con, sizeof(TCP_Secure_Connection));
+    wipe_secure_connection(con);
 }
 
 static int rm_connection_index(TCP_Server *tcp_server, TCP_Secure_Connection *con, uint8_t con_number);
@@ -965,7 +982,7 @@ static int confirm_TCP_connection(TCP_Server *tcp_server, const Mono_Time *mono_
         return -1;
     }
 
-    crypto_memzero(con, sizeof(TCP_Secure_Connection));
+    wipe_secure_connection(con);
 
     if (handle_TCP_packet(tcp_server, index, data, length) == -1) {
         kill_accepted(tcp_server, index);
