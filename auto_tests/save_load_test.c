@@ -16,6 +16,16 @@
 #include "../toxcore/util.h"
 #include "check_compat.h"
 
+/* The Travis-CI container responds poorly to ::1 as a localhost address
+ * You're encouraged to -D FORCE_TESTS_IPV6 on a local test  */
+#ifdef FORCE_TESTS_IPV6
+#define TOX_LOCALHOST "::1"
+#else
+#define TOX_LOCALHOST "127.0.0.1"
+#endif
+
+#define TCP_RELAY_PORT 33448
+
 static void accept_friend_request(Tox *m, const uint8_t *public_key, const uint8_t *data, size_t length, void *userdata)
 {
     if (length == 7 && memcmp("Gentoo", data, 7) == 0) {
@@ -40,7 +50,7 @@ static void tox_connection_status(Tox *tox, TOX_CONNECTION connection_status, vo
  * b) a saved state can be loaded back successfully
  * c) a second save is of equal size
  * d) the second save is of equal content */
-static void reload_tox(Tox **tox, uint32_t *index)
+static void reload_tox(Tox **tox, struct Tox_Options *in_opts, void *user_data)
 {
     const size_t extra = 64;
     const size_t save_size1 = tox_get_savedata_size(*tox);
@@ -59,17 +69,17 @@ static void reload_tox(Tox **tox, uint32_t *index)
         ck_assert_msg(buffer[extra + save_size1 + i] == 0xCD, "Buffer overwritten from tox_get_savedata() @%u", (unsigned)i);
     }
 
-    struct Tox_Options *const options = tox_options_new(nullptr);
+    struct Tox_Options *const options = (in_opts == nullptr) ? tox_options_new(nullptr) : in_opts;
 
     tox_options_set_savedata_type(options, TOX_SAVEDATA_TYPE_TOX_SAVE);
 
     tox_options_set_savedata_data(options, buffer + extra, save_size1);
 
-    tox_options_set_local_discovery_enabled(options, false);
+    *tox = tox_new_log(options, nullptr, user_data);
 
-    *tox = tox_new_log(options, nullptr, index);
-
-    tox_options_free(options);
+    if (in_opts == nullptr) {
+        tox_options_free(options);
+    }
 
     ck_assert_msg(*tox != nullptr, "Failed to load back stored buffer");
 
@@ -95,17 +105,31 @@ static void test_few_clients(void)
 {
     uint32_t index[] = { 1, 2, 3 };
     time_t con_time = 0, cur_time = time(nullptr);
-    Tox *tox1 = tox_new_log(nullptr, nullptr, &index[0]);
-    Tox *tox2 = tox_new_log(nullptr, nullptr, &index[1]);
-    Tox *tox3 = tox_new_log(nullptr, nullptr, &index[2]);
+
+    struct Tox_Options *opts1 = tox_options_new(nullptr);
+    tox_options_set_tcp_port(opts1, TCP_RELAY_PORT);
+    Tox *tox1 = tox_new_log(opts1, nullptr, &index[0]);
+    tox_options_free(opts1);
+
+    struct Tox_Options *opts2 = tox_options_new(nullptr);
+    tox_options_set_udp_enabled(opts2, false);
+    tox_options_set_local_discovery_enabled(opts2, false);
+    Tox *tox2 = tox_new_log(opts2, nullptr, &index[1]);
+
+    struct Tox_Options *opts3 = tox_options_new(nullptr);
+    tox_options_set_local_discovery_enabled(opts3, false);
+    Tox *tox3 = tox_new_log(opts3, nullptr, &index[2]);
 
     ck_assert_msg(tox1 && tox2 && tox3, "Failed to create 3 tox instances");
 
-    printf("bootstrapping tox2 and tox3 off tox1\n");
     uint8_t dht_key[TOX_PUBLIC_KEY_SIZE];
     tox_self_get_dht_id(tox1, dht_key);
     const uint16_t dht_port = tox_self_get_udp_port(tox1, nullptr);
 
+    printf("using tox1 as tcp relay for tox2\n");
+    tox_add_tcp_relay(tox2, TOX_LOCALHOST, TCP_RELAY_PORT, dht_key, nullptr);
+
+    printf("bootstrapping toxes off tox1\n");
     tox_bootstrap(tox2, "localhost", dht_port, dht_key, nullptr);
     tox_bootstrap(tox3, "localhost", dht_port, dht_key, nullptr);
 
@@ -132,8 +156,8 @@ static void test_few_clients(void)
                 off = 0;
             }
 
-            if (tox_friend_get_connection_status(tox2, 0, nullptr) == TOX_CONNECTION_UDP
-                    && tox_friend_get_connection_status(tox3, 0, nullptr) == TOX_CONNECTION_UDP) {
+            if (tox_friend_get_connection_status(tox2, 0, nullptr) == TOX_CONNECTION_TCP
+                    && tox_friend_get_connection_status(tox3, 0, nullptr) == TOX_CONNECTION_TCP) {
                 break;
             }
         }
@@ -144,7 +168,9 @@ static void test_few_clients(void)
     ck_assert_msg(connected_t1, "Tox1 isn't connected. %u", connected_t1);
     printf("tox clients connected took %lu seconds\n", (unsigned long)(time(nullptr) - con_time));
 
-    reload_tox(&tox2, &index[1]);
+    reload_tox(&tox2, opts2, &index[1]);
+
+    reload_tox(&tox3, opts3, &index[2]);
 
     cur_time = time(nullptr);
 
@@ -163,8 +189,8 @@ static void test_few_clients(void)
                 off = 0;
             }
 
-            if (tox_friend_get_connection_status(tox2, 0, nullptr) == TOX_CONNECTION_UDP
-                    && tox_friend_get_connection_status(tox3, 0, nullptr) == TOX_CONNECTION_UDP) {
+            if (tox_friend_get_connection_status(tox2, 0, nullptr) == TOX_CONNECTION_TCP
+                    && tox_friend_get_connection_status(tox3, 0, nullptr) == TOX_CONNECTION_TCP) {
                 break;
             }
         }
@@ -179,6 +205,9 @@ static void test_few_clients(void)
     tox_kill(tox1);
     tox_kill(tox2);
     tox_kill(tox3);
+
+    tox_options_free(opts2);
+    tox_options_free(opts3);
 }
 
 int main(void)
