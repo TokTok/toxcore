@@ -222,10 +222,8 @@ static int add_accepted(TCP_Server *tcp_server, const Mono_Time *mono_time, cons
     return index;
 }
 
-static void wipe_priority_list(TCP_Secure_Connection *con)
+void wipe_priority_list(TCP_Priority_List *p)
 {
-    TCP_Priority_List *p = con->priority_queue_start;
-
     while (p) {
         TCP_Priority_List *pp = p;
         p = p->next;
@@ -235,7 +233,7 @@ static void wipe_priority_list(TCP_Secure_Connection *con)
 
 static void wipe_secure_connection(TCP_Secure_Connection *con)
 {
-    wipe_priority_list(con);
+    wipe_priority_list(con->priority_queue_start);
     crypto_memzero(con, sizeof(TCP_Secure_Connection));
 }
 
