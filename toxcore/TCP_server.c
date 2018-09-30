@@ -124,41 +124,66 @@ size_t tcp_server_listen_count(const TCP_Server *tcp_server)
 #endif
 #endif
 
-/* Set the size of the connection list to numfriends.
+/* Increase the size of the connection list
  *
- *  return -1 if realloc fails.
- *  return 0 if it succeeds.
+ *  return -1 on failure
+ *  return 0 on success.
  */
-static int realloc_connection(TCP_Server *tcp_server, uint32_t num)
+static int alloc_new_connections(TCP_Server *tcp_server, uint32_t num)
 {
-    if (num == 0) {
-        free(tcp_server->accepted_connection_array);
-        tcp_server->accepted_connection_array = nullptr;
-        tcp_server->size_accepted_connections = 0;
-        return 0;
-    }
+    uint32_t new_size = tcp_server->size_accepted_connections + num;
 
-    if (num == tcp_server->size_accepted_connections) {
-        return 0;
+    if (new_size < tcp_server->size_accepted_connections) {
+        return -1;
     }
 
     TCP_Secure_Connection *new_connections = (TCP_Secure_Connection *)realloc(
                 tcp_server->accepted_connection_array,
-                num * sizeof(TCP_Secure_Connection));
+                new_size * sizeof(TCP_Secure_Connection));
 
     if (new_connections == nullptr) {
         return -1;
     }
 
-    if (num > tcp_server->size_accepted_connections) {
-        uint32_t old_size = tcp_server->size_accepted_connections;
-        uint32_t size_new_entries = (num - old_size) * sizeof(TCP_Secure_Connection);
-        memset(new_connections + old_size, 0, size_new_entries);
-    }
+    const uint32_t old_size = tcp_server->size_accepted_connections;
+    const uint32_t size_new_entries = num * sizeof(TCP_Secure_Connection);
+    memset(new_connections + old_size, 0, size_new_entries);
 
     tcp_server->accepted_connection_array = new_connections;
-    tcp_server->size_accepted_connections = num;
+    tcp_server->size_accepted_connections = new_size;
     return 0;
+}
+
+void wipe_priority_list(TCP_Priority_List *p)
+{
+    while (p) {
+        TCP_Priority_List *pp = p;
+        p = p->next;
+        free(pp);
+    }
+}
+
+static void wipe_secure_connection(TCP_Secure_Connection *con)
+{
+    wipe_priority_list(con->priority_queue_start);
+    crypto_memzero(con, sizeof(TCP_Secure_Connection));
+}
+
+static void free_accepted_connection_array(TCP_Server *tcp_server)
+{
+    if (tcp_server->accepted_connection_array == nullptr) {
+        return;
+    }
+
+    for (uint32_t i = 0; i < tcp_server->size_accepted_connections; ++i) {
+        if (tcp_server->accepted_connection_array[i].status) {
+            wipe_secure_connection(&tcp_server->accepted_connection_array[i]);
+        }
+    }
+
+    free(tcp_server->accepted_connection_array);
+    tcp_server->accepted_connection_array = nullptr;
+    tcp_server->size_accepted_connections = 0;
 }
 
 /* return index corresponding to connection with peer on success
@@ -177,7 +202,7 @@ static int kill_accepted(TCP_Server *tcp_server, int index);
  * return index on success
  * return -1 on failure
  */
-static int add_accepted(TCP_Server *tcp_server, const Mono_Time *mono_time, const TCP_Secure_Connection *con)
+static int add_accepted(TCP_Server *tcp_server, const Mono_Time *mono_time, TCP_Secure_Connection *con)
 {
     int index = get_TCP_connection_index(tcp_server, con->public_key);
 
@@ -187,7 +212,7 @@ static int add_accepted(TCP_Server *tcp_server, const Mono_Time *mono_time, cons
     }
 
     if (tcp_server->size_accepted_connections == tcp_server->num_accepted_connections) {
-        if (realloc_connection(tcp_server, tcp_server->size_accepted_connections + 4) == -1) {
+        if (alloc_new_connections(tcp_server, 4) == -1) {
             return -1;
         }
 
@@ -213,6 +238,8 @@ static int add_accepted(TCP_Server *tcp_server, const Mono_Time *mono_time, cons
     }
 
     memcpy(&tcp_server->accepted_connection_array[index], con, sizeof(TCP_Secure_Connection));
+    crypto_memzero(con, sizeof(TCP_Secure_Connection));
+
     tcp_server->accepted_connection_array[index].status = TCP_STATUS_CONFIRMED;
     ++tcp_server->num_accepted_connections;
     tcp_server->accepted_connection_array[index].identifier = ++tcp_server->counter;
@@ -220,21 +247,6 @@ static int add_accepted(TCP_Server *tcp_server, const Mono_Time *mono_time, cons
     tcp_server->accepted_connection_array[index].ping_id = 0;
 
     return index;
-}
-
-void wipe_priority_list(TCP_Priority_List *p)
-{
-    while (p) {
-        TCP_Priority_List *pp = p;
-        p = p->next;
-        free(pp);
-    }
-}
-
-static void wipe_secure_connection(TCP_Secure_Connection *con)
-{
-    wipe_priority_list(con->priority_queue_start);
-    crypto_memzero(con, sizeof(TCP_Secure_Connection));
 }
 
 /* Delete accepted connection from list.
@@ -260,7 +272,7 @@ static int del_accepted(TCP_Server *tcp_server, int index)
     --tcp_server->num_accepted_connections;
 
     if (tcp_server->num_accepted_connections == 0) {
-        realloc_connection(tcp_server, 0);
+        free_accepted_connection_array(tcp_server);
     }
 
     return 0;
@@ -1466,7 +1478,17 @@ void kill_TCP_server(TCP_Server *tcp_server)
     close(tcp_server->efd);
 #endif
 
+    for (uint32_t i = 0; i < MAX_INCOMING_CONNECTIONS; ++i) {
+        if (tcp_server->incoming_connection_queue[i].status) {
+            wipe_secure_connection(&tcp_server->incoming_connection_queue[i]);
+        }
+        if (tcp_server->unconfirmed_connection_queue[i].status) {
+            wipe_secure_connection(&tcp_server->unconfirmed_connection_queue[i]);
+        }
+    }
+
+    free_accepted_connection_array(tcp_server);
+
     free(tcp_server->socks_listening);
-    free(tcp_server->accepted_connection_array);
     free(tcp_server);
 }
