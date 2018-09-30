@@ -169,6 +169,12 @@ static void wipe_secure_connection(TCP_Secure_Connection *con)
     crypto_memzero(con, sizeof(TCP_Secure_Connection));
 }
 
+static void move_secure_connection(TCP_Secure_Connection *con_new, TCP_Secure_Connection *con_old)
+{
+    memcpy(con_new, con_old, sizeof(TCP_Secure_Connection));
+    crypto_memzero(con_old, sizeof(TCP_Secure_Connection));
+}
+
 static void free_accepted_connection_array(TCP_Server *tcp_server)
 {
     if (tcp_server->accepted_connection_array == nullptr) {
@@ -237,8 +243,7 @@ static int add_accepted(TCP_Server *tcp_server, const Mono_Time *mono_time, TCP_
         return -1;
     }
 
-    memcpy(&tcp_server->accepted_connection_array[index], con, sizeof(TCP_Secure_Connection));
-    crypto_memzero(con, sizeof(TCP_Secure_Connection));
+    move_secure_connection(&tcp_server->accepted_connection_array[index], con);
 
     tcp_server->accepted_connection_array[index].status = TCP_STATUS_CONFIRMED;
     ++tcp_server->num_accepted_connections;
@@ -1179,8 +1184,7 @@ static int do_incoming(TCP_Server *tcp_server, uint32_t i)
             kill_TCP_secure_connection(conn_new);
         }
 
-        memcpy(conn_new, conn_old, sizeof(TCP_Secure_Connection));
-        crypto_memzero(conn_old, sizeof(TCP_Secure_Connection));
+        move_secure_connection(conn_new, conn_old);
         ++tcp_server->unconfirmed_connection_queue_index;
 
         return index_new;
