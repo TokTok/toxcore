@@ -165,8 +165,10 @@ void wipe_priority_list(TCP_Priority_List *p)
 
 static void wipe_secure_connection(TCP_Secure_Connection *con)
 {
-    wipe_priority_list(con->priority_queue_start);
-    crypto_memzero(con, sizeof(TCP_Secure_Connection));
+    if (con->status) {
+        wipe_priority_list(con->priority_queue_start);
+        crypto_memzero(con, sizeof(TCP_Secure_Connection));
+    }
 }
 
 static void move_secure_connection(TCP_Secure_Connection *con_new, TCP_Secure_Connection *con_old)
@@ -182,9 +184,7 @@ static void free_accepted_connection_array(TCP_Server *tcp_server)
     }
 
     for (uint32_t i = 0; i < tcp_server->size_accepted_connections; ++i) {
-        if (tcp_server->accepted_connection_array[i].status) {
-            wipe_secure_connection(&tcp_server->accepted_connection_array[i]);
-        }
+        wipe_secure_connection(&tcp_server->accepted_connection_array[i]);
     }
 
     free(tcp_server->accepted_connection_array);
@@ -1483,12 +1483,8 @@ void kill_TCP_server(TCP_Server *tcp_server)
 #endif
 
     for (uint32_t i = 0; i < MAX_INCOMING_CONNECTIONS; ++i) {
-        if (tcp_server->incoming_connection_queue[i].status) {
-            wipe_secure_connection(&tcp_server->incoming_connection_queue[i]);
-        }
-        if (tcp_server->unconfirmed_connection_queue[i].status) {
-            wipe_secure_connection(&tcp_server->unconfirmed_connection_queue[i]);
-        }
+        wipe_secure_connection(&tcp_server->incoming_connection_queue[i]);
+        wipe_secure_connection(&tcp_server->unconfirmed_connection_queue[i]);
     }
 
     free_accepted_connection_array(tcp_server);
