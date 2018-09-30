@@ -1466,9 +1466,7 @@ void do_TCP_server(TCP_Server *tcp_server, Mono_Time *mono_time)
 
 void kill_TCP_server(TCP_Server *tcp_server)
 {
-    uint32_t i;
-
-    for (i = 0; i < tcp_server->num_listening_socks; ++i) {
+    for (uint32_t i = 0; i < tcp_server->num_listening_socks; ++i) {
         kill_sock(tcp_server->socks_listening[i]);
     }
 
