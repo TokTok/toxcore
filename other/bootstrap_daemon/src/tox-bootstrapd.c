@@ -29,6 +29,7 @@
 // system provided
 #include <sys/stat.h>
 #include <unistd.h>
+#include <signal.h>
 
 // C
 #include <stdio.h>
@@ -214,9 +215,58 @@ static void toxcore_logger_callback(void *context, Logger_Level level, const cha
     log_write(log_level, "%s:%d(%s) %s\n", file, line, func, message);
 }
 
+// Global resources:
+
+Logger *logger = nullptr;
+Mono_Time *mono_time = nullptr;
+
+Networking_Core *net = nullptr;
+DHT *dht = nullptr;
+TCP_Server *tcp_server = nullptr;
+Onion *onion = nullptr;
+Onion_Announce *onion_a = nullptr;
+
+// Catch signal and free all resources
+//  so valgrind can report memleaks correctly
+
+void signal_handler(int sig_num)
+{
+    if (logger) {
+        logger_kill(logger);
+        logger = nullptr;
+    }
+    if (mono_time) {
+        mono_time_free(mono_time);
+        mono_time = nullptr;
+    }
+    if (net) {
+        kill_networking(net);
+        net = nullptr;
+    }
+    if (dht) {
+        kill_dht(dht);
+        dht = nullptr;
+    }
+    if (tcp_server) {
+        kill_TCP_server(tcp_server);
+        tcp_server = nullptr;
+    }
+    if (onion) {
+        kill_onion(onion);
+        onion = nullptr;
+    }
+    if (onion_a) {
+        kill_onion_announce(onion_a);
+        onion_a = nullptr;
+    }
+
+    exit(EXIT_SUCCESS);
+}
+
 int main(int argc, char *argv[])
 {
     umask(077);
+    signal(SIGINT, signal_handler);
     char *cfg_file_path;
     LOG_BACKEND log_backend;
     bool run_in_foreground;
@@ -266,13 +316,15 @@ int main(int argc, char *argv[])
     IP ip;
     ip_init(&ip, enable_ipv6);
 
-    Logger *logger = logger_new();
+    // Init logger
+    logger = logger_new();
 
     if (MIN_LOGGER_LEVEL == LOGGER_LEVEL_TRACE || MIN_LOGGER_LEVEL == LOGGER_LEVEL_DEBUG) {
         logger_callback_log(logger, toxcore_logger_callback, nullptr, nullptr);
     }
 
-    Networking_Core *net = new_networking(logger, ip, port);
+    // Init networking core
+    net = new_networking(logger, ip, port);
 
     if (net == nullptr) {
         if (enable_ipv6 && enable_ipv4_fallback) {
@@ -293,7 +345,8 @@ int main(int argc, char *argv[])
         }
     }
 
-    Mono_Time *const mono_time = mono_time_new();
+    // Init mono_time
+    mono_time = mono_time_new();
 
     if (mono_time == nullptr) {
         log_write(LOG_LEVEL_ERROR, "Couldn't initialize monotonic timer. Exiting.\n");
@@ -303,7 +356,8 @@ int main(int argc, char *argv[])
 
     mono_time_update(mono_time);
 
-    DHT *const dht = new_dht(logger, mono_time, net, true);
+    // Init DHT
+    dht = new_dht(logger, mono_time, net, true);
 
     if (dht == nullptr) {
         log_write(LOG_LEVEL_ERROR, "Couldn't initialize Tox DHT instance. Exiting.\n");
@@ -312,8 +366,10 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    Onion *onion = new_onion(mono_time, dht);
-    Onion_Announce *onion_a = new_onion_announce(mono_time, dht);
+    // Init onion
+    onion = new_onion(mono_time, dht);
+    // Init onion_announce
+    onion_a = new_onion_announce(mono_time, dht);
 
     if (!(onion && onion_a)) {
         log_write(LOG_LEVEL_ERROR, "Couldn't initialize Tox Onion. Exiting.\n");
@@ -346,8 +402,7 @@ int main(int argc, char *argv[])
 
     free(keys_file_path);
 
-    TCP_Server *tcp_server = nullptr;
-
+    // Init TCP relay
     if (enable_tcp_relay) {
         if (tcp_relay_port_count == 0) {
             log_write(LOG_LEVEL_ERROR, "No TCP relay ports read. Exiting.\n");
