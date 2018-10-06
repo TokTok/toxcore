@@ -87,6 +87,8 @@ travis_script() {
 
   other/analysis/check_logger_levels
 
+  cat /etc/hosts
+
   cmake -B_build -H. \
     -DCMAKE_C_FLAGS="$C_FLAGS" \
     -DCMAKE_CXX_FLAGS="$CXX_FLAGS" \
