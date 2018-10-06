@@ -371,16 +371,14 @@ unit_test(toxcore util)
 #
 ################################################################################
 
-option(AUTOTEST "Enable Automated regression tests" OFF)
-if(AUTOTEST)
-  add_library(misc_tools
-    testing/misc_tools.c
-    testing/misc_tools.h)
-  target_link_modules(misc_tools toxcore)
+add_library(misc_tools
+  testing/misc_tools.c
+  testing/misc_tools.h)
+target_link_modules(misc_tools toxcore)
 
-  set(TEST_TIMEOUT_SECONDS "" CACHE STRING "Limit runtime of each test to the number of seconds specified")
+set(TEST_TIMEOUT_SECONDS "" CACHE STRING "Limit runtime of each test to the number of seconds specified")
 
-  if(ANDROID_CPU_FEATURES)
+if(ANDROID_CPU_FEATURES)
     # We need to compile cpufeatures.c as many times as there are executables,
     # because libvpx doesn't include it although it depends on it. We can't get
     # the link ordering right in cmake, so we need to compile the cpufeatures
@@ -388,10 +386,12 @@ if(AUTOTEST)
     #
     # The alternative is to #include the library in every main file, but I
     # (@iphydf) felt that this solution was cleaner.
-    add_definitions(-DANDROID_CPU_FEATURES="${ANDROID_CPU_FEATURES}")
-    set(CPUFEATURES other/cpufeatures.c)
-  endif()
+  add_definitions(-DANDROID_CPU_FEATURES="${ANDROID_CPU_FEATURES}")
+  set(CPUFEATURES other/cpufeatures.c)
+endif()
 
+option(AUTOTEST "Enable Automated regression tests" OFF)
+if(AUTOTEST)
   function(auto_test target)
     if(NOT (MSVC AND ARGV1 STREQUAL "MSVC_DONT_BUILD"))
       add_executable(auto_${target}_test ${CPUFEATURES}
