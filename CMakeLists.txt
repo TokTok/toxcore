@@ -93,7 +93,7 @@ else()
   message(STATUS "Supported C++ compiler features = ${CMAKE_CXX_COMPILE_FEATURES}")
 endif()
 
-option(TRACE "Enable DEBUG level logging (default)" ON)
+option(DEBUG "Enable DEBUG level logging (default)" ON)
 if(DEBUG)
   set(MIN_LOGGER_LEVEL DEBUG)
 endif()
@@ -371,81 +371,84 @@ unit_test(toxcore util)
 #
 ################################################################################
 
-add_library(misc_tools
-  testing/misc_tools.c
-  testing/misc_tools.h)
-target_link_modules(misc_tools toxcore)
+option(AUTOTEST "Enable Automated regression tests" OFF)
+if(AUTOTEST)
+  add_library(misc_tools
+    testing/misc_tools.c
+    testing/misc_tools.h)
+  target_link_modules(misc_tools toxcore)
 
-set(TEST_TIMEOUT_SECONDS "" CACHE STRING "Limit runtime of each test to the number of seconds specified")
+  set(TEST_TIMEOUT_SECONDS "" CACHE STRING "Limit runtime of each test to the number of seconds specified")
 
-if(ANDROID_CPU_FEATURES)
-  # We need to compile cpufeatures.c as many times as there are executables,
-  # because libvpx doesn't include it although it depends on it. We can't get
-  # the link ordering right in cmake, so we need to compile the cpufeatures
-  # library into every binary explicitly.
-  #
-  # The alternative is to #include the library in every main file, but I
-  # (@iphydf) felt that this solution was cleaner.
-  add_definitions(-DANDROID_CPU_FEATURES="${ANDROID_CPU_FEATURES}")
-  set(CPUFEATURES other/cpufeatures.c)
-endif()
-
-function(auto_test target)
-  if(NOT (MSVC AND ARGV1 STREQUAL "MSVC_DONT_BUILD"))
-    add_executable(auto_${target}_test ${CPUFEATURES}
-      auto_tests/${target}_test.c)
-    target_link_modules(auto_${target}_test toxcore misc_tools)
-    if(NOT ARGV1 STREQUAL "DONT_RUN")
-      add_test(NAME ${target} COMMAND ${CROSSCOMPILING_EMULATOR} auto_${target}_test)
-      set_tests_properties(${target} PROPERTIES TIMEOUT "${TEST_TIMEOUT_SECONDS}")
-      set_property(TEST ${target} PROPERTY ENVIRONMENT "LLVM_PROFILE_FILE=${target}.profraw")
-    endif()
+  if(ANDROID_CPU_FEATURES)
+    # We need to compile cpufeatures.c as many times as there are executables,
+    # because libvpx doesn't include it although it depends on it. We can't get
+    # the link ordering right in cmake, so we need to compile the cpufeatures
+    # library into every binary explicitly.
+    #
+    # The alternative is to #include the library in every main file, but I
+    # (@iphydf) felt that this solution was cleaner.
+    add_definitions(-DANDROID_CPU_FEATURES="${ANDROID_CPU_FEATURES}")
+    set(CPUFEATURES other/cpufeatures.c)
   endif()
-endfunction()
 
-auto_test(TCP)
-auto_test(bootstrap)
-auto_test(conference)
-auto_test(conference_double_invite)
-auto_test(conference_peer_nick)
-auto_test(conference_simple)
-auto_test(conference_two)
-auto_test(crypto                        MSVC_DONT_BUILD)
-auto_test(dht                           MSVC_DONT_BUILD)
-auto_test(encryptsave)
-auto_test(file_transfer)
-auto_test(file_saving)
-auto_test(friend_connection)
-auto_test(friend_request)
-auto_test(invalid_tcp_proxy)
-auto_test(invalid_udp_proxy)
-auto_test(lan_discovery)
-auto_test(lossless_packet)
-auto_test(lossy_packet)
-auto_test(messenger                     MSVC_DONT_BUILD)
-auto_test(network)
-auto_test(onion)
-auto_test(overflow_recvq)
-auto_test(overflow_sendq)
-auto_test(reconnect)
-auto_test(save_friend)
-auto_test(save_load)
-auto_test(send_message)
-auto_test(set_name)
-auto_test(set_status_message)
-auto_test(skeleton)
-auto_test(tcp_relay)
-auto_test(tox_many)
-auto_test(tox_many_tcp)
-auto_test(tox_one)
-auto_test(tox_strncasecmp)
-auto_test(typing)
-auto_test(version)
-auto_test(save_compatibility)
+  function(auto_test target)
+    if(NOT (MSVC AND ARGV1 STREQUAL "MSVC_DONT_BUILD"))
+      add_executable(auto_${target}_test ${CPUFEATURES}
+        auto_tests/${target}_test.c)
+      target_link_modules(auto_${target}_test toxcore misc_tools)
+      if(NOT ARGV1 STREQUAL "DONT_RUN")
+        add_test(NAME ${target} COMMAND ${CROSSCOMPILING_EMULATOR} auto_${target}_test)
+        set_tests_properties(${target} PROPERTIES TIMEOUT "${TEST_TIMEOUT_SECONDS}")
+        set_property(TEST ${target} PROPERTY ENVIRONMENT "LLVM_PROFILE_FILE=${target}.profraw")
+      endif()
+    endif()
+  endfunction()
 
-if(BUILD_TOXAV)
-  auto_test(toxav_basic)
-  auto_test(toxav_many)
+  auto_test(TCP)
+  auto_test(bootstrap)
+  auto_test(conference)
+  auto_test(conference_double_invite)
+  auto_test(conference_peer_nick)
+  auto_test(conference_simple)
+  auto_test(conference_two)
+  auto_test(crypto                        MSVC_DONT_BUILD)
+  auto_test(dht                           MSVC_DONT_BUILD)
+  auto_test(encryptsave)
+  auto_test(file_transfer)
+  auto_test(file_saving)
+  auto_test(friend_connection)
+  auto_test(friend_request)
+  auto_test(invalid_tcp_proxy)
+  auto_test(invalid_udp_proxy)
+  auto_test(lan_discovery)
+  auto_test(lossless_packet)
+  auto_test(lossy_packet)
+  auto_test(messenger                     MSVC_DONT_BUILD)
+  auto_test(network)
+  auto_test(onion)
+  auto_test(overflow_recvq)
+  auto_test(overflow_sendq)
+  auto_test(reconnect)
+  auto_test(save_friend)
+  auto_test(save_load)
+  auto_test(send_message)
+  auto_test(set_name)
+  auto_test(set_status_message)
+  auto_test(skeleton)
+  auto_test(tcp_relay)
+  auto_test(tox_many)
+  auto_test(tox_many_tcp)
+  auto_test(tox_one)
+  auto_test(tox_strncasecmp)
+  auto_test(typing)
+  auto_test(version)
+  auto_test(save_compatibility)
+
+  if(BUILD_TOXAV)
+    auto_test(toxav_basic)
+    auto_test(toxav_many)
+  endif()
 endif()
 
 ################################################################################
