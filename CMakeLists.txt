@@ -450,7 +450,6 @@ if(BUILD_TOXAV)
   auto_test(toxav_many)
 endif()
 
-
 ################################################################################
 #
 # :: Bootstrap daemon
