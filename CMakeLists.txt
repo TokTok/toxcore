@@ -93,7 +93,7 @@ else()
   message(STATUS "Supported C++ compiler features = ${CMAKE_CXX_COMPILE_FEATURES}")
 endif()
 
-option(TRACE "Enable DEBUG level logging (default)" ON)
+option(DEBUG "Enable DEBUG level logging (default)" ON)
 if(DEBUG)
   set(MIN_LOGGER_LEVEL DEBUG)
 endif()
@@ -390,8 +390,10 @@ if(ANDROID_CPU_FEATURES)
   set(CPUFEATURES other/cpufeatures.c)
 endif()
 
+option(AUTOTEST "Enable Testing" OFF)
+
 function(auto_test target)
-  if(NOT (MSVC AND ARGV1 STREQUAL "MSVC_DONT_BUILD"))
+  if(AUTOTEST AND NOT (MSVC AND ARGV1 STREQUAL "MSVC_DONT_BUILD"))
     add_executable(auto_${target}_test ${CPUFEATURES}
       auto_tests/${target}_test.c)
     target_link_modules(auto_${target}_test toxcore misc_tools)
