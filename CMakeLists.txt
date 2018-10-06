@@ -379,32 +379,32 @@ target_link_modules(misc_tools toxcore)
 set(TEST_TIMEOUT_SECONDS "" CACHE STRING "Limit runtime of each test to the number of seconds specified")
 
 if(ANDROID_CPU_FEATURES)
-    # We need to compile cpufeatures.c as many times as there are executables,
-    # because libvpx doesn't include it although it depends on it. We can't get
-    # the link ordering right in cmake, so we need to compile the cpufeatures
-    # library into every binary explicitly.
-    #
-    # The alternative is to #include the library in every main file, but I
-    # (@iphydf) felt that this solution was cleaner.
+  # We need to compile cpufeatures.c as many times as there are executables,
+  # because libvpx doesn't include it although it depends on it. We can't get
+  # the link ordering right in cmake, so we need to compile the cpufeatures
+  # library into every binary explicitly.
+  #
+  # The alternative is to #include the library in every main file, but I
+  # (@iphydf) felt that this solution was cleaner.
   add_definitions(-DANDROID_CPU_FEATURES="${ANDROID_CPU_FEATURES}")
   set(CPUFEATURES other/cpufeatures.c)
 endif()
 
+function(auto_test target)
+  if(NOT (MSVC AND ARGV1 STREQUAL "MSVC_DONT_BUILD"))
+    add_executable(auto_${target}_test ${CPUFEATURES}
+      auto_tests/${target}_test.c)
+    target_link_modules(auto_${target}_test toxcore misc_tools)
+    if(NOT ARGV1 STREQUAL "DONT_RUN")
+      add_test(NAME ${target} COMMAND ${CROSSCOMPILING_EMULATOR} auto_${target}_test)
+      set_tests_properties(${target} PROPERTIES TIMEOUT "${TEST_TIMEOUT_SECONDS}")
+      set_property(TEST ${target} PROPERTY ENVIRONMENT "LLVM_PROFILE_FILE=${target}.profraw")
+    endif()
+  endif()
+endfunction()
+
 option(AUTOTEST "Enable Automated regression tests" OFF)
 if(AUTOTEST)
-  function(auto_test target)
-    if(NOT (MSVC AND ARGV1 STREQUAL "MSVC_DONT_BUILD"))
-      add_executable(auto_${target}_test ${CPUFEATURES}
-        auto_tests/${target}_test.c)
-      target_link_modules(auto_${target}_test toxcore misc_tools)
-      if(NOT ARGV1 STREQUAL "DONT_RUN")
-        add_test(NAME ${target} COMMAND ${CROSSCOMPILING_EMULATOR} auto_${target}_test)
-        set_tests_properties(${target} PROPERTIES TIMEOUT "${TEST_TIMEOUT_SECONDS}")
-        set_property(TEST ${target} PROPERTY ENVIRONMENT "LLVM_PROFILE_FILE=${target}.profraw")
-      endif()
-    endif()
-  endfunction()
-
   auto_test(TCP)
   auto_test(bootstrap)
   auto_test(conference)
