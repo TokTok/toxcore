@@ -3151,7 +3151,8 @@ static uint8_t *groups_save(const Messenger *m, uint8_t *data)
     uint32_t num = 0;
     GC_Session *c = m->group_handler;
 
-    data = state_write_section_header(data, MESSENGER_STATE_COOKIE_TYPE, saved_groups_size(m), MESSENGER_STATE_TYPE_FRIENDS);
+    data = state_write_section_header(data, MESSENGER_STATE_COOKIE_TYPE, saved_groups_size(m),
+                                      MESSENGER_STATE_TYPE_FRIENDS);
 
     for (i = 0; i < c->num_chats; ++i) {
         if (c->chats[i].connection_state > CS_NONE && c->chats[i].connection_state < CS_INVALID) {
