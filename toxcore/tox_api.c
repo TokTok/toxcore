@@ -45,7 +45,6 @@ void tox_options_set_##ns##name(struct Tox_Options *options, type name) \
 ACCESSORS(bool,, ipv6_enabled)
 ACCESSORS(bool,, udp_enabled)
 ACCESSORS(TOX_PROXY_TYPE, proxy_, type)
-ACCESSORS(const char *, proxy_, host)
 ACCESSORS(uint16_t, proxy_, port)
 ACCESSORS(uint16_t,, start_port)
 ACCESSORS(uint16_t,, end_port)
@@ -57,6 +56,20 @@ ACCESSORS(tox_log_cb *, log_, callback)
 ACCESSORS(void *, log_, user_data)
 ACCESSORS(bool,, local_discovery_enabled)
 
+const char * tox_options_get_proxy_host(const struct Tox_Options *options)
+{
+    return options->proxy_host;
+}
+
+void tox_options_set_proxy_host(struct Tox_Options *options, const char *host)
+{
+    const size_t hostname_len = strlen(host);
+    options->proxy_host = (char *) calloc(hostname_len + 1, sizeof(char));
+    if(options->proxy_host) {
+        memcpy(options->proxy_host, host, hostname_len);
+    }
+}
+
 const uint8_t *tox_options_get_savedata_data(const struct Tox_Options *options)
 {
     return options->savedata_data;
@@ -64,7 +77,13 @@ const uint8_t *tox_options_get_savedata_data(const struct Tox_Options *options)
 
 void tox_options_set_savedata_data(struct Tox_Options *options, const uint8_t *data, size_t length)
 {
-    options->savedata_data = data;
+    options->savedata_data = (uint8_t *) malloc(length);
+    if(!options->savedata_data) {
+        options->savedata_length = 0;
+        return;
+    }
+
+    memcpy(options->savedata_data, data, length);
     options->savedata_length = length;
 }
 
@@ -97,5 +116,9 @@ struct Tox_Options *tox_options_new(TOX_ERR_OPTIONS_NEW *error)
 
 void tox_options_free(struct Tox_Options *options)
 {
+    if(options) {
+        free(options->savedata_data);
+        free(options->proxy_host);
+    }
     free(options);
 }
