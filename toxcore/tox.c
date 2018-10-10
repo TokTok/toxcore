@@ -365,12 +365,12 @@ static int tox_load(Tox *tox, const uint8_t *data, uint32_t length)
     memcpy(data32, data, sizeof(uint32_t));
     lendian_bytes_to_host32(data32 + 1, data + sizeof(uint32_t));
 
-    if (!data32[0] && (data32[1] == STATE_COOKIE_GLOBAL)) {
-        return state_load(tox->m->log, state_load_callback, tox, data + cookie_len,
-                          length - cookie_len, TOP_STATE_COOKIE_TYPE);
+    if (data32[0] != 0 || data32[1] != STATE_COOKIE_GLOBAL) {
+        return -1;
     }
 
-    return -1;
+    return state_load(tox->m->log, state_load_callback, tox, data + cookie_len,
+                      length - cookie_len, TOP_STATE_COOKIE_TYPE);
 }
 
 
@@ -603,22 +603,24 @@ size_t tox_get_savedata_size(const Tox *tox)
 
 void tox_get_savedata(const Tox *tox, uint8_t *data)
 {
-    if (data) {
-        memset(data, 0, tox_get_savedata_size(tox));
-
-        const uint32_t size32 = sizeof(uint32_t);
-
-        // write cookie
-        memset(data, 0, size32);
-        data += size32;
-        host_to_lendian_bytes32(data, STATE_COOKIE_GLOBAL);
-        data += size32;
-
-        const Messenger *m = tox->m;
-        data = messenger_save(m, data);
-        data = conferences_save(m->conferences_object, data);
-        end_save(data);
+    if (data == nullptr) {
+        return;
     }
+
+    memset(data, 0, tox_get_savedata_size(tox));
+
+    const uint32_t size32 = sizeof(uint32_t);
+
+    // write cookie
+    memset(data, 0, size32);
+    data += size32;
+    host_to_lendian_bytes32(data, STATE_COOKIE_GLOBAL);
+    data += size32;
+
+    const Messenger *m = tox->m;
+    data = messenger_save(m, data);
+    data = conferences_save(m->conferences_object, data);
+    end_save(data);
 }
 
 bool tox_bootstrap(Tox *tox, const char *host, uint16_t port, const uint8_t *public_key, Tox_Err_Bootstrap *error)
