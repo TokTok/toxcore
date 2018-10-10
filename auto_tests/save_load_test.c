@@ -64,7 +64,7 @@ static void reload_tox(Tox **tox, struct Tox_Options *const in_opts, void *user_
     tox_get_savedata(*tox, buffer + extra);
     tox_kill(*tox);
 
-    for (size_t i = 0; i < extra; i++) {
+    for (size_t i = 0; i < extra; ++i) {
         ck_assert_msg(buffer[i] == 0xCD, "Buffer underwritten from tox_get_savedata() @%u", (unsigned)i);
         ck_assert_msg(buffer[extra + save_size1 + i] == 0xCD, "Buffer overwritten from tox_get_savedata() @%u", (unsigned)i);
     }
