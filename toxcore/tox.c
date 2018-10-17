@@ -338,7 +338,7 @@ static State_Load_Status state_load_callback(void *outer, const uint8_t *data, u
         return status;
     }
 
-    if (type == TOP_STATE_TYPE_END) {
+    if (type == STATE_TYPE_END) {
         if (length != 0) {
             return STATE_LOAD_STATUS_ERROR;
         }
@@ -370,7 +370,7 @@ static int tox_load(Tox *tox, const uint8_t *data, uint32_t length)
     }
 
     return state_load(tox->m->log, state_load_callback, tox, data + cookie_len,
-                      length - cookie_len, TOP_STATE_COOKIE_TYPE);
+                      length - cookie_len, STATE_COOKIE_TYPE);
 }
 
 
@@ -589,7 +589,7 @@ static uint32_t end_size(void)
 
 static void end_save(uint8_t *data)
 {
-    state_write_section_header(data, TOP_STATE_COOKIE_TYPE, 0, TOP_STATE_TYPE_END);
+    state_write_section_header(data, STATE_COOKIE_TYPE, 0, STATE_TYPE_END);
 }
 
 size_t tox_get_savedata_size(const Tox *tox)

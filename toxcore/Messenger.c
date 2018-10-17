@@ -2877,7 +2877,7 @@ static uint32_t m_state_plugins_size(const Messenger *m)
  * returns true on success
  * returns false on failure
  */
-bool m_register_state_plugin(Messenger *m, Top_State_Type type, m_state_size_cb size_callback,
+bool m_register_state_plugin(Messenger *m, State_Type type, m_state_size_cb size_callback,
                              m_state_load_cb load_callback,
                              m_state_save_cb save_callback)
 {
@@ -2900,7 +2900,7 @@ bool m_register_state_plugin(Messenger *m, Top_State_Type type, m_state_size_cb 
     return true;
 }
 
-static uint32_t m_plugin_size(const Messenger *m, Top_State_Type type)
+static uint32_t m_plugin_size(const Messenger *m, State_Type type)
 {
     for (uint8_t i = 0; i < m->options.state_plugins_length; ++i) {
         const Messenger_State_Plugin plugin = m->options.state_plugins[i];
@@ -2940,7 +2940,7 @@ static uint32_t nospam_keys_size(const Messenger *m)
 
 static State_Load_Status load_nospam_keys(Messenger *m, const uint8_t *data, uint32_t length)
 {
-    if (length != m_plugin_size(m, TOP_STATE_TYPE_NOSPAMKEYS)) {
+    if (length != m_plugin_size(m, STATE_TYPE_NOSPAMKEYS)) {
         return STATE_LOAD_STATUS_ERROR;
     }
 
@@ -2958,9 +2958,9 @@ static State_Load_Status load_nospam_keys(Messenger *m, const uint8_t *data, uin
 
 static uint8_t *save_nospam_keys(const Messenger *m, uint8_t *data)
 {
-    const uint32_t len = m_plugin_size(m, TOP_STATE_TYPE_NOSPAMKEYS);
+    const uint32_t len = m_plugin_size(m, STATE_TYPE_NOSPAMKEYS);
     assert(sizeof(get_nospam(m->fr)) == sizeof(uint32_t));
-    data = state_write_section_header(data, TOP_STATE_COOKIE_TYPE, len, TOP_STATE_TYPE_NOSPAMKEYS);
+    data = state_write_section_header(data, STATE_COOKIE_TYPE, len, STATE_TYPE_NOSPAMKEYS);
     uint32_t nospam = get_nospam(m->fr);
     host_to_lendian_bytes32(data, nospam);
     save_keys(m->net_crypto, data + sizeof(uint32_t));
@@ -2976,8 +2976,8 @@ static uint32_t m_dht_size(const Messenger *m)
 
 static uint8_t *save_dht(const Messenger *m, uint8_t *data)
 {
-    const uint32_t len = m_plugin_size(m, TOP_STATE_TYPE_DHT);
-    data = state_write_section_header(data, TOP_STATE_COOKIE_TYPE, len, TOP_STATE_TYPE_DHT);
+    const uint32_t len = m_plugin_size(m, STATE_TYPE_DHT);
+    data = state_write_section_header(data, STATE_COOKIE_TYPE, len, STATE_TYPE_DHT);
     dht_save(m->dht, data);
     data += len;
     return data;
@@ -2997,8 +2997,8 @@ static uint32_t saved_friendslist_size(const Messenger *m)
 
 static uint8_t *friends_list_save(const Messenger *m, uint8_t *data)
 {
-    const uint32_t len = m_plugin_size(m, TOP_STATE_TYPE_FRIENDS);
-    data = state_write_section_header(data, TOP_STATE_COOKIE_TYPE, len, TOP_STATE_TYPE_FRIENDS);
+    const uint32_t len = m_plugin_size(m, STATE_TYPE_FRIENDS);
+    data = state_write_section_header(data, STATE_COOKIE_TYPE, len, STATE_TYPE_FRIENDS);
 
     uint32_t num = 0;
     uint8_t *cur_data = data;
@@ -3103,8 +3103,8 @@ static uint32_t name_size(const Messenger *m)
 
 static uint8_t *save_name(const Messenger *m, uint8_t *data)
 {
-    const uint32_t len = m_plugin_size(m, TOP_STATE_TYPE_NAME);
-    data = state_write_section_header(data, TOP_STATE_COOKIE_TYPE, len, TOP_STATE_TYPE_NAME);
+    const uint32_t len = m_plugin_size(m, STATE_TYPE_NAME);
+    data = state_write_section_header(data, STATE_COOKIE_TYPE, len, STATE_TYPE_NAME);
     memcpy(data, m->name, len);
     data += len;
     return data;
@@ -3127,8 +3127,8 @@ static uint32_t status_message_size(const Messenger *m)
 
 static uint8_t *save_status_message(const Messenger *m, uint8_t *data)
 {
-    const uint32_t len = m_plugin_size(m, TOP_STATE_TYPE_STATUSMESSAGE);
-    data = state_write_section_header(data, TOP_STATE_COOKIE_TYPE, len, TOP_STATE_TYPE_STATUSMESSAGE);
+    const uint32_t len = m_plugin_size(m, STATE_TYPE_STATUSMESSAGE);
+    data = state_write_section_header(data, STATE_COOKIE_TYPE, len, STATE_TYPE_STATUSMESSAGE);
     memcpy(data, m->statusmessage, len);
     data += len;
     return data;
@@ -3151,8 +3151,8 @@ static uint32_t status_size(const Messenger *m)
 
 static uint8_t *save_status(const Messenger *m, uint8_t *data)
 {
-    const uint32_t len = m_plugin_size(m, TOP_STATE_TYPE_STATUS);
-    data = state_write_section_header(data, TOP_STATE_COOKIE_TYPE, len, TOP_STATE_TYPE_STATUS);
+    const uint32_t len = m_plugin_size(m, STATE_TYPE_STATUS);
+    data = state_write_section_header(data, STATE_COOKIE_TYPE, len, STATE_TYPE_STATUS);
     *data = m->userstatus;
     data += len;
     return data;
@@ -3177,7 +3177,7 @@ static uint8_t *save_tcp_relays(const Messenger *m, uint8_t *data)
 {
     Node_format relays[NUM_SAVED_TCP_RELAYS];
     uint8_t *temp_data = data;
-    data = state_write_section_header(temp_data, TOP_STATE_COOKIE_TYPE, 0, TOP_STATE_TYPE_TCP_RELAY);
+    data = state_write_section_header(temp_data, STATE_COOKIE_TYPE, 0, STATE_TYPE_TCP_RELAY);
     uint32_t num = copy_connected_tcp_relays(m->net_crypto, relays, NUM_SAVED_TCP_RELAYS);
 
     if (m->num_loaded_relays > 0) {
@@ -3189,7 +3189,7 @@ static uint8_t *save_tcp_relays(const Messenger *m, uint8_t *data)
 
     if (l > 0) {
         const uint32_t len = l;
-        data = state_write_section_header(temp_data, TOP_STATE_COOKIE_TYPE, len, TOP_STATE_TYPE_TCP_RELAY);
+        data = state_write_section_header(temp_data, STATE_COOKIE_TYPE, len, STATE_TYPE_TCP_RELAY);
         data += len;
     }
 
@@ -3216,14 +3216,14 @@ static uint8_t *save_path_nodes(const Messenger *m, uint8_t *data)
 {
     Node_format nodes[NUM_SAVED_PATH_NODES];
     uint8_t *temp_data = data;
-    data = state_write_section_header(data, TOP_STATE_COOKIE_TYPE, 0, TOP_STATE_TYPE_PATH_NODE);
+    data = state_write_section_header(data, STATE_COOKIE_TYPE, 0, STATE_TYPE_PATH_NODE);
     memset(nodes, 0, sizeof(nodes));
     const unsigned int num = onion_backup_nodes(m->onion_c, nodes, NUM_SAVED_PATH_NODES);
     const int l = pack_nodes(data, NUM_SAVED_PATH_NODES * packed_node_size(net_family_tcp_ipv6), nodes, num);
 
     if (l > 0) {
         const uint32_t len = l;
-        data = state_write_section_header(temp_data, TOP_STATE_COOKIE_TYPE, len, TOP_STATE_TYPE_PATH_NODE);
+        data = state_write_section_header(temp_data, STATE_COOKIE_TYPE, len, STATE_TYPE_PATH_NODE);
         data += len;
     }
 
@@ -3247,15 +3247,15 @@ static State_Load_Status load_path_nodes(Messenger *m, const uint8_t *data, uint
 
 static void m_register_default_plugins(Messenger *m)
 {
-    m_register_state_plugin(m, TOP_STATE_TYPE_NOSPAMKEYS, nospam_keys_size, load_nospam_keys, save_nospam_keys);
-    m_register_state_plugin(m, TOP_STATE_TYPE_DHT, m_dht_size, m_dht_load, save_dht);
-    m_register_state_plugin(m, TOP_STATE_TYPE_FRIENDS, saved_friendslist_size, friends_list_load, friends_list_save);
-    m_register_state_plugin(m, TOP_STATE_TYPE_NAME, name_size, load_name, save_name);
-    m_register_state_plugin(m, TOP_STATE_TYPE_STATUSMESSAGE, status_message_size, load_status_message,
+    m_register_state_plugin(m, STATE_TYPE_NOSPAMKEYS, nospam_keys_size, load_nospam_keys, save_nospam_keys);
+    m_register_state_plugin(m, STATE_TYPE_DHT, m_dht_size, m_dht_load, save_dht);
+    m_register_state_plugin(m, STATE_TYPE_FRIENDS, saved_friendslist_size, friends_list_load, friends_list_save);
+    m_register_state_plugin(m, STATE_TYPE_NAME, name_size, load_name, save_name);
+    m_register_state_plugin(m, STATE_TYPE_STATUSMESSAGE, status_message_size, load_status_message,
                             save_status_message);
-    m_register_state_plugin(m, TOP_STATE_TYPE_STATUS, status_size, load_status, save_status);
-    m_register_state_plugin(m, TOP_STATE_TYPE_TCP_RELAY, tcp_relay_size, load_tcp_relays, save_tcp_relays);
-    m_register_state_plugin(m, TOP_STATE_TYPE_PATH_NODE, path_node_size, load_path_nodes, save_path_nodes);
+    m_register_state_plugin(m, STATE_TYPE_STATUS, status_size, load_status, save_status);
+    m_register_state_plugin(m, STATE_TYPE_TCP_RELAY, tcp_relay_size, load_tcp_relays, save_tcp_relays);
+    m_register_state_plugin(m, STATE_TYPE_PATH_NODE, path_node_size, load_path_nodes, save_path_nodes);
 }
 
 bool messenger_load_state_section(Messenger *m, const uint8_t *data, uint32_t length, uint16_t type,

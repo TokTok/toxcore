@@ -63,7 +63,7 @@ typedef uint8_t *m_state_save_cb(const Messenger *m, uint8_t *data);
 typedef State_Load_Status m_state_load_cb(Messenger *m, const uint8_t *data, uint32_t length);
 
 typedef struct Messenger_State_Plugin {
-    Top_State_Type type;
+    State_Type type;
     m_state_size_cb *size;
     m_state_save_cb *save;
     m_state_load_cb *load;
@@ -785,7 +785,7 @@ uint32_t messenger_run_interval(const Messenger *m);
  * returns true on success
  * returns false on error
  */
-bool m_register_state_plugin(Messenger *m, Top_State_Type type, m_state_size_cb size_callback,
+bool m_register_state_plugin(Messenger *m, State_Type type, m_state_size_cb size_callback,
                              m_state_load_cb load_callback, m_state_save_cb save_callback);
 
 /* return size of the messenger data (for saving). */
