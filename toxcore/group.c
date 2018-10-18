@@ -2927,7 +2927,7 @@ static uint8_t *save_peer(const Group_Peer *peer, uint8_t *data)
     return data;
 }
 
-#define SAVED_CONF_SIZE_CONSTANT (sizeof(uint16_t) + 1 + GROUP_ID_LENGTH + sizeof(uint32_t) \
+#define SAVED_CONF_SIZE_CONSTANT (1 + GROUP_ID_LENGTH + sizeof(uint32_t) \
       + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint32_t) + 1)
 
 static uint32_t saved_conf_size(const Group_c *g)
@@ -2950,11 +2950,8 @@ static uint32_t saved_conf_size(const Group_c *g)
     return len;
 }
 
-static uint8_t *save_conf(const Group_c *g, uint16_t groupnumber, uint8_t *data)
+static uint8_t *save_conf(const Group_c *g, uint8_t *data)
 {
-    host_to_lendian_bytes16(data, groupnumber);
-    data += sizeof(uint16_t);
-
     *data = g->type;
     ++data;
 
@@ -3031,7 +3028,7 @@ uint8_t *conferences_save(const Group_Chats *g_c, uint8_t *data)
             continue;
         }
 
-        data = save_conf(g, i, data);
+        data = save_conf(g, data);
     }
 
     return data;
@@ -3042,28 +3039,13 @@ static State_Load_Status load_conferences(Group_Chats *g_c, const uint8_t *data,
     const uint8_t *init_data = data;
 
     while (length >= (uint32_t)(data - init_data) + SAVED_CONF_SIZE_CONSTANT) {
-        uint16_t groupnumber;
-        lendian_bytes_to_host16(&groupnumber, data);
-        data += sizeof(uint16_t);
+        const int groupnumber = create_group_chat(g_c);
 
-        if (groupnumber == UINT16_MAX) {
+        if (groupnumber == -1) {
             return STATE_LOAD_STATUS_ERROR;
         }
 
-        if (groupnumber >= g_c->num_chats) {
-            if (!realloc_conferences(g_c, groupnumber + 1)) {
-                return STATE_LOAD_STATUS_ERROR;
-            }
-
-            for (uint16_t i = g_c->num_chats; i < groupnumber; ++i) {
-                setup_conference(&g_c->chats[groupnumber]);
-            }
-
-            g_c->num_chats = groupnumber + 1;
-        }
-
         Group_c *g = &g_c->chats[groupnumber];
-        setup_conference(g);
 
         g->type = *data;
         ++data;
