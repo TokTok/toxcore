@@ -134,25 +134,6 @@ int main(int argc, char *argv[])
         }
     }
 
-    /* Loading disabled, because loading is now handled by Tox rather than Messenger */
-#if 0
-    else {
-        FILE *file = fopen(argv[argvoffset + 1], "rb");
-
-        if (file == nullptr) {
-            printf("Failed to open \"%s\" - does it exist?\n", argv[argvoffset + 1]);
-            return 1;
-        }
-
-        int read;
-        uint8_t buffer[128000];
-        read = fread(buffer, 1, 128000, file);
-        printf("Messenger loaded: %i\n", messenger_load(m, buffer, read));
-        fclose(file);
-    }
-
-#endif
-
     m_callback_friendrequest(m, print_request);
     m_callback_friendmessage(m, print_message);
 
