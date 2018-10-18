@@ -3,7 +3,6 @@
 # cmake on Linux, and cmake on Windows 32 bit.
 #
 # For branch builds and cron builds (once a day), we build all the jobs. This
-# is achieved using the "if: type IN (push, api, cron)" fields in the matrix.
 
 language: c
 
@@ -63,36 +62,30 @@ matrix:
         # Clear bazel installation.
         - rm -rf $HOME/.cache/bazel/_bazel_$USER/install
     - stage: "Stage 1"
-      if: type IN (push, api, cron)
       env: JOB=cmake-win32
       services: [docker]
       install:       .travis/$JOB install
       script:        .travis/$JOB script
     - stage: "Stage 1"
-      if: type IN (push, api, cron)
       env: JOB=cmake-win64
       services: [docker]
       install:       .travis/$JOB install
       script:        .travis/$JOB script
     - stage: "Stage 1"
-      if: type IN (push, api, cron)
       env: JOB=cmake-freebsd
       sudo: required
       install:       .travis/$JOB-stage1 install
       script:        .travis/$JOB-stage1 script
     - stage: "Stage 1"
-      if: type IN (push, api, cron)
       env: JOB=cmake-osx
       os: osx
       install:       .travis/$JOB install
       script:        .travis/$JOB script
     - stage: "Stage 1"
-      if: type IN (push, api, cron)
       env: JOB=tox-bootstrapd-docker
       services: [docker]
       script:        .travis/$JOB
     - stage: "Stage 2"
-      if: type IN (push, api, cron)
       env: JOB=cmake-freebsd
       sudo: required
       install:       .travis/$JOB-stage2 install
