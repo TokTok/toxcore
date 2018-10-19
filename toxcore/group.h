@@ -56,37 +56,37 @@ typedef struct Group_Peer {
     void *object;
 } Group_Peer;
 
-#define DESIRED_CLOSE_CONNECTIONS 4
+#define DESIRED_CLOSEST 4
 #define MAX_GROUP_CONNECTIONS 16
 #define GROUP_ID_LENGTH CRYPTO_SYMMETRIC_KEY_SIZE
 
-typedef enum Groupchat_Close_Type {
-    GROUPCHAT_CLOSE_NONE,
-    GROUPCHAT_CLOSE_CONNECTION,
-    GROUPCHAT_CLOSE_ONLINE,
-} Groupchat_Close_Type;
+typedef enum Groupchat_Connection_Type {
+    GROUPCHAT_CONNECTION_NONE,
+    GROUPCHAT_CONNECTION_CONNECTING,
+    GROUPCHAT_CONNECTION_ONLINE,
+} Groupchat_Connection_Type;
 
-/* Connection is to one of the closest DESIRED_CLOSE_CONNECTIONS peers */
-#define GROUPCHAT_CLOSE_REASON_CLOSEST     (1 << 0)
+/* Connection is to one of the closest DESIRED_CLOSEST peers */
+#define GROUPCHAT_CONNECTION_REASON_CLOSEST     (1 << 0)
 
 /* Connection is to a peer we are introducing to the conference */
-#define GROUPCHAT_CLOSE_REASON_INTRODUCING (1 << 1)
+#define GROUPCHAT_CONNECTION_REASON_INTRODUCING (1 << 1)
 
 /* Connection is to a peer who is introducing us to the conference */
-#define GROUPCHAT_CLOSE_REASON_INTRODUCER  (1 << 2)
+#define GROUPCHAT_CONNECTION_REASON_INTRODUCER  (1 << 2)
 
-typedef struct Groupchat_Close {
-    uint8_t type; /* `GROUPCHAT_CLOSE_*` */
-    uint8_t reasons; /* bit field with flags `GROUPCHAT_CLOSE_REASON_*` */
+typedef struct Groupchat_Connection {
+    uint8_t type; /* `GROUPCHAT_CONNECTION_*` */
+    uint8_t reasons; /* bit field with flags `GROUPCHAT_CONNECTION_REASON_*` */
     uint32_t number;
     uint16_t group_number;
-} Groupchat_Close;
+} Groupchat_Connection;
 
-typedef struct Groupchat_Close_Connection {
+typedef struct Groupchat_Closest {
     uint8_t entry;
     uint8_t real_pk[CRYPTO_PUBLIC_KEY_SIZE];
     uint8_t temp_pk[CRYPTO_PUBLIC_KEY_SIZE];
-} Groupchat_Close_Connection;
+} Groupchat_Closest;
 
 typedef void peer_on_join_cb(void *object, uint32_t conference_number, uint32_t peer_number);
 typedef void peer_on_leave_cb(void *object, uint32_t conference_number, void *peer_object);
@@ -109,11 +109,10 @@ typedef struct Group_c {
 
     uint32_t maxfrozen;
 
-    /* TODO(zugz) rename close to something more accurate - "connected"? */
-    Groupchat_Close close[MAX_GROUP_CONNECTIONS];
+    Groupchat_Connection connections[MAX_GROUP_CONNECTIONS];
 
     uint8_t real_pk[CRYPTO_PUBLIC_KEY_SIZE];
-    Groupchat_Close_Connection closest_peers[DESIRED_CLOSE_CONNECTIONS];
+    Groupchat_Closest closest_peers[DESIRED_CLOSEST];
     uint8_t changed;
 
     uint8_t type;
