@@ -79,10 +79,10 @@ static void group_message_test(Tox **toxes, State *state)
     tox_self_set_name(toxes[0], (const uint8_t *)"a", 1, nullptr);
     tox_self_set_name(toxes[1], (const uint8_t *)"b", 1, nullptr);
 
-    tox_callback_group_invite(toxes[1], group_invite_handler, nullptr);
-    tox_callback_group_join_fail(toxes[1], group_join_fail_handler, nullptr);
-    tox_callback_group_peer_join(toxes[1], group_peer_join_handler, nullptr);
-    tox_callback_group_message(toxes[0], group_message_handler, nullptr);
+    tox_callback_group_invite(toxes[1], group_invite_handler);
+    tox_callback_group_join_fail(toxes[1], group_join_fail_handler);
+    tox_callback_group_peer_join(toxes[1], group_peer_join_handler);
+    tox_callback_group_message(toxes[0], group_message_handler);
 
     global_state_tox0 = &state[0];
     global_state_tox1 = &state[1];
