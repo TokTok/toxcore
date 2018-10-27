@@ -3311,7 +3311,7 @@ namespace group {
     /**
      * This event is triggered when a peer changes their nickname.
      */
-    event name {
+    event name const {
       /**
        * @param group_number The group number of the group the name change is intended for.
        * @param peer_id The ID of the peer who has changed their name.
@@ -3324,7 +3324,7 @@ namespace group {
     /**
      * This event is triggered when a peer changes their status.
      */
-    event status {
+    event status const {
       /**
        * @param group_number The group number of the group the status change is intended for.
        * @param peer_id The ID of the peer who has changed their status.
@@ -3421,7 +3421,7 @@ namespace group {
   /**
    * This event is triggered when a peer changes the group topic.
    */
-  event topic {
+  event topic const {
     /**
      * @param group_number The group number of the group the topic change is intended for.
      * @param peer_id The ID of the peer who changed the topic.
@@ -3490,7 +3490,7 @@ namespace group {
   /**
    * This event is triggered when the group founder changes the privacy state.
    */
-  event privacy_state {
+  event privacy_state const {
     /**
      * @param group_number The group number of the group the topic change is intended for.
      * @param privacy_state The new privacy state.
@@ -3515,7 +3515,7 @@ namespace group {
   /**
    * This event is triggered when the group founder changes the maximum peer limit.
    */
-  event peer_limit {
+  event peer_limit const {
     /**
      * @param group_number The group number of the group for which the peer limit has changed.
      * @param peer_limit The new peer limit for the group.
@@ -3552,7 +3552,7 @@ namespace group {
   /**
    * This event is triggered when the group founder changes the group password.
    */
-  event password {
+  event password const {
     /**
      * @param group_number The group number of the group for which the password has changed.
      * @param password The new group password.
@@ -3714,7 +3714,7 @@ namespace group {
   /**
    * This event is triggered when the client receives a group message.
    */
-  event message {
+  event message const {
     /**
      * @param group_number The group number of the group the message is intended for.
      * @param peer_id The ID of the peer who sent the message.
@@ -3728,7 +3728,7 @@ namespace group {
   /**
    * This event is triggered when the client receives a private message.
    */
-  event private_message {
+  event private_message const {
     /**
      * @param group_number The group number of the group the private message is intended for.
      * @param peer_id The ID of the peer who sent the private message.
@@ -3741,7 +3741,7 @@ namespace group {
   /**
    * This event is triggered when the client receives a custom packet.
    */
-  event custom_packet {
+  event custom_packet const {
     /**
      * @param group_number The group number of the group the custom packet is intended for.
      * @param peer_id The ID of the peer who sent the custom packet.
@@ -3824,7 +3824,7 @@ namespace group {
    * This event is triggered when the client receives a group invite from a friend. The client must store
    * invite_data which is used to join the group via tox_group_invite_accept.
    */
-  event invite {
+  event invite const {
     /**
      * @param friend_number The friend number of the contact who sent the invite.
      * @param invite_data The invite data.
@@ -3836,7 +3836,7 @@ namespace group {
   /**
    * This event is triggered when a peer other than self joins the group.
    */
-  event peer_join {
+  event peer_join const {
     /**
      * @param group_number The group number of the group in which a new peer has joined.
      * @param peer_id The permanent ID of the new peer. This id should not be relied on for
@@ -3848,7 +3848,7 @@ namespace group {
   /**
    * This event is triggered when a peer other than self exits the group.
    */
-  event peer_exit {
+  event peer_exit const {
     /**
      * @param group_number The group number of the group in which a peer has left.
      * @param peer_id The ID of the peer who left the group.
@@ -3862,7 +3862,7 @@ namespace group {
    * This event is triggered when the client has successfully joined a group. Use this to initialize
    * any group information the client may need.
    */
-  event self_join {
+  event self_join const {
     /**
      * @param group_number The group number of the group that the client has joined.
      */
@@ -3899,7 +3899,7 @@ namespace group {
   /**
    * This event is triggered when the client fails to join a group.
    */
-  event join_fail {
+  event join_fail const {
     /**
      * @param group_number The group number of the group for which the join has failed.
      * @param fail_type The type of group rejection.
@@ -4196,7 +4196,7 @@ namespace group {
   /**
    * This event is triggered when a moderator or founder executes a moderation event.
    */
-  event moderation {
+  event moderation const {
     /**
      * @param group_number The group number of the group the event is intended for.
      * @param source_peer_number The ID of the peer who initiated the event.
