@@ -2472,93 +2472,78 @@ uint16_t tox_self_get_tcp_port(const Tox *tox, Tox_Err_Get_Port *error)
 /**************** GROUPCHAT FUNCTIONS *****************/
 
 #ifndef VANILLA_NACL
-void tox_callback_group_invite(Tox *tox, tox_group_invite_cb *function, void *userdata)
+void tox_callback_group_invite(Tox *tox, tox_group_invite_cb *function)
 {
-    assert(userdata == nullptr);
     tox->group_invite_callback = function;
 }
 
-void tox_callback_group_message(Tox *tox, tox_group_message_cb *function, void *userdata)
+void tox_callback_group_message(Tox *tox, tox_group_message_cb *function)
 {
-    assert(userdata == nullptr);
     tox->group_message_callback = function;
 }
 
-void tox_callback_group_private_message(Tox *tox, tox_group_private_message_cb *function, void *userdata)
+void tox_callback_group_private_message(Tox *tox, tox_group_private_message_cb *function)
 {
-    assert(userdata == nullptr);
     tox->group_private_message_callback = function;
 }
 
-void tox_callback_group_custom_packet(Tox *tox, tox_group_custom_packet_cb *function, void *userdata)
+void tox_callback_group_custom_packet(Tox *tox, tox_group_custom_packet_cb *function)
 {
-    assert(userdata == nullptr);
     tox->group_custom_packet_callback = function;
 }
 
-void tox_callback_group_moderation(Tox *tox, tox_group_moderation_cb *function, void *userdata)
+void tox_callback_group_moderation(Tox *tox, tox_group_moderation_cb *function)
 {
-    assert(userdata == nullptr);
     tox->group_moderation_callback = function;
 }
 
-void tox_callback_group_peer_name(Tox *tox, tox_group_peer_name_cb *function, void *userdata)
+void tox_callback_group_peer_name(Tox *tox, tox_group_peer_name_cb *function)
 {
-    assert(userdata == nullptr);
     tox->group_peer_name_callback = function;
 }
 
-void tox_callback_group_peer_status(Tox *tox, tox_group_peer_status_cb *function, void *userdata)
+void tox_callback_group_peer_status(Tox *tox, tox_group_peer_status_cb *function)
 {
-    assert(userdata == nullptr);
     tox->group_peer_status_callback = function;
 }
 
-void tox_callback_group_topic(Tox *tox, tox_group_topic_cb *function, void *userdata)
+void tox_callback_group_topic(Tox *tox, tox_group_topic_cb *function)
 {
-    assert(userdata == nullptr);
     tox->group_topic_callback = function;
 }
 
-void tox_callback_group_privacy_state(Tox *tox, tox_group_privacy_state_cb *function, void *user_data)
+void tox_callback_group_privacy_state(Tox *tox, tox_group_privacy_state_cb *function)
 {
-    assert(user_data == nullptr);
     tox->group_privacy_state_callback = function;
 }
 
-void tox_callback_group_peer_limit(Tox *tox, tox_group_peer_limit_cb *function, void *user_data)
+void tox_callback_group_peer_limit(Tox *tox, tox_group_peer_limit_cb *function)
 {
-    assert(user_data == nullptr);
     tox->group_peer_limit_callback = function;
 }
 
-void tox_callback_group_password(Tox *tox, tox_group_password_cb *function, void *user_data)
+void tox_callback_group_password(Tox *tox, tox_group_password_cb *function)
 {
-    assert(user_data == nullptr);
     tox->group_password_callback = function;
 }
 
-void tox_callback_group_peer_join(Tox *tox, tox_group_peer_join_cb *function, void *userdata)
+void tox_callback_group_peer_join(Tox *tox, tox_group_peer_join_cb *function)
 {
-    assert(userdata == nullptr);
     tox->group_peer_join_callback = function;
 }
 
-void tox_callback_group_peer_exit(Tox *tox, tox_group_peer_exit_cb *function, void *userdata)
+void tox_callback_group_peer_exit(Tox *tox, tox_group_peer_exit_cb *function)
 {
-    assert(userdata == nullptr);
     tox->group_peer_exit_callback = function;
 }
 
-void tox_callback_group_self_join(Tox *tox, tox_group_self_join_cb *function, void *userdata)
+void tox_callback_group_self_join(Tox *tox, tox_group_self_join_cb *function)
 {
-    assert(userdata == nullptr);
     tox->group_self_join_callback = function;
 }
 
-void tox_callback_group_join_fail(Tox *tox, tox_group_join_fail_cb *function, void *userdata)
+void tox_callback_group_join_fail(Tox *tox, tox_group_join_fail_cb *function)
 {
-    assert(userdata == nullptr);
     tox->group_join_fail_callback = function;
 }
 
