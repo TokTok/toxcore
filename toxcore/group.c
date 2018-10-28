@@ -2934,13 +2934,10 @@ static uint32_t saved_conf_size(const Group_c *g)
 {
     uint32_t len = SAVED_CONF_SIZE_CONSTANT + g->title_len;
 
-    bool found_self = false;
-
     for (uint32_t j = 0; j < g->numpeers + g->numfrozen; ++j) {
         const Group_Peer *peer = (j < g->numpeers) ? &g->group[j] : &g->frozen[j - g->numpeers];
 
-        if (!found_self && id_equal(peer->real_pk, g->real_pk)) {
-            found_self = true;
+        if (id_equal(peer->real_pk, g->real_pk)) {
             continue;
         }
 
@@ -2976,13 +2973,17 @@ static uint8_t *save_conf(const Group_c *g, uint8_t *data)
     memcpy(data, g->title, g->title_len);
     data += g->title_len;
 
+#ifndef NDEBUG
     bool found_self = false;
+#endif
 
     for (uint32_t j = 0; j < g->numpeers + g->numfrozen; ++j) {
         const Group_Peer *peer = (j < g->numpeers) ? &g->group[j] : &g->frozen[j - g->numpeers];
 
-        if (!found_self && id_equal(peer->real_pk, g->real_pk)) {
+        if (id_equal(peer->real_pk, g->real_pk)) {
+#ifndef NDEBUG
             found_self = true;
+#endif
             continue;
         }
 
