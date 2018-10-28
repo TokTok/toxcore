@@ -461,8 +461,11 @@ uint32_t conferences_size(const Group_Chats *g_c);
 uint8_t *conferences_save(const Group_Chats *g_c, uint8_t *data);
 
 /**
- * Load a section.
+ * Load a state section.
  *
+ * @param data Data to load
+ * @param length Length of data
+ * @param type Type of section (STATE_TYPE_*)
  * @param status Result of loading section is stored here if the section is handled.
  * @return true iff section handled.
  */
