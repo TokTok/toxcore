@@ -1146,6 +1146,105 @@ int group_peername(const Group_Chats *g_c, uint32_t groupnumber, int peernumber,
     return g->group[peernumber].nick_len;
 }
 
+/* Copy the public key of offline_peernumber who is in groupnumber to pk.
+ * pk must be CRYPTO_PUBLIC_KEY_SIZE long.
+ *
+ * return 0 on success
+ * return -1 if groupnumber is invalid.
+ * return -2 if offline_peernumber is invalid.
+ */
+int group_offline_peer_pubkey(const Group_Chats *g_c, uint32_t groupnumber, int offline_peernumber, uint8_t *pk)
+{
+    Group_c *g = get_group_c(g_c, groupnumber);
+
+    if (!g) {
+        return -1;
+    }
+
+    if ((uint32_t)offline_peernumber >= g->numfrozen) {
+        return -2;
+    }
+
+    memcpy(pk, g->frozen[offline_peernumber].real_pk, CRYPTO_PUBLIC_KEY_SIZE);
+    return 0;
+}
+
+/*
+ * Return the size of offline_peernumber's name.
+ *
+ * return -1 if groupnumber is invalid.
+ * return -2 if offline_peernumber is invalid.
+ */
+int group_offline_peername_size(const Group_Chats *g_c, uint32_t groupnumber, int offline_peernumber)
+{
+    Group_c *g = get_group_c(g_c, groupnumber);
+
+    if (!g) {
+        return -1;
+    }
+
+    if ((uint32_t)offline_peernumber >= g->numfrozen) {
+        return -2;
+    }
+
+    if (g->frozen[offline_peernumber].nick_len == 0) {
+        return 0;
+    }
+
+    return g->frozen[offline_peernumber].nick_len;
+}
+
+/* Copy the name of offline_peernumber who is in groupnumber to name.
+ * name must be at least MAX_NAME_LENGTH long.
+ *
+ * return length of name if success
+ * return -1 if groupnumber is invalid.
+ * return -2 if offline_peernumber is invalid.
+ */
+int group_offline_peername(const Group_Chats *g_c, uint32_t groupnumber, int offline_peernumber, uint8_t *name)
+{
+    Group_c *g = get_group_c(g_c, groupnumber);
+
+    if (!g) {
+        return -1;
+    }
+
+    if ((uint32_t)offline_peernumber >= g->numfrozen) {
+        return -2;
+    }
+
+    if (g->frozen[offline_peernumber].nick_len == 0) {
+        return 0;
+    }
+
+    memcpy(name, g->frozen[offline_peernumber].nick, g->frozen[offline_peernumber].nick_len);
+    return g->frozen[offline_peernumber].nick_len;
+}
+
+/* Copy last active timestamp of offline_peernumber who is in groupnumber to
+ * last_active.
+ *
+ * return 0 on success
+ * return -1 if groupnumber is invalid.
+ * return -2 if offline_peernumber is invalid.
+ */
+int group_offline_peer_last_active(const Group_Chats *g_c, uint32_t groupnumber, int offline_peernumber,
+                             uint64_t *last_active)
+{
+    Group_c *g = get_group_c(g_c, groupnumber);
+
+    if (!g) {
+        return -1;
+    }
+
+    if ((uint32_t)offline_peernumber >= g->numfrozen) {
+        return -2;
+    }
+
+    *last_active = g->frozen[offline_peernumber].last_active;
+    return 0;
+}
+
 /* List all the peers in the group chat.
  *
  * Copies the names of the peers to the name[length][MAX_NAME_LENGTH] array.
@@ -1186,6 +1285,20 @@ int group_number_peers(const Group_Chats *g_c, uint32_t groupnumber)
     }
 
     return g->numpeers;
+}
+
+/* Return the number of offline peers in the group chat on success.
+ * return -1 if groupnumber is invalid.
+ */
+int group_number_offline_peers(const Group_Chats *g_c, uint32_t groupnumber)
+{
+    Group_c *g = get_group_c(g_c, groupnumber);
+
+    if (!g) {
+        return -1;
+    }
+
+    return g->numfrozen;
 }
 
 /* return 1 if the peernumber corresponds to ours.
@@ -2900,7 +3013,7 @@ void send_name_all_groups(Group_Chats *g_c)
     }
 }
 
-#define SAVED_PEER_SIZE_CONSTANT (2 * CRYPTO_PUBLIC_KEY_SIZE + 2 + 1)
+#define SAVED_PEER_SIZE_CONSTANT (2 * CRYPTO_PUBLIC_KEY_SIZE + sizeof(uint16_t) + sizeof(uint64_t) + 1)
 
 static uint32_t saved_peer_size(const Group_Peer *peer)
 {
@@ -2917,6 +3030,9 @@ static uint8_t *save_peer(const Group_Peer *peer, uint8_t *data)
 
     host_to_lendian_bytes16(data, peer->peer_number);
     data += sizeof(uint16_t);
+
+    host_to_lendian_bytes64(data, peer->last_active);
+    data += sizeof(uint64_t);
 
     *data = peer->nick_len;
     ++data;
@@ -3097,6 +3213,9 @@ static State_Load_Status load_conferences(Group_Chats *g_c, const uint8_t *data,
 
             lendian_bytes_to_host16(&peer->peer_number, data);
             data += sizeof(uint16_t);
+
+            lendian_bytes_to_host64(&peer->last_active, data);
+            data += sizeof(uint64_t);
 
             peer->nick_len = *data;
             ++data;

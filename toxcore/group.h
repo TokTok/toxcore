@@ -271,6 +271,42 @@ int group_peername_size(const Group_Chats *g_c, uint32_t groupnumber, int32_t pe
  */
 int group_peername(const Group_Chats *g_c, uint32_t groupnumber, int peernumber, uint8_t *name);
 
+/* Copy the public key of offline_peernumber who is in groupnumber to pk.
+ * pk must be CRYPTO_PUBLIC_KEY_SIZE long.
+ *
+ * return 0 on success
+ * return -1 if groupnumber is invalid.
+ * return -2 if offline_peernumber is invalid.
+ */
+int group_offline_peer_pubkey(const Group_Chats *g_c, uint32_t groupnumber, int offline_peernumber, uint8_t *pk);
+
+/*
+ * Return the size of offline_peernumber's name.
+ *
+ * return -1 if groupnumber is invalid.
+ * return -2 if offline_peernumber is invalid.
+ */
+int group_offline_peername_size(const Group_Chats *g_c, uint32_t groupnumber, int32_t offline_peernumber);
+
+/* Copy the name of offline_peernumber who is in groupnumber to name.
+ * name must be at least MAX_NAME_LENGTH long.
+ *
+ * return length of name if success
+ * return -1 if groupnumber is invalid.
+ * return -2 if offline_peernumber is invalid.
+ */
+int group_offline_peername(const Group_Chats *g_c, uint32_t groupnumber, int offline_peernumber, uint8_t *name);
+
+/* Copy last active timestamp of offline_peernumber who is in groupnumber to
+ * last_active.
+ *
+ * return 0 on success
+ * return -1 if groupnumber is invalid.
+ * return -2 if offline_peernumber is invalid.
+ */
+int group_offline_peer_last_active(const Group_Chats *g_c, uint32_t groupnumber, int offline_peernumber,
+                             uint64_t *last_active);
+
 /* invite friendnumber to groupnumber
  *
  * return 0 on success.
@@ -340,6 +376,11 @@ int group_title_get(const Group_Chats *g_c, uint32_t groupnumber, uint8_t *title
  * return -1 if groupnumber is invalid.
  */
 int group_number_peers(const Group_Chats *g_c, uint32_t groupnumber);
+
+/* Return the number of offline peers in the group chat on success.
+ * return -1 if groupnumber is invalid.
+ */
+int group_number_offline_peers(const Group_Chats *g_c, uint32_t groupnumber);
 
 /* return 1 if the peernumber corresponds to ours.
  * return 0 if the peernumber is not ours.

@@ -2321,6 +2321,70 @@ namespace conference {
 
   }
 
+  namespace offline_peer {
+
+    /**
+     * Error codes for peer info queries.
+     */
+    error for query {
+      /**
+       * The conference number passed did not designate a valid conference.
+       */
+      CONFERENCE_NOT_FOUND,
+      /**
+       * The peer number passed did not designate a valid peer.
+       */
+      PEER_NOT_FOUND,
+      /**
+       * The client is not connected to the conference.
+       */
+      NO_CONNECTION,
+    }
+
+    /**
+     * Return the number of offline peers in the conference. Return value is unspecified on failure.
+     */
+    const uint32_t count(uint32_t conference_number)
+        with error for query;
+
+    uint8_t[size] name {
+
+      /**
+       * Return the length of the offline peer's name. Return value is unspecified on failure.
+       */
+      size(uint32_t conference_number, uint32_t offline_peer_number)
+          with error for query;
+
+      /**
+       * Copy the name of offline_peer_number who is in conference_number to name.
+       * name must be at least $MAX_NAME_LENGTH long.
+       *
+       * @return true on success.
+       */
+      get(uint32_t conference_number, uint32_t offline_peer_number)
+          with error for query;
+    }
+
+    /**
+     * Copy the public key of offline_peer_number who is in conference_number to public_key.
+     * public_key must be $PUBLIC_KEY_SIZE long.
+     *
+     * @return true on success.
+     */
+    uint8_t[PUBLIC_KEY_SIZE] public_key {
+      get(uint32_t conference_number, uint32_t offline_peer_number)
+          with error for query;
+    }
+
+    /**
+     * Return a unix-time timestamp of the last time offline_peer_number was seen to be active.
+     */
+    uint64_t last_active {
+      get(uint32_t conference_number, uint32_t offline_peer_number)
+        with error for query;
+    }
+
+  }
 
   /**
    * Invites a friend to a conference.
@@ -2754,6 +2818,7 @@ typedef TOX_ERR_FILE_SEND_CHUNK Tox_Err_File_Send_Chunk;
 typedef TOX_ERR_CONFERENCE_NEW Tox_Err_Conference_New;
 typedef TOX_ERR_CONFERENCE_DELETE Tox_Err_Conference_Delete;
 typedef TOX_ERR_CONFERENCE_PEER_QUERY Tox_Err_Conference_Peer_Query;
+typedef TOX_ERR_CONFERENCE_OFFLINE_PEER_QUERY Tox_Err_Conference_Offline_Peer_Query;
 typedef TOX_ERR_CONFERENCE_BY_ID Tox_Err_Conference_By_Id;
 typedef TOX_ERR_CONFERENCE_BY_UID Tox_Err_Conference_By_Uid;
 typedef TOX_ERR_CONFERENCE_INVITE Tox_Err_Conference_Invite;
