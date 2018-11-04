@@ -97,7 +97,7 @@ typedef struct Messenger_Options {
  * please coordinate with us first!
  * thank you, the Tox Devs.
  */
-#define TOX_CAPABILITY_CAPABILITIES ((uint64_t)1) << 1
+#define TOX_CAPABILITY_CAPABILITIES ((uint64_t)1) << 0
 /* add new flags/bits here */
 
 /* if the TOX_CAPABILITY_NEXT_IMPLEMENTATION flag is set it means
