@@ -87,7 +87,7 @@ typedef struct Messenger_Options {
     uint8_t state_plugins_length;
 } Messenger_Options;
 
-/* this means no special capabilities, toxcore_capabilities == 0 */
+/* this means no special capabilities, Friend.toxcore_capabilities == 0 */
 #define TOX_CAPABILITY_BASIC 0
 
 /* uint64_t ToxCapabilitiesFlags */
