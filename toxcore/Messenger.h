@@ -90,7 +90,7 @@ typedef struct Messenger_Options {
 /* this means no special capabilities, Friend.toxcore_capabilities == 0 */
 #define TOX_CAPABILITY_BASIC 0
 
-/* uint64_t ToxCapabilitiesFlags */
+/* uint64_t Friend.toxcore_capabilities */
 #define TOX_CAPABILITY_NEXT_IMPLEMENTATION ((uint64_t)1) << 63
 
 /* hardcoded capabilities of this version/branch of toxcore */
