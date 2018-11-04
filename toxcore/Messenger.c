@@ -153,19 +153,11 @@ void getaddress(const Messenger *m, uint8_t *address)
     memcpy(address + CRYPTO_PUBLIC_KEY_SIZE + sizeof(nospam), &checksum, sizeof(checksum));
 }
 
+
 static int send_online_packet(Messenger *m, int32_t friendnumber)
 {
     if (friend_not_valid(m, friendnumber)) {
         return 0;
-    }
-
-    uint8_t buf[TOX_CAPABILITIES_SIZE + 1];
-    buf[0] = PACKET_ID_ONLINE;
-    net_pack_u64(buf + 1, TOX_CAPABILITIES_CURRENT);
-
-    if (write_cryptpacket(m->net_crypto, friend_connection_crypt_connection_id(m->fr_c,
-                          m->friendlist[friendnumber].friendcon_id), buf, TOX_CAPABILITIES_SIZE + 1, 0) == -1) {
-        return -1;
     }
 
     uint8_t packet = PACKET_ID_ONLINE;
@@ -178,6 +170,26 @@ static int send_offline_packet(Messenger *m, int friendcon_id)
     uint8_t packet = PACKET_ID_OFFLINE;
     return write_cryptpacket(m->net_crypto, friend_connection_crypt_connection_id(m->fr_c, friendcon_id), &packet,
                              sizeof(packet), 0) != -1;
+}
+
+static int send_capabilities_packet(Messenger *m, int32_t friendnumber)
+{
+    if (friend_not_valid(m, friendnumber)) {
+        return 0;
+    }
+
+    uint8_t packet[1 + TOX_CAPABILITIES_SIZE];
+    packet[0] = PACKET_ID_CAPABILITIES;
+    net_pack_u64(packet + 1, TOX_CAPABILITIES_CURRENT);
+    return write_cryptpacket(m->net_crypto, friend_connection_crypt_connection_id(m->fr_c,
+                             m->friendlist[friendnumber].friendcon_id), packet, sizeof(packet), 0) != -1;
+}
+
+// Send packets we want to be sent either to people we greet, or people who greet us.
+static void send_handshake_packets(Messenger *m, int32_t friendnumber)
+{
+    send_online_packet(m, friendnumber); //Tell them we're online.
+    send_capabilities_packet(m, friendnumber); //Send them our capabilities.
 }
 
 static int m_handle_status(void *object, int i, uint8_t status, void *userdata);
@@ -221,7 +233,7 @@ static int32_t init_new_friend(Messenger *m, const uint8_t *real_pk, uint8_t sta
             }
 
             if (friend_con_connected(m->fr_c, friendcon_id) == FRIENDCONN_STATUS_CONNECTED) {
-                send_online_packet(m, i);
+                send_handshake_packets(m, i);
             }
 
             return i;
@@ -2159,7 +2171,7 @@ static int m_handle_status(void *object, int i, uint8_t status, void *userdata)
     Messenger *m = (Messenger *)object;
 
     if (status) { /* Went online. */
-        send_online_packet(m, i);
+        send_handshake_packets(m, i);
     } else { /* Went offline. */
         if (m->friendlist[i].status == FRIEND_ONLINE) {
             set_friend_status(m, i, FRIEND_CONFIRMED, userdata);
@@ -2191,32 +2203,31 @@ static int m_handle_packet(void *object, int i, const uint8_t *temp, uint16_t le
     Messenger *m = (Messenger *)object;
     uint8_t packet_id = temp[0];
     const uint8_t *data = temp + 1;
-    uint32_t data_length = len - 1;
+    uint16_t data_length = len - 1;
 
-    if (m->friendlist[i].status != FRIEND_ONLINE) {
-        if (packet_id == PACKET_ID_ONLINE) {
-            if (len == (TOX_CAPABILITIES_SIZE + 1)) {
-                uint64_t received_caps;
-                net_unpack_u64(data, &received_caps);
-                m->friendlist[i].toxcore_capabilities = received_caps;
-            } else if (len == 1) {
-                set_friend_status(m, i, FRIEND_ONLINE, userdata);
-                send_online_packet(m, i);
-            } else {
-                return -1;
-            }
-        } else {
-            return -1;
-        }
-    }
 
     switch (packet_id) {
+        case PACKET_ID_ONLINE: {
+            if (m->friendlist[i].status != FRIEND_ONLINE) {
+                set_friend_status(m, i, FRIEND_ONLINE, userdata);
+            }
+
+            break;
+        }
+
         case PACKET_ID_OFFLINE: {
             if (data_length != 0) {
                 break;
             }
 
             set_friend_status(m, i, FRIEND_CONFIRMED, userdata);
+            break;
+        }
+
+        case PACKET_ID_CAPABILITIES: {
+            uint64_t received_caps;
+            net_unpack_u64(data, &received_caps);
+            m->friendlist[i].toxcore_capabilities = received_caps;
             break;
         }
 
