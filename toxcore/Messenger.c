@@ -193,7 +193,6 @@ static int32_t init_new_friend(Messenger *m, const uint8_t *real_pk, uint8_t sta
     }
 
     memset(&m->friendlist[m->numfriends], 0, sizeof(Friend));
-    m->friendlist[m->numfriends].toxcore_capabilities = TOX_CAPABILITY_BASIC;
 
     int friendcon_id = new_friend_connection(m->fr_c, real_pk);
 
