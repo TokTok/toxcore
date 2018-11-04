@@ -2200,10 +2200,12 @@ static int m_handle_packet(void *object, int i, const uint8_t *temp, uint16_t le
                 uint64_t received_caps;
                 net_unpack_u64(data, &received_caps);
                 m->friendlist[i].toxcore_capabilities = received_caps;
+            } else if (len == 1) {
+                set_friend_status(m, i, FRIEND_ONLINE, userdata);
+                send_online_packet(m, i);
+            } else {
+                return -1;
             }
-
-            set_friend_status(m, i, FRIEND_ONLINE, userdata);
-            send_online_packet(m, i);
         } else {
             return -1;
         }
