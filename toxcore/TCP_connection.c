@@ -1467,7 +1467,7 @@ static void kill_nonused_tcp(TCP_Connections *tcp_c)
     unsigned int i;
     unsigned int num_online = 0;
     unsigned int num_kill = 0;
-    VLA(unsigned int, to_kill, tcp_c->tcp_connections_length);
+    unsigned int* const to_kill = malloc(tcp_c->tcp_connections_length * sizeof(unsigned int));
 
     for (i = 0; i < tcp_c->tcp_connections_length; ++i) {
         TCP_con *tcp_con = get_tcp_connection(tcp_c, i);
@@ -1486,6 +1486,7 @@ static void kill_nonused_tcp(TCP_Connections *tcp_c)
     }
 
     if (num_online <= RECOMMENDED_FRIEND_TCP_CONNECTIONS) {
+        free(to_kill);
         return;
     }
 
@@ -1498,6 +1499,8 @@ static void kill_nonused_tcp(TCP_Connections *tcp_c)
     for (i = 0; i < num_kill; ++i) {
         kill_tcp_relay_connection(tcp_c, to_kill[i]);
     }
+
+    free(to_kill);
 }
 
 void do_tcp_connections(TCP_Connections *tcp_c, void *userdata)

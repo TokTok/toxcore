@@ -11,7 +11,6 @@
 #include <time.h>
 
 #include "../testing/misc_tools.h"
-#include "../toxcore/ccompat.h"
 #include "../toxcore/tox.h"
 #include "../toxcore/util.h"
 #include "check_compat.h"

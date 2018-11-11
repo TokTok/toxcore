@@ -1073,21 +1073,25 @@ static int send_data_packet(Net_Crypto *c, int crypt_connection_id, const uint8_
         return -1;
     }
 
+    const size_t packet_size = 1 + sizeof(uint16_t) + length + CRYPTO_MAC_SIZE;
+    uint8_t* const packet = calloc(packet_size, sizeof(uint8_t));
     pthread_mutex_lock(&conn->mutex);
-    VLA(uint8_t, packet, 1 + sizeof(uint16_t) + length + CRYPTO_MAC_SIZE);
     packet[0] = NET_PACKET_CRYPTO_DATA;
     memcpy(packet + 1, conn->sent_nonce + (CRYPTO_NONCE_SIZE - sizeof(uint16_t)), sizeof(uint16_t));
     const int len = encrypt_data_symmetric(conn->shared_key, conn->sent_nonce, data, length, packet + 1 + sizeof(uint16_t));
 
-    if (len + 1 + sizeof(uint16_t) != SIZEOF_VLA(packet)) {
+    if (len + 1 + sizeof(uint16_t) != packet_size) {
         pthread_mutex_unlock(&conn->mutex);
+        free(packet);
         return -1;
     }
 
     increment_nonce(conn->sent_nonce);
     pthread_mutex_unlock(&conn->mutex);
 
-    return send_packet_to(c, crypt_connection_id, packet, SIZEOF_VLA(packet));
+    const int result = send_packet_to(c, crypt_connection_id, packet, packet_size);
+    free(packet);
+    return result;
 }
 
 /* Creates and sends a data packet with buffer_start and num to the peer using the fastest route.
@@ -1105,13 +1109,16 @@ static int send_data_packet_helper(Net_Crypto *c, int crypt_connection_id, uint3
     num = net_htonl(num);
     buffer_start = net_htonl(buffer_start);
     uint16_t padding_length = (MAX_CRYPTO_DATA_SIZE - length) % CRYPTO_MAX_PADDING;
-    VLA(uint8_t, packet, sizeof(uint32_t) + sizeof(uint32_t) + padding_length + length);
+    const size_t packet_size = sizeof(uint32_t) + sizeof(uint32_t) + padding_length + length;
+    uint8_t* const packet = calloc(packet_size, sizeof(uint8_t));
     memcpy(packet, &buffer_start, sizeof(uint32_t));
     memcpy(packet + sizeof(uint32_t), &num, sizeof(uint32_t));
     memset(packet + (sizeof(uint32_t) * 2), PACKET_ID_PADDING, padding_length);
     memcpy(packet + (sizeof(uint32_t) * 2) + padding_length, data, length);
 
-    return send_data_packet(c, crypt_connection_id, packet, SIZEOF_VLA(packet));
+    const int result = send_data_packet(c, crypt_connection_id, packet, packet_size);
+    free(packet);
+    return result;
 }
 
 static int reset_max_speed_reached(Net_Crypto *c, int crypt_connection_id)

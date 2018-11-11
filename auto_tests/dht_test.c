@@ -722,9 +722,10 @@ static void dht_pack_unpack(const Node_format *nodes, size_t size, uint8_t *data
 {
     int16_t packed_size = pack_nodes(data, length, nodes, size);
     ck_assert_msg(packed_size != -1, "Wrong pack_nodes result");
+    ck_assert_msg(size <= MAX_COUNT, "Too many nodes. Please increase MAX_COUNT to run this test.");
 
     uint16_t processed = 0;
-    VLA(Node_format, nodes_unpacked, size);
+    Node_format nodes_unpacked[MAX_COUNT];
     const uint8_t tcp_enabled = 1;
 
     uint16_t unpacked_count = unpack_nodes(nodes_unpacked, size, &processed, data, length, tcp_enabled);

@@ -14,7 +14,6 @@
 #endif
 
 #include "../testing/misc_tools.h"
-#include "../toxcore/ccompat.h"
 #include "../toxcore/crypto_core.h"
 #include "../toxcore/tox.h"
 #include "../toxencryptsave/toxencryptsave.h"
