@@ -788,11 +788,11 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length,
         header.flags |= RTP_KEY_FRAME;
     }
 
-    VLA(uint8_t, rdata, length + RTP_HEADER_SIZE + 1);
-    memset(rdata, 0, SIZEOF_VLA(rdata));
+    const size_t packet_size = length + RTP_HEADER_SIZE + 1;
+    uint8_t* rdata = calloc(packet_size, sizeof(uint8_t));
     rdata[0] = session->payload_type;  // packet id == payload_type
 
-    if (MAX_CRYPTO_DATA_SIZE > (length + RTP_HEADER_SIZE + 1)) {
+    if (MAX_CRYPTO_DATA_SIZE > packet_size) {
         /**
          * The length is lesser than the maximum allowed length (including header)
          * Send the packet in single piece.
@@ -800,10 +800,10 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length,
         rtp_header_pack(rdata + 1, &header);
         memcpy(rdata + 1 + RTP_HEADER_SIZE, data, length);
 
-        if (-1 == m_send_custom_lossy_packet(session->m, session->friend_number, rdata, SIZEOF_VLA(rdata))) {
+        if (-1 == m_send_custom_lossy_packet(session->m, session->friend_number, rdata, packet_size)) {
             const char *netstrerror = net_new_strerror(net_error());
             LOGGER_WARNING(session->m->log, "RTP send failed (len: %u)! std error: %s, net error: %s",
-                           (unsigned)SIZEOF_VLA(rdata), strerror(errno), netstrerror);
+                           (unsigned)packet_size, strerror(errno), netstrerror);
             net_kill_strerror(netstrerror);
         }
     } else {
@@ -848,6 +848,7 @@ int rtp_send_data(RTPSession *session, const uint8_t *data, uint32_t length,
         }
     }
 
+    free(rdata);
     ++session->sequnum;
     return 0;
 }

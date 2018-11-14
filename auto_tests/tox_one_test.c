@@ -9,7 +9,6 @@
 #include <string.h>
 
 #include "../testing/misc_tools.h"
-#include "../toxcore/ccompat.h"
 #include "../toxcore/crypto_core.h"
 #include "../toxcore/tox.h"
 #include "../toxcore/util.h"
@@ -77,8 +76,8 @@ static void test_one(void)
                   "Can't set status message of TOX_MAX_STATUS_MESSAGE_LENGTH");
 
     tox_self_get_address(tox1, address);
-    size_t save_size = tox_get_savedata_size(tox1);
-    VLA(uint8_t, data, save_size);
+    const size_t save_size = tox_get_savedata_size(tox1);
+    uint8_t* data = malloc(save_size);
     tox_get_savedata(tox1, data);
 
     tox_kill(tox2);
@@ -124,6 +123,7 @@ static void test_one(void)
     tox_self_get_public_key(tox2, pk);
     ck_assert_msg(memcmp(pk, address, TOX_PUBLIC_KEY_SIZE) == 0, "Wrong public key.");
 
+    free(data);
     tox_options_free(options);
     tox_kill(tox1);
     tox_kill(tox2);

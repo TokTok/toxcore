@@ -27,7 +27,6 @@
 #include "config.h"
 #endif
 
-#include "ccompat.h"
 #include "crypto_core.h"
 
 #include <string.h>
@@ -142,20 +141,23 @@ int32_t encrypt_data_symmetric(const uint8_t *secret_key, const uint8_t *nonce,
         return -1;
     }
 
-    VLA(uint8_t, temp_plain, length + crypto_box_ZEROBYTES);
-    VLA(uint8_t, temp_encrypted, length + crypto_box_MACBYTES + crypto_box_BOXZEROBYTES);
+    uint8_t* temp_plain = calloc(length + crypto_box_ZEROBYTES, sizeof(uint8_t));
+    uint8_t* temp_encrypted = malloc(length + crypto_box_MACBYTES + crypto_box_BOXZEROBYTES);
 
-    memset(temp_plain, 0, crypto_box_ZEROBYTES);
     // Pad the message with 32 0 bytes.
     memcpy(temp_plain + crypto_box_ZEROBYTES, plain, length);
 
     if (crypto_box_afternm(temp_encrypted, temp_plain, length + crypto_box_ZEROBYTES, nonce,
                            secret_key) != 0) {
+        free(temp_plain);
+        free(temp_encrypted);
         return -1;
     }
 
     // Unpad the encrypted message.
     memcpy(encrypted, temp_encrypted + crypto_box_BOXZEROBYTES, length + crypto_box_MACBYTES);
+    free(temp_plain);
+    free(temp_encrypted);
     return length + crypto_box_MACBYTES;
 }
 
@@ -166,19 +168,22 @@ int32_t decrypt_data_symmetric(const uint8_t *secret_key, const uint8_t *nonce,
         return -1;
     }
 
-    VLA(uint8_t, temp_plain, length + crypto_box_ZEROBYTES);
-    VLA(uint8_t, temp_encrypted, length + crypto_box_BOXZEROBYTES);
+    uint8_t* temp_plain = calloc(length + crypto_box_ZEROBYTES, sizeof(uint8_t));
+    uint8_t* temp_encrypted = malloc(length + crypto_box_BOXZEROBYTES);
 
-    memset(temp_encrypted, 0, crypto_box_BOXZEROBYTES);
     // Pad the message with 16 0 bytes.
     memcpy(temp_encrypted + crypto_box_BOXZEROBYTES, encrypted, length);
 
     if (crypto_box_open_afternm(temp_plain, temp_encrypted, length + crypto_box_BOXZEROBYTES, nonce,
                                 secret_key) != 0) {
+        free(temp_plain);
+        free(temp_encrypted);
         return -1;
     }
 
     memcpy(plain, temp_plain + crypto_box_ZEROBYTES, length - crypto_box_MACBYTES);
+    free(temp_plain);
+    free(temp_encrypted);
     return length - crypto_box_MACBYTES;
 }
 
