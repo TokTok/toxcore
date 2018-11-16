@@ -58,9 +58,9 @@
 
 /** Messages. **/
 
-#define PACKET_ID_PADDING 3 // Denotes padding
-#define PACKET_ID_REQUEST 4 // Used to request unreceived packets
-#define PACKET_ID_KILL    5 // Used to kill connection
+#define PACKET_ID_PADDING 0 // Denotes padding
+#define PACKET_ID_REQUEST 1 // Used to request unreceived packets
+#define PACKET_ID_KILL    2 // Used to kill connection
 
 #define PACKET_ID_ONLINE 24
 #define PACKET_ID_OFFLINE 25
