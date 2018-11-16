@@ -91,15 +91,20 @@ uint32_t id_copy(uint8_t *dest, const uint8_t *src)
     return CRYPTO_PUBLIC_KEY_SIZE;
 }
 
-char *id_toa(const uint8_t *id)
+/* id_str should be of length at least IDSTRING_LEN */
+char *id_to_string(const uint8_t *pk, char *id_str, size_t length)
 {
-    char *str = (char *)malloc(CRYPTO_PUBLIC_KEY_SIZE * 2 + 1);
-
-    for (int i = 0; i < CRYPTO_PUBLIC_KEY_SIZE; ++i) {
-        sprintf(str + 2 * i, "%02x", id[i]);
+    if (length < IDSTRING_LEN) {
+        snprintf(id_str, length, "Bad buf length");
+        return id_str;
     }
 
-    return str;
+    for (uint32_t i = 0; i < CRYPTO_PUBLIC_KEY_SIZE; ++i) {
+        sprintf(&id_str[i * 2], "%02X", pk[i]);
+    }
+
+    id_str[CRYPTO_PUBLIC_KEY_SIZE * 2] = 0;
+    return id_str;
 }
 
 void host_to_net(uint8_t *num, uint16_t numbytes)
