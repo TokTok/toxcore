@@ -2618,22 +2618,6 @@ static void connection_status_callback(Messenger *m, void *userdata)
 
 #define DUMPING_CLIENTS_FRIENDS_EVERY_N_SECONDS 60UL
 
-#define IDSTRING_LEN (CRYPTO_PUBLIC_KEY_SIZE * 2 + 1)
-/* id_str should be of length at least IDSTRING_LEN */
-static char *id_to_string(const uint8_t *pk, char *id_str, size_t length)
-{
-    if (length < IDSTRING_LEN) {
-        snprintf(id_str, length, "Bad buf length");
-        return id_str;
-    }
-
-    for (uint32_t i = 0; i < CRYPTO_PUBLIC_KEY_SIZE; ++i) {
-        sprintf(&id_str[i * 2], "%02X", pk[i]);
-    }
-
-    id_str[CRYPTO_PUBLIC_KEY_SIZE * 2] = 0;
-    return id_str;
-}
 
 /* Minimum messenger run interval in ms
  * TODO(mannol): A/V */
