@@ -31,6 +31,7 @@
 #include <stdint.h>
 
 #include "logger.h"
+#include "crypto_core.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -91,6 +92,9 @@ uint64_t min_u64(uint64_t a, uint64_t b);
 
 /* Returns a 32-bit hash of key of size len */
 uint32_t jenkins_one_at_a_time_hash(const uint8_t *key, size_t len);
+
+#define IDSTRING_LEN (CRYPTO_PUBLIC_KEY_SIZE * 2 + 1)
+char *id_to_string(const uint8_t *pk, char *id_str, size_t length);
 
 #ifdef __cplusplus
 }  // extern "C"

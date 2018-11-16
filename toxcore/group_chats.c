@@ -1023,7 +1023,8 @@ static int handle_gc_sync_response(Messenger *m, int group_number, int peer_numb
                 save_tcp_relay(peer_gconn, &curr_announce->tcp_relays[j]);
             }
 
-            fprintf(stderr, "handle_gc_sync_response - added peer %s\n", id_toa(curr_announce->peer_public_key));
+            char id_str[IDSTRING_LEN];
+            fprintf(stderr, "handle_gc_sync_response - added peer %s\n", id_to_string(curr_announce->peer_public_key,id_str,IDSTRING_LEN));
 
             if (curr_announce->ip_port_is_set && !curr_announce->tcp_relays_count) {
                 send_gc_handshake_packet(chat, (uint32_t)new_peer_number, GH_REQUEST, HS_PEER_INFO_EXCHANGE,
@@ -1854,7 +1855,8 @@ static int handle_gc_peer_announcement(Messenger *m, int group_number, const uin
         return -1;
     }
 
-    fprintf(stderr, "peer add %s\n", id_toa(new_peer_announce.peer_public_key));
+    char id_str[IDSTRING_LEN];
+    fprintf(stderr, "peer add %s\n", id_to_string(new_peer_announce.peer_public_key,id_str,IDSTRING_LEN));
     GC_Connection *gconn = gcc_get_connection(chat, peer_number);
     if (!gconn) {
         return -1;
@@ -6624,7 +6626,8 @@ int add_peers_from_announces(const GC_Session *gc_session, GC_Chat *chat, GC_Ann
         }
 
         added_peers++;
-        fprintf(stderr, "Added peers %s\n", id_toa(curr_announce->peer_public_key));
+        char id_str[IDSTRING_LEN];
+        fprintf(stderr, "Added peers %s\n", id_to_string(curr_announce->peer_public_key,id_str,IDSTRING_LEN));
     }
 
     return added_peers;

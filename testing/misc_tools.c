@@ -52,6 +52,7 @@
 
 #include "../toxcore/ccompat.h"
 #include "../toxcore/tox.h"
+#include "../toxcore/util.h"
 
 void c_sleep(uint32_t x)
 {
@@ -84,6 +85,13 @@ uint8_t *hex_string_to_bin(const char *hex_string)
     }
 
     return ret;
+}
+
+// You are responsible for freeing the return value!
+char *id_toa(const uint8_t *id)
+{
+    char *str = (char *)malloc(IDSTRING_LEN);
+    return id_to_string(id,str,IDSTRING_LEN);
 }
 
 void to_hex(char *out, uint8_t *in, int size)
