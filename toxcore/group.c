@@ -202,6 +202,17 @@ static int peer_in_chat(const Group_c *chat, const uint8_t *real_pk)
     return -1;
 }
 
+static int frozen_in_chat(const Group_c *chat, const uint8_t *real_pk)
+{
+    for (uint32_t i = 0; i < chat->numfrozen; ++i) {
+        if (id_equal(chat->frozen[i].real_pk, real_pk)) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
 /*
  * check if group with the given type and id is in group array.
  *
@@ -458,6 +469,34 @@ static int get_frozen_index(Group_c *g, uint16_t peer_number)
     return -1;
 }
 
+static bool delete_frozen(Group_c *g, uint32_t frozen_index)
+{
+    if (frozen_index >= g->numfrozen) {
+        return false;
+    }
+
+    --g->numfrozen;
+
+    if (g->numfrozen == 0) {
+        free(g->frozen);
+        g->frozen = nullptr;
+    } else {
+        if (g->numfrozen != frozen_index) {
+            g->frozen[frozen_index] = g->frozen[g->numfrozen];
+        }
+
+        Group_Peer *frozen_temp = (Group_Peer *)realloc(g->frozen, sizeof(Group_Peer) * (g->numfrozen));
+
+        if (frozen_temp == nullptr) {
+            return false;
+        }
+
+        g->frozen = frozen_temp;
+    }
+
+    return true;
+}
+
 /* Update last_active timestamp on peer, and thaw the peer if it is frozen.
  *
  * return peer index if peer is in the conference.
@@ -501,23 +540,8 @@ static int note_peer_active(Group_Chats *g_c, uint32_t groupnumber, uint16_t pee
 
     ++g->numpeers;
 
-    --g->numfrozen;
-
-    if (g->numfrozen == 0) {
-        free(g->frozen);
-        g->frozen = nullptr;
-    } else {
-        if (g->numfrozen != (uint32_t)frozen_index) {
-            g->frozen[frozen_index] = g->frozen[g->numfrozen];
-        }
-
-        Group_Peer *frozen_temp = (Group_Peer *)realloc(g->frozen, sizeof(Group_Peer) * (g->numfrozen));
-
-        if (frozen_temp == nullptr) {
-            return -1;
-        }
-
-        g->frozen = frozen_temp;
+    if (!delete_frozen(g, frozen_index)) {
+        return -1;
     }
 
     if (g_c->peer_list_changed_callback) {
@@ -532,6 +556,8 @@ static int note_peer_active(Group_Chats *g_c, uint32_t groupnumber, uint16_t pee
 
     return g->numpeers - 1;
 }
+
+static int delpeer(Group_Chats *g_c, uint32_t groupnumber, int peer_index, void *userdata, bool keep_connection);
 
 /* Add a peer to the group chat, or update an existing peer.
  *
@@ -583,6 +609,16 @@ static int addpeer(Group_Chats *g_c, uint32_t groupnumber, const uint8_t *real_p
 
             return -1;
         }
+    }
+
+    int prev_peer_index = peer_in_chat(g, real_pk);
+    if (prev_peer_index >= 0) {
+        delpeer(g_c, groupnumber, prev_peer_index, userdata, false);
+    }
+
+    int prev_frozen_index = frozen_in_chat(g, real_pk);
+    if (prev_frozen_index >= 0) {
+        delete_frozen(g, prev_frozen_index);
     }
 
     Group_Peer *temp = (Group_Peer *)realloc(g->group, sizeof(Group_Peer) * (g->numpeers + 1));
@@ -1765,11 +1801,11 @@ static bool get_peer_number(const Group_c *g, const uint8_t *real_pk, uint16_t *
         return true;
     }
 
-    for (uint32_t i = 0; i < g->numfrozen; ++i) {
-        if (id_equal(g->frozen[i].real_pk, real_pk)) {
-            *peer_number = g->frozen[i].peer_number;
-            return true;
-        }
+    const int frozen_index = frozen_in_chat(g, real_pk);
+
+    if (peer_index >= 0) {
+        *peer_number = g->frozen[frozen_index].peer_number;
+        return true;
     }
 
     return false;
