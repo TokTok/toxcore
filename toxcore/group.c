@@ -42,6 +42,7 @@ typedef enum Group_Message_Id {
     GROUP_MESSAGE_PING_ID        = 0,
     GROUP_MESSAGE_NEW_PEER_ID    = 16,
     GROUP_MESSAGE_KILL_PEER_ID   = 17,
+    GROUP_MESSAGE_FREEZE_PEER_ID = 18,
     GROUP_MESSAGE_NAME_ID        = 48,
     GROUP_MESSAGE_TITLE_ID       = 49,
 } Group_Message_Id;
@@ -1034,7 +1035,7 @@ int add_groupchat(Group_Chats *g_c, uint8_t type)
     return groupnumber;
 }
 
-static int group_leave(const Group_Chats *g_c, uint32_t groupnumber);
+static int group_leave(const Group_Chats *g_c, uint32_t groupnumber, bool permanent);
 
 /* Delete a groupchat from the chats array, informing the group first as
  * appropriate.
@@ -1050,9 +1051,7 @@ int del_groupchat(Group_Chats *g_c, uint32_t groupnumber, bool leave_permanently
         return -1;
     }
 
-    if (leave_permanently) {
-        group_leave(g_c, groupnumber);
-    }
+    group_leave(g_c, groupnumber, leave_permanently);
 
     for (uint32_t i = 0; i < MAX_GROUP_CONNECTIONS; ++i) {
         if (g->close[i].type == GROUPCHAT_CLOSE_NONE) {
@@ -1623,6 +1622,24 @@ static int group_kill_peer_send(const Group_Chats *g_c, uint32_t groupnumber, ui
     return -1;
 }
 
+/* send a freeze_peer message
+ * return 0 on success
+ * return -1 on failure
+ */
+static int group_freeze_peer_send(const Group_Chats *g_c, uint32_t groupnumber, uint16_t peer_num)
+{
+    uint8_t packet[GROUP_MESSAGE_KILL_PEER_LENGTH];
+
+    peer_num = net_htons(peer_num);
+    memcpy(packet, &peer_num, sizeof(uint16_t));
+
+    if (send_message_group(g_c, groupnumber, GROUP_MESSAGE_FREEZE_PEER_ID, packet, sizeof(packet)) > 0) {
+        return 0;
+    }
+
+    return -1;
+}
+
 /* send a name message
  * return 0 on success
  * return -1 on failure
@@ -1644,7 +1661,7 @@ static int group_name_send(const Group_Chats *g_c, uint32_t groupnumber, const u
  * return 0 on success
  * return -1 on failure
  */
-static int group_leave(const Group_Chats *g_c, uint32_t groupnumber)
+static int group_leave(const Group_Chats *g_c, uint32_t groupnumber, bool permanent)
 {
     Group_c *g = get_group_c(g_c, groupnumber);
 
@@ -1652,7 +1669,11 @@ static int group_leave(const Group_Chats *g_c, uint32_t groupnumber)
         return -1;
     }
 
-    return group_kill_peer_send(g_c, groupnumber, g->peer_number);
+    if (permanent) {
+        return group_kill_peer_send(g_c, groupnumber, g->peer_number);
+    } else {
+        return group_freeze_peer_send(g_c, groupnumber, g->peer_number);
+    }
 }
 
 
@@ -2555,7 +2576,8 @@ static void handle_message_packet_group(Group_Chats *g_c, uint32_t groupnumber, 
         }
         break;
 
-        case GROUP_MESSAGE_KILL_PEER_ID: {
+        case GROUP_MESSAGE_KILL_PEER_ID:
+        case GROUP_MESSAGE_FREEZE_PEER_ID: {
             if (msg_data_len != GROUP_MESSAGE_KILL_PEER_LENGTH) {
                 return;
             }
@@ -2565,7 +2587,11 @@ static void handle_message_packet_group(Group_Chats *g_c, uint32_t groupnumber, 
             kill_peer_number = net_ntohs(kill_peer_number);
 
             if (peer_number == kill_peer_number) {
-                delpeer(g_c, groupnumber, index, userdata, false);
+                if (message_id == GROUP_MESSAGE_KILL_PEER_ID) {
+                    delpeer(g_c, groupnumber, index, userdata, false);
+                } else {
+                    freeze_peer(g_c, groupnumber, index, userdata);
+                }
             } else {
                 return;
                 // TODO(irungentoo):
