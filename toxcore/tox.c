@@ -1647,7 +1647,7 @@ uint32_t tox_conference_offline_peer_count(const Tox *tox, uint32_t conference_n
         Tox_Err_Conference_Offline_Peer_Query *error)
 {
     const Messenger *m = tox->m;
-    int ret = group_number_offline_peers(m->conferences_object, conference_number);
+    int ret = group_number_frozen(m->conferences_object, conference_number);
 
     if (ret == -1) {
         SET_ERROR_PARAMETER(error, TOX_ERR_CONFERENCE_OFFLINE_PEER_QUERY_CONFERENCE_NOT_FOUND);
@@ -1663,7 +1663,7 @@ size_t tox_conference_offline_peer_get_name_size(const Tox *tox, uint32_t confer
         Tox_Err_Conference_Offline_Peer_Query *error)
 {
     const Messenger *m = tox->m;
-    int ret = group_offline_peername_size(m->conferences_object, conference_number, offline_peer_number);
+    int ret = group_frozenname_size(m->conferences_object, conference_number, offline_peer_number);
 
     switch (ret) {
         case -1:
@@ -1684,7 +1684,7 @@ bool tox_conference_offline_peer_get_name(const Tox *tox, uint32_t conference_nu
         Tox_Err_Conference_Offline_Peer_Query *error)
 {
     const Messenger *m = tox->m;
-    int ret = group_offline_peername(m->conferences_object, conference_number, offline_peer_number, name);
+    int ret = group_frozenname(m->conferences_object, conference_number, offline_peer_number, name);
 
     switch (ret) {
         case -1:
@@ -1705,7 +1705,7 @@ bool tox_conference_offline_peer_get_public_key(const Tox *tox, uint32_t confere
         uint8_t *public_key, Tox_Err_Conference_Offline_Peer_Query *error)
 {
     const Messenger *m = tox->m;
-    int ret = group_offline_peer_pubkey(m->conferences_object, conference_number, offline_peer_number, public_key);
+    int ret = group_frozen_pubkey(m->conferences_object, conference_number, offline_peer_number, public_key);
 
     switch (ret) {
         case -1:
@@ -1727,7 +1727,7 @@ uint64_t tox_conference_offline_peer_get_last_active(const Tox *tox, uint32_t co
 {
     const Messenger *m = tox->m;
     uint64_t last_active = UINT64_MAX;
-    int ret = group_offline_peer_last_active(m->conferences_object, conference_number, offline_peer_number, &last_active);
+    int ret = group_frozen_last_active(m->conferences_object, conference_number, offline_peer_number, &last_active);
 
     switch (ret) {
         case -1:
