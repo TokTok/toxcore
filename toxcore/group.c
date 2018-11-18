@@ -2554,9 +2554,24 @@ static void handle_message_packet_group(Group_Chats *g_c, uint32_t groupnumber, 
     memcpy(&peer_number, data, sizeof(uint16_t));
     peer_number = net_ntohs(peer_number);
 
-    const int index = note_peer_active(g_c, groupnumber, peer_number, userdata);
+    uint32_t message_number;
+    memcpy(&message_number, data + sizeof(uint16_t), sizeof(message_number));
+    message_number = net_ntohl(message_number);
+
+    const uint8_t message_id = data[sizeof(uint16_t) + sizeof(message_number)];
+    const uint8_t *msg_data = data + sizeof(uint16_t) + sizeof(message_number) + 1;
+    const uint16_t msg_data_len = length - (sizeof(uint16_t) + sizeof(message_number) + 1);
+
+    const bool ignore_frozen = message_id == GROUP_MESSAGE_FREEZE_PEER_ID;
+
+    const int index = ignore_frozen ? get_peer_index(g, peer_number)
+        : note_peer_active(g_c, groupnumber, peer_number, userdata);
 
     if (index == -1) {
+        if (ignore_frozen) {
+            return;
+        }
+
         /* If we don't know the peer this packet came from, then we query the
          * list of peers from the relaying peer.
          * (They would not have relayed it if they didn't know the peer.) */
@@ -2582,14 +2597,6 @@ static void handle_message_packet_group(Group_Chats *g_c, uint32_t groupnumber, 
             }
         }
     }
-
-    uint32_t message_number;
-    memcpy(&message_number, data + sizeof(uint16_t), sizeof(message_number));
-    message_number = net_ntohl(message_number);
-
-    const uint8_t message_id = data[sizeof(uint16_t) + sizeof(message_number)];
-    const uint8_t *msg_data = data + sizeof(uint16_t) + sizeof(message_number) + 1;
-    const uint16_t msg_data_len = length - (sizeof(uint16_t) + sizeof(message_number) + 1);
 
     if (!check_message_info(message_number, message_id, &g->group[index])) {
         return;
