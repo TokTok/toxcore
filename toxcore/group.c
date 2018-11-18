@@ -1071,14 +1071,14 @@ int del_groupchat(Group_Chats *g_c, uint32_t groupnumber)
     return wipe_group_chat(g_c, groupnumber);
 }
 
-/* Copy the public key of peernumber who is in groupnumber to pk.
+/* Copy the public key of (frozen) peernumber who is in groupnumber to pk.
  * pk must be CRYPTO_PUBLIC_KEY_SIZE long.
  *
  * return 0 on success
  * return -1 if groupnumber is invalid.
  * return -2 if peernumber is invalid.
  */
-int group_peer_pubkey(const Group_Chats *g_c, uint32_t groupnumber, int peernumber, uint8_t *pk)
+int group_peer_pubkey(const Group_Chats *g_c, uint32_t groupnumber, int peernumber, uint8_t *pk, bool frozen)
 {
     Group_c *g = get_group_c(g_c, groupnumber);
 
@@ -1086,21 +1086,24 @@ int group_peer_pubkey(const Group_Chats *g_c, uint32_t groupnumber, int peernumb
         return -1;
     }
 
-    if ((uint32_t)peernumber >= g->numpeers) {
+    Group_Peer *list = frozen ? g->frozen : g->group;
+    uint32_t num = frozen ? g->numfrozen : g->numpeers;
+
+    if ((uint32_t)peernumber >= num) {
         return -2;
     }
 
-    memcpy(pk, g->group[peernumber].real_pk, CRYPTO_PUBLIC_KEY_SIZE);
+    memcpy(pk, list[peernumber].real_pk, CRYPTO_PUBLIC_KEY_SIZE);
     return 0;
 }
 
 /*
- * Return the size of peernumber's name.
+ * Return the size of (frozen) peernumber's name.
  *
  * return -1 if groupnumber is invalid.
  * return -2 if peernumber is invalid.
  */
-int group_peername_size(const Group_Chats *g_c, uint32_t groupnumber, int peernumber)
+int group_peername_size(const Group_Chats *g_c, uint32_t groupnumber, int peernumber, bool frozen)
 {
     Group_c *g = get_group_c(g_c, groupnumber);
 
@@ -1108,25 +1111,28 @@ int group_peername_size(const Group_Chats *g_c, uint32_t groupnumber, int peernu
         return -1;
     }
 
-    if ((uint32_t)peernumber >= g->numpeers) {
+    Group_Peer *list = frozen ? g->frozen : g->group;
+    uint32_t num = frozen ? g->numfrozen : g->numpeers;
+
+    if ((uint32_t)peernumber >= num) {
         return -2;
     }
 
-    if (g->group[peernumber].nick_len == 0) {
+    if (list[peernumber].nick_len == 0) {
         return 0;
     }
 
-    return g->group[peernumber].nick_len;
+    return list[peernumber].nick_len;
 }
 
-/* Copy the name of peernumber who is in groupnumber to name.
+/* Copy the name of (frozen) peernumber who is in groupnumber to name.
  * name must be at least MAX_NAME_LENGTH long.
  *
  * return length of name if success
  * return -1 if groupnumber is invalid.
  * return -2 if peernumber is invalid.
  */
-int group_peername(const Group_Chats *g_c, uint32_t groupnumber, int peernumber, uint8_t *name)
+int group_peername(const Group_Chats *g_c, uint32_t groupnumber, int peernumber, uint8_t *name, bool frozen)
 {
     Group_c *g = get_group_c(g_c, groupnumber);
 
@@ -1134,91 +1140,19 @@ int group_peername(const Group_Chats *g_c, uint32_t groupnumber, int peernumber,
         return -1;
     }
 
-    if ((uint32_t)peernumber >= g->numpeers) {
+    Group_Peer *list = frozen ? g->frozen : g->group;
+    uint32_t num = frozen ? g->numfrozen : g->numpeers;
+
+    if ((uint32_t)peernumber >= num) {
         return -2;
     }
 
-    if (g->group[peernumber].nick_len == 0) {
+    if (list[peernumber].nick_len == 0) {
         return 0;
     }
 
-    memcpy(name, g->group[peernumber].nick, g->group[peernumber].nick_len);
-    return g->group[peernumber].nick_len;
-}
-
-/* Copy the public key of frozennumber who is in groupnumber to pk.
- * pk must be CRYPTO_PUBLIC_KEY_SIZE long.
- *
- * return 0 on success
- * return -1 if groupnumber is invalid.
- * return -2 if frozennumber is invalid.
- */
-int group_frozen_pubkey(const Group_Chats *g_c, uint32_t groupnumber, int frozennumber, uint8_t *pk)
-{
-    Group_c *g = get_group_c(g_c, groupnumber);
-
-    if (!g) {
-        return -1;
-    }
-
-    if ((uint32_t)frozennumber >= g->numfrozen) {
-        return -2;
-    }
-
-    memcpy(pk, g->frozen[frozennumber].real_pk, CRYPTO_PUBLIC_KEY_SIZE);
-    return 0;
-}
-
-/*
- * Return the size of frozennumber's name.
- *
- * return -1 if groupnumber is invalid.
- * return -2 if frozennumber is invalid.
- */
-int group_frozenname_size(const Group_Chats *g_c, uint32_t groupnumber, int frozennumber)
-{
-    Group_c *g = get_group_c(g_c, groupnumber);
-
-    if (!g) {
-        return -1;
-    }
-
-    if ((uint32_t)frozennumber >= g->numfrozen) {
-        return -2;
-    }
-
-    if (g->frozen[frozennumber].nick_len == 0) {
-        return 0;
-    }
-
-    return g->frozen[frozennumber].nick_len;
-}
-
-/* Copy the name of frozennumber who is in groupnumber to name.
- * name must be at least MAX_NAME_LENGTH long.
- *
- * return length of name if success
- * return -1 if groupnumber is invalid.
- * return -2 if frozennumber is invalid.
- */
-int group_frozenname(const Group_Chats *g_c, uint32_t groupnumber, int frozennumber, uint8_t *name)
-{
-    Group_c *g = get_group_c(g_c, groupnumber);
-
-    if (!g) {
-        return -1;
-    }
-
-    if ((uint32_t)frozennumber >= g->numfrozen) {
-        return -2;
-    }
-
-    if (g->frozen[frozennumber].nick_len == 0) {
-        return 0;
-    }
-
-    memcpy(name, g->frozen[frozennumber].nick, g->frozen[frozennumber].nick_len);
-    return g->frozen[frozennumber].nick_len;
+    memcpy(name, list[peernumber].nick, list[peernumber].nick_len);
+    return list[peernumber].nick_len;
 }
 
 /* Copy last active timestamp of frozennumber who is in groupnumber to
@@ -1228,7 +1162,7 @@ int group_frozenname(const Group_Chats *g_c, uint32_t groupnumber, int frozennum
  * return -1 if groupnumber is invalid.
  * return -2 if frozennumber is invalid.
  */
-int group_frozen_last_active(const Group_Chats *g_c, uint32_t groupnumber, int frozennumber,
+int group_frozen_last_active(const Group_Chats *g_c, uint32_t groupnumber, int peernumber,
                              uint64_t *last_active)
 {
     Group_c *g = get_group_c(g_c, groupnumber);
@@ -1237,15 +1171,15 @@ int group_frozen_last_active(const Group_Chats *g_c, uint32_t groupnumber, int f
         return -1;
     }
 
-    if ((uint32_t)frozennumber >= g->numfrozen) {
+    if ((uint32_t)peernumber >= g->numfrozen) {
         return -2;
     }
 
-    *last_active = g->frozen[frozennumber].last_active;
+    *last_active = g->frozen[peernumber].last_active;
     return 0;
 }
 
-/* List all the peers in the group chat.
+/* List all the (frozen) peers in the group chat.
  *
  * Copies the names of the peers to the name[length][MAX_NAME_LENGTH] array.
  *
@@ -1256,7 +1190,7 @@ int group_frozen_last_active(const Group_Chats *g_c, uint32_t groupnumber, int f
  * return -1 on failure.
  */
 int group_names(const Group_Chats *g_c, uint32_t groupnumber, uint8_t names[][MAX_NAME_LENGTH], uint16_t lengths[],
-                uint16_t length)
+                uint16_t length, bool frozen)
 {
     Group_c *g = get_group_c(g_c, groupnumber);
 
@@ -1264,19 +1198,21 @@ int group_names(const Group_Chats *g_c, uint32_t groupnumber, uint8_t names[][MA
         return -1;
     }
 
+    uint32_t num = frozen ? g->numfrozen : g->numpeers;
+
     unsigned int i;
 
-    for (i = 0; i < g->numpeers && i < length; ++i) {
-        lengths[i] = group_peername(g_c, groupnumber, i, names[i]);
+    for (i = 0; i < num && i < length; ++i) {
+        lengths[i] = group_peername(g_c, groupnumber, i, names[i], frozen);
     }
 
     return i;
 }
 
-/* Return the number of peers in the group chat on success.
+/* Return the number of (frozen) peers in the group chat on success.
  * return -1 if groupnumber is invalid.
  */
-int group_number_peers(const Group_Chats *g_c, uint32_t groupnumber)
+int group_number_peers(const Group_Chats *g_c, uint32_t groupnumber, bool frozen)
 {
     Group_c *g = get_group_c(g_c, groupnumber);
 
@@ -1284,21 +1220,7 @@ int group_number_peers(const Group_Chats *g_c, uint32_t groupnumber)
         return -1;
     }
 
-    return g->numpeers;
-}
-
-/* Return the number of frozen peers in the group chat on success.
- * return -1 if groupnumber is invalid.
- */
-int group_number_frozen(const Group_Chats *g_c, uint32_t groupnumber)
-{
-    Group_c *g = get_group_c(g_c, groupnumber);
-
-    if (!g) {
-        return -1;
-    }
-
-    return g->numfrozen;
+    return frozen ? g->numfrozen : g->numpeers;
 }
 
 /* return 1 if the peernumber corresponds to ours.

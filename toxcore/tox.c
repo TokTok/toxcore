@@ -1548,7 +1548,7 @@ bool tox_conference_delete(Tox *tox, uint32_t conference_number, Tox_Err_Confere
 uint32_t tox_conference_peer_count(const Tox *tox, uint32_t conference_number, Tox_Err_Conference_Peer_Query *error)
 {
     const Messenger *m = tox->m;
-    int ret = group_number_peers(m->conferences_object, conference_number);
+    int ret = group_number_peers(m->conferences_object, conference_number, false);
 
     if (ret == -1) {
         SET_ERROR_PARAMETER(error, TOX_ERR_CONFERENCE_PEER_QUERY_CONFERENCE_NOT_FOUND);
@@ -1563,7 +1563,7 @@ size_t tox_conference_peer_get_name_size(const Tox *tox, uint32_t conference_num
         Tox_Err_Conference_Peer_Query *error)
 {
     const Messenger *m = tox->m;
-    int ret = group_peername_size(m->conferences_object, conference_number, peer_number);
+    int ret = group_peername_size(m->conferences_object, conference_number, peer_number, false);
 
     switch (ret) {
         case -1:
@@ -1583,7 +1583,7 @@ bool tox_conference_peer_get_name(const Tox *tox, uint32_t conference_number, ui
                                   Tox_Err_Conference_Peer_Query *error)
 {
     const Messenger *m = tox->m;
-    int ret = group_peername(m->conferences_object, conference_number, peer_number, name);
+    int ret = group_peername(m->conferences_object, conference_number, peer_number, name, false);
 
     switch (ret) {
         case -1:
@@ -1603,7 +1603,7 @@ bool tox_conference_peer_get_public_key(const Tox *tox, uint32_t conference_numb
                                         uint8_t *public_key, Tox_Err_Conference_Peer_Query *error)
 {
     const Messenger *m = tox->m;
-    int ret = group_peer_pubkey(m->conferences_object, conference_number, peer_number, public_key);
+    int ret = group_peer_pubkey(m->conferences_object, conference_number, peer_number, public_key, false);
 
     switch (ret) {
         case -1:
@@ -1647,7 +1647,7 @@ uint32_t tox_conference_offline_peer_count(const Tox *tox, uint32_t conference_n
         Tox_Err_Conference_Offline_Peer_Query *error)
 {
     const Messenger *m = tox->m;
-    int ret = group_number_frozen(m->conferences_object, conference_number);
+    int ret = group_number_peers(m->conferences_object, conference_number, true);
 
     if (ret == -1) {
         SET_ERROR_PARAMETER(error, TOX_ERR_CONFERENCE_OFFLINE_PEER_QUERY_CONFERENCE_NOT_FOUND);
@@ -1663,7 +1663,7 @@ size_t tox_conference_offline_peer_get_name_size(const Tox *tox, uint32_t confer
         Tox_Err_Conference_Offline_Peer_Query *error)
 {
     const Messenger *m = tox->m;
-    int ret = group_frozenname_size(m->conferences_object, conference_number, offline_peer_number);
+    int ret = group_peername_size(m->conferences_object, conference_number, offline_peer_number, true);
 
     switch (ret) {
         case -1:
@@ -1684,7 +1684,7 @@ bool tox_conference_offline_peer_get_name(const Tox *tox, uint32_t conference_nu
         Tox_Err_Conference_Offline_Peer_Query *error)
 {
     const Messenger *m = tox->m;
-    int ret = group_frozenname(m->conferences_object, conference_number, offline_peer_number, name);
+    int ret = group_peername(m->conferences_object, conference_number, offline_peer_number, name, true);
 
     switch (ret) {
         case -1:
@@ -1705,7 +1705,7 @@ bool tox_conference_offline_peer_get_public_key(const Tox *tox, uint32_t confere
         uint8_t *public_key, Tox_Err_Conference_Offline_Peer_Query *error)
 {
     const Messenger *m = tox->m;
-    int ret = group_frozen_pubkey(m->conferences_object, conference_number, offline_peer_number, public_key);
+    int ret = group_peer_pubkey(m->conferences_object, conference_number, offline_peer_number, public_key, true);
 
     switch (ret) {
         case -1:
