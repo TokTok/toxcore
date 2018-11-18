@@ -616,12 +616,15 @@ void m_callback_group_invite(Messenger *m, m_group_invite_cb *function, void *us
 
 /* Send a conference invite packet.
  *
- *  return 0 on success
- *  return -1 on failure
+ *  return 1 on success
+ *  return 0 on failure
  */
 int send_conference_invite_packet(const Messenger *m, int32_t friendnumber, const uint8_t *data, uint16_t length);
 
 /* Send a group invite packet.
+ *
+ *  WARNING: Return-value semantics are different than for
+ *  send_conference_invite_packet().
  *
  *  return 0 on success
  *  return -1 on failure
