@@ -612,11 +612,13 @@ static int addpeer(Group_Chats *g_c, uint32_t groupnumber, const uint8_t *real_p
     }
 
     int prev_peer_index = peer_in_chat(g, real_pk);
+
     if (prev_peer_index >= 0) {
         delpeer(g_c, groupnumber, prev_peer_index, userdata, false);
     }
 
     int prev_frozen_index = frozen_in_chat(g, real_pk);
+
     if (prev_frozen_index >= 0) {
         delete_frozen(g, prev_frozen_index);
     }
@@ -2565,7 +2567,7 @@ static void handle_message_packet_group(Group_Chats *g_c, uint32_t groupnumber, 
     const bool ignore_frozen = message_id == GROUP_MESSAGE_FREEZE_PEER_ID;
 
     const int index = ignore_frozen ? get_peer_index(g, peer_number)
-        : note_peer_active(g_c, groupnumber, peer_number, userdata);
+                      : note_peer_active(g_c, groupnumber, peer_number, userdata);
 
     if (index == -1) {
         if (ignore_frozen) {
