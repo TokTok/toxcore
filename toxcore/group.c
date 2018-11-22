@@ -559,6 +559,27 @@ static int note_peer_active(Group_Chats *g_c, uint32_t groupnumber, uint16_t pee
 
 static int delpeer(Group_Chats *g_c, uint32_t groupnumber, int peer_index, void *userdata, bool keep_connection);
 
+static void delete_any_peer_with_pk(Group_Chats *g_c, uint32_t groupnumber, const uint8_t *real_pk, void *userdata)
+{
+    Group_c *g = get_group_c(g_c, groupnumber);
+
+    if (!g) {
+        return;
+    }
+
+    int prev_peer_index = peer_in_chat(g, real_pk);
+
+    if (prev_peer_index >= 0) {
+        delpeer(g_c, groupnumber, prev_peer_index, userdata, false);
+    }
+
+    int prev_frozen_index = frozen_in_chat(g, real_pk);
+
+    if (prev_frozen_index >= 0) {
+        delete_frozen(g, prev_frozen_index);
+    }
+}
+
 /* Add a peer to the group chat, or update an existing peer.
  *
  * fresh indicates whether we should consider this information on the peer to
@@ -611,17 +632,7 @@ static int addpeer(Group_Chats *g_c, uint32_t groupnumber, const uint8_t *real_p
         }
     }
 
-    int prev_peer_index = peer_in_chat(g, real_pk);
-
-    if (prev_peer_index >= 0) {
-        delpeer(g_c, groupnumber, prev_peer_index, userdata, false);
-    }
-
-    int prev_frozen_index = frozen_in_chat(g, real_pk);
-
-    if (prev_frozen_index >= 0) {
-        delete_frozen(g, prev_frozen_index);
-    }
+    delete_any_peer_with_pk(g_c, groupnumber, real_pk, userdata);
 
     Group_Peer *temp = (Group_Peer *)realloc(g->group, sizeof(Group_Peer) * (g->numpeers + 1));
 
