@@ -1086,8 +1086,8 @@ int group_peer_pubkey(const Group_Chats *g_c, uint32_t groupnumber, int peernumb
         return -1;
     }
 
-    Group_Peer *list = frozen ? g->frozen : g->group;
-    uint32_t num = frozen ? g->numfrozen : g->numpeers;
+    const Group_Peer *list = frozen ? g->frozen : g->group;
+    const uint32_t num = frozen ? g->numfrozen : g->numpeers;
 
     if ((uint32_t)peernumber >= num) {
         return -2;
@@ -1111,8 +1111,8 @@ int group_peername_size(const Group_Chats *g_c, uint32_t groupnumber, int peernu
         return -1;
     }
 
-    Group_Peer *list = frozen ? g->frozen : g->group;
-    uint32_t num = frozen ? g->numfrozen : g->numpeers;
+    const Group_Peer *list = frozen ? g->frozen : g->group;
+    const uint32_t num = frozen ? g->numfrozen : g->numpeers;
 
     if ((uint32_t)peernumber >= num) {
         return -2;
@@ -1140,8 +1140,8 @@ int group_peername(const Group_Chats *g_c, uint32_t groupnumber, int peernumber,
         return -1;
     }
 
-    Group_Peer *list = frozen ? g->frozen : g->group;
-    uint32_t num = frozen ? g->numfrozen : g->numpeers;
+    const Group_Peer *list = frozen ? g->frozen : g->group;
+    const uint32_t num = frozen ? g->numfrozen : g->numpeers;
 
     if ((uint32_t)peernumber >= num) {
         return -2;
@@ -1198,7 +1198,7 @@ int group_names(const Group_Chats *g_c, uint32_t groupnumber, uint8_t names[][MA
         return -1;
     }
 
-    uint32_t num = frozen ? g->numfrozen : g->numpeers;
+    const uint32_t num = frozen ? g->numfrozen : g->numpeers;
 
     unsigned int i;
 
