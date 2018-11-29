@@ -1608,7 +1608,7 @@ bool group_leave(const Group_Chats *g_c, uint32_t groupnumber)
         return false;
     }
 
-    return (group_kill_peer_send(g_c, groupnumber, g->peer_number) == 0);
+    return group_kill_peer_send(g_c, groupnumber, g->peer_number) == 0;
 }
 
 
