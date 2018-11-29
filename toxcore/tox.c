@@ -713,6 +713,7 @@ Tox_Connection tox_self_get_connection_status(const Tox *tox)
 {
     const Messenger *m = tox->m;
 
+    // TODO(zugz): this can be const. Similarly throughout the file.
     unsigned int ret = onion_connection_status(m->onion_c);
 
     if (ret == 2) {

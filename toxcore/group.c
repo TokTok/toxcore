@@ -271,6 +271,7 @@ typedef enum Groupchat_Closest {
 
 static int add_to_closest(Group_Chats *g_c, uint32_t groupnumber, const uint8_t *real_pk, const uint8_t *temp_pk)
 {
+    // TODO(zugz): this can be const. Similarly throughout the file.
     Group_c *g = get_group_c(g_c, groupnumber);
 
     if (!g) {
