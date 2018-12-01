@@ -1816,7 +1816,7 @@ static bool get_peer_number(const Group_c *g, const uint8_t *real_pk, uint16_t *
 
     const int frozen_index = frozen_in_chat(g, real_pk);
 
-    if (peer_index >= 0) {
+    if (frozen_index >= 0) {
         *peer_number = g->frozen[frozen_index].peer_number;
         return true;
     }
