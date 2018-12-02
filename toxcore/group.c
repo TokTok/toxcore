@@ -1077,8 +1077,8 @@ int del_groupchat(Group_Chats *g_c, uint32_t groupnumber, bool leave_permanently
     return wipe_group_chat(g_c, groupnumber);
 }
 
-/* Copy the public key of (frozen) peernumber who is in groupnumber to pk.
- * pk must be CRYPTO_PUBLIC_KEY_SIZE long.
+/* Copy the public key of (frozen, if frozen is true) peernumber who is in
+ * groupnumber to pk. pk must be CRYPTO_PUBLIC_KEY_SIZE long.
  *
  * return 0 on success
  * return -1 if groupnumber is invalid.
@@ -1104,7 +1104,7 @@ int group_peer_pubkey(const Group_Chats *g_c, uint32_t groupnumber, int peernumb
 }
 
 /*
- * Return the size of (frozen) peernumber's name.
+ * Return the size of (frozen, if frozen is true) peernumber's name.
  *
  * return -1 if groupnumber is invalid.
  * return -2 if peernumber is invalid.
@@ -1131,8 +1131,8 @@ int group_peername_size(const Group_Chats *g_c, uint32_t groupnumber, int peernu
     return list[peernumber].nick_len;
 }
 
-/* Copy the name of (frozen) peernumber who is in groupnumber to name.
- * name must be at least MAX_NAME_LENGTH long.
+/* Copy the name of (frozen, if frozen is true) peernumber who is in
+ * groupnumber to name. name must be at least MAX_NAME_LENGTH long.
  *
  * return length of name if success
  * return -1 if groupnumber is invalid.
@@ -1185,7 +1185,7 @@ int group_frozen_last_active(const Group_Chats *g_c, uint32_t groupnumber, int p
     return 0;
 }
 
-/* List all the (frozen) peers in the group chat.
+/* List all the (frozen, if frozen is true) peers in the group chat.
  *
  * Copies the names of the peers to the name[length][MAX_NAME_LENGTH] array.
  *
@@ -1215,8 +1215,9 @@ int group_names(const Group_Chats *g_c, uint32_t groupnumber, uint8_t names[][MA
     return i;
 }
 
-/* Return the number of (frozen) peers in the group chat on success.
- * return -1 if groupnumber is invalid.
+/* Return the number of (frozen, if frozen is true) peers in the group chat on
+ * success. return
+ * -1 if groupnumber is invalid.
  */
 int group_number_peers(const Group_Chats *g_c, uint32_t groupnumber, bool frozen)
 {
