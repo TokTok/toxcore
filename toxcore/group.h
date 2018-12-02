@@ -238,12 +238,13 @@ void g_callback_peer_list_changed(Group_Chats *g_c, peer_list_changed_cb *functi
  */
 int add_groupchat(Group_Chats *g_c, uint8_t type);
 
-/* Delete a groupchat from the chats array.
+/* Delete a groupchat from the chats array, informing the group first as
+ * appropriate.
  *
  * return 0 on success.
  * return -1 if groupnumber is invalid.
  */
-int del_groupchat(Group_Chats *g_c, uint32_t groupnumber);
+int del_groupchat(Group_Chats *g_c, uint32_t groupnumber, bool leave_permanently);
 
 /* Copy the public key of (frozen) peernumber who is in groupnumber to pk.
  * pk must be CRYPTO_PUBLIC_KEY_SIZE long.
@@ -315,12 +316,6 @@ int group_message_send(const Group_Chats *g_c, uint32_t groupnumber, const uint8
  * see: send_message_group() for error codes.
  */
 int group_action_send(const Group_Chats *g_c, uint32_t groupnumber, const uint8_t *action, uint16_t length);
-
-/* send message to announce leaving group
- * return true on success
- * return false on failure
- */
-bool group_leave(const Group_Chats *g_c, uint32_t groupnumber);
 
 /* set the group's title, limited to MAX_NAME_LENGTH
  * return 0 on success

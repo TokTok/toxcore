@@ -1034,17 +1034,22 @@ int add_groupchat(Group_Chats *g_c, uint8_t type)
     return groupnumber;
 }
 
-/* Delete a groupchat from the chats array.
+/* Delete a groupchat from the chats array, informing the group first as
+ * appropriate.
  *
  * return 0 on success.
  * return -1 if groupnumber is invalid.
  */
-int del_groupchat(Group_Chats *g_c, uint32_t groupnumber)
+int del_groupchat(Group_Chats *g_c, uint32_t groupnumber, bool leave_permanently)
 {
     Group_c *g = get_group_c(g_c, groupnumber);
 
     if (!g) {
         return -1;
+    }
+
+    if (leave_permanently) {
+        group_leave(g_c, groupnumber);
     }
 
     for (uint32_t i = 0; i < MAX_GROUP_CONNECTIONS; ++i) {
@@ -3231,7 +3236,7 @@ void do_groupchats(Group_Chats *g_c, void *userdata)
 void kill_groupchats(Group_Chats *g_c)
 {
     for (uint16_t i = 0; i < g_c->num_chats; ++i) {
-        del_groupchat(g_c, i);
+        leave_groupchat(g_c, i, false);
     }
 
     m_callback_conference_invite(g_c->m, nullptr);
