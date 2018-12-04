@@ -3093,7 +3093,7 @@ static uint8_t *save_conf(const Group_c *g, uint8_t *data)
     host_to_lendian_bytes16(data, g->peer_number);
     data += sizeof(uint16_t);
 
-    host_to_lendian_bytes32(data, g->numpeers - 1 + g->numfrozen);
+    uint8_t *numsaved_location = data;
     data += sizeof(uint32_t);
 
     *data = g->title_len;
@@ -3102,24 +3102,20 @@ static uint8_t *save_conf(const Group_c *g, uint8_t *data)
     memcpy(data, g->title, g->title_len);
     data += g->title_len;
 
-#ifndef NDEBUG
-    bool found_self = false;
-#endif
+    uint32_t numsaved = 0;
 
     for (uint32_t j = 0; j < g->numpeers + g->numfrozen; ++j) {
         const Group_Peer *peer = (j < g->numpeers) ? &g->group[j] : &g->frozen[j - g->numpeers];
 
         if (id_equal(peer->real_pk, g->real_pk)) {
-#ifndef NDEBUG
-            found_self = true;
-#endif
             continue;
         }
 
         data = save_peer(peer, data);
+        ++numsaved;
     }
 
-    assert(found_self);
+    host_to_lendian_bytes32(numsaved_location, numsaved);
 
     return data;
 }
