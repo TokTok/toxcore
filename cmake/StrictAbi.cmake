@@ -52,3 +52,10 @@ if(WIN32 OR APPLE)
   # Windows and OSX don't have this linker functionality.
   set(STRICT_ABI OFF)
 endif()
+
+if(STRICT_ABI)
+  set(AUTOTEST OFF)
+  set(BOOTSTRAP_DAEMON OFF)
+  set(BUILD_MISC_TESTS OFF)
+  set(DHT_BOOTSTRAP OFF)
+endif()
