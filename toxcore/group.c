@@ -1084,7 +1084,7 @@ int add_groupchat(Group_Chats *g_c, uint8_t type)
     return groupnumber;
 }
 
-static int group_leave(const Group_Chats *g_c, uint32_t groupnumber, bool permanent);
+static bool group_leave(const Group_Chats *g_c, uint32_t groupnumber, bool permanent);
 
 /* Delete a groupchat from the chats array, informing the group first as
  * appropriate.
@@ -1654,10 +1654,9 @@ static int group_new_peer_send(const Group_Chats *g_c, uint32_t groupnumber, uin
 }
 
 /* send a kill_peer message
- * return 0 on success
- * return -1 on failure
+ * return true on success
  */
-static int group_kill_peer_send(const Group_Chats *g_c, uint32_t groupnumber, uint16_t peer_num)
+static bool group_kill_peer_send(const Group_Chats *g_c, uint32_t groupnumber, uint16_t peer_num)
 {
     uint8_t packet[GROUP_MESSAGE_KILL_PEER_LENGTH];
 
@@ -1665,17 +1664,16 @@ static int group_kill_peer_send(const Group_Chats *g_c, uint32_t groupnumber, ui
     memcpy(packet, &peer_num, sizeof(uint16_t));
 
     if (send_message_group(g_c, groupnumber, GROUP_MESSAGE_KILL_PEER_ID, packet, sizeof(packet)) > 0) {
-        return 0;
+        return true;
     }
 
-    return -1;
+    return false;
 }
 
 /* send a freeze_peer message
- * return 0 on success
- * return -1 on failure
+ * return true on success
  */
-static int group_freeze_peer_send(const Group_Chats *g_c, uint32_t groupnumber, uint16_t peer_num)
+static bool group_freeze_peer_send(const Group_Chats *g_c, uint32_t groupnumber, uint16_t peer_num)
 {
     uint8_t packet[GROUP_MESSAGE_KILL_PEER_LENGTH];
 
@@ -1683,10 +1681,10 @@ static int group_freeze_peer_send(const Group_Chats *g_c, uint32_t groupnumber, 
     memcpy(packet, &peer_num, sizeof(uint16_t));
 
     if (send_message_group(g_c, groupnumber, GROUP_MESSAGE_FREEZE_PEER_ID, packet, sizeof(packet)) > 0) {
-        return 0;
+        return true;
     }
 
-    return -1;
+    return false;
 }
 
 /* send a name message
@@ -1707,15 +1705,14 @@ static int group_name_send(const Group_Chats *g_c, uint32_t groupnumber, const u
 }
 
 /* send message to announce leaving group
- * return 0 on success
- * return -1 on failure
+ * return true on success
  */
-static int group_leave(const Group_Chats *g_c, uint32_t groupnumber, bool permanent)
+static bool group_leave(const Group_Chats *g_c, uint32_t groupnumber, bool permanent)
 {
     Group_c *g = get_group_c(g_c, groupnumber);
 
     if (!g) {
-        return -1;
+        return false;
     }
 
     if (permanent) {
