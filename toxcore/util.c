@@ -34,10 +34,9 @@
 #include "util.h"
 
 #include "crypto_core.h" /* for CRYPTO_PUBLIC_KEY_SIZE */
+#include "mem.h"
 
-#include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
 
 /* id functions */
@@ -55,14 +54,14 @@ uint32_t id_copy(uint8_t *dest, const uint8_t *src)
 void host_to_net(uint8_t *num, uint16_t numbytes)
 {
 #ifndef WORDS_BIGENDIAN
-    uint32_t i;
-    VLA(uint8_t, buff, numbytes);
+    uint8_t *buff = (uint8_t *)mem_bcalloc(numbytes, sizeof(uint8_t));
 
-    for (i = 0; i < numbytes; ++i) {
+    for (uint16_t i = 0; i < numbytes; ++i) {
         buff[i] = num[numbytes - i - 1];
     }
 
     memcpy(num, buff, numbytes);
+    mem_bfree(buff, numbytes, sizeof(uint8_t));
 #endif
 }
 

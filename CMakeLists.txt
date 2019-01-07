@@ -145,6 +145,13 @@ set(toxcore_PKGCONFIG_LIBS)
 # Requires: in pkg-config file.
 set(toxcore_PKGCONFIG_REQUIRES)
 
+# LAYER 0: Memory allocator
+# --------------------
+apidsl(toxcore/mem.api.h)
+set(toxcore_SOURCES ${toxcore_SOURCES}
+  toxcore/mem.c
+  toxcore/mem.h)
+
 # LAYER 1: Crypto core
 # --------------------
 apidsl(toxcore/crypto_core.api.h)
