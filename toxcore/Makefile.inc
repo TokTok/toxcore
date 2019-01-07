@@ -8,6 +8,8 @@ libtoxcore_la_includedir = $(includedir)/tox
 libtoxcore_la_SOURCES = ../toxcore/ccompat.h \
                         ../toxcore/DHT.h \
                         ../toxcore/DHT.c \
+                        ../toxcore/mem.h \
+                        ../toxcore/mem.c \
                         ../toxcore/mono_time.h \
                         ../toxcore/mono_time.c \
                         ../toxcore/network.h \

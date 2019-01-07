@@ -13,6 +13,12 @@ cc_library(
 )
 
 cc_library(
+    name = "mem",
+    srcs = ["mem.c"],
+    hdrs = ["mem.h"],
+)
+
+cc_library(
     name = "crypto_core",
     srcs = [
         "crypto_core.c",
@@ -24,6 +30,7 @@ cc_library(
     visibility = ["//c-toxcore:__subpackages__"],
     deps = [
         ":ccompat",
+        ":mem",
         "@libsodium",
     ],
 )
