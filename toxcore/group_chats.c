@@ -2815,17 +2815,21 @@ int gc_founder_set_password(GC_Chat *chat, const uint8_t *passwd, uint16_t passw
     }
 
     uint16_t oldlen = chat->shared_state.passwd_len;
-    VLA(uint8_t, oldpasswd, oldlen);
+    uint8_t *const oldpasswd = (uint8_t *)malloc(oldlen);
     memcpy(oldpasswd, chat->shared_state.passwd, oldlen);
 
     if (set_gc_password_local(chat, passwd, passwd_len) == -1) {
+        free(oldpasswd);
         return -2;
     }
 
     if (sign_gc_shared_state(chat) == -1) {
         set_gc_password_local(chat, oldpasswd, oldlen);
+        free(oldpasswd);
         return -2;
     }
+
+    free(oldpasswd);
 
     if (broadcast_gc_shared_state(chat) == -1) {
         return -3;
@@ -5288,6 +5292,12 @@ static int init_gc_tcp_connection(Messenger *m, GC_Chat *chat)
     }
 
     uint16_t num_relays = tcp_connections_count(nc_get_tcp_c(m->net_crypto));
+
+    if (num_relays == 0) {
+        // TODO(iphydf): This should be an error, but for now TCP isn't working.
+        return 0;
+    }
+
     VLA(Node_format, tcp_relays, num_relays);
     unsigned int i, num = tcp_copy_connected_relays(nc_get_tcp_c(m->net_crypto), tcp_relays, num_relays);
 
