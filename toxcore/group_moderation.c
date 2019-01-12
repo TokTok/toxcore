@@ -286,7 +286,7 @@ uint16_t sanctions_creds_pack(struct GC_Sanction_Creds *creds, uint8_t *data, ui
 
     uint16_t packed_len = 0;
 
-    u32_to_bytes(data + packed_len, creds->version);
+    net_pack_u32(data + packed_len, creds->version);
     packed_len += sizeof(uint32_t);
     memcpy(data + packed_len, creds->hash, GC_MODERATION_HASH_SIZE);
     packed_len += GC_MODERATION_HASH_SIZE;
@@ -318,7 +318,7 @@ int sanctions_list_pack(uint8_t *data, uint16_t length, struct GC_Sanction *sanc
         packed_len += sizeof(uint8_t);
         memcpy(data + packed_len, sanctions[i].public_sig_key, SIG_PUBLIC_KEY);
         packed_len += SIG_PUBLIC_KEY;
-        u64_to_bytes(data + packed_len, sanctions[i].time_set);
+        net_pack_u64(data + packed_len, sanctions[i].time_set);
         packed_len += TIME_STAMP_SIZE;
 
         if (sanctions[i].type == SA_BAN) {
@@ -331,9 +331,9 @@ int sanctions_list_pack(uint8_t *data, uint16_t length, struct GC_Sanction *sanc
             packed_len += ipp_size;
             memcpy(data + packed_len, sanctions[i].info.ban_info.nick, MAX_GC_NICK_SIZE);
             packed_len += MAX_GC_NICK_SIZE;
-            u16_to_bytes(data + packed_len, sanctions[i].info.ban_info.nick_len);
+            net_pack_u16(data + packed_len, sanctions[i].info.ban_info.nick_len);
             packed_len += sizeof(uint16_t);
-            u32_to_bytes(data + packed_len, sanctions[i].info.ban_info.id);
+            net_pack_u32(data + packed_len, sanctions[i].info.ban_info.id);
             packed_len += sizeof(uint32_t);
         } else if (sanctions[i].type == SA_OBSERVER) {
             if (packed_len + ENC_PUBLIC_KEY > length) {
@@ -381,7 +381,7 @@ uint16_t sanctions_creds_unpack(struct GC_Sanction_Creds *creds, const uint8_t *
 
     uint16_t len_processed = 0;
 
-    bytes_to_U32(&creds->version, data + len_processed);
+    net_unpack_u32(data + len_processed, &creds->version);
     len_processed += sizeof(uint32_t);
     memcpy(creds->hash, data + len_processed, GC_MODERATION_HASH_SIZE);
     len_processed += GC_MODERATION_HASH_SIZE;
@@ -414,7 +414,7 @@ int sanctions_list_unpack(struct GC_Sanction *sanctions, struct GC_Sanction_Cred
         len_processed += sizeof(uint8_t);
         memcpy(sanctions[num].public_sig_key, data + len_processed, SIG_PUBLIC_KEY);
         len_processed += SIG_PUBLIC_KEY;
-        bytes_to_U64(&sanctions[num].time_set, data + len_processed);
+        net_unpack_u64(data + len_processed, &sanctions[num].time_set);
         len_processed += TIME_STAMP_SIZE;
 
         if (sanctions[num].type == SA_BAN) {
@@ -427,9 +427,9 @@ int sanctions_list_unpack(struct GC_Sanction *sanctions, struct GC_Sanction_Cred
             len_processed += ipp_size;
             memcpy(sanctions[num].info.ban_info.nick, data + len_processed, MAX_GC_NICK_SIZE);
             len_processed += MAX_GC_NICK_SIZE;
-            bytes_to_U16(&sanctions[num].info.ban_info.nick_len, data + len_processed);
+            net_unpack_u16(data + len_processed, &sanctions[num].info.ban_info.nick_len);
             len_processed += sizeof(uint16_t);
-            bytes_to_U32(&sanctions[num].info.ban_info.id, data + len_processed);
+            net_unpack_u32(data + len_processed, &sanctions[num].info.ban_info.id);
             len_processed += sizeof(uint32_t);
         } else if (sanctions[num].type == SA_OBSERVER) {
             if (len_processed + ENC_PUBLIC_KEY > length) {

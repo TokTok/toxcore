@@ -64,24 +64,6 @@ void net_to_host(uint8_t *num, uint16_t numbytes);
 /* frees all pointers in a uint8_t pointer array, as well as the array itself. */
 void free_uint8_t_pointer_array(uint8_t **ary, size_t n_items);
 
-/* Converts 8 bytes to uint64_t */
-void bytes_to_U64(uint64_t *dest, const uint8_t *bytes);
-
-/* Converts 4 bytes to uint32_t */
-void bytes_to_U32(uint32_t *dest, const uint8_t *bytes);
-
-/* Converts 2 bytes to uint16_t */
-void bytes_to_U16(uint16_t *dest, const uint8_t *bytes);
-
-/* Convert uint64_t to byte string of size 8 */
-void u64_to_bytes(uint8_t *dest, uint64_t value);
-
-/* Convert uint32_t to byte string of size 4 */
-void u32_to_bytes(uint8_t *dest, uint32_t value);
-
-/* Convert uint16_t to byte string of size 2 */
-void u16_to_bytes(uint8_t *dest, uint16_t value);
-
 /* Returns -1 if failed or 0 if success */
 int create_recursive_mutex(pthread_mutex_t *mutex);
 
