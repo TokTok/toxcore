@@ -5559,7 +5559,6 @@ static void add_tcp_relays_to_chat(Messenger *m, GC_Chat *chat)
     uint16_t num_relays = tcp_connections_count(nc_get_tcp_c(m->net_crypto));
 
     if (num_relays == 0) {
-        // TODO(iphydf): This should be an error, but for now TCP isn't working.
         return;
     }
 
