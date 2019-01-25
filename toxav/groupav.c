@@ -433,14 +433,19 @@ static int handle_group_audio_packet(void *object, uint32_t groupnumber, uint32_
     return 0;
 }
 
-/* Convert groupchat to an A/V groupchat.
+/* Enable A/V in a groupchat.
  *
  * return 0 on success.
  * return -1 on failure.
  */
-static int groupchat_enable_av(const Logger *log, Tox *tox, Group_Chats *g_c, uint32_t groupnumber,
-                               audio_data_cb *audio_callback, void *userdata)
+int groupchat_enable_av(const Logger *log, Tox *tox, Group_Chats *g_c, uint32_t groupnumber,
+                        audio_data_cb *audio_callback, void *userdata)
 {
+    if (group_get_type(g_c, groupnumber) != GROUPCHAT_TYPE_AV
+            || group_get_object(g_c, groupnumber) != nullptr) {
+        return -1;
+    }
+
     Group_AV *group_av = new_group_av(log, tox, g_c, audio_callback, userdata);
 
     if (group_av == nullptr) {
@@ -456,6 +461,35 @@ static int groupchat_enable_av(const Logger *log, Tox *tox, Group_Chats *g_c, ui
     }
 
     group_lossy_packet_registerhandler(g_c, GROUP_AUDIO_PACKET_ID, &handle_group_audio_packet);
+    return 0;
+}
+
+/* Disable A/V in a groupchat.
+ *
+ * return 0 on success.
+ * return -1 on failure.
+ */
+int groupchat_disable_av(Group_Chats *g_c, uint32_t groupnumber)
+{
+    if (group_get_type(g_c, groupnumber) != GROUPCHAT_TYPE_AV) {
+        return -1;
+    }
+
+    Group_AV *group_av = group_get_object(g_c, groupnumber);
+
+    if (group_av == nullptr) {
+        return -1;
+    }
+
+    kill_group_av(group_av);
+
+    if (group_set_object(g_c, groupnumber, nullptr) == -1
+            || callback_groupchat_peer_new(g_c, groupnumber, nullptr) == -1
+            || callback_groupchat_peer_delete(g_c, groupnumber, nullptr) == -1
+            || callback_groupchat_delete(g_c, groupnumber, nullptr) == -1) {
+        return -1;
+    }
+
     return 0;
 }
 
