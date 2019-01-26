@@ -452,6 +452,8 @@ int groupchat_enable_av(const Logger *log, Tox *tox, Group_Chats *g_c, uint32_t 
         return -1;
     }
 
+    // FIXME: need to associate Group_Peer_AV objects with any existing peers
+
     if (group_set_object(g_c, groupnumber, group_av) == -1
             || callback_groupchat_peer_new(g_c, groupnumber, group_av_peer_new) == -1
             || callback_groupchat_peer_delete(g_c, groupnumber, group_av_peer_delete) == -1
@@ -480,6 +482,9 @@ int groupchat_disable_av(Group_Chats *g_c, uint32_t groupnumber)
     if (group_av == nullptr) {
         return -1;
     }
+
+    // FIXME: need to kill Group_Peer_AV objects associated with any existing 
+    // peers
 
     kill_group_av(group_av);
 
@@ -567,6 +572,7 @@ static int send_audio_packet(Group_Chats *g_c, uint32_t groupnumber, uint8_t *pa
         return -1;
     }
 
+    // FIXME: freezing and unfreezing peers breaks the sequence
     ++group_av->audio_sequnum;
     return 0;
 }
