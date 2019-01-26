@@ -2,6 +2,7 @@ if BUILD_TESTS
 
 TESTS = \
 	bootstrap_test \
+	conference_av_test \
 	conference_double_invite_test \
 	conference_peer_nick_test \
 	conference_simple_test \
@@ -66,6 +67,10 @@ check_PROGRAMS = $(TESTS)
 bootstrap_test_SOURCES = ../auto_tests/bootstrap_test.c
 bootstrap_test_CFLAGS = $(AUTOTEST_CFLAGS)
 bootstrap_test_LDADD = $(AUTOTEST_LDADD)
+
+conference_av_test_SOURCES = ../auto_tests/conference_av_test.c
+conference_av_test_CFLAGS = $(AUTOTEST_CFLAGS)
+conference_av_test_LDADD = $(AUTOTEST_LDADD)
 
 conference_double_invite_test_SOURCES = ../auto_tests/conference_double_invite_test.c
 conference_double_invite_test_CFLAGS = $(AUTOTEST_CFLAGS)
