@@ -774,6 +774,7 @@ static int freeze_peer(Group_Chats *g_c, uint32_t groupnumber, int peer_index, v
 
     g->frozen = temp;
     g->frozen[g->numfrozen] = g->group[peer_index];
+    g->frozen[g->numfrozen].object = nullptr;
     ++g->numfrozen;
 
     return delpeer(g_c, groupnumber, peer_index, userdata, true);
