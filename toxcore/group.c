@@ -2935,7 +2935,7 @@ int group_peer_set_object(const Group_Chats *g_c, uint32_t groupnumber, int peer
     return 0;
 }
 
-/* Return the object tide to the group chat previously set by group_set_object.
+/* Return the object tied to the group chat previously set by group_set_object.
  *
  * return NULL on failure.
  * return object on success.
@@ -2951,7 +2951,7 @@ void *group_get_object(const Group_Chats *g_c, uint32_t groupnumber)
     return g->object;
 }
 
-/* Return the object tide to the group chat peer previously set by group_peer_set_object.
+/* Return the object tied to the group chat peer previously set by group_peer_set_object.
  *
  * return NULL on failure.
  * return object on success.
