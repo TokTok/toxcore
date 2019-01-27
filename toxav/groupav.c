@@ -452,14 +452,17 @@ int groupchat_enable_av(const Logger *log, Tox *tox, Group_Chats *g_c, uint32_t 
         return -1;
     }
 
-    // FIXME: need to associate Group_Peer_AV objects with any existing peers
-
     if (group_set_object(g_c, groupnumber, group_av) == -1
             || callback_groupchat_peer_new(g_c, groupnumber, group_av_peer_new) == -1
             || callback_groupchat_peer_delete(g_c, groupnumber, group_av_peer_delete) == -1
             || callback_groupchat_delete(g_c, groupnumber, group_av_groupchat_delete) == -1) {
         kill_group_av(group_av);
         return -1;
+    }
+
+    int numpeers = group_number_peers(g_c, groupnumber, false);
+    for (uint32_t i = 0; i < numpeers; ++i) {
+        group_av_peer_new(group_av, groupnumber, i);
     }
 
     group_lossy_packet_registerhandler(g_c, GROUP_AUDIO_PACKET_ID, &handle_group_audio_packet);
@@ -483,8 +486,11 @@ int groupchat_disable_av(Group_Chats *g_c, uint32_t groupnumber)
         return -1;
     }
 
-    // FIXME: need to kill Group_Peer_AV objects associated with any existing 
-    // peers
+    int numpeers = group_number_peers(g_c, groupnumber, false);
+    for (uint32_t i = 0; i < numpeers; ++i) {
+        group_av_peer_delete(group_av, groupnumber, group_peer_get_object(g_c, groupnumber, i));
+        group_peer_set_object(g_c, groupnumber, i, nullptr);
+    }
 
     kill_group_av(group_av);
 

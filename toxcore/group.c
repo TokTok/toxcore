@@ -539,9 +539,7 @@ static int note_peer_active(Group_Chats *g_c, uint32_t groupnumber, uint16_t pee
 
     ++g->numpeers;
 
-    if (!delete_frozen(g, frozen_index)) {
-        return -1;
-    }
+    delete_frozen(g, frozen_index);
 
     if (g_c->peer_list_changed_callback) {
         g_c->peer_list_changed_callback(g_c->m, groupnumber, userdata);
