@@ -223,6 +223,8 @@ static void run_conference_tests(Tox **toxes, State *state)
             toxes[i] = tox_new_log(options, nullptr, &state[i].index);
             tox_options_free(options);
             free(save[i]);
+
+            set_mono_time_callback(toxes[i], &state[i]);
         }
     }
 
