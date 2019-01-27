@@ -18,7 +18,7 @@
 #include "check_compat.h"
 
 #define NUM_AV_GROUP_TOX 4
-#define NUM_AV_DISCONNECT 1
+#define NUM_AV_DISCONNECT 2
 
 typedef struct State {
     uint32_t index;
@@ -131,10 +131,10 @@ static uint32_t random_false_index(bool *list, const uint32_t length)
     return index;
 }
 
-static bool all_got_audio(State *state, uint32_t samples, uint16_t sender)
+static bool all_got_audio(State *state, uint16_t sender)
 {
     for (uint16_t j = 0; j < NUM_AV_GROUP_TOX; ++j) {
-        if (j != sender && state[j].received_audio_samples < samples) {
+        if (j != sender && state[j].received_audio_samples == 0) {
             return false;
         }
     }
@@ -153,15 +153,15 @@ static void test_audio(Tox **toxes, State *state)
             state[j].received_audio_samples = 0;
         }
 
-        ck_assert_msg(toxav_group_send_audio(toxes[i], 0, PCM, samples, 1, 48000) == 0,
-                "#%u failed to send audio", state[i].index);
-
         uint64_t start = state[0].clock;
         do {
-            iterate_all_wait(NUM_AV_GROUP_TOX, toxes, state, ITERATION_INTERVAL);
-        } while (state[0].clock < start + 3000 && !all_got_audio(state, samples, i));
+            ck_assert_msg(toxav_group_send_audio(toxes[i], 0, PCM, samples, 1, 48000) == 0,
+                    "#%u failed to send audio", state[i].index);
 
-        ck_assert_msg(state[0].clock < start + 3000,
+            iterate_all_wait(NUM_AV_GROUP_TOX, toxes, state, ITERATION_INTERVAL);
+        } while (state[0].clock < start + 16*ITERATION_INTERVAL && !all_got_audio(state, i));
+
+        ck_assert_msg(state[0].clock < start + 16*ITERATION_INTERVAL,
                 "timed out while waiting for group to receive audio from #%u", 
                 state[i].index);
 
