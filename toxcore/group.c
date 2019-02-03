@@ -2882,6 +2882,8 @@ static int handle_lossy(void *object, int friendcon_id, const uint8_t *data, uin
     ++lossy_data;
     --lossy_length;
 
+    send_lossy_all_close(g_c, groupnumber, data + 1 + sizeof(uint16_t), length - (1 + sizeof(uint16_t)), index);
+
     if (g_c->lossy_packethandlers[message_id].function) {
         if (g_c->lossy_packethandlers[message_id].function(g->object, groupnumber, peer_index, g->group[peer_index].object,
                 lossy_data, lossy_length) == -1) {
@@ -2891,7 +2893,6 @@ static int handle_lossy(void *object, int friendcon_id, const uint8_t *data, uin
         return -1;
     }
 
-    send_lossy_all_close(g_c, groupnumber, data + 1 + sizeof(uint16_t), length - (1 + sizeof(uint16_t)), index);
     return 0;
 }
 
