@@ -102,20 +102,54 @@ static void handle_conference_message(
     }
 }
 
-static bool toxes_are_disconnected_from_group(uint32_t tox_count, Tox **toxes, int disconnected_count,
+static bool toxes_are_disconnected_from_group(uint32_t tox_count, Tox **toxes,
         bool *disconnected)
 {
+    uint32_t num_disconnected = 0;
+    for (uint32_t i = 0; i < tox_count; ++i) {
+        num_disconnected += disconnected[i];
+    }
+
     for (uint32_t i = 0; i < tox_count; i++) {
         if (disconnected[i]) {
             continue;
         }
 
-        if (tox_conference_peer_count(toxes[i], 0, nullptr) > tox_count - NUM_DISCONNECT) {
+        if (tox_conference_peer_count(toxes[i], 0, nullptr) > tox_count - num_disconnected) {
             return false;
         }
     }
 
     return true;
+}
+
+static void disconnect_toxes(uint32_t tox_count, Tox **toxes, State *state,
+        const bool *disconnect, const bool *exclude)
+{
+    /* Fake a network outage for a set of peers D by iterating only the other
+     * peers D' until the connections time out according to D', then iterating
+     * only D until the connections time out according to D. */
+
+    VLA(bool, disconnect_now, tox_count);
+    bool invert = false;
+    do {
+        for (uint16_t i = 0; i < tox_count; ++i) {
+            disconnect_now[i] = exclude[i] || (invert ^ disconnect[i]);
+        }
+
+        do {
+            for (uint16_t i = 0; i < tox_count; ++i) {
+                if (!disconnect_now[i]) {
+                    tox_iterate(toxes[i], &state[i]);
+                    state[i].clock += 1000;
+                }
+            }
+
+            c_sleep(20);
+        } while (!toxes_are_disconnected_from_group(tox_count, toxes, disconnect_now));
+
+        invert = !invert;
+    } while (invert);
 }
 
 static bool all_connected_to_group(uint32_t tox_count, Tox **toxes)
@@ -197,16 +231,7 @@ static void run_conference_tests(Tox **toxes, State *state)
         }
     }
 
-    do {
-        for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
-            if (!disconnected[i]) {
-                tox_iterate(toxes[i], &state[i]);
-                state[i].clock += 1000;
-            }
-        }
-
-        c_sleep(20);
-    } while (!toxes_are_disconnected_from_group(NUM_GROUP_TOX, toxes, NUM_DISCONNECT, disconnected));
+    disconnect_toxes(NUM_GROUP_TOX, toxes, state, disconnected, restarting);
 
     for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
         if (restarting[i]) {
