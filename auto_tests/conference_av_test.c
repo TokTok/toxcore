@@ -19,7 +19,8 @@
 #include "check_compat.h"
 
 #define NUM_AV_GROUP_TOX 4
-#define NUM_AV_DISCONNECT 2
+#define NUM_AV_DISCONNECT (NUM_AV_GROUP_TOX / 2)
+#define NUM_AV_DISABLE (NUM_AV_GROUP_TOX / 2)
 
 typedef struct State {
     uint32_t index;
@@ -166,10 +167,13 @@ static uint32_t random_false_index(bool *list, const uint32_t length)
     return index;
 }
 
-static bool all_got_audio(State *state, uint16_t sender)
+static bool all_got_audio(State *state, uint16_t sender, const bool *disabled)
 {
     for (uint16_t j = 0; j < NUM_AV_GROUP_TOX; ++j) {
-        if (j != sender && state[j].received_audio_samples == 0) {
+        if (j == sender) {
+            continue;
+        }
+        if (disabled[j] ^ (state[j].received_audio_samples == 0)) {
             return false;
         }
     }
@@ -186,13 +190,17 @@ static void reset_received_audio(Tox **toxes, State *state)
 
 // must have AUDIO_RECEIVE_ITERATIONS > 2^n >= GROUP_JBUF_SIZE for some n.
 #define AUDIO_RECEIVE_ITERATIONS 9
-static void test_audio(Tox **toxes, State *state)
+static void test_audio(Tox **toxes, State *state, const bool *disabled)
 {
     printf("testing sending and receiving audio\n");
     const unsigned int samples = 960;
     int16_t *PCM = (int16_t *)calloc(samples, sizeof(int16_t));
 
     for (uint16_t i = 0; i < NUM_AV_GROUP_TOX; ++i) {
+        if (disabled[i]) {
+            continue;
+        }
+
         reset_received_audio(toxes, state);
 
         uint64_t start = state[0].clock;
@@ -201,7 +209,8 @@ static void test_audio(Tox **toxes, State *state)
                     "#%u failed to send audio", state[i].index);
 
             iterate_all_wait(NUM_AV_GROUP_TOX, toxes, state, ITERATION_INTERVAL);
-        } while (state[0].clock < start + AUDIO_RECEIVE_ITERATIONS*ITERATION_INTERVAL && !all_got_audio(state, i));
+        } while (state[0].clock < start + AUDIO_RECEIVE_ITERATIONS*ITERATION_INTERVAL
+                && !all_got_audio(state, i, disabled));
 
         ck_assert_msg(state[0].clock < start + AUDIO_RECEIVE_ITERATIONS*ITERATION_INTERVAL,
                 "timed out while waiting for group to receive audio from #%u", 
@@ -209,7 +218,7 @@ static void test_audio(Tox **toxes, State *state)
     }
 }
 
-static bool try_audio(Tox **toxes, State *state)
+static bool try_audio(Tox **toxes, State *state, const bool *disabled)
 {
     /* same as test_audio(), but without errors. */
 
@@ -217,13 +226,18 @@ static bool try_audio(Tox **toxes, State *state)
     int16_t *PCM = (int16_t *)calloc(samples, sizeof(int16_t));
 
     for (uint16_t i = 0; i < NUM_AV_GROUP_TOX; ++i) {
+        if (disabled[i]) {
+            continue;
+        }
+
         reset_received_audio(toxes, state);
 
         uint64_t start = state[0].clock;
         do {
             toxav_group_send_audio(toxes[i], 0, PCM, samples, 1, 48000);
             iterate_all_wait(NUM_AV_GROUP_TOX, toxes, state, ITERATION_INTERVAL);
-        } while (state[0].clock < start + AUDIO_RECEIVE_ITERATIONS*ITERATION_INTERVAL && !all_got_audio(state, i));
+        } while (state[0].clock < start + AUDIO_RECEIVE_ITERATIONS*ITERATION_INTERVAL
+                && !all_got_audio(state, i, disabled));
 
         if (state[0].clock >= start + AUDIO_RECEIVE_ITERATIONS*ITERATION_INTERVAL) {
             return false;
@@ -252,7 +266,9 @@ static void do_audio(Tox **toxes, State *state, uint32_t iterations)
 
 static void run_conference_tests(Tox **toxes, State *state)
 {
-    test_audio(toxes, state);
+    bool disabled[NUM_AV_GROUP_TOX] = {0};
+
+    test_audio(toxes, state, disabled);
 
     /* have everyone send audio for a bit so we can test that the audio
      * sequnums dropping to 0 on restart isn't a problem */
@@ -326,16 +342,48 @@ static void run_conference_tests(Tox **toxes, State *state)
      * looser condition). Note: at the time of writing, this can take an
      * unreasonably long time with many peers (>60s with 16 peers). */
     uint64_t start = state[0].clock;
-    do {} while (!try_audio(toxes, state) && state[0].clock < start + SETTLE_TIME*1000);
+    do {} while (!try_audio(toxes, state, disabled) && state[0].clock < start + SETTLE_TIME*1000);
 
     if (state[0].clock >= start + SETTLE_TIME*1000) {
         printf("audio seems not to be getting through: testing again with errors.\n");
-        test_audio(toxes, state);
+        test_audio(toxes, state, disabled);
     }
     else {
         printf("audio test successful after %d seconds\n", (int)((state[0].clock - start) / 1000));
     }
 
+    printf("testing disabling av\n");
+
+    ck_assert(NUM_AV_DISABLE < NUM_AV_GROUP_TOX);
+
+    for (uint16_t i = 0; i < NUM_AV_DISABLE; ++i) {
+        uint32_t disable = random_false_index(disabled, NUM_AV_GROUP_TOX);
+        disabled[disable] = true;
+        printf("Disabling #%u\n", state[disable].index);
+        ck_assert_msg(toxav_groupchat_enable_av(toxes[disable], 0, audio_callback, &state[disable]) != 0,
+                "#%u could enable already enabled av!", state[i].index);
+        ck_assert_msg(toxav_groupchat_disable_av(toxes[disable], 0) == 0,
+                "#%u failed to disable av", state[i].index);
+        
+    }
+
+    printf("testing audio with some peers having disabled their av\n");
+    test_audio(toxes, state, disabled);
+
+    for (uint16_t i = 0; i < NUM_AV_DISABLE; ++i) {
+        if (!disabled[i]) {
+            continue;
+        }
+
+        disabled[i] = false;
+        ck_assert_msg(toxav_groupchat_disable_av(toxes[i], 0) != 0,
+                "#%u could disable already disabled av!", state[i].index);
+        ck_assert_msg(toxav_groupchat_enable_av(toxes[i], 0, audio_callback, &state[i]) == 0,
+                "#%u failed to re-enable av", state[i].index);
+    }
+
+    printf("testing audio after re-enabling all av\n");
+    test_audio(toxes, state, disabled);
 }
 
 static void test_groupav(Tox **toxes, State *state)
