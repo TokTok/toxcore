@@ -237,6 +237,20 @@ static bool test_audio(Tox **toxes, State *state, const bool *disabled, bool qui
     return true;
 }
 
+static void test_eventual_audio(Tox **toxes, State *state, const bool *disabled, uint64_t timeout)
+{
+    uint64_t start = state[0].clock;
+    do {} while (!test_audio(toxes, state, disabled, true) && state[0].clock < start + timeout);
+
+    if (state[0].clock >= start + timeout) {
+        printf("audio seems not to be getting through: testing again with errors.\n");
+        test_audio(toxes, state, disabled, false);
+    }
+    else {
+        printf("audio test successful after %d seconds\n", (int)((state[0].clock - start) / 1000));
+    }
+}
+
 static void do_audio(Tox **toxes, State *state, uint32_t iterations)
 {
     const unsigned int samples = 960;
@@ -330,16 +344,7 @@ static void run_conference_tests(Tox **toxes, State *state)
      * (all_connected_to_group() only checks lossless connectivity, which is a
      * looser condition). Note: at the time of writing, this can take an
      * unreasonably long time with many peers (>60s with 16 peers). */
-    uint64_t start = state[0].clock;
-    do {} while (!test_audio(toxes, state, disabled, true) && state[0].clock < start + SETTLE_TIME*1000);
-
-    if (state[0].clock >= start + SETTLE_TIME*1000) {
-        printf("audio seems not to be getting through: testing again with errors.\n");
-        test_audio(toxes, state, disabled, false);
-    }
-    else {
-        printf("audio test successful after %d seconds\n", (int)((state[0].clock - start) / 1000));
-    }
+    test_eventual_audio(toxes, state, disabled, SETTLE_TIME*1000);
 
     printf("testing disabling av\n");
 
@@ -372,7 +377,7 @@ static void run_conference_tests(Tox **toxes, State *state)
     }
 
     printf("testing audio after re-enabling all av\n");
-    test_audio(toxes, state, disabled, false);
+    test_eventual_audio(toxes, state, disabled, (GROUP_JBUF_DEAD_SECONDS+1)*1000);
 }
 
 static void test_groupav(Tox **toxes, State *state)
