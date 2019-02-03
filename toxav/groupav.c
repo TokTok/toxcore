@@ -578,7 +578,6 @@ static int send_audio_packet(Group_Chats *g_c, uint32_t groupnumber, uint8_t *pa
         return -1;
     }
 
-    // FIXME: freezing and unfreezing peers breaks the sequence
     ++group_av->audio_sequnum;
     return 0;
 }
