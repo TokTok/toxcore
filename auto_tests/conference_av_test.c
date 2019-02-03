@@ -176,6 +176,9 @@ static bool all_got_audio(State *state, uint16_t sender)
     return true;
 }
 
+// AUDIO_RECEIVE_ITERATIONS should be at least 2^n+2 for n such that
+// 2^n >= GROUP_JBUF_SIZE
+#define AUDIO_RECEIVE_ITERATIONS 10
 static void test_audio(Tox **toxes, State *state)
 {
     printf("testing sending and receiving audio\n");
@@ -193,12 +196,11 @@ static void test_audio(Tox **toxes, State *state)
                     "#%u failed to send audio", state[i].index);
 
             iterate_all_wait(NUM_AV_GROUP_TOX, toxes, state, ITERATION_INTERVAL);
-        } while (state[0].clock < start + 16*ITERATION_INTERVAL && !all_got_audio(state, i));
+        } while (state[0].clock < start + AUDIO_RECEIVE_ITERATIONS*ITERATION_INTERVAL && !all_got_audio(state, i));
 
-        ck_assert_msg(state[0].clock < start + 16*ITERATION_INTERVAL,
+        ck_assert_msg(state[0].clock < start + AUDIO_RECEIVE_ITERATIONS*ITERATION_INTERVAL,
                 "timed out while waiting for group to receive audio from #%u", 
                 state[i].index);
-
     }
 }
 
