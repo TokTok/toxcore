@@ -8,11 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <stdint.h>
 
-#include "../testing/misc_tools.h"
-#include "../toxcore/crypto_core.h"
-#include "../toxcore/tox.h"
-#include "../toxcore/util.h"
 #include "check_compat.h"
 
 #define NUM_GROUP_TOX 16
@@ -181,9 +178,10 @@ static bool names_propagated(uint32_t tox_count, Tox **toxes, State *state)
 }
 
 
-/* returns a random index at which a list of booleans is false
+/**
+ * returns a random index at which a list of booleans is false
  * (some such index is required to exist)
- * */
+ */
 static uint32_t random_false_index(bool *list, const uint32_t length)
 {
     uint32_t index;

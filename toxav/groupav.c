@@ -481,7 +481,7 @@ int groupchat_disable_av(Group_Chats *g_c, uint32_t groupnumber)
         return -1;
     }
 
-    Group_AV *group_av = group_get_object(g_c, groupnumber);
+    Group_AV *group_av = (Group_AV *)group_get_object(g_c, groupnumber);
 
     if (group_av == nullptr) {
         return -1;

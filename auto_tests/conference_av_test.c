@@ -8,13 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <stdint.h>
 
-#include "../testing/misc_tools.h"
-#include "../toxcore/crypto_core.h"
-#include "../toxcore/tox.h"
-#include "../toxcore/util.h"
-#include "../toxav/groupav.h"
-#include "../toxav/groupav.c"
 #include "../toxav/toxav.h"
 #include "check_compat.h"
 
@@ -134,8 +129,7 @@ static void disconnect_toxes(uint32_t tox_count, Tox **toxes, State *state,
 {
     /* Fake a network outage for a set of peers D by iterating only the other
      * peers D' until the connections time out according to D', then iterating
-     * only D until the connections time out according to D.
-     */
+     * only D until the connections time out according to D. */
 
     VLA(bool, disconnect_now, tox_count);
     bool invert = false;
@@ -171,9 +165,10 @@ static bool all_connected_to_group(uint32_t tox_count, Tox **toxes)
     return true;
 }
 
-/* returns a random index at which a list of booleans is false
+/**
+ * returns a random index at which a list of booleans is false
  * (some such index is required to exist)
- * */
+ */
 static uint32_t random_false_index(bool *list, const uint32_t length)
 {
     uint32_t index;
@@ -210,30 +205,31 @@ static void reset_received_audio(Tox **toxes, State *state)
     }
 }
 
+#define GROUP_AV_TEST_SAMPLES 960
+
 /* must have
- * AUDIO_ITERATIONS - NUM_AV_GROUP_TOX >= 2^n >= GROUP_JBUF_SIZE
+ * GROUP_AV_AUDIO_ITERATIONS - NUM_AV_GROUP_TOX >= 2^n >= GROUP_JBUF_SIZE
  * for some n, to give messages time to be relayed and to let the jitter
- * buffers fill up.
- */
-#define AUDIO_ITERATIONS (8 + NUM_AV_GROUP_TOX)
+ * buffers fill up. */
+#define GROUP_AV_AUDIO_ITERATIONS (8 + NUM_AV_GROUP_TOX)
+
 static bool test_audio(Tox **toxes, State *state, const bool *disabled, bool quiet)
 {
     if (!quiet) {
         printf("testing sending and receiving audio\n");
     }
 
-    const unsigned int samples = 960;
-    int16_t *PCM = (int16_t *)calloc(samples, sizeof(int16_t));
+    int16_t PCM[GROUP_AV_TEST_SAMPLES];
 
     reset_received_audio(toxes, state);
 
-    for (uint32_t n = 0; n < AUDIO_ITERATIONS; n++) {
-        for (uint16_t i = 0; i < NUM_AV_GROUP_TOX; ++i) {
+    for (uint32_t n = 0; n < GROUP_AV_AUDIO_ITERATIONS; n++) {
+        for (uint32_t i = 0; i < NUM_AV_GROUP_TOX; ++i) {
             if (disabled[i]) {
                 continue;
             }
 
-            if (toxav_group_send_audio(toxes[i], 0, PCM, samples, 1, 48000) != 0) {
+            if (toxav_group_send_audio(toxes[i], 0, PCM, GROUP_AV_TEST_SAMPLES, 1, 48000) != 0) {
                 if (!quiet) {
                     ck_abort_msg("#%u failed to send audio", state[i].index);
                 }
@@ -273,20 +269,22 @@ static void test_eventual_audio(Tox **toxes, State *state, const bool *disabled,
 
 static void do_audio(Tox **toxes, State *state, uint32_t iterations)
 {
-    const unsigned int samples = 960;
-    int16_t *PCM = (int16_t *)calloc(samples, sizeof(int16_t));
-    printf("running audio for %d iterations\n", iterations);
+    int16_t PCM[GROUP_AV_TEST_SAMPLES];
+    printf("running audio for %u iterations\n", iterations);
 
     for (uint32_t f = 0; f < iterations; ++f) {
         for (uint16_t i = 0; i < NUM_AV_GROUP_TOX; ++i) {
-            ck_assert_msg(toxav_group_send_audio(toxes[i], 0, PCM, samples, 1, 48000) == 0,
+            ck_assert_msg(toxav_group_send_audio(toxes[i], 0, PCM, GROUP_AV_TEST_SAMPLES, 1, 48000) == 0,
                           "#%u failed to send audio", state[i].index);
             iterate_all_wait(NUM_AV_GROUP_TOX, toxes, state, ITERATION_INTERVAL);
         }
     }
 }
 
-#define JITTER_SETTLE_TIME (GROUP_JBUF_DEAD_SECONDS*1000 + NUM_AV_GROUP_TOX*ITERATION_INTERVAL*(AUDIO_ITERATIONS+1))
+// should agree with value in groupav.c
+#define GROUP_JBUF_DEAD_SECONDS 4
+
+#define JITTER_SETTLE_TIME (GROUP_JBUF_DEAD_SECONDS*1000 + NUM_AV_GROUP_TOX*ITERATION_INTERVAL*(GROUP_AV_AUDIO_ITERATIONS+1))
 
 static void run_conference_tests(Tox **toxes, State *state)
 {
@@ -295,8 +293,7 @@ static void run_conference_tests(Tox **toxes, State *state)
     test_audio(toxes, state, disabled, false);
 
     /* have everyone send audio for a bit so we can test that the audio
-     * sequnums dropping to 0 on restart isn't a problem
-     */
+     * sequnums dropping to 0 on restart isn't a problem */
     do_audio(toxes, state, 20);
 
     printf("letting random toxes timeout\n");
@@ -364,8 +361,7 @@ static void run_conference_tests(Tox **toxes, State *state)
     /* Allow time for the jitter buffers to reset and for the group to become
      * connected enough for lossy messages to get through
      * (all_connected_to_group() only checks lossless connectivity, which is a
-     * looser condition).
-     */
+     * looser condition). */
     test_eventual_audio(toxes, state, disabled, JITTER_SETTLE_TIME + NUM_AV_GROUP_TOX * 1000);
 
     printf("testing disabling av\n");
