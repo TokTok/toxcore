@@ -106,6 +106,7 @@ static bool toxes_are_disconnected_from_group(uint32_t tox_count, Tox **toxes,
         bool *disconnected)
 {
     uint32_t num_disconnected = 0;
+
     for (uint32_t i = 0; i < tox_count; ++i) {
         num_disconnected += disconnected[i];
     }
@@ -124,7 +125,7 @@ static bool toxes_are_disconnected_from_group(uint32_t tox_count, Tox **toxes,
 }
 
 static void disconnect_toxes(uint32_t tox_count, Tox **toxes, State *state,
-        const bool *disconnect, const bool *exclude)
+                             const bool *disconnect, const bool *exclude)
 {
     /* Fake a network outage for a set of peers D by iterating only the other
      * peers D' until the connections time out according to D', then iterating
@@ -132,6 +133,7 @@ static void disconnect_toxes(uint32_t tox_count, Tox **toxes, State *state,
 
     VLA(bool, disconnect_now, tox_count);
     bool invert = false;
+
     do {
         for (uint16_t i = 0; i < tox_count; ++i) {
             disconnect_now[i] = exclude[i] || (invert ^ disconnect[i]);

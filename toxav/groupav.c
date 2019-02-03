@@ -461,6 +461,7 @@ int groupchat_enable_av(const Logger *log, Tox *tox, Group_Chats *g_c, uint32_t 
     }
 
     int numpeers = group_number_peers(g_c, groupnumber, false);
+
     for (uint32_t i = 0; i < numpeers; ++i) {
         group_av_peer_new(group_av, groupnumber, i);
     }
@@ -487,6 +488,7 @@ int groupchat_disable_av(Group_Chats *g_c, uint32_t groupnumber)
     }
 
     int numpeers = group_number_peers(g_c, groupnumber, false);
+
     for (uint32_t i = 0; i < numpeers; ++i) {
         group_av_peer_delete(group_av, groupnumber, group_peer_get_object(g_c, groupnumber, i));
         group_peer_set_object(g_c, groupnumber, i, nullptr);
