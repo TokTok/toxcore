@@ -63,7 +63,7 @@ static void audio_callback(void *tox, uint32_t groupnumber, uint32_t peernumber,
 
     State *state = (State *)userdata;
 
-    for (uint16_t i = 0; i < state->received_audio_num; ++i) {
+    for (uint32_t i = 0; i < state->received_audio_num; ++i) {
         if (state->received_audio_peers[i] == peernumber) {
             return;
         }
@@ -135,12 +135,12 @@ static void disconnect_toxes(uint32_t tox_count, Tox **toxes, State *state,
     bool invert = false;
 
     do {
-        for (uint16_t i = 0; i < tox_count; ++i) {
+        for (uint32_t i = 0; i < tox_count; ++i) {
             disconnect_now[i] = exclude[i] || (invert ^ disconnect[i]);
         }
 
         do {
-            for (uint16_t i = 0; i < tox_count; ++i) {
+            for (uint32_t i = 0; i < tox_count; ++i) {
                 if (!disconnect_now[i]) {
                     tox_iterate(toxes[i], &state[i]);
                     state[i].clock += 1000;
@@ -182,13 +182,13 @@ static uint32_t random_false_index(bool *list, const uint32_t length)
 
 static bool all_got_audio(State *state, const bool *disabled)
 {
-    uint16_t num_disabled = 0;
+    uint32_t num_disabled = 0;
 
-    for (uint16_t i = 0; i < NUM_AV_GROUP_TOX; ++i) {
+    for (uint32_t i = 0; i < NUM_AV_GROUP_TOX; ++i) {
         num_disabled += disabled[i];
     }
 
-    for (uint16_t i = 0; i < NUM_AV_GROUP_TOX; ++i) {
+    for (uint32_t i = 0; i < NUM_AV_GROUP_TOX; ++i) {
         if (disabled[i] ^ (state[i].received_audio_num
                            != NUM_AV_GROUP_TOX - num_disabled - 1)) {
             return false;
@@ -200,7 +200,7 @@ static bool all_got_audio(State *state, const bool *disabled)
 
 static void reset_received_audio(Tox **toxes, State *state)
 {
-    for (uint16_t j = 0; j < NUM_AV_GROUP_TOX; ++j) {
+    for (uint32_t j = 0; j < NUM_AV_GROUP_TOX; ++j) {
         state[j].received_audio_num = 0;
     }
 }
@@ -273,7 +273,7 @@ static void do_audio(Tox **toxes, State *state, uint32_t iterations)
     printf("running audio for %u iterations\n", iterations);
 
     for (uint32_t f = 0; f < iterations; ++f) {
-        for (uint16_t i = 0; i < NUM_AV_GROUP_TOX; ++i) {
+        for (uint32_t i = 0; i < NUM_AV_GROUP_TOX; ++i) {
             ck_assert_msg(toxav_group_send_audio(toxes[i], 0, PCM, GROUP_AV_TEST_SAMPLES, 1, 48000) == 0,
                           "#%u failed to send audio", state[i].index);
             iterate_all_wait(NUM_AV_GROUP_TOX, toxes, state, ITERATION_INTERVAL);
@@ -302,7 +302,7 @@ static void run_conference_tests(Tox **toxes, State *state)
 
     ck_assert(NUM_AV_DISCONNECT < NUM_AV_GROUP_TOX);
 
-    for (uint16_t i = 0; i < NUM_AV_DISCONNECT; ++i) {
+    for (uint32_t i = 0; i < NUM_AV_DISCONNECT; ++i) {
         uint32_t disconnect = random_false_index(disconnected, NUM_AV_GROUP_TOX);
         disconnected[disconnect] = true;
 
@@ -317,7 +317,7 @@ static void run_conference_tests(Tox **toxes, State *state)
     uint8_t *save[NUM_AV_GROUP_TOX];
     size_t save_size[NUM_AV_GROUP_TOX];
 
-    for (uint16_t i = 0; i < NUM_AV_GROUP_TOX; ++i) {
+    for (uint32_t i = 0; i < NUM_AV_GROUP_TOX; ++i) {
         if (restarting[i]) {
             save_size[i] = tox_get_savedata_size(toxes[i]);
             ck_assert_msg(save_size[i] != 0, "save is invalid size %u", (unsigned)save_size[i]);
@@ -330,7 +330,7 @@ static void run_conference_tests(Tox **toxes, State *state)
 
     disconnect_toxes(NUM_AV_GROUP_TOX, toxes, state, disconnected, restarting);
 
-    for (uint16_t i = 0; i < NUM_AV_GROUP_TOX; ++i) {
+    for (uint32_t i = 0; i < NUM_AV_GROUP_TOX; ++i) {
         if (restarting[i]) {
             struct Tox_Options *const options = tox_options_new(nullptr);
             tox_options_set_savedata_type(options, TOX_SAVEDATA_TYPE_TOX_SAVE);
@@ -349,7 +349,7 @@ static void run_conference_tests(Tox **toxes, State *state)
         iterate_all_wait(NUM_AV_GROUP_TOX, toxes, state, ITERATION_INTERVAL);
     } while (!all_connected_to_group(NUM_AV_GROUP_TOX, toxes));
 
-    for (uint16_t i = 0; i < NUM_AV_GROUP_TOX; ++i) {
+    for (uint32_t i = 0; i < NUM_AV_GROUP_TOX; ++i) {
         if (restarting[i]) {
             ck_assert_msg(toxav_groupchat_enable_av(toxes[i], 0, audio_callback, &state[i]) == 0,
                           "#%u failed to re-enable av", state[i].index);
@@ -368,7 +368,7 @@ static void run_conference_tests(Tox **toxes, State *state)
 
     ck_assert(NUM_AV_DISABLE < NUM_AV_GROUP_TOX);
 
-    for (uint16_t i = 0; i < NUM_AV_DISABLE; ++i) {
+    for (uint32_t i = 0; i < NUM_AV_DISABLE; ++i) {
         uint32_t disable = random_false_index(disabled, NUM_AV_GROUP_TOX);
         disabled[disable] = true;
         printf("Disabling #%u\n", state[disable].index);
@@ -384,7 +384,7 @@ static void run_conference_tests(Tox **toxes, State *state)
     printf("testing audio with some peers having disabled their av\n");
     test_audio(toxes, state, disabled, false);
 
-    for (uint16_t i = 0; i < NUM_AV_DISABLE; ++i) {
+    for (uint32_t i = 0; i < NUM_AV_DISABLE; ++i) {
         if (!disabled[i]) {
             continue;
         }
@@ -404,7 +404,7 @@ static void test_groupav(Tox **toxes, State *state)
 {
     const time_t test_start_time = time(nullptr);
 
-    for (uint16_t i = 0; i < NUM_AV_GROUP_TOX; ++i) {
+    for (uint32_t i = 0; i < NUM_AV_GROUP_TOX; ++i) {
         tox_callback_self_connection_status(toxes[i], &handle_self_connection_status);
         tox_callback_friend_connection_status(toxes[i], &handle_friend_connection_status);
         tox_callback_conference_invite(toxes[i], &handle_conference_invite);
@@ -418,27 +418,27 @@ static void test_groupav(Tox **toxes, State *state)
 
 
     printf("waiting for invitations to be made\n");
-    uint16_t invited_count = 0;
+    uint32_t invited_count = 0;
 
     do {
         iterate_all_wait(NUM_AV_GROUP_TOX, toxes, state, ITERATION_INTERVAL);
 
         invited_count = 0;
 
-        for (uint16_t i = 0; i < NUM_AV_GROUP_TOX; ++i) {
+        for (uint32_t i = 0; i < NUM_AV_GROUP_TOX; ++i) {
             invited_count += state[i].invited_next;
         }
     } while (invited_count != NUM_AV_GROUP_TOX - 1);
 
     uint64_t pregroup_clock = state[0].clock;
     printf("waiting for all toxes to be in the group\n");
-    uint16_t fully_connected_count = 0;
+    uint32_t fully_connected_count = 0;
 
     do {
         fully_connected_count = 0;
         iterate_all_wait(NUM_AV_GROUP_TOX, toxes, state, ITERATION_INTERVAL);
 
-        for (uint16_t i = 0; i < NUM_AV_GROUP_TOX; ++i) {
+        for (uint32_t i = 0; i < NUM_AV_GROUP_TOX; ++i) {
             Tox_Err_Conference_Peer_Query err;
             uint32_t peer_count = tox_conference_peer_count(toxes[i], 0, &err);
 
