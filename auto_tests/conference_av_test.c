@@ -14,6 +14,7 @@
 #include "../toxcore/tox.h"
 #include "../toxcore/util.h"
 #include "../toxav/groupav.h"
+#include "../toxav/groupav.c"
 #include "../toxav/toxav.h"
 #include "check_compat.h"
 
@@ -176,9 +177,10 @@ static bool all_got_audio(State *state, uint16_t sender)
     return true;
 }
 
-// AUDIO_RECEIVE_ITERATIONS should be at least 2^n+2 for n such that
-// 2^n >= GROUP_JBUF_SIZE
-#define AUDIO_RECEIVE_ITERATIONS 10
+// AUDIO_RECEIVE_ITERATIONS determined by experiment; it must be at least a
+// power of 2 greater than GROUP_JBUF_SIZE, but it needs some room beyond that
+// to be reliable.
+#define AUDIO_RECEIVE_ITERATIONS 16
 static void test_audio(Tox **toxes, State *state)
 {
     printf("testing sending and receiving audio\n");
@@ -204,9 +206,27 @@ static void test_audio(Tox **toxes, State *state)
     }
 }
 
+static void do_audio(Tox **toxes, State *state, uint32_t iterations)
+{
+    const unsigned int samples = 960;
+    int16_t *PCM = (int16_t *)calloc(samples, sizeof(int16_t));
+    printf("running audio for %d iterations\n", iterations);
+    for (uint32_t f = 0; f < iterations; ++f) {
+        for (uint16_t i = 0; i < NUM_AV_GROUP_TOX; ++i) {
+            ck_assert_msg(toxav_group_send_audio(toxes[i], 0, PCM, samples, 1, 48000) == 0,
+                    "#%u failed to send audio", state[i].index);
+            iterate_all_wait(NUM_AV_GROUP_TOX, toxes, state, ITERATION_INTERVAL);
+        }
+    }
+}
+
 static void run_conference_tests(Tox **toxes, State *state)
 {
     test_audio(toxes, state);
+
+    // have everyone send audio for a bit so we can test that the audio
+    // sequnums dropping to 0 on restart isn't a problem
+    do_audio(toxes, state, 20);
 
     printf("letting random toxes timeout\n");
     bool disconnected[NUM_AV_GROUP_TOX] = {0};
@@ -267,6 +287,9 @@ static void run_conference_tests(Tox **toxes, State *state)
                     "#%u failed to re-enable av", state[i].index);
         }
     }
+
+    printf("Waiting %d seconds for jitter buffer to reset\n", GROUP_JBUF_DEAD_SECONDS);
+    iterate_all_wait(NUM_AV_GROUP_TOX, toxes, state, GROUP_JBUF_DEAD_SECONDS*1000);
 
     test_audio(toxes, state);
 }
