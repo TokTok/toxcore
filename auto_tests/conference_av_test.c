@@ -18,7 +18,7 @@
 #include "../toxav/toxav.h"
 #include "check_compat.h"
 
-#define NUM_AV_GROUP_TOX 4
+#define NUM_AV_GROUP_TOX 16
 #define NUM_AV_DISCONNECT (NUM_AV_GROUP_TOX / 2)
 #define NUM_AV_DISABLE (NUM_AV_GROUP_TOX / 2)
 
