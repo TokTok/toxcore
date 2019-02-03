@@ -177,10 +177,15 @@ static bool all_got_audio(State *state, uint16_t sender)
     return true;
 }
 
-// AUDIO_RECEIVE_ITERATIONS determined by experiment; it must be at least a
-// power of 2 greater than GROUP_JBUF_SIZE, but it needs some room beyond that
-// to be reliable.
-#define AUDIO_RECEIVE_ITERATIONS 16
+static void reset_received_audio(Tox **toxes, State *state)
+{
+    for (uint16_t j = 0; j < NUM_AV_GROUP_TOX; ++j) {
+        state[j].received_audio_samples = 0;
+    }
+}
+
+// must have AUDIO_RECEIVE_ITERATIONS > 2^n >= GROUP_JBUF_SIZE for some n.
+#define AUDIO_RECEIVE_ITERATIONS 9
 static void test_audio(Tox **toxes, State *state)
 {
     printf("testing sending and receiving audio\n");
@@ -188,9 +193,7 @@ static void test_audio(Tox **toxes, State *state)
     int16_t *PCM = (int16_t *)calloc(samples, sizeof(int16_t));
 
     for (uint16_t i = 0; i < NUM_AV_GROUP_TOX; ++i) {
-        for (uint16_t j = 0; j < NUM_AV_GROUP_TOX; ++j) {
-            state[j].received_audio_samples = 0;
-        }
+        reset_received_audio(toxes, state);
 
         uint64_t start = state[0].clock;
         do {
@@ -206,6 +209,31 @@ static void test_audio(Tox **toxes, State *state)
     }
 }
 
+static bool try_audio(Tox **toxes, State *state)
+{
+    /* same as test_audio(), but without errors. */
+
+    const unsigned int samples = 960;
+    int16_t *PCM = (int16_t *)calloc(samples, sizeof(int16_t));
+
+    for (uint16_t i = 0; i < NUM_AV_GROUP_TOX; ++i) {
+        reset_received_audio(toxes, state);
+
+        uint64_t start = state[0].clock;
+        do {
+            toxav_group_send_audio(toxes[i], 0, PCM, samples, 1, 48000);
+            iterate_all_wait(NUM_AV_GROUP_TOX, toxes, state, ITERATION_INTERVAL);
+        } while (state[0].clock < start + AUDIO_RECEIVE_ITERATIONS*ITERATION_INTERVAL && !all_got_audio(state, i));
+
+        if (state[0].clock >= start + AUDIO_RECEIVE_ITERATIONS*ITERATION_INTERVAL) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
 static void do_audio(Tox **toxes, State *state, uint32_t iterations)
 {
     const unsigned int samples = 960;
@@ -220,12 +248,14 @@ static void do_audio(Tox **toxes, State *state, uint32_t iterations)
     }
 }
 
+#define SETTLE_TIME (GROUP_JBUF_DEAD_SECONDS + NUM_AV_GROUP_TOX * NUM_AV_GROUP_TOX)
+
 static void run_conference_tests(Tox **toxes, State *state)
 {
     test_audio(toxes, state);
 
-    // have everyone send audio for a bit so we can test that the audio
-    // sequnums dropping to 0 on restart isn't a problem
+    /* have everyone send audio for a bit so we can test that the audio
+     * sequnums dropping to 0 on restart isn't a problem */
     do_audio(toxes, state, 20);
 
     printf("letting random toxes timeout\n");
@@ -288,10 +318,24 @@ static void run_conference_tests(Tox **toxes, State *state)
         }
     }
 
-    printf("Waiting %d seconds for jitter buffer to reset\n", GROUP_JBUF_DEAD_SECONDS);
-    iterate_all_wait(NUM_AV_GROUP_TOX, toxes, state, GROUP_JBUF_DEAD_SECONDS*1000);
+    printf("testing audio\n");
 
-    test_audio(toxes, state);
+    /* Allow time for the jitter buffers to reset and for the group to become
+     * connected enough for lossy messages to get through
+     * (all_connected_to_group() only checks lossless connectivity, which is a
+     * looser condition). Note: at the time of writing, this can take an
+     * unreasonably long time with many peers (>60s with 16 peers). */
+    uint64_t start = state[0].clock;
+    do {} while (!try_audio(toxes, state) && state[0].clock < start + SETTLE_TIME*1000);
+
+    if (state[0].clock >= start + SETTLE_TIME*1000) {
+        printf("audio seems not to be getting through: testing again with errors.\n");
+        test_audio(toxes, state);
+    }
+    else {
+        printf("audio test successful after %d seconds\n", (int)((state[0].clock - start) / 1000));
+    }
+
 }
 
 static void test_groupav(Tox **toxes, State *state)
