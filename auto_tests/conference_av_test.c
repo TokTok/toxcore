@@ -255,16 +255,17 @@ static bool test_audio(Tox **toxes, State *state, const bool *disabled, bool qui
 static void test_eventual_audio(Tox **toxes, State *state, const bool *disabled, uint64_t timeout)
 {
     uint64_t start = state[0].clock;
-    do {} while (!(test_audio(toxes, state, disabled, true)
-                   && test_audio(toxes, state, disabled, true))
-                 && state[0].clock < start + timeout);
 
-    if (state[0].clock >= start + timeout) {
-        printf("audio seems not to be getting through: testing again with errors.\n");
-        test_audio(toxes, state, disabled, false);
-    } else {
-        printf("audio test successful after %d seconds\n", (int)((state[0].clock - start) / 1000));
+    while (state[0].clock < start + timeout) {
+        if (test_audio(toxes, state, disabled, true)
+                && test_audio(toxes, state, disabled, true)) {
+            printf("audio test successful after %d seconds\n", (int)((state[0].clock - start) / 1000));
+            return;
+        }
     }
+
+    printf("audio seems not to be getting through: testing again with errors.\n");
+    test_audio(toxes, state, disabled, false);
 }
 
 static void do_audio(Tox **toxes, State *state, uint32_t iterations)
