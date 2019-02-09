@@ -2830,6 +2830,12 @@ static unsigned int lossy_packet_not_received(const Group_c *g, int peer_index, 
 
 }
 
+/* Does this group type make use of lossy packets? */
+static bool type_uses_lossy(uint8_t type)
+{
+    return (type == GROUPCHAT_TYPE_AV);
+}
+
 static int handle_lossy(void *object, int friendcon_id, const uint8_t *data, uint16_t length, void *userdata)
 {
     Group_Chats *g_c = (Group_Chats *)object;
@@ -2853,6 +2859,10 @@ static int handle_lossy(void *object, int friendcon_id, const uint8_t *data, uin
     const Group_c *g = get_group_c(g_c, groupnumber);
 
     if (!g) {
+        return -1;
+    }
+
+    if (!type_uses_lossy(g->type)) {
         return -1;
     }
 
