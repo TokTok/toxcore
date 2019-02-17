@@ -118,6 +118,8 @@ static bool realloc_conferences(Group_Chats *g_c, uint16_t num)
 static void setup_conference(Group_c *g)
 {
     memset(g, 0, sizeof(Group_c));
+
+    g->maxfrozen = MAX_FROZEN_DEFAULT;
 }
 
 /* Create a new empty groupchat connection.
@@ -646,8 +648,8 @@ static int addpeer(Group_Chats *g_c, uint32_t groupnumber, const uint8_t *real_p
     id_copy(g->group[g->numpeers].temp_pk, temp_pk);
     g->group[g->numpeers].temp_pk_updated = true;
     g->group[g->numpeers].peer_number = peer_number;
-
     g->group[g->numpeers].last_active = mono_time_get(g_c->mono_time);
+    g->group[g->numpeers].is_friend = (getfriend_id(g_c->m, real_pk) != -1);
     ++g->numpeers;
 
     add_to_closest(g_c, groupnumber, real_pk, temp_pk);
@@ -754,6 +756,41 @@ static int delpeer(Group_Chats *g_c, uint32_t groupnumber, int peer_index, void 
     return 0;
 }
 
+static int cmp_u64(uint64_t a, uint64_t b)
+{
+    return (a > b) - (a < b);
+}
+
+/* Order peers with friends first and increasing with last active time */
+static int cmp_frozen(const void *a, const void *b)
+{
+    const Group_Peer *pa = (const Group_Peer *) a;
+    const Group_Peer *pb = (const Group_Peer *) b;
+
+    if (pa->is_friend ^ pb->is_friend) {
+        return pa->is_friend ? -1 : 1;
+    }
+
+    return cmp_u64(pa->last_active, pb->last_active);
+}
+
+/* Remove frozen peers as necessary to ensure at most g->maxfrozen remain.
+ *
+ * return true if any frozen peers are removed.
+ */
+static bool remove_old_frozen(Group_c *g)
+{
+    if (g->numfrozen <= g->maxfrozen) {
+        return false;
+    }
+
+    qsort(g->frozen, g->numfrozen, sizeof(Group_Peer), cmp_frozen);
+
+    g->numfrozen = g->maxfrozen;
+
+    return true;
+}
+
 static bool try_send_rejoin(Group_Chats *g_c, uint32_t groupnumber, const uint8_t *real_pk);
 
 static int freeze_peer(Group_Chats *g_c, uint32_t groupnumber, int peer_index, void *userdata)
@@ -774,7 +811,10 @@ static int freeze_peer(Group_Chats *g_c, uint32_t groupnumber, int peer_index, v
 
     g->frozen = temp;
     g->frozen[g->numfrozen] = g->group[peer_index];
+    g->frozen[g->numfrozen].object = nullptr;
     ++g->numfrozen;
+
+    remove_old_frozen(g);
 
     return delpeer(g_c, groupnumber, peer_index, userdata, true);
 }
@@ -1234,6 +1274,24 @@ int group_frozen_last_active(const Group_Chats *g_c, uint32_t groupnumber, int p
     }
 
     *last_active = g->frozen[peernumber].last_active;
+    return 0;
+}
+
+/* Set maximum number of frozen peers.
+ *
+ * return 0 on success.
+ * return -1 if groupnumber is invalid.
+ */
+int group_set_max_frozen(const Group_Chats *g_c, uint32_t groupnumber, uint32_t maxfrozen)
+{
+    Group_c *g = get_group_c(g_c, groupnumber);
+
+    if (!g) {
+        return -1;
+    }
+
+    g->maxfrozen = maxfrozen;
+    remove_old_frozen(g);
     return 0;
 }
 
@@ -3242,6 +3300,10 @@ static State_Load_Status load_conferences(Group_Chats *g_c, const uint8_t *data,
 
             memcpy(peer->nick, data, peer->nick_len);
             data += peer->nick_len;
+        }
+
+        if (g->numfrozen > g->maxfrozen) {
+            g->maxfrozen = g->numfrozen;
         }
 
         g->status = GROUPCHAT_STATUS_CONNECTED;

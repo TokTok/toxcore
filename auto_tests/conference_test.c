@@ -165,6 +165,18 @@ static void run_conference_tests(Tox **toxes, State *state)
      * fails due to disconnections too short to trigger freezing */
     const bool check_name_change_propagation = false;
 
+    /* each peer should freeze at least its two friends, but freezing more
+     * should not be necessary */
+    const uint32_t max_frozen = max_u32(2, NUM_DISCONNECT / 2);
+    printf("restricting number of frozen peers to %u\n", max_frozen);
+
+    for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
+        Tox_Err_Conference_Set_Max_Offline err;
+        tox_conference_set_max_offline(toxes[i], 0, max_frozen, &err);
+        ck_assert_msg(err == TOX_ERR_CONFERENCE_SET_MAX_OFFLINE_OK,
+                      "tox #%u failed to set max offline: err = %d", state->index, err);
+    }
+
     printf("letting random toxes timeout\n");
     bool disconnected[NUM_GROUP_TOX] = {0};
     bool restarting[NUM_GROUP_TOX] = {0};
