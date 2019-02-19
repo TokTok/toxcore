@@ -774,11 +774,11 @@ static int cmp_frozen(const void *a, const void *b)
     return cmp_u64(pa->last_active, pb->last_active);
 }
 
-/* Remove frozen peers as necessary to ensure at most g->maxfrozen remain.
+/* Delete frozen peers as necessary to ensure at most g->maxfrozen remain.
  *
  * return true if any frozen peers are removed.
  */
-static bool remove_old_frozen(Group_c *g)
+static bool delete_old_frozen(Group_c *g)
 {
     if (g->numfrozen <= g->maxfrozen) {
         return false;
@@ -787,6 +787,14 @@ static bool remove_old_frozen(Group_c *g)
     qsort(g->frozen, g->numfrozen, sizeof(Group_Peer), cmp_frozen);
 
     g->numfrozen = g->maxfrozen;
+
+    Group_Peer *temp = (Group_Peer *)realloc(g->frozen, sizeof(Group_Peer) * g->numfrozen);
+
+    if (temp == nullptr) {
+        return false;
+    }
+
+    g->frozen = temp;
 
     return true;
 }
@@ -814,7 +822,7 @@ static int freeze_peer(Group_Chats *g_c, uint32_t groupnumber, int peer_index, v
     g->frozen[g->numfrozen].object = nullptr;
     ++g->numfrozen;
 
-    remove_old_frozen(g);
+    delete_old_frozen(g);
 
     return delpeer(g_c, groupnumber, peer_index, userdata, true);
 }
@@ -1291,7 +1299,7 @@ int group_set_max_frozen(const Group_Chats *g_c, uint32_t groupnumber, uint32_t 
     }
 
     g->maxfrozen = maxfrozen;
-    remove_old_frozen(g);
+    delete_old_frozen(g);
     return 0;
 }
 
