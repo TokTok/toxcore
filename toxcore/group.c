@@ -3308,6 +3308,9 @@ static State_Load_Status load_conferences(Group_Chats *g_c, const uint8_t *data,
 
             memcpy(peer->nick, data, peer->nick_len);
             data += peer->nick_len;
+
+            // XXX: this relies on friends being loaded before conferences.
+            peer->is_friend = (getfriend_id(g_c->m, peer->real_pk) != -1);
         }
 
         if (g->numfrozen > g->maxfrozen) {
