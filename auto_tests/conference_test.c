@@ -174,7 +174,7 @@ static void run_conference_tests(Tox **toxes, State *state)
         Tox_Err_Conference_Set_Max_Offline err;
         tox_conference_set_max_offline(toxes[i], 0, max_frozen, &err);
         ck_assert_msg(err == TOX_ERR_CONFERENCE_SET_MAX_OFFLINE_OK,
-                      "tox #%u failed to set max offline: err = %d", state->index, err);
+                      "tox #%u failed to set max offline: err = %d", state[i].index, err);
     }
 
     printf("letting random toxes timeout\n");
@@ -228,6 +228,8 @@ static void run_conference_tests(Tox **toxes, State *state)
             toxes[i] = tox_new_log(options, nullptr, &state[i].index);
             tox_options_free(options);
             free(save[i]);
+
+            tox_conference_set_max_offline(toxes[i], 0, max_frozen, nullptr);
         }
     }
 
@@ -239,6 +241,13 @@ static void run_conference_tests(Tox **toxes, State *state)
             snprintf(name, NAMELEN + 1, NEW_NAME_FORMAT_STR, state[i].index);
             tox_self_set_name(toxes[i], (const uint8_t *)name, NAMELEN, nullptr);
         }
+    }
+
+    for (uint16_t i = 0; i < NUM_GROUP_TOX; ++i) {
+        const uint32_t num_frozen = tox_conference_offline_peer_count(toxes[i], 0, nullptr);
+        ck_assert_msg(num_frozen <= max_frozen,
+                      "tox #%u has too many offline peers: %u\n",
+                      state[i].index, num_frozen);
     }
 
     printf("reconnecting toxes\n");
