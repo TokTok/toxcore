@@ -786,15 +786,15 @@ static bool delete_old_frozen(Group_c *g)
 
     qsort(g->frozen, g->numfrozen, sizeof(Group_Peer), cmp_frozen);
 
-    g->numfrozen = g->maxfrozen;
-
-    Group_Peer *temp = (Group_Peer *)realloc(g->frozen, sizeof(Group_Peer) * g->numfrozen);
+    Group_Peer *temp = (Group_Peer *)realloc(g->frozen, sizeof(Group_Peer) * g->maxfrozen);
 
     if (temp == nullptr) {
         return false;
     }
 
     g->frozen = temp;
+
+    g->numfrozen = g->maxfrozen;
 
     return true;
 }
@@ -3309,7 +3309,7 @@ static State_Load_Status load_conferences(Group_Chats *g_c, const uint8_t *data,
             memcpy(peer->nick, data, peer->nick_len);
             data += peer->nick_len;
 
-            // XXX: this relies on friends being loaded before conferences.
+            // NOTE: this relies on friends being loaded before conferences.
             peer->is_friend = (getfriend_id(g_c->m, peer->real_pk) != -1);
         }
 
