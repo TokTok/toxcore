@@ -784,6 +784,13 @@ static bool delete_old_frozen(Group_c *g)
         return false;
     }
 
+    if (g->maxfrozen == 0) {
+        free(g->frozen);
+        g->frozen = nullptr;
+        g->numfrozen = 0;
+        return true;
+    }
+
     qsort(g->frozen, g->numfrozen, sizeof(Group_Peer), cmp_frozen);
 
     Group_Peer *temp = (Group_Peer *)realloc(g->frozen, sizeof(Group_Peer) * g->maxfrozen);
@@ -3264,10 +3271,12 @@ static State_Load_Status load_conferences(Group_Chats *g_c, const uint8_t *data,
         lendian_bytes_to_host32(&g->numfrozen, data);
         data += sizeof(uint32_t);
 
-        g->frozen = (Group_Peer *)malloc(sizeof(Group_Peer) * g->numfrozen);
+        if (g->numfrozen > 0) {
+            g->frozen = (Group_Peer *)malloc(sizeof(Group_Peer) * g->numfrozen);
 
-        if (g->frozen == nullptr) {
-            return STATE_LOAD_STATUS_ERROR;
+            if (g->frozen == nullptr) {
+                return STATE_LOAD_STATUS_ERROR;
+            }
         }
 
         g->title_len = *data;
