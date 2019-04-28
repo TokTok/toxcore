@@ -434,11 +434,11 @@ static int connect_to_closest(Group_Chats *g_c, uint32_t groupnumber, void *user
 
         int friendcon_id = getfriend_conn_id_pk(g_c->fr_c, g->closest_peers[i].real_pk);
 
-        uint8_t lock = 1;
+        uint8_t fresh = 0;
 
         if (friendcon_id == -1) {
             friendcon_id = new_friend_connection(g_c->fr_c, g->closest_peers[i].real_pk);
-            lock = 0;
+            fresh = 1;
 
             if (friendcon_id == -1) {
                 continue;
@@ -447,10 +447,16 @@ static int connect_to_closest(Group_Chats *g_c, uint32_t groupnumber, void *user
             set_dht_temp_pk(g_c->fr_c, friendcon_id, g->closest_peers[i].temp_pk, userdata);
         }
 
-        add_conn_to_groupchat(g_c, friendcon_id, groupnumber, GROUPCHAT_CLOSE_REASON_CLOSEST, lock);
+        const int close_index = add_conn_to_groupchat(g_c, friendcon_id, groupnumber, GROUPCHAT_CLOSE_REASON_CLOSEST, !fresh);
 
-        if (friend_con_connected(g_c->fr_c, friendcon_id) == FRIENDCONN_STATUS_CONNECTED) {
-            send_packet_online(g_c->fr_c, friendcon_id, groupnumber, g->type, g->id);
+        if (close_index == -1) {
+            if (fresh) {
+                kill_friend_connection(g_c->fr_c, friendcon_id);
+            }
+        } else {
+            if (friend_con_connected(g_c->fr_c, friendcon_id) == FRIENDCONN_STATUS_CONNECTED) {
+                send_packet_online(g_c->fr_c, friendcon_id, groupnumber, g->type, g->id);
+            }
         }
     }
 
