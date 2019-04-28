@@ -3424,6 +3424,7 @@ void kill_groupchats(Group_Chats *g_c)
     }
 
     m_callback_conference_invite(g_c->m, nullptr);
+    set_global_status_callback(g_c->m->fr_c, nullptr, nullptr);
     g_c->m->conferences_object = nullptr;
     free(g_c);
 }
