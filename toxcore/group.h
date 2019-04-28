@@ -292,7 +292,8 @@ int invite_friend(Group_Chats *g_c, uint32_t friendnumber, uint32_t groupnumber)
 
 /* Join a group (you need to have been invited first.)
  *
- * expected_type is the groupchat type we expect the chat we are joining is.
+ * expected_type is the groupchat type we expect the chat we are joining to
+ * have.
  *
  * return group number on success.
  * return -1 if data length is invalid.
