@@ -685,6 +685,10 @@ static int remove_close_conn(Group_Chats *g_c, uint32_t groupnumber, int friendc
         }
 
         if (g->close[i].number == (unsigned int)friendcon_id) {
+            if (g->close[i].reasons & GROUPCHAT_CLOSE_REASON_INTRODUCER) {
+                --g->num_introducer_connections;
+            }
+
             g->close[i].type = GROUPCHAT_CLOSE_NONE;
             kill_friend_connection(g_c->fr_c, friendcon_id);
             return 0;
