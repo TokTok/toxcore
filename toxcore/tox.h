@@ -183,7 +183,7 @@ uint32_t tox_version_minor(void);
  * The patch or revision number. Incremented when bugfixes are applied without
  * changing any functionality or API or ABI.
  */
-#define TOX_VERSION_PATCH              8
+#define TOX_VERSION_PATCH              9
 
 uint32_t tox_version_patch(void);
 
@@ -1556,7 +1556,7 @@ size_t tox_friend_get_status_message_size(const Tox *tox, uint32_t friend_number
  * Write the status message of the friend designated by the given friend number to a byte
  * array.
  *
- * Call tox_friend_get_status_message_size to determine the allocation size for the `status_name`
+ * Call tox_friend_get_status_message_size to determine the allocation size for the `status_message`
  * parameter.
  *
  * The data written to `status_message` is equal to the data received by the last
@@ -2609,7 +2609,10 @@ size_t tox_conference_peer_get_name_size(const Tox *tox, uint32_t conference_num
 
 /**
  * Copy the name of peer_number who is in conference_number to name.
- * name must be at least TOX_MAX_NAME_LENGTH long.
+ *
+ * Call tox_conference_peer_get_name_size to determine the allocation size for the `name` parameter.
+ *
+ * @param name A valid memory region large enough to store the peer's name.
  *
  * @return true on success.
  */
@@ -2630,6 +2633,45 @@ bool tox_conference_peer_get_public_key(const Tox *tox, uint32_t conference_numb
  */
 bool tox_conference_peer_number_is_ours(const Tox *tox, uint32_t conference_number, uint32_t peer_number,
                                         TOX_ERR_CONFERENCE_PEER_QUERY *error);
+
+/**
+ * Return the number of offline peers in the conference. Return value is unspecified on failure.
+ */
+uint32_t tox_conference_offline_peer_count(const Tox *tox, uint32_t conference_number,
+        TOX_ERR_CONFERENCE_PEER_QUERY *error);
+
+/**
+ * Return the length of the offline peer's name. Return value is unspecified on failure.
+ */
+size_t tox_conference_offline_peer_get_name_size(const Tox *tox, uint32_t conference_number,
+        uint32_t offline_peer_number, TOX_ERR_CONFERENCE_PEER_QUERY *error);
+
+/**
+ * Copy the name of offline_peer_number who is in conference_number to name.
+ *
+ * Call tox_conference_offline_peer_get_name_size to determine the allocation size for the `name` parameter.
+ *
+ * @param name A valid memory region large enough to store the peer's name.
+ *
+ * @return true on success.
+ */
+bool tox_conference_offline_peer_get_name(const Tox *tox, uint32_t conference_number, uint32_t offline_peer_number,
+        uint8_t *name, TOX_ERR_CONFERENCE_PEER_QUERY *error);
+
+/**
+ * Copy the public key of offline_peer_number who is in conference_number to public_key.
+ * public_key must be TOX_PUBLIC_KEY_SIZE long.
+ *
+ * @return true on success.
+ */
+bool tox_conference_offline_peer_get_public_key(const Tox *tox, uint32_t conference_number,
+        uint32_t offline_peer_number, uint8_t *public_key, TOX_ERR_CONFERENCE_PEER_QUERY *error);
+
+/**
+ * Return a unix-time timestamp of the last time offline_peer_number was seen to be active.
+ */
+uint64_t tox_conference_offline_peer_get_last_active(const Tox *tox, uint32_t conference_number,
+        uint32_t offline_peer_number, TOX_ERR_CONFERENCE_PEER_QUERY *error);
 
 typedef enum TOX_ERR_CONFERENCE_INVITE {
 

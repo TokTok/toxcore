@@ -405,16 +405,23 @@ bool set_socket_dualstack(Socket sock)
 
 static uint32_t data_0(uint16_t buflen, const uint8_t *buffer)
 {
-    // TODO(iphydf): Do this differently. Right now this is most likely a
-    // misaligned memory access in reality, and definitely undefined behaviour
-    // in terms of C standard.
-    const uint8_t *const start = buffer + 1;
-    return buflen > 4 ? net_ntohl(*(const uint32_t *)start) : 0;
+    uint32_t data = 0;
+
+    if (buflen > 4) {
+        net_unpack_u32(buffer + 1, &data);
+    }
+
+    return data;
 }
 static uint32_t data_1(uint16_t buflen, const uint8_t *buffer)
 {
-    const uint8_t *const start = buffer + 5;
-    return buflen > 7 ? net_ntohl(*(const uint32_t *)start) : 0;
+    uint32_t data = 0;
+
+    if (buflen > 7) {
+        net_unpack_u32(buffer + 5, &data);
+    }
+
+    return data;
 }
 
 static void loglogdata(const Logger *log, const char *message, const uint8_t *buffer,
@@ -426,13 +433,13 @@ static void loglogdata(const Logger *log, const char *message, const uint8_t *bu
         int error = net_error();
         const char *strerror = net_new_strerror(error);
         LOGGER_TRACE(log, "[%2u] %s %3u%c %s:%u (%u: %s) | %04x%04x",
-                     buffer[0], message, (buflen < 999 ? buflen : 999), 'E',
+                     buffer[0], message, min_u16(buflen, 999), 'E',
                      ip_ntoa(&ip_port.ip, ip_str, sizeof(ip_str)), net_ntohs(ip_port.port), error,
                      strerror, data_0(buflen, buffer), data_1(buflen, buffer));
         net_kill_strerror(strerror);
     } else if ((res > 0) && ((size_t)res <= buflen)) {
         LOGGER_TRACE(log, "[%2u] %s %3u%c %s:%u (%u: %s) | %04x%04x",
-                     buffer[0], message, (res < 999 ? res : 999), ((size_t)res < buflen ? '<' : '='),
+                     buffer[0], message, min_u16(res, 999), ((size_t)res < buflen ? '<' : '='),
                      ip_ntoa(&ip_port.ip, ip_str, sizeof(ip_str)), net_ntohs(ip_port.port), 0, "OK",
                      data_0(buflen, buffer), data_1(buflen, buffer));
     } else { /* empty or overwrite */
