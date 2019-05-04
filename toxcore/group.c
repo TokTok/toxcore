@@ -1174,12 +1174,12 @@ int del_groupchat(Group_Chats *g_c, uint32_t groupnumber, bool leave_permanently
     return wipe_group_chat(g_c, groupnumber);
 }
 
-static const Group_Peer *peer_in_list(const Group_c *g, int peernumber, bool frozen)
+static const Group_Peer *peer_in_list(const Group_c *g, uint32_t peernumber, bool frozen)
 {
     const Group_Peer *list = frozen ? g->frozen : g->group;
     const uint32_t num = frozen ? g->numfrozen : g->numpeers;
 
-    if ((uint32_t)peernumber >= num) {
+    if (peernumber >= num) {
         return nullptr;
     }
 
@@ -1194,7 +1194,7 @@ static const Group_Peer *peer_in_list(const Group_c *g, int peernumber, bool fro
  * return -1 if groupnumber is invalid.
  * return -2 if peernumber is invalid.
  */
-int group_peer_pubkey(const Group_Chats *g_c, uint32_t groupnumber, int peernumber, uint8_t *pk, bool frozen)
+int group_peer_pubkey(const Group_Chats *g_c, uint32_t groupnumber, uint32_t peernumber, uint8_t *pk, bool frozen)
 {
     const Group_c *g = get_group_c(g_c, groupnumber);
 
@@ -1218,7 +1218,7 @@ int group_peer_pubkey(const Group_Chats *g_c, uint32_t groupnumber, int peernumb
  * return -1 if groupnumber is invalid.
  * return -2 if peernumber is invalid.
  */
-int group_peername_size(const Group_Chats *g_c, uint32_t groupnumber, int peernumber, bool frozen)
+int group_peername_size(const Group_Chats *g_c, uint32_t groupnumber, uint32_t peernumber, bool frozen)
 {
     const Group_c *g = get_group_c(g_c, groupnumber);
 
@@ -1242,7 +1242,7 @@ int group_peername_size(const Group_Chats *g_c, uint32_t groupnumber, int peernu
  * return -1 if groupnumber is invalid.
  * return -2 if peernumber is invalid.
  */
-int group_peername(const Group_Chats *g_c, uint32_t groupnumber, int peernumber, uint8_t *name, bool frozen)
+int group_peername(const Group_Chats *g_c, uint32_t groupnumber, uint32_t peernumber, uint8_t *name, bool frozen)
 {
     const Group_c *g = get_group_c(g_c, groupnumber);
 
@@ -1270,7 +1270,7 @@ int group_peername(const Group_Chats *g_c, uint32_t groupnumber, int peernumber,
  * return -1 if groupnumber is invalid.
  * return -2 if frozennumber is invalid.
  */
-int group_frozen_last_active(const Group_Chats *g_c, uint32_t groupnumber, int peernumber,
+int group_frozen_last_active(const Group_Chats *g_c, uint32_t groupnumber, uint32_t peernumber,
                              uint64_t *last_active)
 {
     const Group_c *g = get_group_c(g_c, groupnumber);
@@ -1279,7 +1279,7 @@ int group_frozen_last_active(const Group_Chats *g_c, uint32_t groupnumber, int p
         return -1;
     }
 
-    if ((uint32_t)peernumber >= g->numfrozen) {
+    if (peernumber >= g->numfrozen) {
         return -2;
     }
 
@@ -1356,7 +1356,7 @@ int group_number_peers(const Group_Chats *g_c, uint32_t groupnumber, bool frozen
  * return -2 if peernumber is invalid.
  * return -3 if we are not connected to the group chat.
  */
-int group_peernumber_is_ours(const Group_Chats *g_c, uint32_t groupnumber, int peernumber)
+int group_peernumber_is_ours(const Group_Chats *g_c, uint32_t groupnumber, uint32_t peernumber)
 {
     const Group_c *g = get_group_c(g_c, groupnumber);
 
@@ -1364,7 +1364,7 @@ int group_peernumber_is_ours(const Group_Chats *g_c, uint32_t groupnumber, int p
         return -1;
     }
 
-    if ((uint32_t)peernumber >= g->numpeers) {
+    if (peernumber >= g->numpeers) {
         return -2;
     }
 
@@ -2941,7 +2941,7 @@ int group_set_object(const Group_Chats *g_c, uint32_t groupnumber, void *object)
  * return 0 on success.
  * return -1 on failure
  */
-int group_peer_set_object(const Group_Chats *g_c, uint32_t groupnumber, int peernumber, void *object)
+int group_peer_set_object(const Group_Chats *g_c, uint32_t groupnumber, uint32_t peernumber, void *object)
 {
     const Group_c *g = get_group_c(g_c, groupnumber);
 
@@ -2949,7 +2949,7 @@ int group_peer_set_object(const Group_Chats *g_c, uint32_t groupnumber, int peer
         return -1;
     }
 
-    if ((uint32_t)peernumber >= g->numpeers) {
+    if (peernumber >= g->numpeers) {
         return -1;
     }
 
@@ -2978,7 +2978,7 @@ void *group_get_object(const Group_Chats *g_c, uint32_t groupnumber)
  * return NULL on failure.
  * return object on success.
  */
-void *group_peer_get_object(const Group_Chats *g_c, uint32_t groupnumber, int peernumber)
+void *group_peer_get_object(const Group_Chats *g_c, uint32_t groupnumber, uint32_t peernumber)
 {
     const Group_c *g = get_group_c(g_c, groupnumber);
 
@@ -2986,7 +2986,7 @@ void *group_peer_get_object(const Group_Chats *g_c, uint32_t groupnumber, int pe
         return nullptr;
     }
 
-    if ((uint32_t)peernumber >= g->numpeers) {
+    if (peernumber >= g->numpeers) {
         return nullptr;
     }
 

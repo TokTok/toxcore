@@ -244,7 +244,7 @@ int del_groupchat(Group_Chats *g_c, uint32_t groupnumber, bool leave_permanently
  * return -1 if groupnumber is invalid.
  * return -2 if peernumber is invalid.
  */
-int group_peer_pubkey(const Group_Chats *g_c, uint32_t groupnumber, int peernumber, uint8_t *pk, bool frozen);
+int group_peer_pubkey(const Group_Chats *g_c, uint32_t groupnumber, uint32_t peernumber, uint8_t *pk, bool frozen);
 
 /*
  * Return the size of (frozen, if frozen is true) peernumber's name.
@@ -252,7 +252,7 @@ int group_peer_pubkey(const Group_Chats *g_c, uint32_t groupnumber, int peernumb
  * return -1 if groupnumber is invalid.
  * return -2 if peernumber is invalid.
  */
-int group_peername_size(const Group_Chats *g_c, uint32_t groupnumber, int32_t peernumber, bool frozen);
+int group_peername_size(const Group_Chats *g_c, uint32_t groupnumber, uint32_t peernumber, bool frozen);
 
 /* Copy the name of (frozen, if frozen is true) peernumber who is in
  * groupnumber to name.
@@ -262,7 +262,7 @@ int group_peername_size(const Group_Chats *g_c, uint32_t groupnumber, int32_t pe
  * return -1 if groupnumber is invalid.
  * return -2 if peernumber is invalid.
  */
-int group_peername(const Group_Chats *g_c, uint32_t groupnumber, int peernumber, uint8_t *name, bool frozen);
+int group_peername(const Group_Chats *g_c, uint32_t groupnumber, uint32_t peernumber, uint8_t *name, bool frozen);
 
 /* Copy last active timestamp of frozen peernumber who is in groupnumber to
  * last_active.
@@ -271,7 +271,7 @@ int group_peername(const Group_Chats *g_c, uint32_t groupnumber, int peernumber,
  * return -1 if groupnumber is invalid.
  * return -2 if peernumber is invalid.
  */
-int group_frozen_last_active(const Group_Chats *g_c, uint32_t groupnumber, int peernumber,
+int group_frozen_last_active(const Group_Chats *g_c, uint32_t groupnumber, uint32_t peernumber,
                              uint64_t *last_active);
 
 /* Set maximum number of frozen peers.
@@ -353,7 +353,7 @@ int group_number_peers(const Group_Chats *g_c, uint32_t groupnumber, bool frozen
  * return -2 if peernumber is invalid.
  * return -3 if we are not connected to the group chat.
  */
-int group_peernumber_is_ours(const Group_Chats *g_c, uint32_t groupnumber, int peernumber);
+int group_peernumber_is_ours(const Group_Chats *g_c, uint32_t groupnumber, uint32_t peernumber);
 
 /* List all the (frozen, if frozen is true) peers in the group chat.
  *
@@ -423,7 +423,7 @@ int group_set_object(const Group_Chats *g_c, uint32_t groupnumber, void *object)
  * return 0 on success.
  * return -1 on failure
  */
-int group_peer_set_object(const Group_Chats *g_c, uint32_t groupnumber, int peernumber, void *object);
+int group_peer_set_object(const Group_Chats *g_c, uint32_t groupnumber, uint32_t peernumber, void *object);
 
 /* Return the object tied to the group chat previously set by group_set_object.
  *
@@ -437,7 +437,7 @@ void *group_get_object(const Group_Chats *g_c, uint32_t groupnumber);
  * return NULL on failure.
  * return object on success.
  */
-void *group_peer_get_object(const Group_Chats *g_c, uint32_t groupnumber, int peernumber);
+void *group_peer_get_object(const Group_Chats *g_c, uint32_t groupnumber, uint32_t peernumber);
 
 /* Set a function to be called when a new peer joins a group chat.
  *
