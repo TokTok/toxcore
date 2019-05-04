@@ -419,8 +419,7 @@ static int connect_to_closest(Group_Chats *g_c, uint32_t groupnumber, void *user
         }
 
         uint8_t real_pk[CRYPTO_PUBLIC_KEY_SIZE];
-        uint8_t dht_temp_pk[CRYPTO_PUBLIC_KEY_SIZE];
-        get_friendcon_public_keys(real_pk, dht_temp_pk, g_c->fr_c, g->close[i].number);
+        get_friendcon_public_keys(real_pk, nullptr, g_c->fr_c, g->close[i].number);
 
         if (!pk_in_closest_peers(g, real_pk)) {
             remove_conn_reason(g_c, groupnumber, i, GROUPCHAT_CLOSE_REASON_CLOSEST);
@@ -2800,7 +2799,15 @@ static void handle_message_packet_group(Group_Chats *g_c, uint32_t groupnumber, 
             return;
     }
 
-    send_message_all_close(g_c, groupnumber, data, length, -1/* TODO(irungentoo) close_index */);
+    /* If the packet was received from the peer who sent the message, relay it
+     * back. When the sender only has one group connection (e.g. because there
+     * are only two peers in the group), this is the only way for them to
+     * receive their own message. */
+    uint8_t real_pk[CRYPTO_PUBLIC_KEY_SIZE];
+    get_friendcon_public_keys(real_pk, nullptr, g_c->fr_c, g->close[close_index].number);
+    bool relay_back = id_equal(g->group[index].real_pk, real_pk);
+
+    send_message_all_close(g_c, groupnumber, data, length, relay_back ? -1 : close_index);
 }
 
 static int g_handle_packet(void *object, int friendcon_id, const uint8_t *data, uint16_t length, void *userdata)
