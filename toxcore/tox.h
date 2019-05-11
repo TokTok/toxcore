@@ -2541,7 +2541,7 @@ typedef enum TOX_ERR_CONFERENCE_NEW {
 /**
  * Creates a new conference.
  *
- * This function creates a new text conference.
+ * This function creates and connects to a new text conference.
  *
  * @return conference number on success, or an unspecified value on failure.
  */
@@ -2725,10 +2725,6 @@ typedef enum TOX_ERR_CONFERENCE_INVITE {
 /**
  * Invites a friend to a conference.
  *
- * We must be connected to the conference, meaning that the conference has not
- * been deleted, and either we created the conference with the tox_conference_new function,
- * or a `conference_connected` event has occurred for the conference.
- *
  * @param friend_number The friend number of the friend we want to invite.
  * @param conference_number The conference number of the conference we want to invite the friend to.
  *
@@ -2779,6 +2775,14 @@ typedef enum TOX_ERR_CONFERENCE_JOIN {
 
 /**
  * Joins a conference that the client has been invited to.
+ *
+ * After successfully joining the conference, the client will not be "connected"
+ * to it until a handshaking procedure has been completed. A
+ * `conference_connected` event will then occur for the conference. The client
+ * will then remain connected to the conference until the conference is deleted,
+ * even across core restarts. Many operations on a conference will fail with a
+ * corresponding error if attempted on a conference to which the client is not
+ * yet connected.
  *
  * @param friend_number The friend number of the friend who sent the invite.
  * @param cookie Received via the `conference_invite` event.
