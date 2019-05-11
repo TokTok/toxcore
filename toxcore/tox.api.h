@@ -2552,8 +2552,16 @@ namespace conference {
     size();
 
     /**
-     * Copy a list of valid conference IDs into the array chatlist. Determine how much space
-     * to allocate for the array with the `$size` function.
+     * Copy a list of valid conference numbers into the array chatlist. Determine
+     * how much space to allocate for the array with the `$size` function.
+     *
+     * Note that `${savedata.get}` saves all connected conferences;
+     * when toxcore is created from savedata in which conferences were saved, those
+     * conferences will be connected at startup, and will be listed by
+     * `$get`.
+     *
+     * The conference number of a loaded conference may differ from the conference
+     * number it had when it was saved.
      */
     get();
   }
