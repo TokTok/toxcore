@@ -2802,7 +2802,10 @@ static void handle_message_packet_group(Group_Chats *g_c, uint32_t groupnumber, 
     /* If the packet was received from the peer who sent the message, relay it
      * back. When the sender only has one group connection (e.g. because there
      * are only two peers in the group), this is the only way for them to
-     * receive their own message. */
+     * receive their own message.
+     * TODO(zugz): this still doesn't agree with the spec. Should we need to
+     * get our own messages echoed? Why not just process our messages
+     * immediately when we send them? */
     uint8_t real_pk[CRYPTO_PUBLIC_KEY_SIZE];
     get_friendcon_public_keys(real_pk, nullptr, g_c->fr_c, g->close[close_index].number);
     bool relay_back = id_equal(g->group[index].real_pk, real_pk);
