@@ -383,30 +383,14 @@ static unsigned int pk_in_closest_peers(const Group_c *g, uint8_t *real_pk)
     return 0;
 }
 
-static int add_conn_to_groupchat(Group_Chats *g_c, int friendcon_id, uint32_t groupnumber, uint8_t reason,
-                                 uint8_t lock);
-
 static void remove_conn_reason(Group_Chats *g_c, uint32_t groupnumber, uint16_t i, uint8_t reason);
 
-static int send_packet_online(Friend_Connections *fr_c, int friendcon_id, uint16_t group_num, uint8_t type,
-                              const uint8_t *id);
-
-static int connect_to_closest(Group_Chats *g_c, uint32_t groupnumber, void *userdata)
+static void purge_closest(Group_Chats *g_c, uint32_t groupnumber)
 {
     Group_c *g = get_group_c(g_c, groupnumber);
 
     if (!g) {
-        return -1;
-    }
-
-    if (!g->changed) {
-        return 0;
-    }
-
-    if (g->changed == GROUPCHAT_CLOSEST_REMOVED) {
-        for (uint32_t i = 0; i < g->numpeers; ++i) {
-            add_to_closest(g_c, groupnumber, g->group[i].real_pk, g->group[i].temp_pk);
-        }
+        return;
     }
 
     for (uint32_t i = 0; i < MAX_GROUP_CONNECTIONS; ++i) {
@@ -424,6 +408,18 @@ static int connect_to_closest(Group_Chats *g_c, uint32_t groupnumber, void *user
         if (!pk_in_closest_peers(g, real_pk)) {
             remove_conn_reason(g_c, groupnumber, i, GROUPCHAT_CLOSE_REASON_CLOSEST);
         }
+    }
+}
+
+static int send_packet_online(Friend_Connections *fr_c, int friendcon_id, uint16_t group_num, uint8_t type,
+                              const uint8_t *id);
+
+static void add_closest_connections(Group_Chats *g_c, uint32_t groupnumber)
+{
+    Group_c *g = get_group_c(g_c, groupnumber);
+
+    if (!g) {
+        return;
     }
 
     for (uint32_t i = 0; i < DESIRED_CLOSE_CONNECTIONS; ++i) {
@@ -458,6 +454,32 @@ static int connect_to_closest(Group_Chats *g_c, uint32_t groupnumber, void *user
             }
         }
     }
+}
+
+static int add_conn_to_groupchat(Group_Chats *g_c, int friendcon_id, uint32_t groupnumber, uint8_t reason,
+                                 uint8_t lock);
+
+static int connect_to_closest(Group_Chats *g_c, uint32_t groupnumber, void *userdata)
+{
+    Group_c *g = get_group_c(g_c, groupnumber);
+
+    if (!g) {
+        return -1;
+    }
+
+    if (!g->changed) {
+        return 0;
+    }
+
+    if (g->changed == GROUPCHAT_CLOSEST_REMOVED) {
+        for (uint32_t i = 0; i < g->numpeers; ++i) {
+            add_to_closest(g_c, groupnumber, g->group[i].real_pk, g->group[i].temp_pk);
+        }
+    }
+
+    purge_closest(g_c, groupnumber);
+
+    add_closest_connections(g_c, groupnumber);
 
     g->changed = GROUPCHAT_CLOSEST_NONE;
 
