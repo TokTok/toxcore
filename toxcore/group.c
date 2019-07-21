@@ -448,10 +448,13 @@ static void add_closest_connections(Group_Chats *g_c, uint32_t groupnumber)
             if (fresh) {
                 kill_friend_connection(g_c->fr_c, friendcon_id);
             }
-        } else {
-            if (friend_con_connected(g_c->fr_c, friendcon_id) == FRIENDCONN_STATUS_CONNECTED) {
-                send_packet_online(g_c->fr_c, friendcon_id, groupnumber, g->type, g->id);
-            }
+
+            continue;
+        }
+
+        if (friend_con_connected(g_c->fr_c, friendcon_id) == FRIENDCONN_STATUS_CONNECTED
+                && g->close[close_index].type == GROUPCHAT_CLOSE_CONNECTION) {
+            send_packet_online(g_c->fr_c, friendcon_id, groupnumber, g->type, g->id);
         }
     }
 }
