@@ -413,7 +413,7 @@ int packed_node_size(Family ip_family)
  * Returns size of packed IP_Port data on success
  * Return -1 on failure.
  */
-int pack_ip_port(uint8_t *data, uint16_t length, const IP_Port *ip_port)
+int pack_ip_port(uint8_t *data, uint16_t length, const IP_Port *ip_port, bool any_family)
 {
     if (data == nullptr) {
         return -1;
@@ -436,7 +436,12 @@ int pack_ip_port(uint8_t *data, uint16_t length, const IP_Port *ip_port)
         is_ipv4 = false;
         net_family = TOX_TCP_INET6;
     } else {
-        return -1;
+        if (any_family) {
+            is_ipv4 = false;
+            net_family = ip_port->ip.family.value;
+        } else {
+            return -1;
+        }
     }
 
     if (is_ipv4) {
@@ -491,7 +496,7 @@ static int dht_create_packet(const uint8_t public_key[CRYPTO_PUBLIC_KEY_SIZE],
  * Return size of unpacked ip_port on success.
  * Return -1 on failure.
  */
-int unpack_ip_port(IP_Port *ip_port, const uint8_t *data, uint16_t length, bool tcp_enabled)
+int unpack_ip_port(IP_Port *ip_port, const uint8_t *data, uint16_t length, bool tcp_enabled, bool any_family)
 {
     if (data == nullptr) {
         return -1;
@@ -521,7 +526,12 @@ int unpack_ip_port(IP_Port *ip_port, const uint8_t *data, uint16_t length, bool 
         is_ipv4 = false;
         host_family = net_family_tcp_ipv6;
     } else {
-        return -1;
+        if (any_family) {
+            is_ipv4 = false;
+            host_family.value = data[0];
+        } else {
+            return -1;
+        }
     }
 
     if (is_ipv4) {
@@ -559,7 +569,7 @@ int pack_nodes(uint8_t *data, uint16_t length, const Node_format *nodes, uint16_
     uint32_t packed_length = 0;
 
     for (uint32_t i = 0; i < number && packed_length < length; ++i) {
-        const int ipp_size = pack_ip_port(data + packed_length, length - packed_length, &nodes[i].ip_port);
+        const int ipp_size = pack_ip_port(data + packed_length, length - packed_length, &nodes[i].ip_port, false);
 
         if (ipp_size == -1) {
             return -1;
@@ -596,7 +606,8 @@ int unpack_nodes(Node_format *nodes, uint16_t max_num_nodes, uint16_t *processed
     uint32_t num = 0, len_processed = 0;
 
     while (num < max_num_nodes && len_processed < length) {
-        const int ipp_size = unpack_ip_port(&nodes[num].ip_port, data + len_processed, length - len_processed, tcp_enabled);
+        const int ipp_size = unpack_ip_port(&nodes[num].ip_port, data + len_processed, length - len_processed, tcp_enabled,
+                                            false);
 
         if (ipp_size == -1) {
             return -1;

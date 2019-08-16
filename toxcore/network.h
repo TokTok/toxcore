@@ -124,6 +124,9 @@ typedef enum Net_Packet_Type {
     NET_PACKET_ONION_RECV_2         = 0x8d,
     NET_PACKET_ONION_RECV_1         = 0x8e,
 
+    NET_PACKET_FORWARD_REQUEST      = 0x90,
+    NET_PACKET_FORWARDING           = 0x91,
+
     BOOTSTRAP_INFO_PACKET_ID        = 0xf0, /* Only used for bootstrap nodes */
 
     NET_PACKET_MAX                  = 0xff, /* This type must remain within a single uint8. */

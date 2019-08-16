@@ -39,6 +39,7 @@
 #include <unistd.h>
 #endif
 
+#include "forwarding.h"
 #include "mono_time.h"
 #include "util.h"
 
@@ -82,6 +83,7 @@ typedef struct TCP_Secure_Connection {
 
 struct TCP_Server {
     Onion *onion;
+    Forwarding *forwarding;
 
 #ifdef TCP_SERVER_USE_EPOLL
     int efd;
@@ -873,6 +875,24 @@ static int handle_onion_recv_1(void *object, IP_Port dest, const uint8_t *data, 
     return 0;
 }
 
+static bool handle_forward_request_tcp(void *object, IP_Port dest, const uint8_t *data, uint16_t length)
+{
+    TCP_Server *tcp_server = (TCP_Server *)object;
+    uint32_t index;
+
+    if (!ip_port_to_con_id(tcp_server, dest, &index)) {
+        return 1;
+    }
+
+    TCP_Secure_Connection *con = &tcp_server->accepted_connection_array[index];
+
+    VLA(uint8_t, packet, 1 + length);
+    memcpy(packet + 1, data, length);
+    packet[0] = TCP_PACKET_FORWARDING;
+
+    return (write_packet_TCP_secure_connection(con, packet, SIZEOF_VLA(packet), 0) == 1);
+}
+
 /* return 0 on success
  * return -1 on failure
  */
@@ -966,6 +986,20 @@ static int handle_TCP_packet(TCP_Server *tcp_server, uint32_t con_id, const uint
         case TCP_PACKET_ONION_RESPONSE: {
             return -1;
         }
+
+        case TCP_PACKET_FORWARD_REQUEST: {
+            if (tcp_server->forwarding) {
+                IP_Port source = con_id_to_ip_port(con_id, con->identifier);
+                handle_forward_request(tcp_server->forwarding, source, data + 1, length - 1);
+            }
+
+            return 0;
+        }
+
+        case TCP_PACKET_FORWARDING: {
+            return -1;
+        }
+
 
         default: {
             if (data[0] < NUM_RESERVED_PORTS) {
@@ -1159,7 +1193,11 @@ TCP_Server *new_TCP_server(uint8_t ipv6_enabled, uint16_t num_sockets, const uin
     if (onion) {
         temp->onion = onion;
         set_callback_handle_recv_1(onion, &handle_onion_recv_1, temp);
+
+        temp->forwarding = onion->forwarding;
+        set_callback_forward_request_not_inet(temp->forwarding, &handle_forward_request_tcp, temp);
     }
+
 
     memcpy(temp->secret_key, secret_key, CRYPTO_SECRET_KEY_SIZE);
     crypto_derive_public_key(temp->public_key, temp->secret_key);
@@ -1491,6 +1529,10 @@ void kill_TCP_server(TCP_Server *tcp_server)
 
     if (tcp_server->onion) {
         set_callback_handle_recv_1(tcp_server->onion, nullptr, nullptr);
+    }
+
+    if (tcp_server->forwarding) {
+        set_callback_forward_request_not_inet(tcp_server->forwarding, nullptr, nullptr);
     }
 
     bs_list_free(&tcp_server->accepted_key_list);

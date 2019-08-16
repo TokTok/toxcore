@@ -167,14 +167,14 @@ int packed_node_size(Family ip_family);
  * Returns size of packed IP_Port data on success
  * Return -1 on failure.
  */
-int pack_ip_port(uint8_t *data, uint16_t length, const IP_Port *ip_port);
+int pack_ip_port(uint8_t *data, uint16_t length, const IP_Port *ip_port, bool any_family);
 
 /* Unpack IP_Port structure from data of max size length into ip_port.
  *
  * Return size of unpacked ip_port on success.
  * Return -1 on failure.
  */
-int unpack_ip_port(IP_Port *ip_port, const uint8_t *data, uint16_t length, bool tcp_enabled);
+int unpack_ip_port(IP_Port *ip_port, const uint8_t *data, uint16_t length, bool tcp_enabled, bool any_family);
 
 /* Pack number of nodes into data of maxlength length.
  *
@@ -327,6 +327,12 @@ bool node_addable_to_close_list(DHT *dht, const uint8_t *public_key, IP_Port ip_
 int get_close_nodes(const DHT *dht, const uint8_t *public_key, Node_format *nodes_list, Family sa_family,
                     bool is_LAN, uint8_t want_good);
 
+/* Put ip_port for a random node in ip_port.
+ * May fail (with low probability) even if there are nodes available.
+ *
+ * return true on success, false otherwise.
+ */
+bool random_dht_node_ip_port(const DHT *dht, IP_Port *ip_port);
 
 /* Put up to max_num nodes in nodes from the random friends.
  *
