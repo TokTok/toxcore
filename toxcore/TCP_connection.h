@@ -145,6 +145,19 @@ typedef int tcp_oob_cb(void *object, const uint8_t *public_key, unsigned int tcp
  */
 void set_oob_packet_tcp_connection_callback(TCP_Connections *tcp_c, tcp_oob_cb *tcp_oob_callback, void *object);
 
+/* Encode tcp_connections_number as a custom ip_port.
+ *
+ * return ip_port.
+ */
+IP_Port tcp_connections_number_to_ip_port(unsigned int tcp_connections_number);
+
+/* Decode ip_port created by tcp_connections_number_to_ip_port to tcp_connections_number.
+ *
+ * return true on success.
+ * return false if ip_port is invalid.
+ */
+bool ip_port_to_tcp_connections_number(IP_Port ip_port, unsigned int *tcp_connections_number);
+
 /* Create a new TCP connection to public_key.
  *
  * public_key must be the counterpart to the secret key that the other peer used with new_tcp_connections().

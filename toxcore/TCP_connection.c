@@ -443,7 +443,7 @@ void set_packet_tcp_connection_callback(TCP_Connections *tcp_c, tcp_data_cb *tcp
     tcp_c->tcp_data_callback_object = object;
 }
 
-/* Set the callback for TCP onion packets.
+/* Set the callback for TCP oob data packets.
  */
 void set_oob_packet_tcp_connection_callback(TCP_Connections *tcp_c, tcp_oob_cb *tcp_oob_callback, void *object)
 {
@@ -451,7 +451,7 @@ void set_oob_packet_tcp_connection_callback(TCP_Connections *tcp_c, tcp_oob_cb *
     tcp_c->tcp_oob_callback_object = object;
 }
 
-/* Set the callback for TCP oob data packets.
+/* Set the callback for TCP onion packets.
  */
 void set_onion_packet_tcp_connection_callback(TCP_Connections *tcp_c, tcp_onion_cb *tcp_onion_callback, void *object)
 {
@@ -459,6 +459,28 @@ void set_onion_packet_tcp_connection_callback(TCP_Connections *tcp_c, tcp_onion_
     tcp_c->tcp_onion_callback_object = object;
 }
 
+/* Encode tcp_connections_number as a custom ip_port.
+ *
+ * return ip_port.
+ */
+IP_Port tcp_connections_number_to_ip_port(unsigned int tcp_connections_number)
+{
+    IP_Port ip_port = {{{0}}};
+    ip_port.ip.family = net_family_tcp_server;
+    ip_port.ip.ip.v6.uint32[0] = tcp_connections_number;
+    return ip_port;
+}
+
+/* Decode ip_port created by tcp_connections_number_to_ip_port to tcp_connections_number.
+ *
+ * return true on success.
+ * return false if ip_port is invalid.
+ */
+bool ip_port_to_tcp_connections_number(IP_Port ip_port, unsigned int *tcp_connections_number)
+{
+    *tcp_connections_number = ip_port.ip.ip.v6.uint32[0];
+    return net_family_is_tcp_server(ip_port.ip.family);
+}
 
 /* Find the TCP connection with public_key.
  *

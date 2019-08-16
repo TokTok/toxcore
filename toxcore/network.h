@@ -41,8 +41,8 @@ typedef struct Family {
 bool net_family_is_unspec(Family family);
 bool net_family_is_ipv4(Family family);
 bool net_family_is_ipv6(Family family);
-bool net_family_is_tcp_family(Family family);
-bool net_family_is_tcp_onion(Family family);
+bool net_family_is_tcp_server(Family family);
+bool net_family_is_tcp_client(Family family);
 bool net_family_is_tcp_ipv4(Family family);
 bool net_family_is_tcp_ipv6(Family family);
 bool net_family_is_tox_tcp_ipv4(Family family);
@@ -51,8 +51,8 @@ bool net_family_is_tox_tcp_ipv6(Family family);
 extern const Family net_family_unspec;
 extern const Family net_family_ipv4;
 extern const Family net_family_ipv6;
-extern const Family net_family_tcp_family;
-extern const Family net_family_tcp_onion;
+extern const Family net_family_tcp_server;
+extern const Family net_family_tcp_client;
 extern const Family net_family_tcp_ipv4;
 extern const Family net_family_tcp_ipv6;
 extern const Family net_family_tox_tcp_ipv4;
@@ -148,10 +148,10 @@ typedef enum Net_Packet_Type {
 #define TOX_PROTO_UDP 2
 
 /* TCP related */
-#define TCP_ONION_FAMILY (TOX_AF_INET6 + 1)
+#define TCP_CLIENT_FAMILY (TOX_AF_INET6 + 1)
 #define TCP_INET (TOX_AF_INET6 + 2)
 #define TCP_INET6 (TOX_AF_INET6 + 3)
-#define TCP_FAMILY (TOX_AF_INET6 + 4)
+#define TCP_SERVER (TOX_AF_INET6 + 4)
 
 typedef union IP4 {
     uint32_t uint32;
