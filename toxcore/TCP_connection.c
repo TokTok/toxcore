@@ -396,7 +396,7 @@ int get_random_tcp_onion_conn_number(TCP_Connections *tcp_c)
  * return TCP connection number on success.
  * return -1 on failure.
  */
-int get_conn_number_by_ip_port(TCP_Connections *tcp_c, IP_Port ip_port)
+static int get_conn_number_by_ip_port(TCP_Connections *tcp_c, IP_Port ip_port)
 {
     for (uint32_t i = 0; i < tcp_c->tcp_connections_length; ++i) {
         const IP_Port conn_ip_port = tcp_con_ip_port(tcp_c->tcp_connections[i].connection);
