@@ -118,6 +118,14 @@ int tcp_send_onion_request(TCP_Connections *tcp_c, unsigned int tcp_connections_
  */
 int set_tcp_onion_status(TCP_Connections *tcp_c, bool status);
 
+/* Send a forward request packet to the TCP relay corresponding to tcp_connections_number.
+ *
+ * return 0 on success.
+ * return -1 on failure.
+ */
+int tcp_send_forward_request(TCP_Connections *tcp_c, unsigned int tcp_connections_number, const uint8_t *data,
+                             uint16_t length);
+
 /* Send an oob packet via the TCP relay corresponding to tcp_connections_number.
  *
  * return 0 on success.
@@ -137,6 +145,14 @@ typedef int tcp_onion_cb(void *object, const uint8_t *data, uint16_t length, voi
 /* Set the callback for TCP onion packets.
  */
 void set_onion_packet_tcp_connection_callback(TCP_Connections *tcp_c, tcp_onion_cb *tcp_onion_callback, void *object);
+
+typedef int tcp_forwarding_cb(void *object, const uint8_t *data, uint16_t length, IP_Port forwarder, void *userdata);
+
+/* Set the callback for TCP forwarding packets.
+ */
+void set_forwarding_packet_tcp_connection_callback(TCP_Connections *tcp_c, tcp_forwarding_cb *tcp_forwarding_callback,
+        void *object);
+
 
 typedef int tcp_oob_cb(void *object, const uint8_t *public_key, unsigned int tcp_connections_number,
                        const uint8_t *data, uint16_t length, void *userdata);

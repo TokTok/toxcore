@@ -208,7 +208,9 @@ set(toxcore_SOURCES ${toxcore_SOURCES}
   toxcore/onion_client.c
   toxcore/onion_client.h
   toxcore/forwarding.c
-  toxcore/forwarding.h)
+  toxcore/forwarding.h
+  toxcore/forwarders.c
+  toxcore/forwarders.h)
 
 # LAYER 5: Friend requests and connections
 # ----------------------------------------

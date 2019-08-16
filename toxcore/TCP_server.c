@@ -1000,7 +1000,6 @@ static int handle_TCP_packet(TCP_Server *tcp_server, uint32_t con_id, const uint
             return -1;
         }
 
-
         default: {
             if (data[0] < NUM_RESERVED_PORTS) {
                 return -1;
@@ -1197,7 +1196,6 @@ TCP_Server *new_TCP_server(uint8_t ipv6_enabled, uint16_t num_sockets, const uin
         temp->forwarding = onion->forwarding;
         set_callback_forward_request_not_inet(temp->forwarding, &handle_forward_request_tcp, temp);
     }
-
 
     memcpy(temp->secret_key, secret_key, CRYPTO_SECRET_KEY_SIZE);
     crypto_derive_public_key(temp->public_key, temp->secret_key);

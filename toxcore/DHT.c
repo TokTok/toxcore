@@ -2571,6 +2571,43 @@ static uint16_t list_nodes(Client_data *list, size_t length, const Mono_Time *mo
     return count;
 }
 
+/* Put ip_port for a random node in ip_port.
+ * May fail (with low probability) even if there are nodes available.
+ *
+ * return true on success, false otherwise.
+ */
+bool random_dht_node_ip_port(const DHT *dht, IP_Port *ip_port)
+{
+    const uint32_t max_num_nodes = LCLIENT_LIST + dht->num_friends * MAX_FRIEND_CLIENTS;
+    bool found = false;
+
+    for (uint32_t n = 0; !found && n < max_num_nodes; ++n) {
+        uint32_t i = random_u32() % max_num_nodes;
+        const Client_data *client_list = dht->close_clientlist;
+
+        if (i >= LCLIENT_LIST) {
+            client_list = dht->friends_list[(i - LCLIENT_LIST) / MAX_FRIEND_CLIENTS].client_list;
+            i = (i - LCLIENT_LIST) % MAX_FRIEND_CLIENTS;
+        }
+
+        const Client_data *client = &client_list[i];
+
+        if (!mono_time_is_timeout(dht->mono_time, client->assoc4.timestamp, BAD_NODE_TIMEOUT)) {
+            *ip_port = client->assoc4.ip_port;
+            found = true;
+        }
+
+        if (!mono_time_is_timeout(dht->mono_time, client->assoc6.timestamp, BAD_NODE_TIMEOUT)) {
+            if (!found || (random_u08() % 2)) {
+                *ip_port = client->assoc6.ip_port;
+                found = true;
+            }
+        }
+    }
+
+    return found;
+}
+
 /* Put up to max_num nodes in nodes from the random friends.
  *
  * return the number of nodes.

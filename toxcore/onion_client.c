@@ -31,6 +31,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "forwarders.h"
 #include "LAN_discovery.h"
 #include "mono_time.h"
 #include "util.h"
@@ -116,6 +117,7 @@ struct Onion_Client {
     DHT     *dht;
     Net_Crypto *c;
     Networking_Core *net;
+    Forwarders *forwarders;
     Onion_Friend    *friends_list;
     uint16_t       num_friends;
 
@@ -1889,6 +1891,13 @@ Onion_Client *new_onion_client(Mono_Time *mono_time, Net_Crypto *c)
     onion_c->dht = nc_get_dht(c);
     onion_c->net = dht_get_net(onion_c->dht);
     onion_c->c = c;
+    onion_c->forwarders = new_forwarders(onion_c->mono_time, onion_c->dht, onion_c->c);
+
+    if (onion_c->forwarders == nullptr) {
+        free(onion_c);
+        return nullptr;
+    }
+
     new_symmetric_key(onion_c->secret_symmetric_key);
     crypto_new_keypair(onion_c->temp_public_key, onion_c->temp_secret_key);
     networking_registerhandler(onion_c->net, NET_PACKET_ANNOUNCE_RESPONSE, &handle_announce_response, onion_c);
@@ -1908,6 +1917,7 @@ void kill_onion_client(Onion_Client *onion_c)
 
     ping_array_kill(onion_c->announce_ping_array);
     realloc_onion_friends(onion_c, 0);
+    kill_forwarders(onion_c->forwarders);
     networking_registerhandler(onion_c->net, NET_PACKET_ANNOUNCE_RESPONSE, nullptr, nullptr);
     networking_registerhandler(onion_c->net, NET_PACKET_ONION_DATA_RESPONSE, nullptr, nullptr);
     oniondata_registerhandler(onion_c, ONION_DATA_DHTPK, nullptr, nullptr);

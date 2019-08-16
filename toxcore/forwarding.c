@@ -117,11 +117,7 @@ bool handle_forward_request(const Forwarding *forwarding, IP_Port source, const 
 static int handle_forward_request_direct(void *object, IP_Port source, const uint8_t *packet, uint16_t length,
         void *userdata)
 {
-    if (!handle_forward_request((Forwarding *)object, source, packet + 1, length - 1)) {
-        return 1;
-    }
-
-    return 0;
+    return handle_forward_request((Forwarding *)object, source, packet + 1, length - 1) ? 0 : 1;
 }
 
 void set_callback_forward_request_not_inet(Forwarding *forwarding, forward_request_cb *function, void *object)

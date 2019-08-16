@@ -53,6 +53,6 @@ void set_callback_forward_request_not_inet(Forwarding *forwarding, forward_reque
 
 Forwarding *new_forwarding(Networking_Core *net);
 
-void kill_forwarding();
+void kill_forwarding(Forwarding *forwarding);
 
 #endif

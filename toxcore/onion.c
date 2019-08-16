@@ -683,6 +683,10 @@ Onion *new_onion(Mono_Time *mono_time, DHT *dht)
     new_symmetric_key(onion->secret_symmetric_key);
     onion->timestamp = mono_time_get(onion->mono_time);
 
+    // TODO(zugz): For now, Forwarding is treated as a component of Onion,
+    // while in reality it is a parallel system. Similarly for Forwarders and
+    // Onion_Client. This fits the architecture of the rest of tox, but is not
+    // intended to be permanent.
     onion->forwarding = new_forwarding(onion->net);
 
     if (onion->forwarding == nullptr) {
