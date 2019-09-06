@@ -223,7 +223,8 @@ static void test_av_three_calls(void)
     printf("All set after %lu seconds!\n", (unsigned long)(time(nullptr) - cur_time));
 
     thread_data tds[3];
-    for(size_t i = 0; i < 3; i++) {
+
+    for (size_t i = 0; i < 3; i++) {
         tds[i].AliceAV = AliceAV;
         tds[i].BobAV = BobsAV[i];
         tds[i].AliceCC = &AliceCC[i];
@@ -234,7 +235,8 @@ static void test_av_three_calls(void)
     }
 
     pthread_t tids[3];
-    for(size_t i = 0; i < 3; i++) {
+
+    for (size_t i = 0; i < 3; i++) {
         (void) pthread_create(&tids[i], nullptr, call_thread, &tds[i]);
     }
 
@@ -260,7 +262,6 @@ static void test_av_three_calls(void)
         }
     }
 
-
     do {
         tox_iterate(bootstrap, nullptr);
         tox_iterate(Alice, nullptr);
@@ -282,6 +283,7 @@ static void test_av_three_calls(void)
                 BobsCC[i].incoming = false;
             }
         }
+
         c_sleep(20);
     } while (time(nullptr) - start_time < 3);
 
