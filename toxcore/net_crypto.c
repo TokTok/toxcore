@@ -1800,15 +1800,12 @@ static int wipe_crypto_connection(Net_Crypto *c, int crypt_connection_id)
 
     uint32_t i;
 
-    /* Keep mutex, only destroy it when connection is realloced out. */
-    pthread_mutex_t mutex = c->crypto_connections[crypt_connection_id].mutex;
+    pthread_mutex_destroy(&c->crypto_connections[crypt_connection_id].mutex);
     crypto_memzero(&c->crypto_connections[crypt_connection_id], sizeof(Crypto_Connection));
-    c->crypto_connections[crypt_connection_id].mutex = mutex;
 
+    /* check if we can resize the connections array */
     for (i = c->crypto_connections_length; i != 0; --i) {
-        if (c->crypto_connections[i - 1].status == CRYPTO_CONN_NO_CONNECTION) {
-            pthread_mutex_destroy(&c->crypto_connections[i - 1].mutex);
-        } else {
+        if (c->crypto_connections[i - 1].status != CRYPTO_CONN_NO_CONNECTION) {
             break;
         }
     }
