@@ -2193,7 +2193,7 @@ static uint16_t nat_getports(uint16_t *portlist, IP_Port *ip_portlist, uint16_t 
     return num;
 }
 
-static void punch_holes(DHT *dht, IP ip, uint16_t *port_list, uint16_t numports, uint16_t friend_num)
+static void punch_holes(DHT *dht, IP ip, const uint16_t *port_list, uint16_t numports, uint16_t friend_num)
 {
     if (!dht->hole_punching_enabled) {
         return;
@@ -2914,33 +2914,25 @@ int dht_connect_after_load(DHT *dht)
 
 static State_Load_Status dht_load_state_callback(void *outer, const uint8_t *data, uint32_t length, uint16_t type)
 {
-    DHT *dht = (DHT *)outer;
+    DHT *dht = (DHT *) outer;
 
-    switch (type) {
-        case DHT_STATE_TYPE_NODES: {
-            if (length == 0) {
-                break;
-            }
+    if (type != DHT_STATE_TYPE_NODES) {
+        LOGGER_ERROR(dht->log, "Load state (DHT): contains unrecognized part (len %u, type %u)\n", length, type);
+        return STATE_LOAD_STATUS_CONTINUE;
+    }
 
-            free(dht->loaded_nodes_list);
-            // Copy to loaded_clients_list
-            dht->loaded_nodes_list = (Node_format *)calloc(MAX_SAVED_DHT_NODES, sizeof(Node_format));
+    if (length != 0) {
+        free(dht->loaded_nodes_list);
+        // Copy to loaded_clients_list
+        dht->loaded_nodes_list = (Node_format *) calloc(MAX_SAVED_DHT_NODES, sizeof(Node_format));
 
-            const int num = unpack_nodes(dht->loaded_nodes_list, MAX_SAVED_DHT_NODES, nullptr, data, length, 0);
+        const int num = unpack_nodes(dht->loaded_nodes_list, MAX_SAVED_DHT_NODES, nullptr, data, length, 0);
 
-            if (num > 0) {
-                dht->loaded_num_nodes = num;
-            } else {
-                dht->loaded_num_nodes = 0;
-            }
-
-            break;
+        if (num > 0) {
+            dht->loaded_num_nodes = num;
+        } else {
+            dht->loaded_num_nodes = 0;
         }
-
-        default:
-            LOGGER_ERROR(dht->log, "Load state (DHT): contains unrecognized part (len %u, type %u)\n",
-                         length, type);
-            break;
     }
 
     return STATE_LOAD_STATUS_CONTINUE;

@@ -1208,30 +1208,19 @@ static int send_file_control_packet(const Messenger *m, int32_t friendnumber, ui
     return write_cryptpacket_id(m, friendnumber, PACKET_ID_FILE_CONTROL, packet, SIZEOF_VLA(packet), 0);
 }
 
-/* Send a file control request.
- *
- *  return 0 on success
- *  return -1 if friend not valid.
- *  return -2 if friend not online.
- *  return -3 if file number invalid.
- *  return -4 if file control is bad.
- *  return -5 if file already paused.
- *  return -6 if resume file failed because it was only paused by the other.
- *  return -7 if resume file failed because it wasn't paused.
- *  return -8 if packet failed to send.
- */
-int file_control(const Messenger *m, int32_t friendnumber, uint32_t filenumber, unsigned int control)
+// Send a file control request.
+Filecontrol_Error file_control(const Messenger *m, int32_t friendnumber, uint32_t filenumber, unsigned int control)
 {
     if (friend_not_valid(m, friendnumber)) {
-        return -1;
+        return FILECONTROL_ERROR_FRIEND_NOT_VALID;
     }
 
     if (m->friendlist[friendnumber].status != FRIEND_ONLINE) {
-        return -2;
+        return FILECONTROL_ERROR_FRIEND_NOT_ONLINE;
     }
 
     uint32_t temp_filenum;
-    uint8_t send_receive, file_number;
+    uint8_t send_receive;
 
     if (filenumber >= (1 << 16)) {
         send_receive = 1;
@@ -1242,10 +1231,10 @@ int file_control(const Messenger *m, int32_t friendnumber, uint32_t filenumber, 
     }
 
     if (temp_filenum >= MAX_CONCURRENT_FILE_PIPES) {
-        return -3;
+        return FILECONTROL_ERROR_FILE_NUMBER_INVALID;
     }
 
-    file_number = temp_filenum;
+    uint8_t file_number = temp_filenum;
 
     struct File_Transfers *ft;
 
@@ -1256,33 +1245,33 @@ int file_control(const Messenger *m, int32_t friendnumber, uint32_t filenumber, 
     }
 
     if (ft->status == FILESTATUS_NONE) {
-        return -3;
+        return FILECONTROL_ERROR_FILE_NUMBER_INVALID;
     }
 
     if (control > FILECONTROL_KILL) {
-        return -4;
+        return FILECONTROL_ERROR_FILE_CONTROL_BAD;
     }
 
     if (control == FILECONTROL_PAUSE && ((ft->paused & FILE_PAUSE_US) || ft->status != FILESTATUS_TRANSFERRING)) {
-        return -5;
+        return FILECONTROL_ERROR_FILE_ALREADY_PAUSED;
     }
 
     if (control == FILECONTROL_ACCEPT) {
         if (ft->status == FILESTATUS_TRANSFERRING) {
             if (!(ft->paused & FILE_PAUSE_US)) {
                 if (ft->paused & FILE_PAUSE_OTHER) {
-                    return -6;
+                    return FILECONTROL_ERROR_RESUME_FAILED_PAUSED_BY_OTHER;
                 }
 
-                return -7;
+                return FILECONTROL_ERROR_RESUME_FAILED_NOT_PAUSED;
             }
         } else {
             if (ft->status != FILESTATUS_NOT_ACCEPTED) {
-                return -7;
+                return FILECONTROL_ERROR_RESUME_FAILED_NOT_PAUSED;
             }
 
             if (!send_receive) {
-                return -6;
+                return FILECONTROL_ERROR_RESUME_FAILED_PAUSED_BY_OTHER;
             }
         }
     }
@@ -1304,10 +1293,10 @@ int file_control(const Messenger *m, int32_t friendnumber, uint32_t filenumber, 
             }
         }
     } else {
-        return -8;
+        return FILECONTROL_ERROR_PACKET_FAILED_TO_SEND;
     }
 
-    return 0;
+    return FILECONTROL_ERROR_NONE;
 }
 
 /* Send a seek file control request.

@@ -1262,50 +1262,46 @@ bool tox_hash(uint8_t *hash, const uint8_t *data, size_t length)
 bool tox_file_control(Tox *tox, uint32_t friend_number, uint32_t file_number, Tox_File_Control control,
                       Tox_Err_File_Control *error)
 {
-    Messenger *m = tox->m;
-    const int ret = file_control(m, friend_number, file_number, control);
-
-    if (ret == 0) {
-        SET_ERROR_PARAMETER(error, TOX_ERR_FILE_CONTROL_OK);
-        return 1;
-    }
+    const Filecontrol_Error ret = file_control(tox->m, friend_number, file_number, control);
 
     switch (ret) {
-        case -1:
+        case FILECONTROL_ERROR_NONE:
+            SET_ERROR_PARAMETER(error, TOX_ERR_FILE_CONTROL_OK);
+            return true;
+
+        case FILECONTROL_ERROR_FRIEND_NOT_VALID:
             SET_ERROR_PARAMETER(error, TOX_ERR_FILE_CONTROL_FRIEND_NOT_FOUND);
-            return 0;
+            return false;
 
-        case -2:
+        case FILECONTROL_ERROR_FRIEND_NOT_ONLINE:
             SET_ERROR_PARAMETER(error, TOX_ERR_FILE_CONTROL_FRIEND_NOT_CONNECTED);
-            return 0;
+            return false;
 
-        case -3:
+        case FILECONTROL_ERROR_FILE_NUMBER_INVALID:
             SET_ERROR_PARAMETER(error, TOX_ERR_FILE_CONTROL_NOT_FOUND);
-            return 0;
+            return false;
 
-        case -4:
-            /* can't happen */
-            return 0;
+        case FILECONTROL_ERROR_FILE_CONTROL_BAD:
+            return false; // Can't happen.
 
-        case -5:
+        case FILECONTROL_ERROR_FILE_ALREADY_PAUSED:
             SET_ERROR_PARAMETER(error, TOX_ERR_FILE_CONTROL_ALREADY_PAUSED);
-            return 0;
+            return false;
 
-        case -6:
+        case FILECONTROL_ERROR_RESUME_FAILED_PAUSED_BY_OTHER:
             SET_ERROR_PARAMETER(error, TOX_ERR_FILE_CONTROL_DENIED);
-            return 0;
+            return false;
 
-        case -7:
+        case FILECONTROL_ERROR_RESUME_FAILED_NOT_PAUSED:
             SET_ERROR_PARAMETER(error, TOX_ERR_FILE_CONTROL_NOT_PAUSED);
-            return 0;
+            return false;
 
-        case -8:
+        case FILECONTROL_ERROR_PACKET_FAILED_TO_SEND:
             SET_ERROR_PARAMETER(error, TOX_ERR_FILE_CONTROL_SENDQ);
-            return 0;
+            return false;
     }
 
-    /* can't happen */
-    return 0;
+    return false; // Can't happen.
 }
 
 bool tox_file_seek(Tox *tox, uint32_t friend_number, uint32_t file_number, uint64_t position,
