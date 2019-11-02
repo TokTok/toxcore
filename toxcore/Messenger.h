@@ -177,6 +177,17 @@ typedef enum Filekind {
     FILEKIND_AVATAR
 } Filekind;
 
+typedef enum Filecontrol_Error {
+    FILECONTROL_ERROR_NONE,
+    FILECONTROL_ERROR_FRIEND_NOT_VALID,
+    FILECONTROL_ERROR_FRIEND_NOT_ONLINE,
+    FILECONTROL_ERROR_FILE_NUMBER_INVALID,
+    FILECONTROL_ERROR_FILE_CONTROL_BAD,
+    FILECONTROL_ERROR_FILE_ALREADY_PAUSED,
+    FILECONTROL_ERROR_RESUME_FAILED_PAUSED_BY_OTHER,
+    FILECONTROL_ERROR_RESUME_FAILED_NOT_PAUSED,
+    FILECONTROL_ERROR_PACKET_FAILED_TO_SEND,
+} Filecontrol_Error;
 
 typedef void m_self_connection_status_cb(Messenger *m, unsigned int connection_status, void *user_data);
 typedef void m_friend_status_cb(Messenger *m, uint32_t friend_number, unsigned int status, void *user_data);
@@ -650,7 +661,7 @@ long int new_filesender(const Messenger *m, int32_t friendnumber, uint32_t file_
  *  return -7 if resume file failed because it wasn't paused.
  *  return -8 if packet failed to send.
  */
-int file_control(const Messenger *m, int32_t friendnumber, uint32_t filenumber, unsigned int control);
+Filecontrol_Error file_control(const Messenger *m, int32_t friendnumber, uint32_t filenumber, unsigned int control);
 
 /* Send a seek file control request.
  *

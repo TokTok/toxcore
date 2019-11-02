@@ -72,11 +72,11 @@ uint8_t *hex_string_to_bin(const char *hex_string)
     // valid. the more proper implementation would be to check if strlen(hex_string)
     // is odd and return error code if it is. we assume strlen is even. if it's not
     // then the last byte just won't be written in 'ret'.
-    size_t i, len = strlen(hex_string) / 2;
+    size_t len = strlen(hex_string) / 2;
     uint8_t *ret = (uint8_t *)malloc(len);
     const char *pos = hex_string;
 
-    for (i = 0; i < len; ++i, pos += 2) {
+    for (size_t i = 0; i < len; ++i, pos += 2) {
         unsigned int val;
         sscanf(pos, "%02x", &val);
         ret[i] = val;
