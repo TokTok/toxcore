@@ -49,13 +49,14 @@ typedef struct Packets_Array {
 } Packets_Array;
 
 typedef enum Crypto_Conn_State {
-    CRYPTO_CONN_FREE = 0,           /* the connection slot is free, explicitly 0 to stay valid after
-                                     * crypto_memzero(...) of the parent struct
-                                     */
+    CRYPTO_CONN_FREE = 0,            /* the connection slot is free; this value is 0 so it is valid after
+                                      * crypto_memzero(...) of the parent struct
+                                      */
     CRYPTO_CONN_NO_CONNECTION,       /* the connection is allocated, but not yet used */
     CRYPTO_CONN_COOKIE_REQUESTING,   /* we are sending cookie request packets */
     CRYPTO_CONN_HANDSHAKE_SENT,      /* we are sending handshake packets */
-    CRYPTO_CONN_NOT_CONFIRMED,       /* send handshake packets, we have received one from the other, but no data */
+    CRYPTO_CONN_NOT_CONFIRMED,       /* we are sending handshake packets;
+                                      * we have received one from the other, but no data */
     CRYPTO_CONN_ESTABLISHED,         /* the connection is established */
 } Crypto_Conn_State;
 
@@ -1829,7 +1830,6 @@ static int create_crypto_connection(Net_Crypto *c)
  */
 static int wipe_crypto_connection(Net_Crypto *c, int crypt_connection_id)
 {
-    // prevent double free, by checking if status == CRYPTO_CONN_FREE
     if ((uint32_t)crypt_connection_id >= c->crypto_connections_length) {
         return -1;
     }
