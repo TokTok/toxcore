@@ -1768,35 +1768,24 @@ static int create_crypto_connection(Net_Crypto *c)
         pthread_mutex_unlock(&c->connections_mutex);
     }
 
+    int id = -1;
+
     for (uint32_t i = 0; i < c->crypto_connections_length; ++i) {
         if (c->crypto_connections[i].status == CRYPTO_CONN_FREE) {
-            /* On destruction the connection struct is zeroed and the mutex memory freed,
-             * allocate here again */
-            c->crypto_connections[i].mutex = (pthread_mutex_t *) malloc(sizeof(pthread_mutex_t));
-
-            if (c->crypto_connections[i].mutex == nullptr) {
-                pthread_mutex_unlock(&c->connections_mutex);
-                return -1;
-            }
-
-            if (pthread_mutex_init(c->crypto_connections[i].mutex, nullptr) != 0) {
-                free(c->crypto_connections[i].mutex);
-                pthread_mutex_unlock(&c->connections_mutex);
-                return -1;
-            }
-
-            c->crypto_connections[i].status = CRYPTO_CONN_NO_CONNECTION;
-            pthread_mutex_unlock(&c->connections_mutex);
-            return i;
+            id = i;
+            break;
         }
     }
 
-    int id = -1;
+    if (id == -1) {
+        if (realloc_cryptoconnection(c, c->crypto_connections_length + 1) == 0) {
+            id = c->crypto_connections_length;
+            ++c->crypto_connections_length;
+            memset(&c->crypto_connections[id], 0, sizeof(Crypto_Connection));
+        }
+    }
 
-    if (realloc_cryptoconnection(c, c->crypto_connections_length + 1) == 0) {
-        id = c->crypto_connections_length;
-        ++c->crypto_connections_length;
-        memset(&c->crypto_connections[id], 0, sizeof(Crypto_Connection));
+    if (id != -1) {
         // Memsetting float/double to 0 is non-portable, so we explicitly set them to 0
         c->crypto_connections[id].packet_recv_rate = 0;
         c->crypto_connections[id].packet_send_rate = 0;
