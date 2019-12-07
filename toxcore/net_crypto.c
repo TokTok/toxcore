@@ -2010,6 +2010,7 @@ int accept_crypto_connection(Net_Crypto *c, New_Connection *n_c)
     Crypto_Connection *conn = &c->crypto_connections[crypt_connection_id];
 
     if (n_c->cookie_length != COOKIE_LENGTH) {
+        wipe_crypto_connection(c, crypt_connection_id);
         return -1;
     }
 
