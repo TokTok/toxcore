@@ -2299,8 +2299,9 @@ static void do_tcp(Net_Crypto *c, void *userdata)
 
         bool direct_connected = 0;
 
-        // FIXME(sudden6): handle return value
-        crypto_connection_status(c, i, &direct_connected, nullptr);
+        if (!crypto_connection_status(c, i, &direct_connected, nullptr)) {
+            continue;
+        }
 
         if (direct_connected) {
             pthread_mutex_lock(&c->tcp_mutex);
