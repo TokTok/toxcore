@@ -309,7 +309,7 @@ unsigned int copy_connected_tcp_relays(Net_Crypto *c, Node_format *tcp_relays, u
  */
 int crypto_kill(Net_Crypto *c, int crypt_connection_id);
 
-/* return true if connection established, false otherwise
+/* return true if connection is valid, false otherwise
  *
  * sets direct_connected to 1 if connection connects directly to other, 0 if it isn't.
  * sets online_tcp_relays to the number of connected tcp relays this connection has.

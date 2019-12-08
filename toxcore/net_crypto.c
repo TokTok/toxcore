@@ -2297,6 +2297,10 @@ static void do_tcp(Net_Crypto *c, void *userdata)
             continue;
         }
 
+        if (conn->status != CRYPTO_CONN_ESTABLISHED) {
+            continue;
+        }
+
         bool direct_connected = 0;
 
         if (!crypto_connection_status(c, i, &direct_connected, nullptr)) {
@@ -2927,10 +2931,6 @@ bool crypto_connection_status(const Net_Crypto *c, int crypt_connection_id, bool
     Crypto_Connection *conn = get_crypto_connection(c, crypt_connection_id);
 
     if (conn == nullptr) {
-        return false;
-    }
-
-    if (conn->status != CRYPTO_CONN_ESTABLISHED) {
         return false;
     }
 
