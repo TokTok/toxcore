@@ -110,10 +110,8 @@ static int32_t create_group_chat(Group_Chats *g_c)
         }
     }
 
-    uint16_t id;
-
     if (realloc_conferences(g_c, g_c->num_chats + 1)) {
-        id = g_c->num_chats;
+        uint16_t id = g_c->num_chats;
         ++g_c->num_chats;
         setup_conference(&g_c->chats[id]);
         return id;
