@@ -2376,7 +2376,7 @@ static unsigned int send_lossy_all_connections(const Group_Chats *g_c, const Gro
     }
 
     unsigned int to_send[2] = {0, 0};
-    uint64_t comp_val_old[2] = {-1, -1};
+    uint64_t comp_val_old[2] = {(uint64_t) -1, (uint64_t) -1};
 
     for (i = 0; i < num_connected_closest; ++i) {
         uint8_t real_pk[CRYPTO_PUBLIC_KEY_SIZE] = {0};
