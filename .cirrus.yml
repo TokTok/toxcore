@@ -1,7 +1,7 @@
 ---
 cirrus-ci_task:
   container:
-    image: cirrusci/bazel:0.22.0
+    image: l.gcr.io/google/bazel:2.1.0
     cpu: 8
     memory: 12G
   configure_script:
@@ -17,7 +17,7 @@ cirrus-ci_task:
     - echo "build --config=gcc" | sudo tee -a /etc/bazel.bazelrc
     - echo "build --config=remote" | sudo tee -a /etc/bazel.bazelrc
     - cd .. && mv cirrus-ci-build c-toxcore
-    - git clone --depth=1 https://github.com/TokTok/toktok-stack cirrus-ci-build
+    - git clone --branch=upgrade-bazel --depth=1 https://github.com/iphydf/toktok-stack cirrus-ci-build
     - mv c-toxcore cirrus-ci-build
     - cd -
   test_all_script:
