@@ -2600,7 +2600,10 @@ typedef enum TOX_ERR_CONFERENCE_PEER_QUERY {
 
 
 /**
- * Return the number of peers in the conference. Return value is unspecified on failure.
+ * Return the number of online peers in the conference. The unsigned
+ * integers less than this number are the valid values of peer_number for
+ * the functions querying these peers. Return value is unspecified on
+ * failure.
  */
 uint32_t tox_conference_peer_count(const Tox *tox, uint32_t conference_number, TOX_ERR_CONFERENCE_PEER_QUERY *error);
 
@@ -2638,7 +2641,9 @@ bool tox_conference_peer_number_is_ours(const Tox *tox, uint32_t conference_numb
                                         TOX_ERR_CONFERENCE_PEER_QUERY *error);
 
 /**
- * Return the number of offline peers in the conference. Return value is unspecified on failure.
+ * Return the number of offline peers in the conference. The unsigned
+ * integers less than this number are the valid values of offline_peer_number for
+ * the functions querying these peers. Return value is unspecified on failure.
  */
 uint32_t tox_conference_offline_peer_count(const Tox *tox, uint32_t conference_number,
         TOX_ERR_CONFERENCE_PEER_QUERY *error);
