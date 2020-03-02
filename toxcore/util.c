@@ -17,8 +17,14 @@
 
 #include "util.h"
 
+// Need dht because of ENC_SECRET_KEY and ENC_PUBLIC_KEY
+#define ENC_PUBLIC_KEY CRYPTO_PUBLIC_KEY_SIZE
+#define ENC_SECRET_KEY CRYPTO_SECRET_KEY_SIZE
+#define SIG_PUBLIC_KEY CRYPTO_SIGN_PUBLIC_KEY_SIZE
+#define SIG_SECRET_KEY CRYPTO_SIGN_SECRET_KEY_SIZE
+#define CHAT_ID_SIZE SIG_PUBLIC_KEY
+
 #include "crypto_core.h" /* for CRYPTO_PUBLIC_KEY_SIZE */
-#include "DHT.h"
 #include "network.h" /* for current_time_monotonic */
 
 #include <stdio.h>

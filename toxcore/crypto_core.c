@@ -14,10 +14,12 @@
 
 #include "ccompat.h"
 #include "crypto_core.h"
-#include "util.h"
 
+#ifndef VANILLA_NACL
 // Need dht because of ENC_SECRET_KEY and ENC_PUBLIC_KEY
-#include "DHT.h"
+#define ENC_PUBLIC_KEY CRYPTO_PUBLIC_KEY_SIZE
+#define ENC_SECRET_KEY CRYPTO_SECRET_KEY_SIZE
+#endif
 
 #include <stdlib.h>
 #include <string.h>
