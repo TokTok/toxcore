@@ -6,13 +6,18 @@
 # is achieved using the "if: type IN (push, api, cron)" fields in the matrix.
 
 language: c
+os: linux
 
-matrix:
+jobs:
   include:
     - stage: "Stage 1"
       env: JOB=cmake-linux
       compiler: gcc
       addons:
+        sonarcloud:
+          organization: "toktok"
+          token:
+            secure: "Z0QPd1UPtbCqrvrnLjOhhiOORbtJ+5dNwZGsiQgWqO0v5LeD6EeVCvGPXtzRrt+LT8uneAFLy/FgsKT1sny5sJxB+LsEJxZHiVXHbKINrX9E1VEkmWI+/6ful5p5gprqg4fOaqVcZfPDtifj3mhYjFjbAgZO0OxVAbFI5K+wPrXdE9zN6Ji6oSoxczGUItdd5oTtI17eIJNSJo9tfc1hF5jjbfj30M3i+eCqiRb19IGWAiovrGDXb4L/QIel7Zf+XslLov6SwibNO+/kwdSuydivrEYLH5l7brsxOBBVLfBeuxuBCvcFjbVwQlJxvk+UF0Gp53c1g335KDpwWgmFD4ku4bMVR6S3OO/Oo/hGAF7sT+Sl4zcnMOBAPq6m9Ewuj9f5FFOtPOz+/6jygHQHro0Hv1W0MQTcfI8jKSb8mQNmHbWpk63wfUubOLzAz+Tbb4L0+idXsssLWxrdPk2Uj/6fzClmm8gVyNR1ZNY9xCYCEu6s7PxTpWlioYOSBIxAXZlcxEU2K5pwij5YG62IsBnpRwFzmZCAh/pbo4JK5IOjQYoZFpZio8BBxl4J8Q7AUbsYtZfYD+pVre9AUEb7FDCyskb5IjPVCtf8dOey3C2vBZDPgMuXcVok3B8x4t7DTHA4GcZYSN0QeHO5r6b4UqKpBtOn1Vb7GGYyi+f87ns="
         apt:
           packages:
             - libconfig-dev          # For tox-bootstrapd.
@@ -77,7 +82,6 @@ matrix:
     - stage: "Stage 1"
       if: type IN (push, api, cron)
       env: JOB=cmake-freebsd
-      sudo: required
       install:       .travis/$JOB-stage1 install
       script:        .travis/$JOB-stage1 script
     - stage: "Stage 1"
@@ -94,7 +98,6 @@ matrix:
     - stage: "Stage 2"
       if: type IN (push, api, cron)
       env: JOB=cmake-freebsd
-      sudo: required
       install:       .travis/$JOB-stage2 install
       script:        .travis/$JOB-stage2 script
   fast_finish: true

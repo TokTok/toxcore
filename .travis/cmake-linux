@@ -100,8 +100,11 @@ travis_script() {
     -DUSE_IPV6=OFF \
     -DAUTOTEST=ON
 
+  build-wrapper-linux-x86-64 --out-dir bw-output \
+    cmake --build _build --parallel "$NPROC" --target install -- -k
+  sonar-scanner -Dsonar.cfamily.build-wrapper-output=bw-output
+
   cd _build  # pushd
-  make "-j$NPROC" -k install
   ctest -j50 --output-on-failure || \
     ctest -j50 --output-on-failure --rerun-failed
   cd -  # popd
