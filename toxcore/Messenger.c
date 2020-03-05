@@ -315,7 +315,7 @@ int32_t m_addfriend_norequest(Messenger *m, const uint8_t *real_pk)
     return m_add_contact_no_request(m, real_pk);
 }
 
-static void try_pack_gc_data(const Messenger *m, const GC_Chat *chat, Onion_Friend *onion_friend);
+static void try_pack_gc_data(const Messenger *m, GC_Chat *chat, Onion_Friend *onion_friend);
 
 int32_t m_add_friend_gc(Messenger *m, GC_Chat *chat)
 {
@@ -2639,7 +2639,7 @@ uint32_t messenger_run_interval(const Messenger *m)
     return crypto_interval;
 }
 
-static void try_pack_gc_data(const Messenger *m, const GC_Chat *chat, Onion_Friend *onion_friend)
+static void try_pack_gc_data(const Messenger *m, GC_Chat *chat, Onion_Friend *onion_friend)
 {
     GC_Public_Announce announce;
     int tcp_num = tcp_copy_connected_relays(chat->tcp_conn, announce.base_announce.tcp_relays,

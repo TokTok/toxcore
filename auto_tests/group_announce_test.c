@@ -22,7 +22,9 @@ typedef struct State {
 static void group_invite_handler(Tox *tox, uint32_t friend_number, const uint8_t *invite_data, size_t length,
                                  const uint8_t *group_name, size_t group_name_length, void *user_data)
 {
-    ck_abort_msg("we should not get invited");
+    if (tox != nullptr) {
+        ck_abort_msg("we should not get invited");
+    }
 }
 
 static const char *tox_str_group_join_fail(TOX_GROUP_JOIN_FAIL v)
