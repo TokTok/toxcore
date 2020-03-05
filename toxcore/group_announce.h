@@ -79,7 +79,7 @@ struct GC_Announces_List {
 };
 
 
-GC_Announces_List *new_gca_list();
+GC_Announces_List *new_gca_list(void);
 
 void kill_gca(GC_Announces_List *announces_list);
 
@@ -95,13 +95,12 @@ GC_Peer_Announce* add_gc_announce(const Mono_Time *mono_time, GC_Announces_List 
 
 int pack_announce(uint8_t *data, uint16_t length, GC_Announce *announce);
 
-int unpack_announce(uint8_t *data, uint16_t length, GC_Announce *announce);
+int unpack_announce(const uint8_t *data, uint16_t length, GC_Announce *announce);
 
 int pack_announces_list(uint8_t *data, uint16_t length, GC_Announce *announces, uint8_t announces_count,
                         size_t *processed);
 
-int unpack_announces_list(uint8_t *data, uint16_t length, GC_Announce *announces, uint8_t max_announces_count,
-                          size_t *processed);
+int unpack_announces_list(const uint8_t *data, uint16_t length, GC_Announce *announces, uint8_t max_announces_count, size_t *processed);
 
 int pack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce *announce);
 

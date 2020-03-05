@@ -1179,7 +1179,7 @@ uint32_t sanctions_list_num_banned(const GC_Chat *chat)
     return count;
 }
 
-struct GC_Sanction* sanctions_get_ban_by_id(const GC_Chat *chat, uint32_t ban_id)
+static struct GC_Sanction* sanctions_get_ban_by_id(const GC_Chat *chat, uint32_t ban_id)
 {
     if (!chat) {
         return nullptr;
