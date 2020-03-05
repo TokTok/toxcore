@@ -3436,7 +3436,7 @@ void tox_group_self_peer_info_free(Group_Chat_Self_Peer_Info *self_peer_info);
  *
  * @return group_number on success, UINT32_MAX on failure.
  */
-uint32_t tox_group_new(Tox *tox, TOX_GROUP_PRIVACY_STATE privacy_state, const uint8_t *group_name, size_t group_name_length,
+uint32_t tox_group_new(Tox *tox, TOX_GROUP_PRIVACY_STATE privacy_state, const uint8_t *group_name, size_t length,
                        Group_Chat_Self_Peer_Info *peer_info, TOX_ERR_GROUP_NEW *error);
 
 typedef enum TOX_ERR_GROUP_JOIN {
@@ -4921,7 +4921,7 @@ bool tox_group_mod_remove_peer(Tox *tox, uint32_t group_number, uint32_t peer_id
  *
  * @param group_number The group number of the group the ban is intended for.
  * @param peer_id The ID of the peer who will be kicked and/or added to the ban list.
- * @param set_ban Set to true if a ban shall be set
+ * @param ban_type Set to true if a ban shall be set
  *
  * @return true on success.
  */
