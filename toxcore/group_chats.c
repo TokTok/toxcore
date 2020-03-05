@@ -988,7 +988,7 @@ static int handle_gc_sync_response(Messenger *m, int group_number, int peer_numb
             return -1;
         }
 
-        uint8_t *announces_pointer = (uint8_t *)(data + sizeof(uint32_t));
+        const uint8_t *announces_pointer = data + sizeof(uint32_t);
         int unpacked_announces = unpack_announces_list(announces_pointer, peers_length, announces, num_peers, nullptr);
         if (unpacked_announces == -1 || unpacked_announces != num_peers) {
             free(announces);
@@ -1077,7 +1077,7 @@ int gcc_copy_tcp_relay(GC_Connection *gconn, Node_format *node)
     return 0;
 }
 
-bool create_announce_for_peer(GC_Chat *chat, GC_Connection *gconn, uint32_t peer_number, GC_Announce *announce)
+static bool create_announce_for_peer(GC_Chat *chat, GC_Connection *gconn, uint32_t peer_number, GC_Announce *announce)
 {
     if (!chat || !gconn || !announce) {
         return false;
@@ -1438,8 +1438,7 @@ static int send_gc_invite_response_reject(GC_Chat *chat, GC_Connection *gconn, u
  * Returns non-negative value on success.
  * Returns -1 on failure.
  */
-int handle_gc_invite_request(Messenger *m, int group_number, uint32_t peer_number, const uint8_t *data,
-                             uint32_t length)
+static int handle_gc_invite_request(Messenger *m, int group_number, uint32_t peer_number, const uint8_t *data, uint32_t length)
 {
     fprintf(stderr, "handle_gc_invite_request\n");
     if (length <= sizeof(uint16_t) + MAX_GC_PASSWORD_SIZE) {
@@ -1833,7 +1832,7 @@ static int handle_gc_peer_announcement(Messenger *m, int group_number, const uin
     }
 
     GC_Announce new_peer_announce;
-    int unpack_result = unpack_announce((uint8_t*)data, length, &new_peer_announce);
+    int unpack_result = unpack_announce((const uint8_t *)data, length, &new_peer_announce);
     if (unpack_result == -1) {
         fprintf(stderr, "in handle_gc_peer_announcement unpack error\n");
         return -1;
@@ -3000,7 +2999,7 @@ static int send_gc_set_mod(GC_Chat *chat, GC_Connection *gconn, bool add_mod)
  * Returns 0 on success.
  * Returns -1 on failure.
  */
-int founder_gc_set_moderator(GC_Chat *chat, GC_Connection *gconn, bool add_mod)
+static int founder_gc_set_moderator(GC_Chat *chat, GC_Connection *gconn, bool add_mod)
 {
     if (chat->group[0].role != GR_FOUNDER) {
         return -1;
@@ -4103,8 +4102,6 @@ static int handle_gc_broadcast(Messenger *m, int group_number, uint32_t peer_num
             fprintf(stderr, "Warning: handle_gc_broadcast received an invalid broadcast type %u\n", broadcast_type);
             return -1;
     }
-
-    return -1;
 }
 
 /* Decrypts data of length using self secret key and sender's public key.
@@ -4180,8 +4177,7 @@ static int wrap_group_handshake_packet(const uint8_t *self_pk, const uint8_t *se
  * Returns length of encrypted packet on success.
  * Returns -1 on failure.
  */
-int make_gc_handshake_packet(GC_Chat *chat, GC_Connection *gconn, uint8_t handshake_type,
-                             uint8_t request_type, uint8_t join_type, uint8_t *packet, size_t packet_size, Node_format *node)
+static int make_gc_handshake_packet(GC_Chat *chat, GC_Connection *gconn, uint8_t handshake_type, uint8_t request_type, uint8_t join_type, uint8_t *packet, size_t packet_size, Node_format *node)
 {
     if (packet_size < GC_ENCRYPTED_HS_PACKET_SIZE + sizeof(Node_format)) {
         return -1;
@@ -4857,7 +4853,7 @@ static bool group_can_handle_packets(GC_Chat *chat)
  * Returns non-negative value on success.
  * Returns -1 on failure.
  */
-int handle_gc_tcp_packet(void *object, int id, const uint8_t *packet, uint16_t length, void *userdata)
+static int handle_gc_tcp_packet(void *object, int id, const uint8_t *packet, uint16_t length, void *userdata)
 {
     if (length <= 1 + sizeof(uint32_t)) {
         return -1;
@@ -4890,8 +4886,7 @@ int handle_gc_tcp_packet(void *object, int id, const uint8_t *packet, uint16_t l
     return -1;
 }
 
-int handle_gc_tcp_oob_packet(void *object, const uint8_t *public_key, unsigned int tcp_connections_number,
-                             const uint8_t *packet, uint16_t length, void *userdata)
+static int handle_gc_tcp_oob_packet(void *object, const uint8_t *public_key, unsigned int tcp_connections_number, const uint8_t *packet, uint16_t length, void *userdata)
 {
     if (length <= 1 + sizeof(uint32_t)) {
         return -1;
@@ -4923,7 +4918,7 @@ int handle_gc_tcp_oob_packet(void *object, const uint8_t *public_key, unsigned i
     return 0;
 }
 
-int handle_gc_udp_packet(void *object, IP_Port ipp, const uint8_t *packet, uint16_t length, void *userdata)
+static int handle_gc_udp_packet(void *object, IP_Port ipp, const uint8_t *packet, uint16_t length, void *userdata)
 {
     if (length <= 1 + sizeof(uint32_t)) {
         return -1;

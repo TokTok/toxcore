@@ -160,7 +160,7 @@ int pack_announce(uint8_t *data, uint16_t length, GC_Announce *announce)
     return nodes_length + offset;
 }
 
-int unpack_announce(uint8_t *data, uint16_t length, GC_Announce *announce)
+int unpack_announce(const uint8_t *data, uint16_t length, GC_Announce *announce)
 {
     if (!data || !announce || length < GC_ANNOUNCE_MIN_SIZE) {
         return -1;
@@ -257,8 +257,7 @@ int pack_announces_list(uint8_t *data, uint16_t length, GC_Announce *announces, 
     return announces_count;
 }
 
-int unpack_announces_list(uint8_t *data, uint16_t length, GC_Announce *announces, uint8_t max_announces_count,
-                          size_t *processed)
+int unpack_announces_list(const uint8_t *data, uint16_t length, GC_Announce *announces, uint8_t max_announces_count, size_t *processed)
 {
     if (!data || !announces) {
         return -1;
