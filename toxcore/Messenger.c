@@ -294,9 +294,11 @@ static int32_t m_add_contact_no_request(Messenger *m, const uint8_t *real_pk)
         return FAERR_ALREADYSENT;
     }
 
+#ifndef VANILLA_NACL
     if (gc_get_group_by_public_key(m->group_handler, real_pk)) {
         return FAERR_ALREADYSENT;
     }
+#endif
 
     if (id_equal(real_pk, nc_get_self_public_key(m->net_crypto))) {
         return FAERR_OWNKEY;
@@ -2543,6 +2545,7 @@ static int m_handle_packet(void *object, int i, const uint8_t *temp, uint16_t le
         }
 
         case PACKET_ID_INVITE_GROUPCHAT: {
+#ifndef VANILLA_NACL
             if (data_length < 2 + GC_JOIN_DATA_LENGTH) {
                 break;
             }
@@ -2558,6 +2561,7 @@ static int m_handle_packet(void *object, int i, const uint8_t *temp, uint16_t le
             } else if (data[1] == GROUP_INVITE_CONFIRMATION) {
                 handle_gc_invite_confirmed_packet(m->group_handler, i, data + 2, data_length - 2);
             }
+#endif
             break;
         }
 
@@ -2711,6 +2715,7 @@ static void try_pack_gc_data(const Messenger *m, GC_Chat *chat, Onion_Friend *on
     }
 }
 
+#ifndef VANILLA_NACL
 static void update_gc_friends_data(const Messenger *m)
 {
     int i;
@@ -2732,6 +2737,7 @@ static void update_gc_friends_data(const Messenger *m)
         }
     }
 }
+#endif
 
 /* The main loop that needs to be run at least 20 times per second. */
 void do_messenger(Messenger *m, void *userdata)
@@ -2769,10 +2775,14 @@ void do_messenger(Messenger *m, void *userdata)
     do_net_crypto(m->net_crypto, userdata);
     do_onion_client(m->onion_c);
     do_friend_connections(m->fr_c, userdata);
+#ifndef VANILLA_NACL
     do_gc(m->group_handler, userdata);
     do_gca(m->mono_time, m->group_announce);
+#endif
     do_friends(m, userdata);
+#ifndef VANILLA_NACL
     update_gc_friends_data(m);
+#endif
     connection_status_callback(m, userdata);
 
     if (mono_time_get(m->mono_time) > m->lastdump + DUMPING_CLIENTS_FRIENDS_EVERY_N_SECONDS) {

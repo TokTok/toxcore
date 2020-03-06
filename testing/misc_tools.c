@@ -173,9 +173,11 @@ static const char *tox_log_level_name(Tox_Log_Level level)
 void print_debug_log(Tox *m, Tox_Log_Level level, const char *file, uint32_t line, const char *func,
                      const char *message, void *user_data)
 {
+#if 0
     if (level == TOX_LOG_LEVEL_TRACE) {
         return;
     }
+#endif
 
     uint32_t index = user_data ? *(uint32_t *)user_data : 0;
     fprintf(stderr, "[#%u] %s %s:%u\t%s:\t%s\n", index, tox_log_level_name(level), file, line, func, message);
