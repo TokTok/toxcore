@@ -802,6 +802,7 @@ static int handle_announce_response(void *object, IP_Port source, const uint8_t 
         }
     }
 
+#ifndef VANILLA_NACL
     if (len_nodes + 1 < length - ONION_ANNOUNCE_RESPONSE_MIN_SIZE) {
         fprintf(stderr, "gc ann resp\n");
         GC_Announce announces[MAX_SENT_ANNOUNCES];
@@ -826,6 +827,7 @@ static int handle_announce_response(void *object, IP_Port source, const uint8_t 
             return 1;
         }
     }
+#endif
 
     //TODO: LAN vs non LAN ips?, if we are connected only to LAN, are we offline?
     onion_c->last_packet_recv = mono_time_get(onion_c->mono_time);
