@@ -41,6 +41,8 @@
 #include "Messenger.h"
 #include "friend_connection.h"
 
+#ifndef VANILLA_NACL
+
 #include <sodium.h>
 
 enum {
@@ -6649,3 +6651,5 @@ void group_get_peers_list(const GC_Chat *chat, uint32_t *peers_list)
         }
     }
 }
+
+#endif
