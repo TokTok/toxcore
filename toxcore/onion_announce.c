@@ -20,8 +20,6 @@
 #include "mono_time.h"
 #include "util.h"
 
-#include <sodium.h>
-
 #define PING_ID_TIMEOUT ONION_ANNOUNCE_TIMEOUT
 
 #define ANNOUNCE_REQUEST_MIN_SIZE_RECV (ONION_ANNOUNCE_REQUEST_MIN_SIZE + ONION_RETURN_3)
@@ -114,7 +112,7 @@ int create_gc_announce_request(uint8_t *packet, uint16_t max_packet_length, cons
         return -1;
     }
 
-    uint8_t plain[ONION_PING_ID_SIZE + crypto_box_PUBLICKEYBYTES + crypto_box_PUBLICKEYBYTES +
+    uint8_t plain[ONION_PING_ID_SIZE + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_PUBLIC_KEY_SIZE +
                   ONION_ANNOUNCE_SENDBACK_DATA_LENGTH + GC_ANNOUNCE_MAX_SIZE];
     uint8_t *position_in_plain = plain;
     size_t encrypted_size = sizeof(plain) - GC_ANNOUNCE_MAX_SIZE + gc_data_length;
@@ -417,12 +415,12 @@ static int handle_gc_announce_request(Onion_Announce *onion_a, IP_Port source, c
     get_shared_key(onion_a->mono_time, &onion_a->shared_keys_recv, shared_key, dht_get_self_secret_key(onion_a->dht),
                    packet_public_key);
 
-    size_t minimal_size = ONION_PING_ID_SIZE + crypto_box_PUBLICKEYBYTES * 2 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH;
+    size_t minimal_size = ONION_PING_ID_SIZE + CRYPTO_PUBLIC_KEY_SIZE * 2 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH;
     uint8_t plain[minimal_size + GC_ANNOUNCE_MAX_SIZE];
     size_t encrypted_size = minimal_size + length - ANNOUNCE_REQUEST_MIN_SIZE_RECV;
     int len = decrypt_data_symmetric(shared_key, packet + 1,
-                                     packet + 1 + crypto_box_NONCEBYTES + crypto_box_PUBLICKEYBYTES,
-                                     encrypted_size + crypto_box_MACBYTES, plain);
+                                     packet + 1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE,
+                                     encrypted_size + CRYPTO_MAC_SIZE, plain);
 
     if ((uint32_t)len != encrypted_size) {
         return 1;
@@ -436,10 +434,10 @@ static int handle_gc_announce_request(Onion_Announce *onion_a, IP_Port source, c
 
     int index;
 
-    uint8_t *data_public_key = plain + ONION_PING_ID_SIZE + crypto_box_PUBLICKEYBYTES;
+    uint8_t *data_public_key = plain + ONION_PING_ID_SIZE + CRYPTO_PUBLIC_KEY_SIZE;
 
-    if (sodium_memcmp(ping_id1, plain, ONION_PING_ID_SIZE) == 0
-        || sodium_memcmp(ping_id2, plain, ONION_PING_ID_SIZE) == 0) {
+    if (crypto_memcmp(ping_id1, plain, ONION_PING_ID_SIZE) == 0
+        || crypto_memcmp(ping_id2, plain, ONION_PING_ID_SIZE) == 0) {
         index = add_to_entries(onion_a, source, packet_public_key, data_public_key,
                                packet + (length - ONION_RETURN_3));
     } else {
@@ -515,19 +513,19 @@ static int handle_gc_announce_request(Onion_Announce *onion_a, IP_Port source, c
 
     uint8_t data[ONION_ANNOUNCE_RESPONSE_MAX_SIZE];
     len = encrypt_data_symmetric(shared_key, nonce, pl, offset,
-                                 data + 1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH + crypto_box_NONCEBYTES);
+                                 data + 1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH + CRYPTO_NONCE_SIZE);
 
-    if (len != offset + crypto_box_MACBYTES) {
+    if (len != offset + CRYPTO_MAC_SIZE) {
         return 1;
     }
 
     data[0] = NET_PACKET_ANNOUNCE_RESPONSE;
     memcpy(data + 1, plain + ONION_PING_ID_SIZE + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_PUBLIC_KEY_SIZE,
            ONION_ANNOUNCE_SENDBACK_DATA_LENGTH);
-    memcpy(data + 1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH, nonce, crypto_box_NONCEBYTES);
+    memcpy(data + 1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH, nonce, CRYPTO_NONCE_SIZE);
 
     if (send_onion_response(onion_a->net, source, data,
-                            1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH + crypto_box_NONCEBYTES + len,
+                            1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH + CRYPTO_NONCE_SIZE + len,
                             packet + (length - ONION_RETURN_3)) == -1) {
         return 1;
     }
@@ -548,10 +546,10 @@ static int handle_announce_request(void *object, IP_Port source, const uint8_t *
     get_shared_key(onion_a->mono_time, &onion_a->shared_keys_recv, shared_key, dht_get_self_secret_key(onion_a->dht),
                    packet_public_key);
 
-    uint8_t plain[ONION_PING_ID_SIZE + crypto_box_PUBLICKEYBYTES + crypto_box_PUBLICKEYBYTES +
+    uint8_t plain[ONION_PING_ID_SIZE + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_PUBLIC_KEY_SIZE +
                   ONION_ANNOUNCE_SENDBACK_DATA_LENGTH];
-    int len = decrypt_data_symmetric(shared_key, packet + 1, packet + 1 + crypto_box_NONCEBYTES + crypto_box_PUBLICKEYBYTES,
-                                     sizeof(plain) + crypto_box_MACBYTES, plain);
+    int len = decrypt_data_symmetric(shared_key, packet + 1, packet + 1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE,
+                                     sizeof(plain) + CRYPTO_MAC_SIZE, plain);
 
     if ((uint32_t)len != sizeof(plain)) {
         return 1;
