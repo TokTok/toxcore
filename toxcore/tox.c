@@ -2101,7 +2101,7 @@ size_t tox_conference_get_chatlist_size(const Tox *tox)
 void tox_conference_get_chatlist(const Tox *tox, uint32_t *chatlist)
 {
     lock(tox);
-    const size_t list_size = tox_conference_get_chatlist_size(tox);
+    const size_t list_size = count_chatlist(tox->m->conferences_object);
     copy_chatlist(tox->m->conferences_object, chatlist, list_size);
     unlock(tox);
 }
@@ -2160,9 +2160,7 @@ uint32_t tox_conference_by_id(const Tox *tox, const uint8_t *id, Tox_Err_Confere
 uint32_t tox_conference_by_uid(const Tox *tox, const uint8_t *uid, Tox_Err_Conference_By_Uid *error)
 {
     Tox_Err_Conference_By_Id id_error;
-    lock(tox);
     const uint32_t res = tox_conference_by_id(tox, uid, &id_error);
-    unlock(tox);
 
     switch (id_error) {
         case TOX_ERR_CONFERENCE_BY_ID_OK:
