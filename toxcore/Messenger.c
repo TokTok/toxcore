@@ -246,7 +246,7 @@ int32_t m_addfriend(Messenger *m, const uint8_t *address, const uint8_t *data, u
     uint8_t real_pk[CRYPTO_PUBLIC_KEY_SIZE];
     id_copy(real_pk, address);
 
-    if (!public_key_valid(real_pk)) {
+    if (!crypto_public_key_valid(real_pk)) {
         return FAERR_BADCHECKSUM;
     }
 
@@ -303,7 +303,7 @@ int32_t m_addfriend_norequest(Messenger *m, const uint8_t *real_pk)
         return FAERR_ALREADYSENT;
     }
 
-    if (!public_key_valid(real_pk)) {
+    if (!crypto_public_key_valid(real_pk)) {
         return FAERR_BADCHECKSUM;
     }
 
@@ -2948,7 +2948,7 @@ static State_Load_Status load_nospam_keys(Messenger *m, const uint8_t *data, uin
     set_nospam(m->fr, nospam);
     load_secret_key(m->net_crypto, data + sizeof(uint32_t) + CRYPTO_PUBLIC_KEY_SIZE);
 
-    if (public_key_cmp(data + sizeof(uint32_t), nc_get_self_public_key(m->net_crypto)) != 0) {
+    if (crypto_public_key_cmp(data + sizeof(uint32_t), nc_get_self_public_key(m->net_crypto)) != 0) {
         return STATE_LOAD_STATUS_ERROR;
     }
 

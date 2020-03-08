@@ -205,7 +205,7 @@ int getfriend_conn_id_pk(Friend_Connections *fr_c, const uint8_t *real_pk)
         Friend_Conn *friend_con = get_conn(fr_c, i);
 
         if (friend_con) {
-            if (public_key_cmp(friend_con->real_public_key, real_pk) == 0) {
+            if (crypto_public_key_cmp(friend_con->real_public_key, real_pk) == 0) {
                 return i;
             }
         }
@@ -228,7 +228,7 @@ int friend_add_tcp_relay(Friend_Connections *fr_c, int friendcon_id, IP_Port ip_
     }
 
     /* Local ip and same pk means that they are hosting a TCP relay. */
-    if (ip_is_local(ip_port.ip) && public_key_cmp(friend_con->dht_temp_pk, public_key) == 0) {
+    if (ip_is_local(ip_port.ip) && crypto_public_key_cmp(friend_con->dht_temp_pk, public_key) == 0) {
         if (!net_family_is_unspec(friend_con->dht_ip_port.ip.family)) {
             ip_port.ip = friend_con->dht_ip_port.ip;
         } else {
@@ -240,7 +240,7 @@ int friend_add_tcp_relay(Friend_Connections *fr_c, int friendcon_id, IP_Port ip_
 
     for (unsigned i = 0; i < FRIEND_MAX_STORED_TCP_RELAYS; ++i) {
         if (!net_family_is_unspec(friend_con->tcp_relays[i].ip_port.ip.family)
-                && public_key_cmp(friend_con->tcp_relays[i].public_key, public_key) == 0) {
+                && crypto_public_key_cmp(friend_con->tcp_relays[i].public_key, public_key) == 0) {
             memset(&friend_con->tcp_relays[i], 0, sizeof(Node_format));
         }
     }
@@ -430,7 +430,7 @@ static void dht_pk_callback(void *object, int32_t number, const uint8_t *dht_pub
         return;
     }
 
-    if (public_key_cmp(friend_con->dht_temp_pk, dht_public_key) == 0) {
+    if (crypto_public_key_cmp(friend_con->dht_temp_pk, dht_public_key) == 0) {
         return;
     }
 
@@ -567,7 +567,7 @@ static int handle_new_connections(void *object, New_Connection *n_c)
         friend_con->dht_ip_port_lastrecv = mono_time_get(fr_c->mono_time);
     }
 
-    if (public_key_cmp(friend_con->dht_temp_pk, n_c->dht_public_key) != 0) {
+    if (crypto_public_key_cmp(friend_con->dht_temp_pk, n_c->dht_public_key) != 0) {
         change_dht_pk(fr_c, friendcon_id, n_c->dht_public_key);
     }
 

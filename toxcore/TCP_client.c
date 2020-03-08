@@ -290,12 +290,12 @@ static int generate_handshake(TCP_Client_Connection *tcp_conn)
 {
     uint8_t plain[CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE];
     crypto_new_keypair(plain, tcp_conn->temp_secret_key);
-    random_nonce(tcp_conn->sent_nonce);
+    crypto_random_nonce(tcp_conn->sent_nonce);
     memcpy(plain + CRYPTO_PUBLIC_KEY_SIZE, tcp_conn->sent_nonce, CRYPTO_NONCE_SIZE);
     memcpy(tcp_conn->last_packet, tcp_conn->self_public_key, CRYPTO_PUBLIC_KEY_SIZE);
-    random_nonce(tcp_conn->last_packet + CRYPTO_PUBLIC_KEY_SIZE);
-    int len = encrypt_data_symmetric(tcp_conn->shared_key, tcp_conn->last_packet + CRYPTO_PUBLIC_KEY_SIZE, plain,
-                                     sizeof(plain), tcp_conn->last_packet + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE);
+    crypto_random_nonce(tcp_conn->last_packet + CRYPTO_PUBLIC_KEY_SIZE);
+    int len = crypto_encrypt_data_symmetric(tcp_conn->shared_key, tcp_conn->last_packet + CRYPTO_PUBLIC_KEY_SIZE, plain,
+                                            sizeof(plain), tcp_conn->last_packet + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE);
 
     if (len != sizeof(plain) + CRYPTO_MAC_SIZE) {
         return -1;
@@ -314,15 +314,15 @@ static int generate_handshake(TCP_Client_Connection *tcp_conn)
 static int handle_handshake(TCP_Client_Connection *tcp_conn, const uint8_t *data)
 {
     uint8_t plain[CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE];
-    int len = decrypt_data_symmetric(tcp_conn->shared_key, data, data + CRYPTO_NONCE_SIZE,
-                                     TCP_SERVER_HANDSHAKE_SIZE - CRYPTO_NONCE_SIZE, plain);
+    int len = crypto_decrypt_data_symmetric(tcp_conn->shared_key, data, data + CRYPTO_NONCE_SIZE,
+                                            TCP_SERVER_HANDSHAKE_SIZE - CRYPTO_NONCE_SIZE, plain);
 
     if (len != sizeof(plain)) {
         return -1;
     }
 
     memcpy(tcp_conn->recv_nonce, plain + CRYPTO_PUBLIC_KEY_SIZE, CRYPTO_NONCE_SIZE);
-    encrypt_precompute(plain, tcp_conn->temp_secret_key, tcp_conn->shared_key);
+    crypto_encrypt_precompute(plain, tcp_conn->temp_secret_key, tcp_conn->shared_key);
     crypto_memzero(tcp_conn->temp_secret_key, CRYPTO_SECRET_KEY_SIZE);
     return 0;
 }
@@ -444,7 +444,7 @@ static int write_packet_TCP_client_secure_connection(TCP_Client_Connection *con,
 
     uint16_t c_length = net_htons(length + CRYPTO_MAC_SIZE);
     memcpy(packet, &c_length, sizeof(uint16_t));
-    int len = encrypt_data_symmetric(con->shared_key, con->sent_nonce, data, length, packet + sizeof(uint16_t));
+    int len = crypto_encrypt_data_symmetric(con->shared_key, con->sent_nonce, data, length, packet + sizeof(uint16_t));
 
     if ((unsigned int)len != (SIZEOF_VLA(packet) - sizeof(uint16_t))) {
         return -1;
@@ -457,7 +457,7 @@ static int write_packet_TCP_client_secure_connection(TCP_Client_Connection *con,
             len = 0;
         }
 
-        increment_nonce(con->sent_nonce);
+        crypto_increment_nonce(con->sent_nonce);
 
         if ((unsigned int)len == SIZEOF_VLA(packet)) {
             return 1;
@@ -472,7 +472,7 @@ static int write_packet_TCP_client_secure_connection(TCP_Client_Connection *con,
         return 0;
     }
 
-    increment_nonce(con->sent_nonce);
+    crypto_increment_nonce(con->sent_nonce);
 
     if ((unsigned int)len == SIZEOF_VLA(packet)) {
         return 1;
@@ -727,7 +727,7 @@ TCP_Client_Connection *new_TCP_connection(const Mono_Time *mono_time, IP_Port ip
     temp->sock = sock;
     memcpy(temp->public_key, public_key, CRYPTO_PUBLIC_KEY_SIZE);
     memcpy(temp->self_public_key, self_public_key, CRYPTO_PUBLIC_KEY_SIZE);
-    encrypt_precompute(temp->public_key, self_secret_key, temp->shared_key);
+    crypto_encrypt_precompute(temp->public_key, self_secret_key, temp->shared_key);
     temp->ip_port = ip_port;
     temp->proxy_info = *proxy_info;
 

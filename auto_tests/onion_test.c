@@ -98,10 +98,11 @@ static int handle_test_3(void *object, IP_Port source, const uint8_t *packet, ui
 #if 0
     print_client_id(packet, length);
 #endif
-    int len = decrypt_data(test_3_pub_key, dht_get_self_secret_key(onion->dht),
-                           packet + 1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH,
-                           packet + 1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH + CRYPTO_NONCE_SIZE,
-                           1 + CRYPTO_SHA256_SIZE + CRYPTO_MAC_SIZE, plain);
+    int len = crypto_decrypt_data(
+                  test_3_pub_key, dht_get_self_secret_key(onion->dht),
+                  packet + 1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH,
+                  packet + 1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH + CRYPTO_NONCE_SIZE,
+                  1 + CRYPTO_SHA256_SIZE + CRYPTO_MAC_SIZE, plain);
 
     if (len == -1) {
         return 1;
@@ -137,8 +138,9 @@ static int handle_test_4(void *object, IP_Port source, const uint8_t *packet, ui
         return 1;
     }
 
-    int len = decrypt_data(packet + 1 + CRYPTO_NONCE_SIZE, dht_get_self_secret_key(onion->dht), packet + 1,
-                           packet + 1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE, sizeof("Install gentoo") + CRYPTO_MAC_SIZE, plain);
+    int len = crypto_decrypt_data(
+                  packet + 1 + CRYPTO_NONCE_SIZE, dht_get_self_secret_key(onion->dht), packet + 1,
+                  packet + 1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE, sizeof("Install gentoo") + CRYPTO_MAC_SIZE, plain);
 
     if (len == -1) {
         return 1;
@@ -258,7 +260,7 @@ static void test_basic(void)
     Onion *onion3 = new_onion(mono_time3, new_dht(log3, mono_time3, new_networking(log3, ip, 36569), true));
     ck_assert_msg((onion3 != nullptr), "Onion failed initializing.");
 
-    random_nonce(nonce);
+    crypto_random_nonce(nonce);
     ret = send_data_request(onion3->net, &path, nodes[3].ip_port,
                             dht_get_self_public_key(onion1->dht),
                             dht_get_self_public_key(onion1->dht),

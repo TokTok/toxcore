@@ -277,7 +277,7 @@ void get_shared_key(const Mono_Time *mono_time, Shared_Keys *shared_keys, uint8_
         }
     }
 
-    encrypt_precompute(public_key, secret_key, shared_key);
+    crypto_encrypt_precompute(public_key, secret_key, shared_key);
 
     if (num != UINT32_MAX) {
         Shared_Key *const key = &shared_keys->keys[curr];
@@ -329,12 +329,12 @@ int create_request(const uint8_t *send_public_key, const uint8_t *send_secret_ke
     }
 
     uint8_t *const nonce = packet + 1 + CRYPTO_PUBLIC_KEY_SIZE * 2;
-    random_nonce(nonce);
+    crypto_random_nonce(nonce);
     uint8_t temp[MAX_CRYPTO_REQUEST_SIZE];
     memcpy(temp + 1, data, length);
     temp[0] = request_id;
-    const int len = encrypt_data(recv_public_key, send_secret_key, nonce, temp, length + 1,
-                                 CRYPTO_SIZE + packet);
+    const int len = crypto_encrypt_data(recv_public_key, send_secret_key, nonce, temp, length + 1,
+                                        CRYPTO_SIZE + packet);
 
     if (len == -1) {
         crypto_memzero(temp, MAX_CRYPTO_REQUEST_SIZE);
@@ -373,8 +373,8 @@ int handle_request(const uint8_t *self_public_key, const uint8_t *self_secret_ke
     memcpy(public_key, packet + 1 + CRYPTO_PUBLIC_KEY_SIZE, CRYPTO_PUBLIC_KEY_SIZE);
     const uint8_t *const nonce = packet + 1 + CRYPTO_PUBLIC_KEY_SIZE * 2;
     uint8_t temp[MAX_CRYPTO_REQUEST_SIZE];
-    int len1 = decrypt_data(public_key, self_secret_key, nonce,
-                            packet + CRYPTO_SIZE, length - CRYPTO_SIZE, temp);
+    int len1 = crypto_decrypt_data(public_key, self_secret_key, nonce,
+                                   packet + CRYPTO_SIZE, length - CRYPTO_SIZE, temp);
 
     if (len1 == -1 || len1 == 0) {
         crypto_memzero(temp, MAX_CRYPTO_REQUEST_SIZE);
@@ -470,9 +470,9 @@ static int dht_create_packet(const uint8_t public_key[CRYPTO_PUBLIC_KEY_SIZE],
     VLA(uint8_t, encrypted, plain_length + CRYPTO_MAC_SIZE);
     uint8_t nonce[CRYPTO_NONCE_SIZE];
 
-    random_nonce(nonce);
+    crypto_random_nonce(nonce);
 
-    const int encrypted_length = encrypt_data_symmetric(shared_key, nonce, plain, plain_length, encrypted);
+    const int encrypted_length = crypto_encrypt_data_symmetric(shared_key, nonce, plain, plain_length, encrypted);
 
     if (encrypted_length == -1) {
         return -1;
@@ -1420,7 +1420,7 @@ static int handle_getnodes(void *object, IP_Port source, const uint8_t *packet, 
     uint8_t shared_key[CRYPTO_SHARED_KEY_SIZE];
 
     dht_get_shared_key_recv(dht, shared_key, packet + 1);
-    const int len = decrypt_data_symmetric(
+    const int len = crypto_decrypt_data_symmetric(
                         shared_key,
                         packet + 1 + CRYPTO_PUBLIC_KEY_SIZE,
                         packet + 1 + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE,
@@ -1490,7 +1490,7 @@ static int handle_sendnodes_core(void *object, IP_Port source, const uint8_t *pa
     VLA(uint8_t, plain, 1 + data_size + sizeof(uint64_t));
     uint8_t shared_key[CRYPTO_SHARED_KEY_SIZE];
     dht_get_shared_key_sent(dht, shared_key, packet + 1);
-    const int len = decrypt_data_symmetric(
+    const int len = crypto_decrypt_data_symmetric(
                         shared_key,
                         packet + 1 + CRYPTO_PUBLIC_KEY_SIZE,
                         packet + 1 + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE,

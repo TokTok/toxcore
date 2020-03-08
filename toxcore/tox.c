@@ -1392,7 +1392,7 @@ uint32_t tox_file_send(Tox *tox, uint32_t friend_number, uint32_t kind, uint64_t
 
     if (!file_id) {
         /* Tox keys are 32 bytes like FILE_ID_LENGTH. */
-        new_symmetric_key(f_id);
+        crypto_new_symmetric_key(f_id);
         file_id = f_id;
     }
 

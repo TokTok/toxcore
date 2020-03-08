@@ -291,7 +291,7 @@ static int add_to_closest(Group_Chats *g_c, uint32_t groupnumber, const uint8_t 
         return -1;
     }
 
-    if (public_key_cmp(g->real_pk, real_pk) == 0) {
+    if (crypto_public_key_cmp(g->real_pk, real_pk) == 0) {
         return -1;
     }
 
@@ -299,7 +299,7 @@ static int add_to_closest(Group_Chats *g_c, uint32_t groupnumber, const uint8_t 
     unsigned int index = DESIRED_CLOSE_CONNECTIONS;
 
     for (i = 0; i < DESIRED_CLOSE_CONNECTIONS; ++i) {
-        if (g->closest_peers[i].entry && public_key_cmp(real_pk, g->closest_peers[i].real_pk) == 0) {
+        if (g->closest_peers[i].entry && crypto_public_key_cmp(real_pk, g->closest_peers[i].real_pk) == 0) {
             return 0;
         }
     }
@@ -375,7 +375,7 @@ static unsigned int pk_in_closest_peers(const Group_c *g, uint8_t *real_pk)
             continue;
         }
 
-        if (public_key_cmp(g->closest_peers[i].real_pk, real_pk) == 0) {
+        if (crypto_public_key_cmp(g->closest_peers[i].real_pk, real_pk) == 0) {
             return 1;
         }
     }
@@ -1163,7 +1163,7 @@ int add_groupchat(Group_Chats *g_c, uint8_t type)
 
     g->status = GROUPCHAT_STATUS_CONNECTED;
     g->type = type;
-    new_symmetric_key(g->id);
+    crypto_new_symmetric_key(g->id);
     g->peer_number = 0; /* Founder is peer 0. */
     memcpy(g->real_pk, nc_get_self_public_key(g_c->m->net_crypto), CRYPTO_PUBLIC_KEY_SIZE);
     const int peer_index = addpeer(g_c, groupnumber, g->real_pk, dht_get_self_public_key(g_c->m->dht), 0, nullptr, true,
@@ -2287,7 +2287,7 @@ static int handle_send_peers(Group_Chats *g_c, uint32_t groupnumber, const uint8
         d += sizeof(uint16_t);
 
         if (g->status == GROUPCHAT_STATUS_VALID
-                && public_key_cmp(d, nc_get_self_public_key(g_c->m->net_crypto)) == 0) {
+                && crypto_public_key_cmp(d, nc_get_self_public_key(g_c->m->net_crypto)) == 0) {
             g->peer_number = peer_num;
             g->status = GROUPCHAT_STATUS_CONNECTED;
 

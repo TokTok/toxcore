@@ -47,7 +47,7 @@
 static void change_symmetric_key(Onion *onion)
 {
     if (mono_time_is_timeout(onion->mono_time, onion->timestamp, KEY_REFRESH_INTERVAL)) {
-        new_symmetric_key(onion->secret_symmetric_key);
+        crypto_new_symmetric_key(onion->secret_symmetric_key);
         onion->timestamp = mono_time_get(onion->mono_time);
     }
 }
@@ -125,18 +125,18 @@ int create_onion_path(const DHT *dht, Onion_Path *new_path, const Node_format *n
         return -1;
     }
 
-    encrypt_precompute(nodes[0].public_key, dht_get_self_secret_key(dht), new_path->shared_key1);
+    crypto_encrypt_precompute(nodes[0].public_key, dht_get_self_secret_key(dht), new_path->shared_key1);
     memcpy(new_path->public_key1, dht_get_self_public_key(dht), CRYPTO_PUBLIC_KEY_SIZE);
 
     uint8_t random_public_key[CRYPTO_PUBLIC_KEY_SIZE];
     uint8_t random_secret_key[CRYPTO_SECRET_KEY_SIZE];
 
     crypto_new_keypair(random_public_key, random_secret_key);
-    encrypt_precompute(nodes[1].public_key, random_secret_key, new_path->shared_key2);
+    crypto_encrypt_precompute(nodes[1].public_key, random_secret_key, new_path->shared_key2);
     memcpy(new_path->public_key2, random_public_key, CRYPTO_PUBLIC_KEY_SIZE);
 
     crypto_new_keypair(random_public_key, random_secret_key);
-    encrypt_precompute(nodes[2].public_key, random_secret_key, new_path->shared_key3);
+    crypto_encrypt_precompute(nodes[2].public_key, random_secret_key, new_path->shared_key3);
     memcpy(new_path->public_key3, random_public_key, CRYPTO_PUBLIC_KEY_SIZE);
 
     new_path->ip_port1 = nodes[0].ip_port;
@@ -193,14 +193,14 @@ int create_onion_packet(uint8_t *packet, uint16_t max_packet_length, const Onion
     memcpy(step1 + SIZE_IPPORT, data, length);
 
     uint8_t nonce[CRYPTO_NONCE_SIZE];
-    random_nonce(nonce);
+    crypto_random_nonce(nonce);
 
     VLA(uint8_t, step2, SIZE_IPPORT + SEND_BASE + length);
     ipport_pack(step2, &path->ip_port3);
     memcpy(step2 + SIZE_IPPORT, path->public_key3, CRYPTO_PUBLIC_KEY_SIZE);
 
-    int len = encrypt_data_symmetric(path->shared_key3, nonce, step1, SIZEOF_VLA(step1),
-                                     step2 + SIZE_IPPORT + CRYPTO_PUBLIC_KEY_SIZE);
+    int len = crypto_encrypt_data_symmetric(path->shared_key3, nonce, step1, SIZEOF_VLA(step1),
+                                            step2 + SIZE_IPPORT + CRYPTO_PUBLIC_KEY_SIZE);
 
     if (len != SIZE_IPPORT + length + CRYPTO_MAC_SIZE) {
         return -1;
@@ -209,8 +209,8 @@ int create_onion_packet(uint8_t *packet, uint16_t max_packet_length, const Onion
     VLA(uint8_t, step3, SIZE_IPPORT + SEND_BASE * 2 + length);
     ipport_pack(step3, &path->ip_port2);
     memcpy(step3 + SIZE_IPPORT, path->public_key2, CRYPTO_PUBLIC_KEY_SIZE);
-    len = encrypt_data_symmetric(path->shared_key2, nonce, step2, SIZEOF_VLA(step2),
-                                 step3 + SIZE_IPPORT + CRYPTO_PUBLIC_KEY_SIZE);
+    len = crypto_encrypt_data_symmetric(path->shared_key2, nonce, step2, SIZEOF_VLA(step2),
+                                        step3 + SIZE_IPPORT + CRYPTO_PUBLIC_KEY_SIZE);
 
     if (len != SIZE_IPPORT + SEND_BASE + length + CRYPTO_MAC_SIZE) {
         return -1;
@@ -220,8 +220,8 @@ int create_onion_packet(uint8_t *packet, uint16_t max_packet_length, const Onion
     memcpy(packet + 1, nonce, CRYPTO_NONCE_SIZE);
     memcpy(packet + 1 + CRYPTO_NONCE_SIZE, path->public_key1, CRYPTO_PUBLIC_KEY_SIZE);
 
-    len = encrypt_data_symmetric(path->shared_key1, nonce, step3, SIZEOF_VLA(step3),
-                                 packet + 1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE);
+    len = crypto_encrypt_data_symmetric(path->shared_key1, nonce, step3, SIZEOF_VLA(step3),
+                                        packet + 1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE);
 
     if (len != SIZE_IPPORT + SEND_BASE * 2 + length + CRYPTO_MAC_SIZE) {
         return -1;
@@ -252,14 +252,14 @@ int create_onion_packet_tcp(uint8_t *packet, uint16_t max_packet_length, const O
     memcpy(step1 + SIZE_IPPORT, data, length);
 
     uint8_t nonce[CRYPTO_NONCE_SIZE];
-    random_nonce(nonce);
+    crypto_random_nonce(nonce);
 
     VLA(uint8_t, step2, SIZE_IPPORT + SEND_BASE + length);
     ipport_pack(step2, &path->ip_port3);
     memcpy(step2 + SIZE_IPPORT, path->public_key3, CRYPTO_PUBLIC_KEY_SIZE);
 
-    int len = encrypt_data_symmetric(path->shared_key3, nonce, step1, SIZEOF_VLA(step1),
-                                     step2 + SIZE_IPPORT + CRYPTO_PUBLIC_KEY_SIZE);
+    int len = crypto_encrypt_data_symmetric(path->shared_key3, nonce, step1, SIZEOF_VLA(step1),
+                                            step2 + SIZE_IPPORT + CRYPTO_PUBLIC_KEY_SIZE);
 
     if (len != SIZE_IPPORT + length + CRYPTO_MAC_SIZE) {
         return -1;
@@ -267,8 +267,8 @@ int create_onion_packet_tcp(uint8_t *packet, uint16_t max_packet_length, const O
 
     ipport_pack(packet + CRYPTO_NONCE_SIZE, &path->ip_port2);
     memcpy(packet + CRYPTO_NONCE_SIZE + SIZE_IPPORT, path->public_key2, CRYPTO_PUBLIC_KEY_SIZE);
-    len = encrypt_data_symmetric(path->shared_key2, nonce, step2, SIZEOF_VLA(step2),
-                                 packet + CRYPTO_NONCE_SIZE + SIZE_IPPORT + CRYPTO_PUBLIC_KEY_SIZE);
+    len = crypto_encrypt_data_symmetric(path->shared_key2, nonce, step2, SIZEOF_VLA(step2),
+                                        packet + CRYPTO_NONCE_SIZE + SIZE_IPPORT + CRYPTO_PUBLIC_KEY_SIZE);
 
     if (len != SIZE_IPPORT + SEND_BASE + length + CRYPTO_MAC_SIZE) {
         return -1;
@@ -345,8 +345,8 @@ static int handle_send_initial(void *object, IP_Port source, const uint8_t *pack
     uint8_t shared_key[CRYPTO_SHARED_KEY_SIZE];
     get_shared_key(onion->mono_time, &onion->shared_keys_1, shared_key, dht_get_self_secret_key(onion->dht),
                    packet + 1 + CRYPTO_NONCE_SIZE);
-    int len = decrypt_data_symmetric(shared_key, packet + 1, packet + 1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE,
-                                     length - (1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE), plain);
+    int len = crypto_decrypt_data_symmetric(shared_key, packet + 1, packet + 1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE,
+                                            length - (1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE), plain);
 
     if (len != length - (1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_MAC_SIZE)) {
         return 1;
@@ -380,9 +380,9 @@ int onion_send_1(const Onion *onion, const uint8_t *plain, uint16_t len, IP_Port
     memcpy(data + 1 + CRYPTO_NONCE_SIZE, plain + SIZE_IPPORT, len - SIZE_IPPORT);
     uint16_t data_len = 1 + CRYPTO_NONCE_SIZE + (len - SIZE_IPPORT);
     uint8_t *ret_part = data + data_len;
-    random_nonce(ret_part);
-    len = encrypt_data_symmetric(onion->secret_symmetric_key, ret_part, ip_port, SIZE_IPPORT,
-                                 ret_part + CRYPTO_NONCE_SIZE);
+    crypto_random_nonce(ret_part);
+    len = crypto_encrypt_data_symmetric(onion->secret_symmetric_key, ret_part, ip_port, SIZE_IPPORT,
+                                        ret_part + CRYPTO_NONCE_SIZE);
 
     if (len != SIZE_IPPORT + CRYPTO_MAC_SIZE) {
         return 1;
@@ -415,8 +415,8 @@ static int handle_send_1(void *object, IP_Port source, const uint8_t *packet, ui
     uint8_t shared_key[CRYPTO_SHARED_KEY_SIZE];
     get_shared_key(onion->mono_time, &onion->shared_keys_2, shared_key, dht_get_self_secret_key(onion->dht),
                    packet + 1 + CRYPTO_NONCE_SIZE);
-    int len = decrypt_data_symmetric(shared_key, packet + 1, packet + 1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE,
-                                     length - (1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE + RETURN_1), plain);
+    int len = crypto_decrypt_data_symmetric(shared_key, packet + 1, packet + 1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE,
+                                            length - (1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE + RETURN_1), plain);
 
     if (len != length - (1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE + RETURN_1 + CRYPTO_MAC_SIZE)) {
         return 1;
@@ -434,12 +434,12 @@ static int handle_send_1(void *object, IP_Port source, const uint8_t *packet, ui
     memcpy(data + 1 + CRYPTO_NONCE_SIZE, plain + SIZE_IPPORT, len - SIZE_IPPORT);
     uint16_t data_len = 1 + CRYPTO_NONCE_SIZE + (len - SIZE_IPPORT);
     uint8_t *ret_part = data + data_len;
-    random_nonce(ret_part);
+    crypto_random_nonce(ret_part);
     uint8_t ret_data[RETURN_1 + SIZE_IPPORT];
     ipport_pack(ret_data, &source);
     memcpy(ret_data + SIZE_IPPORT, packet + (length - RETURN_1), RETURN_1);
-    len = encrypt_data_symmetric(onion->secret_symmetric_key, ret_part, ret_data, sizeof(ret_data),
-                                 ret_part + CRYPTO_NONCE_SIZE);
+    len = crypto_encrypt_data_symmetric(onion->secret_symmetric_key, ret_part, ret_data, sizeof(ret_data),
+                                        ret_part + CRYPTO_NONCE_SIZE);
 
     if (len != RETURN_2 - CRYPTO_NONCE_SIZE) {
         return 1;
@@ -472,8 +472,8 @@ static int handle_send_2(void *object, IP_Port source, const uint8_t *packet, ui
     uint8_t shared_key[CRYPTO_SHARED_KEY_SIZE];
     get_shared_key(onion->mono_time, &onion->shared_keys_3, shared_key, dht_get_self_secret_key(onion->dht),
                    packet + 1 + CRYPTO_NONCE_SIZE);
-    int len = decrypt_data_symmetric(shared_key, packet + 1, packet + 1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE,
-                                     length - (1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE + RETURN_2), plain);
+    int len = crypto_decrypt_data_symmetric(shared_key, packet + 1, packet + 1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE,
+                                            length - (1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE + RETURN_2), plain);
 
     if (len != length - (1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE + RETURN_2 + CRYPTO_MAC_SIZE)) {
         return 1;
@@ -498,12 +498,12 @@ static int handle_send_2(void *object, IP_Port source, const uint8_t *packet, ui
     memcpy(data, plain + SIZE_IPPORT, len - SIZE_IPPORT);
     uint16_t data_len = (len - SIZE_IPPORT);
     uint8_t *ret_part = data + (len - SIZE_IPPORT);
-    random_nonce(ret_part);
+    crypto_random_nonce(ret_part);
     uint8_t ret_data[RETURN_2 + SIZE_IPPORT];
     ipport_pack(ret_data, &source);
     memcpy(ret_data + SIZE_IPPORT, packet + (length - RETURN_2), RETURN_2);
-    len = encrypt_data_symmetric(onion->secret_symmetric_key, ret_part, ret_data, sizeof(ret_data),
-                                 ret_part + CRYPTO_NONCE_SIZE);
+    len = crypto_encrypt_data_symmetric(onion->secret_symmetric_key, ret_part, ret_data, sizeof(ret_data),
+                                        ret_part + CRYPTO_NONCE_SIZE);
 
     if (len != RETURN_3 - CRYPTO_NONCE_SIZE) {
         return 1;
@@ -539,8 +539,8 @@ static int handle_recv_3(void *object, IP_Port source, const uint8_t *packet, ui
     change_symmetric_key(onion);
 
     uint8_t plain[SIZE_IPPORT + RETURN_2];
-    int len = decrypt_data_symmetric(onion->secret_symmetric_key, packet + 1, packet + 1 + CRYPTO_NONCE_SIZE,
-                                     SIZE_IPPORT + RETURN_2 + CRYPTO_MAC_SIZE, plain);
+    int len = crypto_decrypt_data_symmetric(onion->secret_symmetric_key, packet + 1, packet + 1 + CRYPTO_NONCE_SIZE,
+                                            SIZE_IPPORT + RETURN_2 + CRYPTO_MAC_SIZE, plain);
 
     if ((uint32_t)len != sizeof(plain)) {
         return 1;
@@ -585,8 +585,8 @@ static int handle_recv_2(void *object, IP_Port source, const uint8_t *packet, ui
     change_symmetric_key(onion);
 
     uint8_t plain[SIZE_IPPORT + RETURN_1];
-    int len = decrypt_data_symmetric(onion->secret_symmetric_key, packet + 1, packet + 1 + CRYPTO_NONCE_SIZE,
-                                     SIZE_IPPORT + RETURN_1 + CRYPTO_MAC_SIZE, plain);
+    int len = crypto_decrypt_data_symmetric(onion->secret_symmetric_key, packet + 1, packet + 1 + CRYPTO_NONCE_SIZE,
+                                            SIZE_IPPORT + RETURN_1 + CRYPTO_MAC_SIZE, plain);
 
     if ((uint32_t)len != sizeof(plain)) {
         return 1;
@@ -631,8 +631,8 @@ static int handle_recv_1(void *object, IP_Port source, const uint8_t *packet, ui
     change_symmetric_key(onion);
 
     uint8_t plain[SIZE_IPPORT];
-    int len = decrypt_data_symmetric(onion->secret_symmetric_key, packet + 1, packet + 1 + CRYPTO_NONCE_SIZE,
-                                     SIZE_IPPORT + CRYPTO_MAC_SIZE, plain);
+    int len = crypto_decrypt_data_symmetric(onion->secret_symmetric_key, packet + 1, packet + 1 + CRYPTO_NONCE_SIZE,
+                                            SIZE_IPPORT + CRYPTO_MAC_SIZE, plain);
 
     if ((uint32_t)len != SIZE_IPPORT) {
         return 1;
@@ -680,7 +680,7 @@ Onion *new_onion(Mono_Time *mono_time, DHT *dht)
     onion->dht = dht;
     onion->net = dht_get_net(dht);
     onion->mono_time = mono_time;
-    new_symmetric_key(onion->secret_symmetric_key);
+    crypto_new_symmetric_key(onion->secret_symmetric_key);
     onion->timestamp = mono_time_get(onion->mono_time);
 
     networking_registerhandler(onion->net, NET_PACKET_ONION_SEND_INITIAL, &handle_send_initial, onion);

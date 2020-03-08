@@ -372,13 +372,13 @@ int read_packet_TCP_secure_connection(Socket sock, uint16_t *next_packet_length,
 
     *next_packet_length = 0;
 
-    int len = decrypt_data_symmetric(shared_key, recv_nonce, data_encrypted, len_packet, data);
+    int len = crypto_decrypt_data_symmetric(shared_key, recv_nonce, data_encrypted, len_packet, data);
 
     if (len + CRYPTO_MAC_SIZE != len_packet) {
         return -1;
     }
 
-    increment_nonce(recv_nonce);
+    crypto_increment_nonce(recv_nonce);
 
     return len;
 }
@@ -500,7 +500,7 @@ static int write_packet_TCP_secure_connection(TCP_Secure_Connection *con, const 
 
     const uint16_t c_length = net_htons(length + CRYPTO_MAC_SIZE);
     memcpy(packet, &c_length, sizeof(uint16_t));
-    int len = encrypt_data_symmetric(con->shared_key, con->sent_nonce, data, length, packet + sizeof(uint16_t));
+    int len = crypto_encrypt_data_symmetric(con->shared_key, con->sent_nonce, data, length, packet + sizeof(uint16_t));
 
     if ((unsigned int)len != (SIZEOF_VLA(packet) - sizeof(uint16_t))) {
         return -1;
@@ -513,7 +513,7 @@ static int write_packet_TCP_secure_connection(TCP_Secure_Connection *con, const 
             len = 0;
         }
 
-        increment_nonce(con->sent_nonce);
+        crypto_increment_nonce(con->sent_nonce);
 
         if ((unsigned int)len == SIZEOF_VLA(packet)) {
             return 1;
@@ -528,7 +528,7 @@ static int write_packet_TCP_secure_connection(TCP_Secure_Connection *con, const 
         return 0;
     }
 
-    increment_nonce(con->sent_nonce);
+    crypto_increment_nonce(con->sent_nonce);
 
     if ((unsigned int)len == SIZEOF_VLA(packet)) {
         return 1;
@@ -592,10 +592,10 @@ static int handle_TCP_handshake(TCP_Secure_Connection *con, const uint8_t *data,
     }
 
     uint8_t shared_key[CRYPTO_SHARED_KEY_SIZE];
-    encrypt_precompute(data, self_secret_key, shared_key);
+    crypto_encrypt_precompute(data, self_secret_key, shared_key);
     uint8_t plain[TCP_HANDSHAKE_PLAIN_SIZE];
-    int len = decrypt_data_symmetric(shared_key, data + CRYPTO_PUBLIC_KEY_SIZE,
-                                     data + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE, TCP_HANDSHAKE_PLAIN_SIZE + CRYPTO_MAC_SIZE, plain);
+    int len = crypto_decrypt_data_symmetric(shared_key, data + CRYPTO_PUBLIC_KEY_SIZE,
+                                            data + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE, TCP_HANDSHAKE_PLAIN_SIZE + CRYPTO_MAC_SIZE, plain);
 
     if (len != TCP_HANDSHAKE_PLAIN_SIZE) {
         return -1;
@@ -605,15 +605,15 @@ static int handle_TCP_handshake(TCP_Secure_Connection *con, const uint8_t *data,
     uint8_t temp_secret_key[CRYPTO_SECRET_KEY_SIZE];
     uint8_t resp_plain[TCP_HANDSHAKE_PLAIN_SIZE];
     crypto_new_keypair(resp_plain, temp_secret_key);
-    random_nonce(con->sent_nonce);
+    crypto_random_nonce(con->sent_nonce);
     memcpy(resp_plain + CRYPTO_PUBLIC_KEY_SIZE, con->sent_nonce, CRYPTO_NONCE_SIZE);
     memcpy(con->recv_nonce, plain + CRYPTO_PUBLIC_KEY_SIZE, CRYPTO_NONCE_SIZE);
 
     uint8_t response[TCP_SERVER_HANDSHAKE_SIZE];
-    random_nonce(response);
+    crypto_random_nonce(response);
 
-    len = encrypt_data_symmetric(shared_key, response, resp_plain, TCP_HANDSHAKE_PLAIN_SIZE,
-                                 response + CRYPTO_NONCE_SIZE);
+    len = crypto_encrypt_data_symmetric(shared_key, response, resp_plain, TCP_HANDSHAKE_PLAIN_SIZE,
+                                        response + CRYPTO_NONCE_SIZE);
 
     if (len != TCP_HANDSHAKE_PLAIN_SIZE + CRYPTO_MAC_SIZE) {
         return -1;
@@ -623,7 +623,7 @@ static int handle_TCP_handshake(TCP_Secure_Connection *con, const uint8_t *data,
         return -1;
     }
 
-    encrypt_precompute(plain, temp_secret_key, con->shared_key);
+    crypto_encrypt_precompute(plain, temp_secret_key, con->shared_key);
     con->status = TCP_STATUS_UNCONFIRMED;
     return 1;
 }
@@ -688,7 +688,7 @@ static int handle_TCP_routing_req(TCP_Server *tcp_server, uint32_t con_id, const
     TCP_Secure_Connection *con = &tcp_server->accepted_connection_array[con_id];
 
     /* If person tries to cennect to himself we deny the request*/
-    if (public_key_cmp(con->public_key, public_key) == 0) {
+    if (crypto_public_key_cmp(con->public_key, public_key) == 0) {
         if (send_routing_response(con, 0, public_key) == -1) {
             return -1;
         }
@@ -698,7 +698,7 @@ static int handle_TCP_routing_req(TCP_Server *tcp_server, uint32_t con_id, const
 
     for (i = 0; i < NUM_CLIENT_CONNECTIONS; ++i) {
         if (con->connections[i].status != 0) {
-            if (public_key_cmp(public_key, con->connections[i].public_key) == 0) {
+            if (crypto_public_key_cmp(public_key, con->connections[i].public_key) == 0) {
                 if (send_routing_response(con, i + NUM_RESERVED_PORTS, public_key) == -1) {
                     return -1;
                 }
@@ -738,7 +738,7 @@ static int handle_TCP_routing_req(TCP_Server *tcp_server, uint32_t con_id, const
 
         for (i = 0; i < NUM_CLIENT_CONNECTIONS; ++i) {
             if (other_conn->connections[i].status == 1
-                    && public_key_cmp(other_conn->connections[i].public_key, con->public_key) == 0) {
+                    && crypto_public_key_cmp(other_conn->connections[i].public_key, con->public_key) == 0) {
                 other_id = i;
                 break;
             }

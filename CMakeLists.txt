@@ -148,11 +148,13 @@ set(toxcore_PKGCONFIG_REQUIRES)
 # LAYER 1: Crypto core
 # --------------------
 apidsl(toxcore/crypto_core.api.h)
+apidsl(toxcore/random.api.h)
 set(toxcore_SOURCES ${toxcore_SOURCES}
   toxcore/ccompat.h
   toxcore/crypto_core.c
   toxcore/crypto_core.h
-  toxcore/crypto_core_mem.c)
+  toxcore/crypto_core_mem.c
+  toxcore/random.h)
 include(CheckFunctionExists)
 check_function_exists(explicit_bzero HAVE_EXPLICIT_BZERO)
 check_function_exists(memset_s HAVE_MEMSET_S)

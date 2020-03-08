@@ -28,6 +28,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "random.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -124,37 +126,7 @@ void crypto_sha512(uint8_t *hash, const uint8_t *data, size_t length);
  *
  * @return 0 if both mem locations of length are equal, -1 if they are not.
  */
-int32_t public_key_cmp(const uint8_t *pk1, const uint8_t *pk2);
-
-/**
- * Return a random 8 bit integer.
- */
-uint8_t random_u08(void);
-
-/**
- * Return a random 16 bit integer.
- */
-uint16_t random_u16(void);
-
-/**
- * Return a random 32 bit integer.
- */
-uint32_t random_u32(void);
-
-/**
- * Return a random 64 bit integer.
- */
-uint64_t random_u64(void);
-
-/**
- * Fill the given nonce with random bytes.
- */
-void random_nonce(uint8_t *nonce);
-
-/**
- * Fill an array of bytes with random values.
- */
-void random_bytes(uint8_t *bytes, size_t length);
+int32_t crypto_public_key_cmp(const uint8_t *pk1, const uint8_t *pk2);
 
 /**
  * Check if a Tox public key CRYPTO_PUBLIC_KEY_SIZE is valid or not. This
@@ -162,13 +134,18 @@ void random_bytes(uint8_t *bytes, size_t length);
  *
  * @return false if it isn't, true if it is.
  */
-bool public_key_valid(const uint8_t *public_key);
+bool crypto_public_key_valid(const uint8_t *public_key);
 
 /**
  * Generate a new random keypair. Every call to this function is likely to
  * generate a different keypair.
  */
 int32_t crypto_new_keypair(uint8_t *public_key, uint8_t *secret_key);
+
+/**
+ * Fill the given nonce with random bytes.
+ */
+void crypto_random_nonce(uint8_t *nonce);
 
 /**
  * Derive the public key from a given secret key.
@@ -184,8 +161,8 @@ void crypto_derive_public_key(uint8_t *public_key, const uint8_t *secret_key);
  * @return -1 if there was a problem, length of encrypted data if everything
  * was fine.
  */
-int32_t encrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const uint8_t *nonce, const uint8_t *plain,
-                     size_t length, uint8_t *encrypted);
+int32_t crypto_encrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const uint8_t *nonce,
+                            const uint8_t *plain, size_t length, uint8_t *encrypted);
 
 /**
  * Decrypt encrypted text of the given length to plain text of the given length
@@ -196,15 +173,15 @@ int32_t encrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const
  * @return -1 if there was a problem (decryption failed), length of plain text
  * data if everything was fine.
  */
-int32_t decrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const uint8_t *nonce,
-                     const uint8_t *encrypted, size_t length, uint8_t *plain);
+int32_t crypto_decrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const uint8_t *nonce,
+                            const uint8_t *encrypted, size_t length, uint8_t *plain);
 
 /**
  * Fast encrypt/decrypt operations. Use if this is not a one-time communication.
- * encrypt_precompute does the shared-key generation once so it does not have
+ * crypto_encrypt_precompute does the shared-key generation once so it does not have
  * to be performed on every encrypt/decrypt.
  */
-int32_t encrypt_precompute(const uint8_t *public_key, const uint8_t *secret_key, uint8_t *shared_key);
+int32_t crypto_encrypt_precompute(const uint8_t *public_key, const uint8_t *secret_key, uint8_t *shared_key);
 
 /**
  * Encrypts plain of length length to encrypted of length + CRYPTO_MAC_SIZE
@@ -214,36 +191,36 @@ int32_t encrypt_precompute(const uint8_t *public_key, const uint8_t *secret_key,
  * @return -1 if there was a problem, length of encrypted data if everything
  * was fine.
  */
-int32_t encrypt_data_symmetric(const uint8_t *shared_key, const uint8_t *nonce, const uint8_t *plain, size_t length,
-                               uint8_t *encrypted);
+int32_t crypto_encrypt_data_symmetric(const uint8_t *shared_key, const uint8_t *nonce, const uint8_t *plain,
+                                      size_t length, uint8_t *encrypted);
 
 /**
  * Decrypts encrypted of length length to plain of length length -
- * CRYPTO_MAC_SIZE using a shared key CRYPTO_SHARED_KEY_SIZE big and a
+ * CRYPTO_MAC_SIZE using a shared key SHARED_KEY_SIZE big and a
  * CRYPTO_NONCE_SIZE byte nonce.
  *
  * @return -1 if there was a problem (decryption failed), length of plain data
  * if everything was fine.
  */
-int32_t decrypt_data_symmetric(const uint8_t *shared_key, const uint8_t *nonce, const uint8_t *encrypted, size_t length,
-                               uint8_t *plain);
+int32_t crypto_decrypt_data_symmetric(const uint8_t *shared_key, const uint8_t *nonce, const uint8_t *encrypted,
+                                      size_t length, uint8_t *plain);
 
 /**
  * Increment the given nonce by 1 in big endian (rightmost byte incremented
  * first).
  */
-void increment_nonce(uint8_t *nonce);
+void crypto_increment_nonce(uint8_t *nonce);
 
 /**
  * Increment the given nonce by a given number. The number should be in host
  * byte order.
  */
-void increment_nonce_number(uint8_t *nonce, uint32_t host_order_num);
+void crypto_increment_nonce_number(uint8_t *nonce, uint32_t host_order_num);
 
 /**
  * Fill a key CRYPTO_SYMMETRIC_KEY_SIZE big with random bytes.
  */
-void new_symmetric_key(uint8_t *key);
+void crypto_new_symmetric_key(uint8_t *key);
 
 #ifdef __cplusplus
 }  // extern "C"

@@ -43,7 +43,7 @@
 /* id functions */
 bool id_equal(const uint8_t *dest, const uint8_t *src)
 {
-    return public_key_cmp(dest, src) == 0;
+    return crypto_public_key_cmp(dest, src) == 0;
 }
 
 uint32_t id_copy(uint8_t *dest, const uint8_t *src)

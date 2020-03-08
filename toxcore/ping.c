@@ -91,13 +91,13 @@ int32_t ping_send_request(Ping *ping, IP_Port ipp, const uint8_t *public_key)
 
     pk[0] = NET_PACKET_PING_REQUEST;
     id_copy(pk + 1, dht_get_self_public_key(ping->dht));     // Our pubkey
-    random_nonce(pk + 1 + CRYPTO_PUBLIC_KEY_SIZE); // Generate new nonce
+    crypto_random_nonce(pk + 1 + CRYPTO_PUBLIC_KEY_SIZE); // Generate new nonce
 
 
-    rc = encrypt_data_symmetric(shared_key,
-                                pk + 1 + CRYPTO_PUBLIC_KEY_SIZE,
-                                ping_plain, sizeof(ping_plain),
-                                pk + 1 + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE);
+    rc = crypto_encrypt_data_symmetric(shared_key,
+                                       pk + 1 + CRYPTO_PUBLIC_KEY_SIZE,
+                                       ping_plain, sizeof(ping_plain),
+                                       pk + 1 + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE);
 
     if (rc != PING_PLAIN_SIZE + CRYPTO_MAC_SIZE) {
         return 1;
@@ -122,13 +122,13 @@ static int ping_send_response(Ping *ping, IP_Port ipp, const uint8_t *public_key
 
     pk[0] = NET_PACKET_PING_RESPONSE;
     id_copy(pk + 1, dht_get_self_public_key(ping->dht));     // Our pubkey
-    random_nonce(pk + 1 + CRYPTO_PUBLIC_KEY_SIZE); // Generate new nonce
+    crypto_random_nonce(pk + 1 + CRYPTO_PUBLIC_KEY_SIZE); // Generate new nonce
 
     // Encrypt ping_id using recipient privkey
-    rc = encrypt_data_symmetric(shared_encryption_key,
-                                pk + 1 + CRYPTO_PUBLIC_KEY_SIZE,
-                                ping_plain, sizeof(ping_plain),
-                                pk + 1 + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE);
+    rc = crypto_encrypt_data_symmetric(shared_encryption_key,
+                                       pk + 1 + CRYPTO_PUBLIC_KEY_SIZE,
+                                       ping_plain, sizeof(ping_plain),
+                                       pk + 1 + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE);
 
     if (rc != PING_PLAIN_SIZE + CRYPTO_MAC_SIZE) {
         return 1;
@@ -157,11 +157,11 @@ static int handle_ping_request(void *object, IP_Port source, const uint8_t *pack
     uint8_t ping_plain[PING_PLAIN_SIZE];
     // Decrypt ping_id
     dht_get_shared_key_recv(dht, shared_key, packet + 1);
-    rc = decrypt_data_symmetric(shared_key,
-                                packet + 1 + CRYPTO_PUBLIC_KEY_SIZE,
-                                packet + 1 + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE,
-                                PING_PLAIN_SIZE + CRYPTO_MAC_SIZE,
-                                ping_plain);
+    rc = crypto_decrypt_data_symmetric(shared_key,
+                                       packet + 1 + CRYPTO_PUBLIC_KEY_SIZE,
+                                       packet + 1 + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE,
+                                       PING_PLAIN_SIZE + CRYPTO_MAC_SIZE,
+                                       ping_plain);
 
     if (rc != sizeof(ping_plain)) {
         return 1;
@@ -202,11 +202,11 @@ static int handle_ping_response(void *object, IP_Port source, const uint8_t *pac
 
     uint8_t ping_plain[PING_PLAIN_SIZE];
     // Decrypt ping_id
-    rc = decrypt_data_symmetric(shared_key,
-                                packet + 1 + CRYPTO_PUBLIC_KEY_SIZE,
-                                packet + 1 + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE,
-                                PING_PLAIN_SIZE + CRYPTO_MAC_SIZE,
-                                ping_plain);
+    rc = crypto_decrypt_data_symmetric(shared_key,
+                                       packet + 1 + CRYPTO_PUBLIC_KEY_SIZE,
+                                       packet + 1 + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE,
+                                       PING_PLAIN_SIZE + CRYPTO_MAC_SIZE,
+                                       ping_plain);
 
     if (rc != sizeof(ping_plain)) {
         return 1;
@@ -308,7 +308,7 @@ int32_t ping_add(Ping *ping, const uint8_t *public_key, IP_Port ip_port)
             return 0;
         }
 
-        if (public_key_cmp(ping->to_ping[i].public_key, public_key) == 0) {
+        if (crypto_public_key_cmp(ping->to_ping[i].public_key, public_key) == 0) {
             return -1;
         }
     }

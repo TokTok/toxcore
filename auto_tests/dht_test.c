@@ -704,7 +704,7 @@ static void test_dht_create_packet(void)
     uint8_t pkt[1 + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE + sizeof(plain) + CRYPTO_MAC_SIZE];
 
     uint8_t key[CRYPTO_SYMMETRIC_KEY_SIZE];
-    new_symmetric_key(key);
+    crypto_new_symmetric_key(key);
 
     uint16_t length = dht_create_packet(key, key, NET_PACKET_GET_NODES, plain, sizeof(plain), pkt);
 

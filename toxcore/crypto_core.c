@@ -97,7 +97,7 @@ static void crypto_free(uint8_t *ptr, size_t bytes)
     free(ptr);
 }
 
-int32_t public_key_cmp(const uint8_t *pk1, const uint8_t *pk2)
+int32_t crypto_public_key_cmp(const uint8_t *pk1, const uint8_t *pk2)
 {
     return crypto_verify_32(pk1, pk2);
 }
@@ -130,7 +130,7 @@ uint64_t random_u64(void)
     return randnum;
 }
 
-bool public_key_valid(const uint8_t *public_key)
+bool crypto_public_key_valid(const uint8_t *public_key)
 {
     if (public_key[31] >= 128) { /* Last bit of key is always zero. */
         return 0;
@@ -144,14 +144,14 @@ bool public_key_valid(const uint8_t *public_key)
  * encrypt/decrypt operation.
  * shared_key has to be crypto_box_BEFORENMBYTES bytes long.
  */
-int32_t encrypt_precompute(const uint8_t *public_key, const uint8_t *secret_key,
-                           uint8_t *shared_key)
+int32_t crypto_encrypt_precompute(const uint8_t *public_key, const uint8_t *secret_key,
+                                  uint8_t *shared_key)
 {
     return crypto_box_beforenm(shared_key, public_key, secret_key);
 }
 
-int32_t encrypt_data_symmetric(const uint8_t *secret_key, const uint8_t *nonce,
-                               const uint8_t *plain, size_t length, uint8_t *encrypted)
+int32_t crypto_encrypt_data_symmetric(const uint8_t *secret_key, const uint8_t *nonce,
+                                      const uint8_t *plain, size_t length, uint8_t *encrypted)
 {
     if (length == 0 || !secret_key || !nonce || !plain || !encrypted) {
         return -1;
@@ -189,8 +189,8 @@ int32_t encrypt_data_symmetric(const uint8_t *secret_key, const uint8_t *nonce,
     return length + crypto_box_MACBYTES;
 }
 
-int32_t decrypt_data_symmetric(const uint8_t *secret_key, const uint8_t *nonce,
-                               const uint8_t *encrypted, size_t length, uint8_t *plain)
+int32_t crypto_decrypt_data_symmetric(const uint8_t *secret_key, const uint8_t *nonce,
+                                      const uint8_t *encrypted, size_t length, uint8_t *plain)
 {
     if (length <= crypto_box_BOXZEROBYTES || !secret_key || !nonce || !encrypted || !plain) {
         return -1;
@@ -226,36 +226,38 @@ int32_t decrypt_data_symmetric(const uint8_t *secret_key, const uint8_t *nonce,
     return length - crypto_box_MACBYTES;
 }
 
-int32_t encrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const uint8_t *nonce,
-                     const uint8_t *plain, size_t length, uint8_t *encrypted)
+int32_t crypto_encrypt_data(const uint8_t *public_key, const uint8_t *secret_key,
+                            const uint8_t *nonce, const uint8_t *plain, size_t length,
+                            uint8_t *encrypted)
 {
     if (!public_key || !secret_key) {
         return -1;
     }
 
     uint8_t k[crypto_box_BEFORENMBYTES];
-    encrypt_precompute(public_key, secret_key, k);
-    int ret = encrypt_data_symmetric(k, nonce, plain, length, encrypted);
+    crypto_encrypt_precompute(public_key, secret_key, k);
+    int ret = crypto_encrypt_data_symmetric(k, nonce, plain, length, encrypted);
     crypto_memzero(k, sizeof(k));
     return ret;
 }
 
-int32_t decrypt_data(const uint8_t *public_key, const uint8_t *secret_key, const uint8_t *nonce,
-                     const uint8_t *encrypted, size_t length, uint8_t *plain)
+int32_t crypto_decrypt_data(const uint8_t *public_key, const uint8_t *secret_key,
+                            const uint8_t *nonce, const uint8_t *encrypted, size_t length,
+                            uint8_t *plain)
 {
     if (!public_key || !secret_key) {
         return -1;
     }
 
     uint8_t k[crypto_box_BEFORENMBYTES];
-    encrypt_precompute(public_key, secret_key, k);
-    int ret = decrypt_data_symmetric(k, nonce, encrypted, length, plain);
+    crypto_encrypt_precompute(public_key, secret_key, k);
+    int ret = crypto_decrypt_data_symmetric(k, nonce, encrypted, length, plain);
     crypto_memzero(k, sizeof(k));
     return ret;
 }
 
 /* Increment the given nonce by 1. */
-void increment_nonce(uint8_t *nonce)
+void crypto_increment_nonce(uint8_t *nonce)
 {
     /* TODO(irungentoo): use increment_nonce_number(nonce, 1) or
      * sodium_increment (change to little endian).
@@ -288,7 +290,7 @@ static uint32_t host_to_network(uint32_t x)
 }
 
 /* increment the given nonce by num */
-void increment_nonce_number(uint8_t *nonce, uint32_t host_order_num)
+void crypto_increment_nonce_number(uint8_t *nonce, uint32_t host_order_num)
 {
     /* NOTE don't use breaks inside this loop
      * In particular, make sure, as far as possible,
@@ -314,13 +316,13 @@ void increment_nonce_number(uint8_t *nonce, uint32_t host_order_num)
 }
 
 /* Fill the given nonce with random bytes. */
-void random_nonce(uint8_t *nonce)
+void crypto_random_nonce(uint8_t *nonce)
 {
     random_bytes(nonce, crypto_box_NONCEBYTES);
 }
 
 /* Fill a key CRYPTO_SYMMETRIC_KEY_SIZE big with random bytes */
-void new_symmetric_key(uint8_t *key)
+void crypto_new_symmetric_key(uint8_t *key)
 {
     random_bytes(key, CRYPTO_SYMMETRIC_KEY_SIZE);
 }

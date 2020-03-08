@@ -205,12 +205,12 @@ bool tox_pass_key_encrypt(const Tox_Pass_Key *key, const uint8_t *data, size_t d
     out += crypto_pwhash_scryptsalsa208sha256_SALTBYTES;
 
     uint8_t nonce[crypto_box_NONCEBYTES];
-    random_nonce(nonce);
+    crypto_random_nonce(nonce);
     memcpy(out, nonce, crypto_box_NONCEBYTES);
     out += crypto_box_NONCEBYTES;
 
     /* now encrypt */
-    if (encrypt_data_symmetric(key->key, nonce, data, data_len, out)
+    if (crypto_encrypt_data_symmetric(key->key, nonce, data, data_len, out)
             != data_len + crypto_box_MACBYTES) {
         SET_ERROR_PARAMETER(error, TOX_ERR_ENCRYPTION_FAILED);
         return 0;
@@ -282,7 +282,7 @@ bool tox_pass_key_decrypt(const Tox_Pass_Key *key, const uint8_t *data, size_t l
     data += crypto_box_NONCEBYTES;
 
     /* decrypt the data */
-    if (decrypt_data_symmetric(key->key, nonce, data, decrypt_length + crypto_box_MACBYTES, out)
+    if (crypto_decrypt_data_symmetric(key->key, nonce, data, decrypt_length + crypto_box_MACBYTES, out)
             != decrypt_length) {
         SET_ERROR_PARAMETER(error, TOX_ERR_DECRYPTION_FAILED);
         return 0;

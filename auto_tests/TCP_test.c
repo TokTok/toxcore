@@ -80,7 +80,7 @@ START_TEST(test_basic)
     uint8_t f_secret_key[CRYPTO_SECRET_KEY_SIZE];
     uint8_t f_nonce[CRYPTO_NONCE_SIZE];
     crypto_new_keypair(f_public_key, f_secret_key);
-    random_nonce(f_nonce);
+    crypto_random_nonce(f_nonce);
 
     // Generation of the initial handshake.
     uint8_t t_secret_key[CRYPTO_SECRET_KEY_SIZE];
@@ -89,13 +89,13 @@ START_TEST(test_basic)
     memcpy(handshake_plain + CRYPTO_PUBLIC_KEY_SIZE, f_nonce, CRYPTO_NONCE_SIZE);
     uint8_t handshake[TCP_CLIENT_HANDSHAKE_SIZE];
     memcpy(handshake, f_public_key, CRYPTO_PUBLIC_KEY_SIZE);
-    random_nonce(handshake + CRYPTO_PUBLIC_KEY_SIZE);
+    crypto_random_nonce(handshake + CRYPTO_PUBLIC_KEY_SIZE);
 
     // Encrypting handshake
-    int ret = encrypt_data(self_public_key, f_secret_key, handshake + CRYPTO_PUBLIC_KEY_SIZE, handshake_plain,
-                           TCP_HANDSHAKE_PLAIN_SIZE, handshake + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE);
+    int ret = crypto_encrypt_data(self_public_key, f_secret_key, handshake + CRYPTO_PUBLIC_KEY_SIZE, handshake_plain,
+                                  TCP_HANDSHAKE_PLAIN_SIZE, handshake + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE);
     ck_assert_msg(ret == TCP_CLIENT_HANDSHAKE_SIZE - (CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE),
-                  "encrypt_data() call failed.");
+                  "crypto_encrypt_data() call failed.");
 
     // Sending the handshake
     ck_assert_msg(net_send(sock, handshake, TCP_CLIENT_HANDSHAKE_SIZE - 1) == TCP_CLIENT_HANDSHAKE_SIZE - 1,
@@ -113,12 +113,12 @@ START_TEST(test_basic)
     uint8_t response_plain[TCP_HANDSHAKE_PLAIN_SIZE];
     ck_assert_msg(net_recv(sock, response, TCP_SERVER_HANDSHAKE_SIZE) == TCP_SERVER_HANDSHAKE_SIZE,
                   "Could/did not receive a server response to the initial handshake.");
-    ret = decrypt_data(self_public_key, f_secret_key, response, response + CRYPTO_NONCE_SIZE,
-                       TCP_SERVER_HANDSHAKE_SIZE - CRYPTO_NONCE_SIZE, response_plain);
+    ret = crypto_decrypt_data(self_public_key, f_secret_key, response, response + CRYPTO_NONCE_SIZE,
+                              TCP_SERVER_HANDSHAKE_SIZE - CRYPTO_NONCE_SIZE, response_plain);
     ck_assert_msg(ret == TCP_HANDSHAKE_PLAIN_SIZE, "Failed to decrypt handshake response.");
     uint8_t f_nonce_r[CRYPTO_NONCE_SIZE];
     uint8_t f_shared_key[CRYPTO_SHARED_KEY_SIZE];
-    encrypt_precompute(response_plain, t_secret_key, f_shared_key);
+    crypto_encrypt_precompute(response_plain, t_secret_key, f_shared_key);
     memcpy(f_nonce_r, response_plain + CRYPTO_SHARED_KEY_SIZE, CRYPTO_NONCE_SIZE);
 
     // Building a request
@@ -127,8 +127,8 @@ START_TEST(test_basic)
     uint8_t r_req[2 + 1 + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_MAC_SIZE];
     uint16_t size = 1 + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_MAC_SIZE;
     size = net_htons(size);
-    encrypt_data_symmetric(f_shared_key, f_nonce, r_req_p, 1 + CRYPTO_PUBLIC_KEY_SIZE, r_req + 2);
-    increment_nonce(f_nonce);
+    crypto_encrypt_data_symmetric(f_shared_key, f_nonce, r_req_p, 1 + CRYPTO_PUBLIC_KEY_SIZE, r_req + 2);
+    crypto_increment_nonce(f_nonce);
     memcpy(r_req, &size, 2);
 
     // Sending the request at random intervals in random pieces.
@@ -158,13 +158,13 @@ START_TEST(test_basic)
                   "Wrong packet size for request response.");
 
     uint8_t packet_resp_plain[4096];
-    ret = decrypt_data_symmetric(f_shared_key, f_nonce_r, packet_resp + 2, recv_data_len - 2, packet_resp_plain);
+    ret = crypto_decrypt_data_symmetric(f_shared_key, f_nonce_r, packet_resp + 2, recv_data_len - 2, packet_resp_plain);
     ck_assert_msg(ret != -1, "Failed to decrypt the TCP server's response.");
-    increment_nonce(f_nonce_r);
+    crypto_increment_nonce(f_nonce_r);
 
     ck_assert_msg(packet_resp_plain[0] == 1, "Server sent the wrong packet id: %u", packet_resp_plain[0]);
     ck_assert_msg(packet_resp_plain[1] == 0, "Server did not refuse the connection.");
-    ck_assert_msg(public_key_cmp(packet_resp_plain + 2, f_public_key) == 0, "Server sent the wrong public key.");
+    ck_assert_msg(crypto_public_key_cmp(packet_resp_plain + 2, f_public_key) == 0, "Server sent the wrong public key.");
 
     // Closing connections.
     kill_sock(sock);
@@ -196,7 +196,7 @@ static struct sec_TCP_con *new_TCP_con(TCP_Server *tcp_s, Mono_Time *mono_time)
 
     uint8_t f_secret_key[CRYPTO_SECRET_KEY_SIZE];
     crypto_new_keypair(sec_c->public_key, f_secret_key);
-    random_nonce(sec_c->sent_nonce);
+    crypto_random_nonce(sec_c->sent_nonce);
 
     uint8_t t_secret_key[CRYPTO_SECRET_KEY_SIZE];
     uint8_t handshake_plain[TCP_HANDSHAKE_PLAIN_SIZE];
@@ -204,10 +204,11 @@ static struct sec_TCP_con *new_TCP_con(TCP_Server *tcp_s, Mono_Time *mono_time)
     memcpy(handshake_plain + CRYPTO_PUBLIC_KEY_SIZE, sec_c->sent_nonce, CRYPTO_NONCE_SIZE);
     uint8_t handshake[TCP_CLIENT_HANDSHAKE_SIZE];
     memcpy(handshake, sec_c->public_key, CRYPTO_PUBLIC_KEY_SIZE);
-    random_nonce(handshake + CRYPTO_PUBLIC_KEY_SIZE);
+    crypto_random_nonce(handshake + CRYPTO_PUBLIC_KEY_SIZE);
 
-    ret = encrypt_data(tcp_server_public_key(tcp_s), f_secret_key, handshake + CRYPTO_PUBLIC_KEY_SIZE, handshake_plain,
-                       TCP_HANDSHAKE_PLAIN_SIZE, handshake + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE);
+    ret = crypto_encrypt_data(tcp_server_public_key(tcp_s), f_secret_key, handshake + CRYPTO_PUBLIC_KEY_SIZE,
+                              handshake_plain,                       TCP_HANDSHAKE_PLAIN_SIZE,
+                              handshake + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE);
     ck_assert_msg(ret == TCP_CLIENT_HANDSHAKE_SIZE - (CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE),
                   "Failed to encrypt the outgoing handshake.");
 
@@ -225,10 +226,10 @@ static struct sec_TCP_con *new_TCP_con(TCP_Server *tcp_s, Mono_Time *mono_time)
     uint8_t response_plain[TCP_HANDSHAKE_PLAIN_SIZE];
     ck_assert_msg(net_recv(sock, response, TCP_SERVER_HANDSHAKE_SIZE) == TCP_SERVER_HANDSHAKE_SIZE,
                   "Failed to receive server handshake response.");
-    ret = decrypt_data(tcp_server_public_key(tcp_s), f_secret_key, response, response + CRYPTO_NONCE_SIZE,
-                       TCP_SERVER_HANDSHAKE_SIZE - CRYPTO_NONCE_SIZE, response_plain);
+    ret = crypto_decrypt_data(tcp_server_public_key(tcp_s), f_secret_key, response, response + CRYPTO_NONCE_SIZE,
+                              TCP_SERVER_HANDSHAKE_SIZE - CRYPTO_NONCE_SIZE, response_plain);
     ck_assert_msg(ret == TCP_HANDSHAKE_PLAIN_SIZE, "Failed to decrypt server handshake response.");
-    encrypt_precompute(response_plain, t_secret_key, sec_c->shared_key);
+    crypto_encrypt_precompute(response_plain, t_secret_key, sec_c->shared_key);
     memcpy(sec_c->recv_nonce, response_plain + CRYPTO_SHARED_KEY_SIZE, CRYPTO_NONCE_SIZE);
     sec_c->sock = sock;
     return sec_c;
@@ -246,13 +247,13 @@ static int write_packet_TCP_secure_connection(struct sec_TCP_con *con, uint8_t *
 
     uint16_t c_length = net_htons(length + CRYPTO_MAC_SIZE);
     memcpy(packet, &c_length, sizeof(uint16_t));
-    int len = encrypt_data_symmetric(con->shared_key, con->sent_nonce, data, length, packet + sizeof(uint16_t));
+    int len = crypto_encrypt_data_symmetric(con->shared_key, con->sent_nonce, data, length, packet + sizeof(uint16_t));
 
     if ((unsigned int)len != (SIZEOF_VLA(packet) - sizeof(uint16_t))) {
         return -1;
     }
 
-    increment_nonce(con->sent_nonce);
+    crypto_increment_nonce(con->sent_nonce);
 
     ck_assert_msg(net_send(con->sock, packet, SIZEOF_VLA(packet)) == SIZEOF_VLA(packet), "Failed to send a packet.");
     return 0;
@@ -262,9 +263,9 @@ static int read_packet_sec_TCP(struct sec_TCP_con *con, uint8_t *data, uint16_t 
 {
     int rlen = net_recv(con->sock, data, length);
     ck_assert_msg(rlen == length, "Did not receive packet of correct length. Wanted %i, instead got %i", length, rlen);
-    rlen = decrypt_data_symmetric(con->shared_key, con->recv_nonce, data + 2, length - 2, data);
+    rlen = crypto_decrypt_data_symmetric(con->shared_key, con->recv_nonce, data + 2, length - 2, data);
     ck_assert_msg(rlen != -1, "Failed to decrypt a received packet from the Relay server.");
-    increment_nonce(con->recv_nonce);
+    crypto_increment_nonce(con->recv_nonce);
     return rlen;
 }
 
@@ -300,14 +301,14 @@ START_TEST(test_some)
     ck_assert_msg(len == 1 + 1 + CRYPTO_PUBLIC_KEY_SIZE, "Wrong response packet length of %d.", len);
     ck_assert_msg(data[0] == 1, "Wrong response packet id of %d.", data[0]);
     ck_assert_msg(data[1] == 16, "Server didn't refuse connection using wrong public key.");
-    ck_assert_msg(public_key_cmp(data + 2, con3->public_key) == 0, "Key in response packet wrong.");
+    ck_assert_msg(crypto_public_key_cmp(data + 2, con3->public_key) == 0, "Key in response packet wrong.");
 
     // Connection 3
     len = read_packet_sec_TCP(con3, data, 2 + 1 + 1 + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_MAC_SIZE);
     ck_assert_msg(len == 1 + 1 + CRYPTO_PUBLIC_KEY_SIZE, "Wrong response packet length of %d.", len);
     ck_assert_msg(data[0] == 1, "Wrong response packet id of %d.", data[0]);
     ck_assert_msg(data[1] == 16, "Server didn't refuse connection using wrong public key.");
-    ck_assert_msg(public_key_cmp(data + 2, con1->public_key) == 0, "Key in response packet wrong.");
+    ck_assert_msg(crypto_public_key_cmp(data + 2, con1->public_key) == 0, "Key in response packet wrong.");
 
     uint8_t test_packet[512] = {16, 17, 16, 86, 99, 127, 255, 189, 78}; // What is this packet????
 
@@ -443,7 +444,7 @@ static int oob_data_callback(void *object, const uint8_t *public_key, const uint
         return 1;
     }
 
-    if (public_key_cmp(public_key, oob_pubkey) != 0) {
+    if (crypto_public_key_cmp(public_key, oob_pubkey) != 0) {
         return 1;
     }
 
@@ -547,7 +548,7 @@ START_TEST(test_client)
     // All callback methods save data should have run during the above network prodding.
     ck_assert_msg(oob_data_callback_good == 1, "OOB callback not called");
     ck_assert_msg(response_callback_good == 1, "Response callback not called.");
-    ck_assert_msg(public_key_cmp(response_callback_public_key, f2_public_key) == 0, "Wrong public key.");
+    ck_assert_msg(crypto_public_key_cmp(response_callback_public_key, f2_public_key) == 0, "Wrong public key.");
     ck_assert_msg(status_callback_good == 1, "Status callback not called.");
     ck_assert_msg(status_callback_status == 2, "Wrong status callback status.");
     ck_assert_msg(status_callback_connection_id == response_callback_connection_id,
@@ -662,17 +663,17 @@ START_TEST(test_tcp_connection)
     uint8_t self_secret_key[CRYPTO_SECRET_KEY_SIZE];
     crypto_new_keypair(self_public_key, self_secret_key);
     TCP_Server *tcp_s = new_TCP_server(USE_IPV6, NUM_PORTS, ports, self_secret_key, nullptr);
-    ck_assert_msg(public_key_cmp(tcp_server_public_key(tcp_s), self_public_key) == 0, "Wrong public key");
+    ck_assert_msg(crypto_public_key_cmp(tcp_server_public_key(tcp_s), self_public_key) == 0, "Wrong public key");
 
     TCP_Proxy_Info proxy_info;
     proxy_info.proxy_type = TCP_PROXY_NONE;
     crypto_new_keypair(self_public_key, self_secret_key);
     TCP_Connections *tc_1 = new_tcp_connections(mono_time, self_secret_key, &proxy_info);
-    ck_assert_msg(public_key_cmp(tcp_connections_public_key(tc_1), self_public_key) == 0, "Wrong public key");
+    ck_assert_msg(crypto_public_key_cmp(tcp_connections_public_key(tc_1), self_public_key) == 0, "Wrong public key");
 
     crypto_new_keypair(self_public_key, self_secret_key);
     TCP_Connections *tc_2 = new_tcp_connections(mono_time, self_secret_key, &proxy_info);
-    ck_assert_msg(public_key_cmp(tcp_connections_public_key(tc_2), self_public_key) == 0, "Wrong public key");
+    ck_assert_msg(crypto_public_key_cmp(tcp_connections_public_key(tc_2), self_public_key) == 0, "Wrong public key");
 
     IP_Port ip_port_tcp_s;
 
@@ -769,17 +770,17 @@ START_TEST(test_tcp_connection2)
     uint8_t self_secret_key[CRYPTO_SECRET_KEY_SIZE];
     crypto_new_keypair(self_public_key, self_secret_key);
     TCP_Server *tcp_s = new_TCP_server(USE_IPV6, NUM_PORTS, ports, self_secret_key, nullptr);
-    ck_assert_msg(public_key_cmp(tcp_server_public_key(tcp_s), self_public_key) == 0, "Wrong public key");
+    ck_assert_msg(crypto_public_key_cmp(tcp_server_public_key(tcp_s), self_public_key) == 0, "Wrong public key");
 
     TCP_Proxy_Info proxy_info;
     proxy_info.proxy_type = TCP_PROXY_NONE;
     crypto_new_keypair(self_public_key, self_secret_key);
     TCP_Connections *tc_1 = new_tcp_connections(mono_time, self_secret_key, &proxy_info);
-    ck_assert_msg(public_key_cmp(tcp_connections_public_key(tc_1), self_public_key) == 0, "Wrong public key");
+    ck_assert_msg(crypto_public_key_cmp(tcp_connections_public_key(tc_1), self_public_key) == 0, "Wrong public key");
 
     crypto_new_keypair(self_public_key, self_secret_key);
     TCP_Connections *tc_2 = new_tcp_connections(mono_time, self_secret_key, &proxy_info);
-    ck_assert_msg(public_key_cmp(tcp_connections_public_key(tc_2), self_public_key) == 0, "Wrong public key");
+    ck_assert_msg(crypto_public_key_cmp(tcp_connections_public_key(tc_2), self_public_key) == 0, "Wrong public key");
 
     IP_Port ip_port_tcp_s;
 
