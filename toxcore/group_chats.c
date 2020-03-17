@@ -3566,11 +3566,11 @@ int gc_send_private_message(GC_Chat *chat, uint32_t peer_id, uint8_t type, const
         return -5;
     }
 
-    uint8_t message_with_type[length + 1];
+    VLA(uint8_t, message_with_type, length + 1);
     message_with_type[0] = type;
     memcpy(message_with_type + 1, message, length);
 
-    uint8_t packet[length + 1 + GC_BROADCAST_ENC_HEADER_SIZE];
+    VLA(uint8_t, packet, length + 1 + GC_BROADCAST_ENC_HEADER_SIZE);
     uint32_t packet_len = make_gc_broadcast_header(chat, message_with_type, length + 1, packet, GM_PRIVATE_MESSAGE);
 
     if (send_lossless_group_packet(chat, gconn, packet, packet_len, GP_BROADCAST) == -1) {

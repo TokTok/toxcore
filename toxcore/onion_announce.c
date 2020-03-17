@@ -417,7 +417,7 @@ static int handle_gc_announce_request(Onion_Announce *onion_a, IP_Port source, c
                    packet_public_key);
 
     size_t minimal_size = ONION_PING_ID_SIZE + CRYPTO_PUBLIC_KEY_SIZE * 2 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH;
-    uint8_t plain[minimal_size + GC_ANNOUNCE_MAX_SIZE];
+    VLA(uint8_t, plain, minimal_size + GC_ANNOUNCE_MAX_SIZE);
     size_t encrypted_size = minimal_size + length - ANNOUNCE_REQUEST_MIN_SIZE_RECV;
     int len = decrypt_data_symmetric(shared_key, packet + 1,
                                      packet + 1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE,
