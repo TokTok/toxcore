@@ -4724,7 +4724,7 @@ static int handle_gc_lossless_message(Messenger *m, GC_Chat *chat, const uint8_t
 
     /* request missing packet */
     if (lossless_ret == 1) {
-        fprintf(stderr, "recieved out of order packet. expected %lu, got %lu\n", gconn->received_message_id + 1, message_id);
+        fprintf(stderr, "received out of order packet. expected %lu, got %lu\n", gconn->received_message_id + 1, message_id);
         return gc_send_message_ack(chat, gconn, 0, gconn->received_message_id + 1);
     }
 
@@ -4741,7 +4741,7 @@ static int handle_gc_lossless_message(Messenger *m, GC_Chat *chat, const uint8_t
 
     if (lossless_ret == 2 && peer_number != -1) {
         gc_send_message_ack(chat, gconn, message_id, 0);
-        gcc_check_recieved_array(m, chat->group_number, peer_number);
+        gcc_check_received_array(m, chat->group_number, peer_number);
 
         if (direct_conn) {
             gconn->last_received_direct_time = mono_time_get(chat->mono_time);
