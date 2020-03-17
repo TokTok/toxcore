@@ -746,6 +746,7 @@ static int handle_announce_response(void *object, IP_Port source, const uint8_t 
     IP_Port ip_port;
     uint32_t path_num;
     uint32_t num = check_sendback(onion_c, packet + 1, public_key, &ip_port, &path_num);
+
     if (num > onion_c->num_friends) {
         return 1;
     }
@@ -782,6 +783,7 @@ static int handle_announce_response(void *object, IP_Port source, const uint8_t 
 
     uint16_t len_nodes = 0;
     uint8_t nodes_count = plain[1 + ONION_PING_ID_SIZE];
+
     if (nodes_count > 0) {
         if (nodes_count > MAX_SENT_NODES) {
             return 1;
@@ -801,12 +803,14 @@ static int handle_announce_response(void *object, IP_Port source, const uint8_t 
     }
 
 #ifndef VANILLA_NACL
+
     if (len_nodes + 1 < length - ONION_ANNOUNCE_RESPONSE_MIN_SIZE) {
         fprintf(stderr, "gc ann resp\n");
         GC_Announce announces[MAX_SENT_ANNOUNCES];
 
         GC_Chat *chat = gc_get_group_by_public_key(onion_c->gc_session,
-                                                   onion_c->friends_list[num - 1].gc_public_key);
+                        onion_c->friends_list[num - 1].gc_public_key);
+
         if (!chat) {
             return 1;
         }
@@ -814,17 +818,20 @@ static int handle_announce_response(void *object, IP_Port source, const uint8_t 
         int offset = 2 + ONION_PING_ID_SIZE + len_nodes;
         fprintf(stderr, "gc ann pre resp %d\n", plain_size - offset);
         int gc_announces_count = unpack_announces_list(plain + offset, plain_size - offset,
-                                                       announces, MAX_SENT_ANNOUNCES, nullptr);
+                                 announces, MAX_SENT_ANNOUNCES, nullptr);
         fprintf(stderr, "gc ann resp %d\n", gc_announces_count);
+
         if (gc_announces_count == -1) {
             return 1;
         }
 
         int added_peers = add_peers_from_announces(onion_c->gc_session, chat, announces, gc_announces_count);
+
         if (added_peers < 0) {
             return 1;
         }
     }
+
 #endif
 
     //TODO: LAN vs non LAN ips?, if we are connected only to LAN, are we offline?
