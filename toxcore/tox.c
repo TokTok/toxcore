@@ -453,7 +453,8 @@ static void tox_group_invite_handler(Messenger *m, uint32_t friend_number, const
     Tox *tox = (Tox *)user_data;
 
     if (tox->group_invite_callback != nullptr) {
-        tox->group_invite_callback(tox, friend_number, invite_data, length, group_name, group_name_length, tox->non_const_user_data);
+        tox->group_invite_callback(tox, friend_number, invite_data, length, group_name, group_name_length,
+                                   tox->non_const_user_data);
     }
 }
 
@@ -2706,7 +2707,7 @@ void tox_callback_group_join_fail(Tox *tox, tox_group_join_fail_cb *function)
 
 Group_Chat_Self_Peer_Info *tox_group_self_peer_info_new(TOX_ERR_GC_SELF_PEER_INFO *error)
 {
-    Group_Chat_Self_Peer_Info *peer_info = (Group_Chat_Self_Peer_Info*)calloc(1, sizeof(Group_Chat_Self_Peer_Info));
+    Group_Chat_Self_Peer_Info *peer_info = (Group_Chat_Self_Peer_Info *)calloc(1, sizeof(Group_Chat_Self_Peer_Info));
 
     SET_ERROR_PARAMETER(error, peer_info ? TOX_ERR_GC_SELF_PEER_INFO_OK : TOX_ERR_GC_SELF_PEER_INFO_MALLOC);
     return peer_info;
@@ -2717,17 +2718,18 @@ void tox_group_self_peer_info_free(Group_Chat_Self_Peer_Info *self_peer_info)
     free(self_peer_info);
 }
 
-static GC_SelfPeerInfo* create_self_peer_info(const Group_Chat_Self_Peer_Info *peer_info)
+static GC_SelfPeerInfo *create_self_peer_info(const Group_Chat_Self_Peer_Info *peer_info)
 {
     if (!peer_info ||
-        !peer_info->nick ||
-        !peer_info->nick_length ||
-        peer_info->nick_length > TOX_MAX_GC_PEER_LENGTH ||
-        peer_info->user_status > TOX_USER_STATUS_BUSY) {
+            !peer_info->nick ||
+            !peer_info->nick_length ||
+            peer_info->nick_length > TOX_MAX_GC_PEER_LENGTH ||
+            peer_info->user_status > TOX_USER_STATUS_BUSY) {
         return nullptr;
     }
 
     GC_SelfPeerInfo *self_peer_info = (GC_SelfPeerInfo *)calloc(1, sizeof(GC_SelfPeerInfo));
+
     if (self_peer_info) {
         self_peer_info->user_status = (Group_Peer_Status)peer_info->user_status;
         self_peer_info->nick_length = peer_info->nick_length;
@@ -3055,7 +3057,8 @@ size_t tox_group_get_peers_list_size(const Tox *tox, uint32_t group_number, TOX_
     return group_get_peers_list_size(chat);
 }
 
-bool tox_group_get_peers_list(const Tox *tox, uint32_t group_number, uint32_t *peers_list, TOX_ERR_GROUP_PEER_LIST_QUERY *error)
+bool tox_group_get_peers_list(const Tox *tox, uint32_t group_number, uint32_t *peers_list,
+                              TOX_ERR_GROUP_PEER_LIST_QUERY *error)
 {
     const GC_Chat *chat = gc_get_group(tox->m->group_handler, group_number);
 
@@ -3345,7 +3348,8 @@ size_t tox_group_get_password_size(const Tox *tox, uint32_t group_number, Tox_Er
     return gc_get_password_size(chat);
 }
 
-bool tox_group_get_password(const Tox *tox, uint32_t group_number, uint8_t *password, Tox_Err_Group_State_Queries *error)
+bool tox_group_get_password(const Tox *tox, uint32_t group_number, uint8_t *password,
+                            Tox_Err_Group_State_Queries *error)
 {
     const GC_Chat *chat = gc_get_group(tox->m->group_handler, group_number);
 
@@ -3496,7 +3500,8 @@ bool tox_group_send_custom_packet(Tox *tox, uint32_t group_number, bool lossless
     return 0;
 }
 
-bool tox_group_invite_friend(Tox *tox, uint32_t group_number, uint32_t friend_number, Tox_Err_Group_Invite_Friend *error)
+bool tox_group_invite_friend(Tox *tox, uint32_t group_number, uint32_t friend_number,
+                             Tox_Err_Group_Invite_Friend *error)
 {
     GC_Chat *chat = gc_get_group(tox->m->group_handler, group_number);
 
@@ -3545,7 +3550,8 @@ uint32_t tox_group_invite_accept(Tox *tox, uint32_t friend_number, const uint8_t
                                  Tox_Err_Group_Invite_Accept *error)
 {
     GC_SelfPeerInfo *self_peer_info = create_self_peer_info(peer_info);
-    int ret = gc_accept_invite(tox->m->group_handler, friend_number, invite_data, length, password, password_length, self_peer_info);
+    int ret = gc_accept_invite(tox->m->group_handler, friend_number, invite_data, length, password, password_length,
+                               self_peer_info);
     free(self_peer_info);
 
     if (ret >= 0) {
@@ -3633,7 +3639,7 @@ bool tox_group_founder_set_privacy_state(Tox *tox, uint32_t group_number, Tox_Gr
             return 0;
 
         case -4:
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_FOUNDER_SET_PRIVACY_STATE_GROUP_IS_DISCONNECTED);
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_FOUNDER_SET_PRIVACY_STATE_GROUP_IS_DISCONNECTED);
             return 0;
 
         case -5:
@@ -3750,27 +3756,27 @@ bool tox_group_mod_remove_peer(Tox *tox, uint32_t group_number, uint32_t peer_id
 
     switch (ret) {
         case 0:
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_OK);
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_OK);
             return 1;
 
         case -1:
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_GROUP_NOT_FOUND);
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_GROUP_NOT_FOUND);
             return 0;
 
         case -2:
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_PEER_NOT_FOUND);
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_PEER_NOT_FOUND);
             return 0;
 
         case -3:
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_PERMISSIONS);
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_PERMISSIONS);
             return 0;
 
         case -4:
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_FAIL_ACTION);
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_FAIL_ACTION);
             return 0;
 
         case -5:
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_FAIL_SEND);
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_FAIL_SEND);
             return 0;
     }
 
@@ -3809,7 +3815,7 @@ bool tox_group_mod_ban_peer(Tox *tox, uint32_t group_number, uint32_t peer_id,
             return 0;
 
         case -6:
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_INVALID_BAN_TYPE);
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_INVALID_BAN_TYPE);
             return 0;
     }
 
@@ -3893,7 +3899,7 @@ bool tox_group_ban_get_list(const Tox *tox, uint32_t group_number, uint32_t *lis
 }
 
 TOX_GROUP_BAN_TYPE tox_group_ban_get_type(const Tox *tox, uint32_t group_number, uint32_t ban_id,
-                                          TOX_ERR_GROUP_BAN_QUERY *error)
+        TOX_ERR_GROUP_BAN_QUERY *error)
 {
     const GC_Chat *chat = gc_get_group(tox->m->group_handler, group_number);
 
