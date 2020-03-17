@@ -129,7 +129,7 @@ bool gcc_is_ip_set(GC_Connection *gconn);
  * Return 0 on success.
  * Return -1 on failure.
  */
-int gcc_check_recieved_array(struct Messenger *m, int group_number, uint32_t peer_number);
+int gcc_check_received_array(struct Messenger *m, int group_number, uint32_t peer_number);
 
 void gcc_resend_packets(struct Messenger *m, GC_Chat *chat, uint32_t peer_number);
 
