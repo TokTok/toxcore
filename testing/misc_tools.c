@@ -76,7 +76,7 @@ uint8_t *hex_string_to_bin(const char *hex_string)
 char *id_toa(const uint8_t *id)
 {
     char *str = (char *)malloc(IDSTRING_LEN);
-    return id_to_string(id,str,IDSTRING_LEN);
+    return id_to_string(id, str, IDSTRING_LEN);
 }
 
 void to_hex(char *out, uint8_t *in, int size)
@@ -175,9 +175,11 @@ void print_debug_log(Tox *m, Tox_Log_Level level, const char *file, uint32_t lin
                      const char *message, void *user_data)
 {
 #if 0
+
     if (level == TOX_LOG_LEVEL_TRACE) {
         return;
     }
+
 #endif
 
     uint32_t index = user_data ? *(uint32_t *)user_data : 0;

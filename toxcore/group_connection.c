@@ -184,6 +184,7 @@ int gcc_handle_received_message(GC_Chat *chat, uint32_t peer_number, const uint8
                                 uint8_t packet_type, uint64_t message_id)
 {
     GC_Connection *gconn = gcc_get_connection(chat, peer_number);
+
     if (!gconn) {
         return -1;
     }
@@ -223,6 +224,7 @@ static int process_received_array_entry(GC_Chat *chat, Messenger *m, int group_n
                                         struct GC_Message_Array_Entry *array_entry)
 {
     GC_Connection *gconn = gcc_get_connection(chat, peer_number);
+
     if (gconn == nullptr) {
         return -1;
     }
@@ -251,11 +253,13 @@ static int process_received_array_entry(GC_Chat *chat, Messenger *m, int group_n
 int gcc_check_received_array(Messenger *m, int group_number, uint32_t peer_number)
 {
     GC_Chat *chat = gc_get_group(m->group_handler, group_number);
+
     if (!chat) {
         return -1;
     }
 
     GC_Connection *gconn = gcc_get_connection(chat, peer_number);
+
     if (gconn == nullptr) {
         return -1;
     }
@@ -278,6 +282,7 @@ int gcc_check_received_array(Messenger *m, int group_number, uint32_t peer_numbe
 void gcc_resend_packets(Messenger *m, GC_Chat *chat, uint32_t peer_number)
 {
     GC_Connection *gconn = gcc_get_connection(chat, peer_number);
+
     if (gconn == nullptr) {
         return;
     }
