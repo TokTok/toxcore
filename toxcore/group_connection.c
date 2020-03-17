@@ -233,7 +233,7 @@ static int process_received_array_entry(GC_Chat *chat, Messenger *m, int group_n
  * Return 0 on success.
  * Return -1 on failure.
  */
-int gcc_check_recieved_array(Messenger *m, int group_number, uint32_t peer_number)
+int gcc_check_received_array(Messenger *m, int group_number, uint32_t peer_number)
 {
     GC_Chat *chat = gc_get_group(m->group_handler, group_number);
     if (!chat) {
