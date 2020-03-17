@@ -441,6 +441,7 @@ int tcp_send_oob_packet_using_relay(TCP_Connections *tcp_c, const uint8_t *relay
                                     const uint8_t *packet, uint16_t length)
 {
     int tcp_con_number = find_tcp_connection_relay(tcp_c, relay_pk);
+
     if (tcp_con_number < 0) {
         return -1;
     }
@@ -473,10 +474,10 @@ void set_onion_packet_tcp_connection_callback(TCP_Connections *tcp_c, tcp_onion_
 }
 
 void set_connection_status_updated_callback(TCP_Connections *tcp_c,
-                                            void (*connection_status_updated_callback)(void *object,
-                                                                                       TCP_Connections *tcp_c,
-                                                                                       int status),
-                                            void *object)
+        void (*connection_status_updated_callback)(void *object,
+                TCP_Connections *tcp_c,
+                int status),
+        void *object)
 {
     tcp_c->tcp_connection_status_updated_callback = connection_status_updated_callback;
     tcp_c->tcp_connection_status_updated_callback_object = object;
@@ -764,7 +765,7 @@ static int set_tcp_connection_status(TCP_Connections *tcp_c, TCP_Connection_to *
 
             if (tcp_c->tcp_connection_status_updated_callback) {
                 tcp_c->tcp_connection_status_updated_callback(tcp_c->tcp_connection_status_updated_callback_object,
-                                                              tcp_c, status);
+                        tcp_c, status);
             }
 
             return i;
@@ -1472,9 +1473,9 @@ static void do_tcp_conns(const Logger *logger, TCP_Connections *tcp_c, void *use
             }
 
             if (tcp_con->status == TCP_CONN_CONNECTED
-                && !tcp_con->onion && tcp_con->lock_count
-                && tcp_con->lock_count == tcp_con->sleep_count
-                && mono_time_is_timeout(tcp_c->mono_time, tcp_con->connected_time, TCP_CONNECTION_ANNOUNCE_TIMEOUT)) {
+                    && !tcp_con->onion && tcp_con->lock_count
+                    && tcp_con->lock_count == tcp_con->sleep_count
+                    && mono_time_is_timeout(tcp_c->mono_time, tcp_con->connected_time, TCP_CONNECTION_ANNOUNCE_TIMEOUT)) {
                 sleep_tcp_relay_connection(tcp_c, i);
             }
         }

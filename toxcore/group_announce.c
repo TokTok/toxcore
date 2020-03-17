@@ -13,7 +13,8 @@
 #include "util.h"
 
 
-static void remove_announces(GC_Announces_List *gc_announces_list, GC_Announces *announces) {
+static void remove_announces(GC_Announces_List *gc_announces_list, GC_Announces *announces)
+{
     if (announces->prev_announce) {
         announces->prev_announce->next_announce = announces->next_announce;
     } else {
@@ -44,12 +45,14 @@ void kill_gca(GC_Announces_List *announces_list)
     free(announces_list);
 }
 
-void do_gca(const Mono_Time *mono_time, GC_Announces_List *gc_announces_list) {
+void do_gca(const Mono_Time *mono_time, GC_Announces_List *gc_announces_list)
+{
     if (!gc_announces_list) {
         return;
     }
 
     GC_Announces *announces = gc_announces_list->announces;
+
     while (announces) {
         if (announces->last_announce_received_timestamp <= mono_time_get(mono_time) - GC_ANNOUNCE_SAVING_TIMEOUT) {
             GC_Announces *announces_to_delete = announces;
@@ -63,9 +66,10 @@ void do_gca(const Mono_Time *mono_time, GC_Announces_List *gc_announces_list) {
     }
 }
 
-static GC_Announces* get_announces_by_chat_id(const GC_Announces_List *gc_announces_list,  const uint8_t *chat_id)
+static GC_Announces *get_announces_by_chat_id(const GC_Announces_List *gc_announces_list,  const uint8_t *chat_id)
 {
     GC_Announces *announces = gc_announces_list->announces;
+
     while (announces) {
         if (!memcmp(announces->chat_id, chat_id, CHAT_ID_SIZE)) {
             return announces;
@@ -77,12 +81,14 @@ static GC_Announces* get_announces_by_chat_id(const GC_Announces_List *gc_announ
     return nullptr;
 }
 
-bool cleanup_gca(GC_Announces_List *gc_announces_list, const uint8_t *chat_id) {
+bool cleanup_gca(GC_Announces_List *gc_announces_list, const uint8_t *chat_id)
+{
     if (!gc_announces_list || !chat_id) {
         return false;
     }
 
     GC_Announces *announces = get_announces_by_chat_id(gc_announces_list, chat_id);
+
     if (announces) {
         remove_announces(gc_announces_list, announces);
 
@@ -100,19 +106,23 @@ int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Announce *gc_annou
     }
 
     GC_Announces *announces = get_announces_by_chat_id(gc_announces_list, chat_id);
+
     if (!announces) {
         return 0;
     }
 
     // TODO: add proper selection
     int gc_announces_count = 0, i, j;
+
     for (i = 0; i < announces->index && i < MAX_GCA_SAVED_ANNOUNCES_PER_GC && gc_announces_count < max_nodes; i++) {
         int index = i % MAX_GCA_SAVED_ANNOUNCES_PER_GC;
+
         if (!memcmp(except_public_key, &announces->announces[index].base_announce.peer_public_key, ENC_PUBLIC_KEY)) {
             continue;
         }
 
         bool already_added = false;
+
         for (j = 0; j < gc_announces_count; j++) {
             if (!memcmp(&gc_announces[j].peer_public_key,
                         &announces->announces[index].base_announce.peer_public_key,
@@ -149,6 +159,7 @@ int pack_announce(uint8_t *data, uint16_t length, GC_Announce *announce)
 
     if (announce->ip_port_is_set) {
         int ip_port_length = pack_ip_port(data + offset, length - offset, &announce->ip_port);
+
         if (ip_port_length == -1) {
             return -1;
         }
@@ -157,6 +168,7 @@ int pack_announce(uint8_t *data, uint16_t length, GC_Announce *announce)
     }
 
     int nodes_length = pack_nodes(data + offset, length - offset, announce->tcp_relays, announce->tcp_relays_count);
+
     if (nodes_length == -1) {
         return -1;
     }
@@ -186,6 +198,7 @@ int unpack_announce(const uint8_t *data, uint16_t length, GC_Announce *announce)
 
     if (announce->ip_port_is_set) {
         int ip_port_length = unpack_ip_port(&announce->ip_port, data + offset, length - offset, 0);
+
         if (ip_port_length == -1) {
             return -1;
         }
@@ -194,8 +207,9 @@ int unpack_announce(const uint8_t *data, uint16_t length, GC_Announce *announce)
     }
 
     uint16_t nodes_length;
-    int nodes_count = unpack_nodes(announce->tcp_relays,announce->tcp_relays_count, &nodes_length,
+    int nodes_count = unpack_nodes(announce->tcp_relays, announce->tcp_relays_count, &nodes_length,
                                    data + offset, length - offset, 1);
+
     if (nodes_count != announce->tcp_relays_count) {
         return -1;
     }
@@ -212,6 +226,7 @@ int pack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce *ann
     memcpy(data, announce->chat_public_key, CHAT_ID_SIZE);
 
     int packed_size = pack_announce(data + CHAT_ID_SIZE, length - CHAT_ID_SIZE, &announce->base_announce);
+
     if (packed_size < 0) {
         return -1;
     }
@@ -228,6 +243,7 @@ int unpack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce *a
     memcpy(announce->chat_public_key, data, CHAT_ID_SIZE);
 
     int base_announce_size = unpack_announce(data + ENC_PUBLIC_KEY, length - ENC_PUBLIC_KEY, &announce->base_announce);
+
     if (base_announce_size == -1) {
         return -1;
     }
@@ -247,6 +263,7 @@ int pack_announces_list(uint8_t *data, uint16_t length, GC_Announce *announces, 
 
     for (i = 0; i < announces_count; i++) {
         int packed_length = pack_announce(data + offset, length - offset, &announces[i]);
+
         if (packed_length == -1) {
             return -1;
         }
@@ -261,7 +278,8 @@ int pack_announces_list(uint8_t *data, uint16_t length, GC_Announce *announces, 
     return announces_count;
 }
 
-int unpack_announces_list(const uint8_t *data, uint16_t length, GC_Announce *announces, uint8_t max_announces_count, size_t *processed)
+int unpack_announces_list(const uint8_t *data, uint16_t length, GC_Announce *announces, uint8_t max_announces_count,
+                          size_t *processed)
 {
     if (!data || !announces) {
         return -1;
@@ -272,6 +290,7 @@ int unpack_announces_list(const uint8_t *data, uint16_t length, GC_Announce *ann
 
     for (i = 0; i < max_announces_count && length > offset; i++) {
         int unpacked_length = unpack_announce(data + offset, length - offset, &announces[i]);
+
         if (unpacked_length == -1) {
             fprintf(stderr, "unpack error: %d %d\n", length, offset);
             return -1;
@@ -288,25 +307,30 @@ int unpack_announces_list(const uint8_t *data, uint16_t length, GC_Announce *ann
     return announces_count;
 }
 
-GC_Peer_Announce* add_gc_announce(const Mono_Time *mono_time, GC_Announces_List *gc_announces_list, const GC_Public_Announce *announce)
+GC_Peer_Announce *add_gc_announce(const Mono_Time *mono_time, GC_Announces_List *gc_announces_list,
+                                  const GC_Public_Announce *announce)
 {
     if (!gc_announces_list || !announce) {
         return nullptr;
     }
 
     GC_Announces *announces = get_announces_by_chat_id(gc_announces_list, announce->chat_public_key);
+
     if (!announces) {
         gc_announces_list->announces_count++;
         announces = (GC_Announces *)malloc(sizeof(GC_Announces));
         announces->index = 0;
         announces->prev_announce = nullptr;
+
         if (gc_announces_list->announces) {
             gc_announces_list->announces->prev_announce = announces;
         }
+
         announces->next_announce = gc_announces_list->announces;
         gc_announces_list->announces = announces;
         memcpy(announces->chat_id, announce->chat_public_key, CHAT_ID_SIZE);
     }
+
     uint64_t index = announces->index % MAX_GCA_SAVED_ANNOUNCES_PER_GC;
     announces->last_announce_received_timestamp = mono_time_get(mono_time);
     GC_Peer_Announce *gc_peer_announce = &announces->announces[index];
