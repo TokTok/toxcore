@@ -78,7 +78,8 @@ bool cleanup_gca(GC_Announces_List *announces_list, const uint8_t *chat_id);
 int get_gc_announces(GC_Announces_List *gc_announces_list, GC_Announce *gc_announces, uint8_t max_nodes,
                      const uint8_t *chat_id, const uint8_t *except_public_key);
 
-GC_Peer_Announce* add_gc_announce(const Mono_Time *mono_time, GC_Announces_List *gc_announces_list, const GC_Public_Announce *announce);
+GC_Peer_Announce *add_gc_announce(const Mono_Time *mono_time, GC_Announces_List *gc_announces_list,
+                                  const GC_Public_Announce *announce);
 
 int pack_announce(uint8_t *data, uint16_t length, GC_Announce *announce);
 
@@ -87,7 +88,8 @@ int unpack_announce(const uint8_t *data, uint16_t length, GC_Announce *announce)
 int pack_announces_list(uint8_t *data, uint16_t length, GC_Announce *announces, uint8_t announces_count,
                         size_t *processed);
 
-int unpack_announces_list(const uint8_t *data, uint16_t length, GC_Announce *announces, uint8_t max_announces_count, size_t *processed);
+int unpack_announces_list(const uint8_t *data, uint16_t length, GC_Announce *announces, uint8_t max_announces_count,
+                          size_t *processed);
 
 int pack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce *announce);
 
