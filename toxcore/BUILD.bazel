@@ -242,7 +242,6 @@ cc_library(
         "Messenger.h",
         "friend_connection.h",
         "friend_requests.h",
-        "group.h",
         "group_announce.h",
         "group_chats.h",
         "group_connection.h",
