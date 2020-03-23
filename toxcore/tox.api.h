@@ -4258,7 +4258,7 @@ namespace group {
       get(uint32_t group_number) with error for query;
     }
 
-    uint8_t[length <= MAX_NAME_LENGTH] name {
+    uint8_t[length <= MAX_NAME_LENGTH] target {
 
       /**
        * Return the length of the name for the ban list entry designated by ban_id, in the
