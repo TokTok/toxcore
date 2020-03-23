@@ -1272,7 +1272,7 @@ uint16_t sanctions_list_get_ban_target_length(const GC_Chat *chat, uint32_t ban_
  * Returns 0 on success.
  * Returns -1 if ban_id does not exist.
  */
-bool sanctions_list_get_ban_target(const GC_Chat *chat, uint32_t ban_id, char *target)
+bool sanctions_list_get_ban_target(const GC_Chat *chat, uint32_t ban_id, uint8_t *target)
 {
     GC_Sanction *sanction = sanctions_get_ban_by_id(chat, ban_id);
 
@@ -1283,9 +1283,12 @@ bool sanctions_list_get_ban_target(const GC_Chat *chat, uint32_t ban_id, char *t
     GC_Ban *ban_info = &sanction->ban_info;
 
     switch (sanction->type) {
-        case SA_BAN_IP_PORT:
-            ip_ntoa(&ban_info->target.ip_port.ip, target, IP_NTOA_LEN);
+        case SA_BAN_IP_PORT: {
+            char tmp[IP_NTOA_LEN];
+            ip_ntoa(&ban_info->target.ip_port.ip, tmp, IP_NTOA_LEN);
+            memcpy(target, tmp, IP_NTOA_LEN);
             break;
+        }
 
         case SA_BAN_NICK:
             memcpy(target, ban_info->target.nick, MAX_GC_NICK_SIZE);
