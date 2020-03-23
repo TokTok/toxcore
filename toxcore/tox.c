@@ -3950,7 +3950,7 @@ size_t tox_group_ban_get_target_size(const Tox *tox, uint32_t group_number, uint
     return ret;
 }
 
-bool tox_group_ban_get_target(const Tox *tox, uint32_t group_number, uint32_t ban_id, char *name,
+bool tox_group_ban_get_target(const Tox *tox, uint32_t group_number, uint32_t ban_id, uint8_t *name,
                               TOX_ERR_GROUP_BAN_QUERY *error)
 {
     const GC_Chat *chat = gc_get_group(tox->m->group_handler, group_number);
