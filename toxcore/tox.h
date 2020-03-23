@@ -5087,11 +5087,11 @@ size_t tox_group_ban_get_target_size(const Tox *tox, uint32_t group_number, uint
  * Write the name of the ban entry designated by ban_id in the group designated by the
  * given group number to a byte array.
  *
- * Call tox_group_ban_get_name_size to find out how much memory to allocate for the result.
+ * Call tox_group_ban_get_target_size to find out how much memory to allocate for the result.
  *
  * @return true on success.
  */
-bool tox_group_ban_get_target(const Tox *tox, uint32_t group_number, uint32_t ban_id, char *target,
+bool tox_group_ban_get_target(const Tox *tox, uint32_t group_number, uint32_t ban_id, uint8_t *target,
                               TOX_ERR_GROUP_BAN_QUERY *error);
 
 /**

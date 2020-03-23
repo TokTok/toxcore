@@ -248,7 +248,7 @@ uint16_t sanctions_list_get_ban_target_length(const GC_Chat *chat, uint32_t ban_
  * Returns 0 on success.
  * Returns -1 if ban_id does not exist.
  */
-bool sanctions_list_get_ban_target(const GC_Chat *chat, uint32_t ban_id, char *target);
+bool sanctions_list_get_ban_target(const GC_Chat *chat, uint32_t ban_id, uint8_t *target);
 
 /* Returns a timestamp indicating when the ban designated by ban_id was set.
  * Returns 0 if ban_id does not exist.
