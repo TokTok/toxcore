@@ -42,6 +42,12 @@
 #define nullptr NULL
 #endif
 
+#ifdef _MSC_VER
+// MSVC has a header that disallows the above nullptr thing. Defining the
+// following symbol disables that check.
+#define _ALLOW_KEYWORD_MACROS
+#endif
+
 #ifdef __GNUC__
 #define GNU_PRINTF(f, a) __attribute__((__format__(__printf__, f, a)))
 #else
