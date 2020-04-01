@@ -3735,7 +3735,7 @@ namespace group {
      * @param message The message data.
      * @param length The length of the message.
      */
-    typedef void(uint32_t group_number, uint32_t peer_id, const uint8_t[length <= MAX_MESSAGE_LENGTH] message);
+    typedef void(uint32_t group_number, uint32_t peer_id, MESSAGE_TYPE type, const uint8_t[length <= MAX_MESSAGE_LENGTH] message);
   }
 
   /**
