@@ -2854,6 +2854,8 @@ namespace group {
    * Size of a peer public key.
    */
   const PEER_PUBLIC_KEY_SIZE      = 32;
+
+  const MAX_PEER_LENGTH           = 128;
 }
 
 /*******************************************************************************
@@ -2924,8 +2926,25 @@ namespace group {
  *
  ******************************************************************************/
 
+namespace groups{
+  const void get_list(uint32_t *list);
+}
 
 namespace group {
+
+  class group_peer_info {
+      struct this [get, set] {
+          string nick;
+          uint8_t nick_length;
+          USER_STATUS user_status;
+      }
+
+      static this new(){
+        MALLOC,
+      }
+
+      void free();
+  }
 
   /**
    * Creates a new group chat.
@@ -2939,12 +2958,12 @@ namespace group {
    *   the group will attempt to announce itself to the DHT and anyone with the Chat ID may join.
    *   Otherwise a friend invite will be required to join the group.
    * @param group_name The name of the group. The name must be non-NULL.
-   * @param length The length of the group name. This must be greater than zero and no larger than
+   * @param group_name_length The length of the group name. This must be greater than zero and no larger than
    *   $MAX_GROUP_NAME_LENGTH.
    *
    * @return group_number on success, UINT32_MAX on failure.
    */
-  uint32_t new(PRIVACY_STATE privacy_state, const uint8_t[length <= MAX_GROUP_NAME_LENGTH] group_name) {
+  uint32_t new(PRIVACY_STATE privacy_state, const uint8_t[group_name_length <= MAX_GROUP_NAME_LENGTH] group_name, const group_peer_info_t *peer_info) {
     /**
      * The group name exceeded $MAX_GROUP_NAME_LENGTH.
      */
@@ -2970,6 +2989,7 @@ namespace group {
      * The group failed to announce to the DHT. This indicates a network related error.
      */
     ANNOUNCE,
+    PEER_INFO,
   }
 
   /**
@@ -2981,12 +3001,12 @@ namespace group {
    *
    * @param chat_id The Chat ID of the group you wish to join. This must be $CHAT_ID_SIZE bytes.
    * @param password The password required to join the group. Set to NULL if no password is required.
-   * @param length The length of the password. If length is equal to zero,
+   * @param password_length The length of the password. If length is equal to zero,
    *   the password parameter is ignored. length must be no larger than $MAX_PASSWORD_SIZE.
    *
    * @return group_number on success, UINT32_MAX on failure.
    */
-  uint32_t join(const uint8_t[CHAT_ID_SIZE] chat_id, const uint8_t[length <= MAX_PASSWORD_SIZE] password) {
+  uint32_t join(const uint8_t[CHAT_ID_SIZE] chat_id, const uint8_t[password_length <= MAX_PASSWORD_SIZE] password, group_peer_info_t *peer_info) {
     /**
      * The group instance failed to initialize.
      */
@@ -3001,6 +3021,26 @@ namespace group {
      */
     TOO_LONG,
   }
+
+  bool is_connected(uint32_t group_number) {
+    GROUP_NOT_FOUND,
+  }
+
+  bool disconnect(uint32_t group_number) {
+    GROUP_NOT_FOUND,
+    ALREADY_DISCONNECTED,
+    ERROR,
+  }
+
+  error for peer_list_query {
+    GROUP_NOT_FOUND,
+    PARAMETER_IS_NULL,
+  }
+
+  const size_t get_peers_list_size(uint32_t group_number) with error for peer_list_query;
+
+  const bool get_peers_list(uint32_t group_number, uint32_t *peers_list) with error for peer_list_query;
+
 
   /**
    * Reconnects to a group.
@@ -3017,6 +3057,7 @@ namespace group {
      * The group number passed did not designate a valid group.
      */
     GROUP_NOT_FOUND,
+    MALLOC,
   }
 
   /**
@@ -3059,6 +3100,7 @@ namespace group {
  * :: Group user-visible client information (nickname/status/role/public key)
  *
  ******************************************************************************/
+
 
 namespace group {
 
@@ -3381,6 +3423,7 @@ namespace group {
        * The packet failed to send.
        */
       FAIL_SEND,
+      GROUP_IS_DISCONNECTED,
   }
 
   uint8_t[length <= MAX_TOPIC_LENGTH] topic {
@@ -3617,6 +3660,7 @@ namespace group {
        * Packet failed to send.
        */
       FAIL_SEND,
+      GROUP_IS_DISCONNECTED,
     }
 
     /**
@@ -3637,7 +3681,7 @@ namespace group {
      *
      * @return true on success.
      */
-    bool private_message(uint32_t group_number, uint32_t peer_id, const uint8_t[length <= MAX_MESSAGE_LENGTH] message) {
+    bool private_message(uint32_t group_number, uint32_t peer_id, MESSAGE_TYPE type, const uint8_t[length <= MAX_MESSAGE_LENGTH] message) {
       /**
        * The group number passed did not designate a valid group.
        */
@@ -3662,6 +3706,8 @@ namespace group {
        * Packet failed to send.
        */
       FAIL_SEND,
+      GROUP_IS_DISCONNECTED,
+      BAD_TYPE,
     }
 
     /**
@@ -3701,6 +3747,7 @@ namespace group {
        * The caller does not have the required permissions to send group messages.
        */
       PERMISSIONS,
+      GROUP_IS_DISCONNECTED,
     }
   }
 }
@@ -3737,7 +3784,7 @@ namespace group {
      * @param message The message data.
      * @param length The length of the message.
      */
-    typedef void(uint32_t group_number, uint32_t peer_id, const uint8_t[length <= MAX_MESSAGE_LENGTH] message);
+    typedef void(uint32_t group_number, uint32_t peer_id, MESSAGE_TYPE type, const uint8_t[length <= MAX_MESSAGE_LENGTH] message);
   }
 
   /**
@@ -3792,6 +3839,7 @@ namespace group {
        * Packet failed to send.
        */
       FAIL_SEND,
+      GROUP_IS_DISCONNECTED,
     }
 
     /**
@@ -3806,7 +3854,7 @@ namespace group {
      *
      * @return the group_number on success, UINT32_MAX on failure.
      */
-    uint32_t accept(const uint8_t[length] invite_data, const uint8_t[password_length <= MAX_PASSWORD_SIZE] password) {
+    uint32_t accept(uint32_t friend_number, const uint8_t[length] invite_data, const uint8_t[password_length <= MAX_PASSWORD_SIZE] password, group_peer_info_t *peer_info) {
       /**
        * The invite data is not in the expected format.
        */
@@ -3832,7 +3880,7 @@ namespace group {
      * @param invite_data The invite data.
      * @param length The length of invite_data.
      */
-    typedef void(uint32_t friend_number, const uint8_t[length] invite_data);
+    typedef void(uint32_t friend_number, const uint8_t[length] invite_data, const uint8_t[group_name_length] group_name);
   }
 
   /**
@@ -3950,6 +3998,7 @@ namespace group {
        * The packet failed to send.
        */
       FAIL_SEND,
+      GROUP_IS_DISCONNECTED,
     }
 
     /**
@@ -3988,6 +4037,7 @@ namespace group {
        * The packet failed to send.
        */
       FAIL_SEND,
+      GROUP_IS_DISCONNECTED,
     }
 
     /**
@@ -4019,6 +4069,7 @@ namespace group {
        * The packet failed to send.
        */
       FAIL_SEND,
+      GROUP_IS_DISCONNECTED,
     }
   }
 
@@ -4031,6 +4082,12 @@ namespace group {
  ******************************************************************************/
 
 namespace group {
+
+  enum class BAN_TYPE {
+    IP_PORT,
+    PUBLIC_KEY,
+    NICK,
+  }
 
   /**
    * Ignore or unignore a peer.
@@ -4101,11 +4158,10 @@ namespace group {
      *
      * @param group_number The group number of the group the ban is intended for.
      * @param peer_id The ID of the peer who will be kicked and/or added to the ban list.
-     * @param set_ban Set to true if a ban shall be set on the peer's IP address.
      *
      * @return true on success.
      */
-    bool remove_peer(uint32_t group_number, uint32_t peer_id, bool set_ban) {
+    bool remove_peer(uint32_t group_number, uint32_t peer_id) {
       /**
        * The group number passed did not designate a valid group.
        */
@@ -4131,6 +4187,7 @@ namespace group {
        * The packet failed to send.
        */
       FAIL_SEND,
+      INVALID_BAN_TYPE,
     }
 
     /**
@@ -4162,8 +4219,12 @@ namespace group {
        * The packet failed to send.
        */
       FAIL_SEND,
+      GROUP_IS_DISCONNECTED,
     }
+
+    bool ban_peer(uint32_t group_number, uint32_t peer_id, BAN_TYPE ban_type) with error for remove_peer;
   }
+
 
   /**
    * Represents moderation events. These should be used with the `${event moderation}` event.
@@ -4233,7 +4294,10 @@ namespace group {
          * The ban_id does not designate a valid ban list entry.
          */
         BAD_ID,
+        GROUP_IS_DISCONNECTED,
     }
+
+    const BAN_TYPE get_type(uint32_t group_number, uint32_t ban_id) with error for query;
 
     uint32_t[size] list {
 
