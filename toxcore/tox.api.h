@@ -3832,7 +3832,7 @@ namespace group {
      * @param invite_data The invite data.
      * @param length The length of invite_data.
      */
-    typedef void(uint32_t friend_number, const uint8_t[length] invite_data);
+    typedef void(uint32_t friend_number, const uint8_t[length] invite_data, const uint8_t[group_name_length] group_name);
   }
 
   /**
