@@ -3695,6 +3695,8 @@ namespace group {
        * Packet failed to send.
        */
       FAIL_SEND,
+      GROUP_IS_DISCONNECTED,
+      BAD_TYPE,
     }
 
     /**
