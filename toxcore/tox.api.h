@@ -3737,6 +3737,7 @@ namespace group {
        * The caller does not have the required permissions to send group messages.
        */
       PERMISSIONS,
+      GROUP_IS_DISCONNECTED,
     }
   }
 }
@@ -3828,6 +3829,7 @@ namespace group {
        * Packet failed to send.
        */
       FAIL_SEND,
+      GROUP_IS_DISCONNECTED,
     }
 
     /**
@@ -3986,6 +3988,7 @@ namespace group {
        * The packet failed to send.
        */
       FAIL_SEND,
+      GROUP_IS_DISCONNECTED,
     }
 
     /**
@@ -4024,6 +4027,7 @@ namespace group {
        * The packet failed to send.
        */
       FAIL_SEND,
+      GROUP_IS_DISCONNECTED,
     }
 
     /**
@@ -4055,6 +4059,7 @@ namespace group {
        * The packet failed to send.
        */
       FAIL_SEND,
+      GROUP_IS_DISCONNECTED,
     }
   }
 
@@ -4198,6 +4203,7 @@ namespace group {
        * The packet failed to send.
        */
       FAIL_SEND,
+      GROUP_IS_DISCONNECTED,
     }
   }
 
@@ -4269,6 +4275,7 @@ namespace group {
          * The ban_id does not designate a valid ban list entry.
          */
         BAD_ID,
+        GROUP_IS_DISCONNECTED,
     }
 
     uint32_t[size] list {
