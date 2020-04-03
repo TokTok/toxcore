@@ -3058,7 +3058,22 @@ namespace group {
  *
  ******************************************************************************/
 
+
 namespace group {
+
+  class group_peer_info {
+      struct this [get, set] {
+          string nick;
+          uint8_t nick_length;
+          USER_STATUS user_status;
+      }
+
+      static this new(){
+        MALLOC,
+      }
+
+      void free();
+  }
 
   inline namespace self {
 
