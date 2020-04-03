@@ -3670,7 +3670,7 @@ namespace group {
      *
      * @return true on success.
      */
-    bool private_message(uint32_t group_number, uint32_t peer_id, const uint8_t[length <= MAX_MESSAGE_LENGTH] message) {
+    bool private_message(uint32_t group_number, uint32_t peer_id, MESSAGE_TYPE type, const uint8_t[length <= MAX_MESSAGE_LENGTH] message) {
       /**
        * The group number passed did not designate a valid group.
        */
