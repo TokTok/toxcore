@@ -3373,6 +3373,11 @@ namespace group {
 
 namespace group {
 
+  error for peer_list_query {
+    GROUP_NOT_FOUND,
+    PARAMETER_IS_NULL,
+  }
+
   /**
    * General error codes for group state get and size functions.
    */
