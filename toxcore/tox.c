@@ -2705,20 +2705,20 @@ void tox_callback_group_join_fail(Tox *tox, tox_group_join_fail_cb *function)
     tox->group_join_fail_callback = function;
 }
 
-Group_Chat_Self_Peer_Info *tox_group_self_peer_info_new(TOX_ERR_GC_SELF_PEER_INFO *error)
+struct Tox_Group_peer_info *tox_group_group_peer_info_new(TOX_ERR_GROUP_GROUP_PEER_INFO_NEW *error)
 {
-    Group_Chat_Self_Peer_Info *peer_info = (Group_Chat_Self_Peer_Info *)calloc(1, sizeof(Group_Chat_Self_Peer_Info));
+    struct Tox_Group_peer_info *peer_info = (struct Tox_Group_peer_info *)calloc(1, sizeof(struct Tox_Group_peer_info));
 
-    SET_ERROR_PARAMETER(error, peer_info ? TOX_ERR_GC_SELF_PEER_INFO_OK : TOX_ERR_GC_SELF_PEER_INFO_MALLOC);
+    SET_ERROR_PARAMETER(error, peer_info ? TOX_ERR_GROUP_GROUP_PEER_INFO_NEW_OK : TOX_ERR_GROUP_GROUP_PEER_INFO_NEW_MALLOC);
     return peer_info;
 }
 
-void tox_group_self_peer_info_free(Group_Chat_Self_Peer_Info *self_peer_info)
+void tox_group_group_peer_info_free(struct Tox_Group_peer_info *self_peer_info)
 {
     free(self_peer_info);
 }
 
-static GC_SelfPeerInfo *create_self_peer_info(const Group_Chat_Self_Peer_Info *peer_info)
+static GC_SelfPeerInfo *create_self_peer_info(const struct Tox_Group_peer_info *peer_info)
 {
     if (!peer_info ||
             !peer_info->nick ||
@@ -2740,7 +2740,7 @@ static GC_SelfPeerInfo *create_self_peer_info(const Group_Chat_Self_Peer_Info *p
 }
 
 uint32_t tox_group_new(Tox *tox, Tox_Group_Privacy_State privacy_state, const uint8_t *group_name,
-                       size_t group_name_length, Group_Chat_Self_Peer_Info *peer_info, Tox_Err_Group_New *error)
+                       size_t group_name_length, struct Tox_Group_peer_info *peer_info, Tox_Err_Group_New *error)
 {
     GC_SelfPeerInfo *self_peer_info = create_self_peer_info(peer_info);
     int ret = gc_group_add(tox->m->group_handler, privacy_state, group_name, group_name_length, self_peer_info);
@@ -2786,7 +2786,7 @@ uint32_t tox_group_new(Tox *tox, Tox_Group_Privacy_State privacy_state, const ui
 }
 
 uint32_t tox_group_join(Tox *tox, const uint8_t *chat_id, const uint8_t *password, size_t password_length,
-                        struct Group_Chat_Self_Peer_Info *peer_info, Tox_Err_Group_Join *error)
+                        struct Tox_Group_peer_info *peer_info, Tox_Err_Group_Join *error)
 {
     GC_SelfPeerInfo *self_peer_info = create_self_peer_info(peer_info);
     int ret = gc_group_join(tox->m->group_handler, chat_id, password, password_length, self_peer_info);
@@ -3546,7 +3546,7 @@ bool tox_group_invite_friend(Tox *tox, uint32_t group_number, uint32_t friend_nu
 }
 
 uint32_t tox_group_invite_accept(Tox *tox, uint32_t friend_number, const uint8_t *invite_data, size_t length,
-                                 const uint8_t *password, size_t password_length, struct Group_Chat_Self_Peer_Info *peer_info,
+                                 const uint8_t *password, size_t password_length, struct Tox_Group_peer_info *peer_info,
                                  Tox_Err_Group_Invite_Accept *error)
 {
     GC_SelfPeerInfo *self_peer_info = create_self_peer_info(peer_info);
