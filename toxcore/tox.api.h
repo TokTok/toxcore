@@ -4072,6 +4072,12 @@ namespace group {
 
 namespace group {
 
+  enum class BAN_TYPE {
+    IP_PORT,
+    PUBLIC_KEY,
+    NICK,
+  }
+
   /**
    * Ignore or unignore a peer.
    *
