@@ -2723,7 +2723,7 @@ static GC_SelfPeerInfo *create_self_peer_info(const struct Tox_Group_peer_info *
     if (!peer_info ||
             !peer_info->nick ||
             !peer_info->nick_length ||
-            peer_info->nick_length > TOX_MAX_GC_PEER_LENGTH ||
+            peer_info->nick_length > TOX_GROUP_MAX_PEER_LENGTH ||
             peer_info->user_status > TOX_USER_STATUS_BUSY) {
         return nullptr;
     }
