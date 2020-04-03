@@ -3843,7 +3843,7 @@ namespace group {
      *
      * @return the group_number on success, UINT32_MAX on failure.
      */
-    uint32_t accept(const uint8_t[length] invite_data, const uint8_t[password_length <= MAX_PASSWORD_SIZE] password) {
+    uint32_t accept(uint32_t friend_number, const uint8_t[length] invite_data, const uint8_t[password_length <= MAX_PASSWORD_SIZE] password, group_peer_info_t *peer_info) {
       /**
        * The invite data is not in the expected format.
        */
