@@ -2739,8 +2739,8 @@ static GC_SelfPeerInfo *create_self_peer_info(const struct Tox_Group_peer_info *
     return self_peer_info;
 }
 
-uint32_t tox_group_new(Tox *tox, Tox_Group_Privacy_State privacy_state, const uint8_t *group_name,
-                       size_t group_name_length, struct Tox_Group_peer_info *peer_info, Tox_Err_Group_New *error)
+uint32_t tox_group_new(Tox *tox, TOX_GROUP_PRIVACY_STATE privacy_state, const uint8_t *group_name,
+                       size_t group_name_length, const struct Tox_Group_peer_info *peer_info, TOX_ERR_GROUP_NEW *error)
 {
     GC_SelfPeerInfo *self_peer_info = create_self_peer_info(peer_info);
     int ret = gc_group_add(tox->m->group_handler, privacy_state, group_name, group_name_length, self_peer_info);
