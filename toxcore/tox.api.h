@@ -3000,7 +3000,7 @@ namespace group {
    *
    * @return group_number on success, UINT32_MAX on failure.
    */
-  uint32_t join(const uint8_t[CHAT_ID_SIZE] chat_id, const uint8_t[length <= MAX_PASSWORD_SIZE] password) {
+  uint32_t join(const uint8_t[CHAT_ID_SIZE] chat_id, const uint8_t[password_length <= MAX_PASSWORD_SIZE] password, group_peer_info_t *peer_info) {
     /**
      * The group instance failed to initialize.
      */
