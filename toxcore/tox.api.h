@@ -4178,6 +4178,7 @@ namespace group {
        * The packet failed to send.
        */
       FAIL_SEND,
+      INVALID_BAN_TYPE,
     }
 
     /**
