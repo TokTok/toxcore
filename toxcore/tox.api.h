@@ -2854,6 +2854,8 @@ namespace group {
    * Size of a peer public key.
    */
   const PEER_PUBLIC_KEY_SIZE      = 32;
+
+  const MAX_PEER_LENGTH           = 128;
 }
 
 /*******************************************************************************
