@@ -4145,7 +4145,7 @@ namespace group {
      *
      * @return true on success.
      */
-    bool remove_peer(uint32_t group_number, uint32_t peer_id, bool set_ban) {
+    bool remove_peer(uint32_t group_number, uint32_t peer_id) {
       /**
        * The group number passed did not designate a valid group.
        */
