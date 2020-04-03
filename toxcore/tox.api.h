@@ -3023,6 +3023,12 @@ namespace group {
     GROUP_NOT_FOUND,
   }
 
+  error for disconnect {
+    GROUP_NOT_FOUND,
+    ALREADY_DISCONNECTED,
+    ERROR,
+  }
+
   /**
    * Reconnects to a group.
    *
@@ -3038,6 +3044,7 @@ namespace group {
      * The group number passed did not designate a valid group.
      */
     GROUP_NOT_FOUND,
+    MALLOC,
   }
 
   /**
