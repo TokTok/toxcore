@@ -3413,6 +3413,7 @@ namespace group {
        * The packet failed to send.
        */
       FAIL_SEND,
+      GROUP_IS_DISCONNECTED,
   }
 
   uint8_t[length <= MAX_TOPIC_LENGTH] topic {
