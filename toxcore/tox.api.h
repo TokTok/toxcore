@@ -2984,6 +2984,7 @@ namespace group {
      * The group failed to announce to the DHT. This indicates a network related error.
      */
     ANNOUNCE,
+    PEER_INFO,
   }
 
   /**
