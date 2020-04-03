@@ -3016,6 +3016,10 @@ namespace group {
     TOO_LONG,
   }
 
+  error for is_connected {
+    GROUP_NOT_FOUND,
+  }
+
   /**
    * Reconnects to a group.
    *
