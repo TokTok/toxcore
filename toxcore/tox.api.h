@@ -2929,6 +2929,20 @@ namespace group {
 
 namespace group {
 
+  class group_peer_info {
+      struct this [get, set] {
+          string nick;
+          uint8_t nick_length;
+          USER_STATUS user_status;
+      }
+
+      static this new(){
+        MALLOC,
+      }
+
+      void free();
+  }
+
   /**
    * Creates a new group chat.
    *
@@ -2946,7 +2960,7 @@ namespace group {
    *
    * @return group_number on success, UINT32_MAX on failure.
    */
-  uint32_t new(PRIVACY_STATE privacy_state, const uint8_t[length <= MAX_GROUP_NAME_LENGTH] group_name) {
+  uint32_t new(PRIVACY_STATE privacy_state, const uint8_t[group_name_length <= MAX_GROUP_NAME_LENGTH] group_name, const group_peer_info_t *peer_info) {
     /**
      * The group name exceeded $MAX_GROUP_NAME_LENGTH.
      */
@@ -3064,20 +3078,6 @@ namespace group {
 
 
 namespace group {
-
-  class group_peer_info {
-      struct this [get, set] {
-          string nick;
-          uint8_t nick_length;
-          USER_STATUS user_status;
-      }
-
-      static this new(){
-        MALLOC,
-      }
-
-      void free();
-  }
 
   inline namespace self {
 
