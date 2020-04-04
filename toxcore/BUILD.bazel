@@ -92,7 +92,6 @@ cc_library(
     ],
     visibility = [
         "//c-toxcore/other:__pkg__",
-        "//c-toxcore/toxav:__pkg__",
     ],
     deps = [
         ":ccompat",
@@ -252,7 +251,6 @@ cc_library(
     name = "Messenger",
     srcs = ["Messenger.c"],
     hdrs = ["Messenger.h"],
-    visibility = ["//c-toxcore/toxav:__pkg__"],
     deps = [
         ":friend_requests",
         ":state",

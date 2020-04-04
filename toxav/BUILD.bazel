@@ -45,7 +45,7 @@ cc_library(
     hdrs = ["bwcontroller.h"],
     deps = [
         ":ring_buffer",
-        "//c-toxcore/toxcore:Messenger",
+        "//c-toxcore/toxcore",
     ],
 )
 
