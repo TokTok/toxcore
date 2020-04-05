@@ -1,5 +1,8 @@
 if BUILD_TESTS
 
+noinst_LTLIBRARIES += librun_auto_test.la
+librun_auto_test_la_SOURCES = ../auto_tests/run_auto_test.c ../auto_tests/run_auto_test.h
+
 TESTS = \
 	bootstrap_test \
 	conference_double_invite_test \
@@ -50,12 +53,12 @@ AUTOTEST_LDADD = \
 	$(LIBSODIUM_LDFLAGS) \
 	$(NACL_LDFLAGS) \
 	libmisc_tools.la \
+	librun_auto_test.la \
 	libtoxcore.la \
 	libtoxencryptsave.la \
 	$(LIBSODIUM_LIBS) \
 	$(NACL_OBJECTS) \
 	$(NACL_LIBS)
-
 
 if BUILD_AV
 TESTS += conference_av_test toxav_basic_test toxav_many_test

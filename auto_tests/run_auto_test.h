@@ -1,3 +1,6 @@
+#ifndef RUN_AUTO_TEST_H
+#define RUN_AUTO_TEST_H
+
 #include <stdlib.h>  // calloc, free
 
 #include "check_compat.h"
@@ -5,127 +8,51 @@
 #include "../toxcore/Messenger.h"
 #include "../toxcore/mono_time.h"
 
-static bool all_connected(uint32_t tox_count, Tox **toxes)
-{
-    for (uint32_t i = 0; i < tox_count; i++) {
-        if (tox_self_get_connection_status(toxes[i]) == TOX_CONNECTION_NONE) {
-            return false;
-        }
-    }
+typedef struct AutoTox {
+    Tox *tox;
 
-    return true;
-}
+    uint32_t index;
+    uint64_t clock;
 
-static bool all_friends_connected(uint32_t tox_count, Tox **toxes)
-{
-    for (uint32_t i = 0; i < tox_count; i++) {
-        const size_t friend_count = tox_self_get_friend_list_size(toxes[i]);
+    size_t save_size;
+    uint8_t *save_state;
+    bool alive;
 
-        for (size_t j = 0; j < friend_count; j++) {
-            if (tox_friend_get_connection_status(toxes[i], j, nullptr) == TOX_CONNECTION_NONE) {
-                return false;
-            }
-        }
-    }
+    void *state;
+} AutoTox;
 
-    return true;
-}
+bool all_connected(uint32_t tox_count, AutoTox *toxes);
 
-static void iterate_all_wait(uint32_t tox_count, Tox **toxes, State *state, uint32_t wait)
-{
-    for (uint32_t i = 0; i < tox_count; i++) {
-        tox_iterate(toxes[i], &state[i]);
-        state[i].clock += wait;
-    }
+bool all_friends_connected(uint32_t tox_count, AutoTox *toxes);
 
-    /* Also actually sleep a little, to allow for local network processing */
-    c_sleep(20);
-}
+void iterate_all_wait(uint32_t tox_count, AutoTox *toxes, uint32_t wait);
 
-static uint64_t get_state_clock_callback(Mono_Time *mono_time, void *user_data)
-{
-    const State *state = (const State *)user_data;
-    return state->clock;
-}
+bool init_null_state(void **state);
 
-static void set_mono_time_callback(Tox *tox, State *state)
-{
-    // TODO(iphydf): Don't rely on toxcore internals.
-    Mono_Time *mono_time = ((Messenger *)tox)->mono_time;
+void free_null_state(void *state);
 
-    state->clock = current_time_monotonic(mono_time);
-    mono_time_set_current_time_callback(mono_time, get_state_clock_callback, state);
-}
+void save(AutoTox *autotox);
+void kill(AutoTox *autotox);
+void reload(AutoTox *autotox);
 
-static void run_auto_test(uint32_t tox_count, void test(Tox **toxes, State *state), bool chain)
-{
-    printf("initialising %u toxes\n", tox_count);
-    Tox **toxes = (Tox **)calloc(tox_count, sizeof(Tox *));
-    State *state = (State *)calloc(tox_count, sizeof(State));
+void set_mono_time_callback(AutoTox *tox);
 
-    for (uint32_t i = 0; i < tox_count; i++) {
-        state[i].index = i;
-        toxes[i] = tox_new_log(nullptr, nullptr, &state[i].index);
-        ck_assert_msg(toxes[i], "failed to create %u tox instances", i + 1);
+typedef enum Graph_Type {
+    GRAPH_COMPLETE = 0,
+    GRAPH_LINEAR
+} Graph_Type;
 
-        set_mono_time_callback(toxes[i], &state[i]);
-    }
+typedef struct Run_Auto_Options {
+    Graph_Type graph;
+    uint32_t tcp_relays;
+    uint32_t tcp_first_port;
 
-    if (chain) {
-        printf("each tox adds adjacent toxes as friends\n");
+    void (*init_autotox)(AutoTox *autotox, uint32_t n);
+} Run_Auto_Options;
 
-        for (uint32_t i = 0; i < tox_count; i++) {
-            for (uint32_t j = i - 1; j != i + 3; j += 2) {
-                if (j >= tox_count) {
-                    continue;
-                }
+const Run_Auto_Options default_run_auto_options;
 
-                uint8_t public_key[TOX_PUBLIC_KEY_SIZE];
-                tox_self_get_public_key(toxes[j], public_key);
-                tox_friend_add_norequest(toxes[i], public_key, nullptr);
-            }
-        }
-    } else {
-        printf("toxes all add each other as friends\n");
+void run_auto_test(uint32_t tox_count, void test(AutoTox *toxes),
+                   uint32_t state_size, const Run_Auto_Options *options);
 
-        for (uint32_t i = 0; i < tox_count; i++) {
-            for (uint32_t j = 0; j < tox_count; j++) {
-                if (i != j) {
-                    uint8_t public_key[TOX_PUBLIC_KEY_SIZE];
-                    tox_self_get_public_key(toxes[j], public_key);
-                    tox_friend_add_norequest(toxes[i], public_key, nullptr);
-                }
-            }
-        }
-    }
-
-    printf("bootstrapping all toxes off toxes[0]\n");
-    uint8_t dht_key[TOX_PUBLIC_KEY_SIZE];
-    tox_self_get_dht_id(toxes[0], dht_key);
-    const uint16_t dht_port = tox_self_get_udp_port(toxes[0], nullptr);
-
-    for (uint32_t i = 1; i < tox_count; i++) {
-        tox_bootstrap(toxes[i], "localhost", dht_port, dht_key, nullptr);
-    }
-
-    do {
-        iterate_all_wait(tox_count, toxes, state, ITERATION_INTERVAL);
-    } while (!all_connected(tox_count, toxes));
-
-    printf("toxes are online\n");
-
-    do {
-        iterate_all_wait(tox_count, toxes, state, ITERATION_INTERVAL);
-    } while (!all_friends_connected(tox_count, toxes));
-
-    printf("tox clients connected\n");
-
-    test(toxes, state);
-
-    for (uint32_t i = 0; i < tox_count; i++) {
-        tox_kill(toxes[i]);
-    }
-
-    free(state);
-    free(toxes);
-}
+#endif
