@@ -7,23 +7,18 @@
 
 #include <stdint.h>
 
-typedef struct State {
-    uint32_t index;
-    uint64_t clock;
-} State;
-
 #include "run_auto_test.h"
 
 #define NUM_MSGS 40000
 
-static void net_crypto_overflow_test(Tox **toxes, State *state)
+static void net_crypto_overflow_test(AutoTox *autotoxes)
 {
     const uint8_t message[] = {0};
     bool errored = false;
 
     for (uint32_t i = 0; i < NUM_MSGS; i++) {
         Tox_Err_Friend_Send_Message err;
-        tox_friend_send_message(toxes[0], 0, TOX_MESSAGE_TYPE_NORMAL, message, sizeof message, &err);
+        tox_friend_send_message(autotoxes[0].tox, 0, TOX_MESSAGE_TYPE_NORMAL, message, sizeof message, &err);
 
         if (err != TOX_ERR_FRIEND_SEND_MESSAGE_OK) {
             errored = true;
@@ -47,6 +42,6 @@ int main(void)
 {
     setvbuf(stdout, nullptr, _IONBF, 0);
 
-    run_auto_test(2, net_crypto_overflow_test, false);
+    run_auto_test(2, net_crypto_overflow_test, 0, &default_run_auto_options);
     return 0;
 }
