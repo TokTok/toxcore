@@ -2956,7 +2956,7 @@ namespace group {
    *   the group will attempt to announce itself to the DHT and anyone with the Chat ID may join.
    *   Otherwise a friend invite will be required to join the group.
    * @param group_name The name of the group. The name must be non-NULL.
-   * @param length The length of the group name. This must be greater than zero and no larger than
+   * @param group_name_length The length of the group name. This must be greater than zero and no larger than
    *   $MAX_GROUP_NAME_LENGTH.
    *
    * @return group_number on success, UINT32_MAX on failure.
@@ -2999,7 +2999,7 @@ namespace group {
    *
    * @param chat_id The Chat ID of the group you wish to join. This must be $CHAT_ID_SIZE bytes.
    * @param password The password required to join the group. Set to NULL if no password is required.
-   * @param length The length of the password. If length is equal to zero,
+   * @param password_length The length of the password. If length is equal to zero,
    *   the password parameter is ignored. length must be no larger than $MAX_PASSWORD_SIZE.
    *
    * @return group_number on success, UINT32_MAX on failure.
@@ -4156,7 +4156,6 @@ namespace group {
      *
      * @param group_number The group number of the group the ban is intended for.
      * @param peer_id The ID of the peer who will be kicked and/or added to the ban list.
-     * @param set_ban Set to true if a ban shall be set on the peer's IP address.
      *
      * @return true on success.
      */
