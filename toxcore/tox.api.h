@@ -2923,6 +2923,9 @@ namespace group {
  *
  ******************************************************************************/
 
+namespace groups{
+  const void get_list(uint32_t *list);
+}
 
 namespace group {
 
@@ -3016,15 +3019,25 @@ namespace group {
     TOO_LONG,
   }
 
-  error for is_connected {
+  bool is_connected(uint32_t group_number) {
     GROUP_NOT_FOUND,
   }
 
-  error for disconnect {
+  bool disconnect(uint32_t group_number) {
     GROUP_NOT_FOUND,
     ALREADY_DISCONNECTED,
     ERROR,
   }
+
+  error for peer_list_query {
+    GROUP_NOT_FOUND,
+    PARAMETER_IS_NULL,
+  }
+
+  const size_t get_peers_list_size(uint32_t group_number) with error for peer_list_query;
+
+  const bool get_peers_list(uint32_t group_number, uint32_t *peers_list) with error for peer_list_query;
+
 
   /**
    * Reconnects to a group.
@@ -3372,11 +3385,6 @@ namespace group {
  ******************************************************************************/
 
 namespace group {
-
-  error for peer_list_query {
-    GROUP_NOT_FOUND,
-    PARAMETER_IS_NULL,
-  }
 
   /**
    * General error codes for group state get and size functions.
@@ -4211,7 +4219,10 @@ namespace group {
       FAIL_SEND,
       GROUP_IS_DISCONNECTED,
     }
+
+    bool ban_peer(uint32_t group_number, uint32_t peer_id, BAN_TYPE ban_type) with error for remove_peer;
   }
+
 
   /**
    * Represents moderation events. These should be used with the `${event moderation}` event.
@@ -4283,6 +4294,8 @@ namespace group {
         BAD_ID,
         GROUP_IS_DISCONNECTED,
     }
+
+    const BAN_TYPE get_type(uint32_t group_number, uint32_t ban_id) with error for query;
 
     uint32_t[size] list {
 
