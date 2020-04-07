@@ -20,7 +20,7 @@ typedef struct BWController_s BWController;
 typedef void m_cb(BWController *bwc, uint32_t friend_number, float todo, void *user_data);
 
 BWController *bwc_new(Tox *tox, uint32_t friendnumber, m_cb *mcb, void *mcb_user_data,
-                      Mono_Time *toxav_given_mono_time);
+                      Mono_Time *bwc_mono_time);
 
 void bwc_kill(BWController *bwc);
 

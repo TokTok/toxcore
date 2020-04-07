@@ -64,16 +64,15 @@ static int bwc_send_custom_lossy_packet(Tox *tox, int32_t friendnumber, const ui
 static void bwc_handle_data(Tox *tox, uint32_t friendnumber, const uint8_t *data, size_t length, void *dummy);
 static void send_update(BWController *bwc);
 
-
-BWController *bwc_new(Tox *tox, uint32_t friendnumber, m_cb *mcb, void *mcb_user_data, Mono_Time *toxav_given_mono_time)
+BWController *bwc_new(Tox *tox, uint32_t friendnumber, m_cb *mcb, void *mcb_user_data, Mono_Time *bwc_mono_time)
 {
     BWController *retu = (BWController *)calloc(sizeof(struct BWController_s), 1);
     LOGGER_API_DEBUG(tox, "Creating bandwidth controller");
     retu->mcb = mcb;
     retu->mcb_user_data = mcb_user_data;
     retu->friend_number = friendnumber;
-    retu->bwc_mono_time = toxav_given_mono_time;
-    uint64_t now = current_time_monotonic(toxav_given_mono_time);
+    retu->bwc_mono_time = bwc_mono_time;
+    uint64_t now = current_time_monotonic(bwc_mono_time);
     retu->cycle.last_sent_timestamp = now;
     retu->cycle.last_refresh_timestamp = now;
     retu->tox = tox;

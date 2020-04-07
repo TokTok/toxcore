@@ -108,7 +108,7 @@ struct ToxAV {
 
     uint32_t interval; /** Calculated interval */
 
-    Mono_Time *toxav_mono_time; // ToxAV's own mono_time instance
+    Mono_Time *toxav_mono_time; /** ToxAV's own mono_time instance */
 };
 
 static void callback_bwc(BWController *bwc, uint32_t friend_number, float loss, void *user_data);
