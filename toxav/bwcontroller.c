@@ -192,7 +192,7 @@ static int on_update(BWController *bwc, const struct BWCMessage *msg)
  */
 static int bwc_send_custom_lossy_packet(Tox *tox, int32_t friendnumber, const uint8_t *data, uint32_t length)
 {
-    TOX_ERR_FRIEND_CUSTOM_PACKET error;
+    Tox_Err_Friend_Custom_Packet error;
     tox_friend_send_lossy_packet(tox, friendnumber, data, (size_t)length, &error);
 
     if (error == TOX_ERR_FRIEND_CUSTOM_PACKET_OK) {
