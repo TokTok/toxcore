@@ -21,7 +21,6 @@
 #include "util.h"
 #include "TCP_client.h"
 
-
 struct TCP_Connections {
     Mono_Time *mono_time;
     DHT *dht;
@@ -44,7 +43,7 @@ struct TCP_Connections {
     tcp_onion_cb *tcp_onion_callback;
     void *tcp_onion_callback_object;
 
-    void (*tcp_connection_status_updated_callback)(void *object, TCP_Connections *tcp_c, int status);
+    tcp_connection_status_updated_cb *tcp_connection_status_updated_callback;
     void *tcp_connection_status_updated_callback_object;
 
     TCP_Proxy_Info proxy_info;
@@ -474,9 +473,7 @@ void set_onion_packet_tcp_connection_callback(TCP_Connections *tcp_c, tcp_onion_
 }
 
 void set_connection_status_updated_callback(TCP_Connections *tcp_c,
-        void (*connection_status_updated_callback)(void *object,
-                TCP_Connections *tcp_c,
-                int status),
+        tcp_connection_status_updated_cb *connection_status_updated_callback,
         void *object)
 {
     tcp_c->tcp_connection_status_updated_callback = connection_status_updated_callback;
