@@ -130,7 +130,7 @@ int gcc_add_to_send_array(const Mono_Time *mono_time, GC_Connection *gconn, cons
         return -1;
     }
 
-    gconn->send_message_id++;
+    ++gconn->send_message_id;
 
     return 0;
 }
@@ -210,7 +210,7 @@ int gcc_handle_received_message(GC_Chat *chat, uint32_t peer_number, const uint8
         return 1;
     }
 
-    gconn->received_message_id++;
+    ++gconn->received_message_id;
 
     return 2;
 }
@@ -239,7 +239,7 @@ static int process_received_array_entry(GC_Chat *chat, Messenger *m, int group_n
     }
 
     gc_send_message_ack(chat, gconn, array_entry->message_id, 0);
-    gconn->received_message_id++;
+    ++gconn->received_message_id;
 
     return 0;
 }

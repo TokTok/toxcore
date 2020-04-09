@@ -67,11 +67,11 @@ typedef enum Group_Moderation_Event {
     MV_INVALID,
 } Group_Moderation_Event;
 
-typedef enum GROUP_INVITE_MESSAGE_TYPE {
+typedef enum Group_Invite_Message_Type {
     GROUP_INVITE,
     GROUP_INVITE_ACCEPTED,
-    GROUP_INVITE_CONFIRMATION
-} GROUP_INVITE_MESSAGE_TYPE;
+    GROUP_INVITE_CONFIRMATION,
+} Group_Invite_Message_Type;
 
 /* Group roles are hierarchical where each role has a set of privileges plus
  * all the privileges of the roles below it.
@@ -684,7 +684,8 @@ int gc_accept_invite(GC_Session *c, int32_t friend_number, const uint8_t *data, 
                      const uint8_t *passwd, uint16_t passwd_len,
                      const GC_SelfPeerInfo *peer_info);
 
-typedef int gc_send_group_invite_packet_cb(const Messenger *m, uint32_t friendnumber, const uint8_t *packet, size_t length);
+typedef int gc_send_group_invite_packet_cb(const Messenger *m, uint32_t friendnumber, const uint8_t *packet,
+        size_t length);
 
 /* Invites friendnumber to chat. Packet includes: Type, chat_id, node
  *
@@ -693,7 +694,8 @@ typedef int gc_send_group_invite_packet_cb(const Messenger *m, uint32_t friendnu
  * Return -2 on failure to create the invite data.
  * Return -3 if the packet fails to send.
  */
-int gc_invite_friend(GC_Session *c, GC_Chat *chat, int32_t friendnum, gc_send_group_invite_packet_cb *send_group_invite_packet);
+int gc_invite_friend(GC_Session *c, GC_Chat *chat, int32_t friendnum,
+                     gc_send_group_invite_packet_cb *send_group_invite_packet);
 
 /* Sends parting message to group and deletes group.
  *

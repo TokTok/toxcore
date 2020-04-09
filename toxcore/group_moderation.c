@@ -1190,7 +1190,7 @@ uint32_t sanctions_list_num_banned(const GC_Chat *chat)
 
     for (i = 0; i < chat->moderation.num_sanctions; ++i) {
         if (chat->moderation.sanctions[i].type <= SA_OBSERVER) {
-            count++;
+            ++count;
         }
     }
 
@@ -1238,7 +1238,8 @@ void sanctions_list_get_ban_list(const GC_Chat *chat, uint32_t *list)
 
     for (i = 0; i < chat->moderation.num_sanctions; ++i) {
         if (chat->moderation.sanctions[i].type <= SA_OBSERVER) {
-            list[count++] = chat->moderation.sanctions[i].ban_info.id;
+            list[count] = chat->moderation.sanctions[i].ban_info.id;
+            ++count;
         }
     }
 }

@@ -36,12 +36,14 @@ typedef enum Group_Sanction_Type {
     SA_INVALID,
 } Group_Sanction_Type;
 
+typedef union GC_Ban_Target {
+    IP_Port ip_port;
+    uint8_t pk[ENC_PUBLIC_KEY];
+    uint8_t nick[MAX_GC_NICK_SIZE];
+} GC_Ban_Target;
+
 struct GC_Ban {
-    union {
-        IP_Port ip_port;
-        uint8_t pk[ENC_PUBLIC_KEY];
-        uint8_t nick[MAX_GC_NICK_SIZE];
-    } target;
+    GC_Ban_Target target;
 
     uint32_t    id;
 };
