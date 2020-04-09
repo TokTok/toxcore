@@ -248,7 +248,7 @@ typedef struct Onion_Friend {
 
     uint8_t gc_data[GC_MAX_DATA_LENGTH];
     uint8_t gc_public_key[ENC_PUBLIC_KEY];
-    short gc_data_length;
+    int16_t gc_data_length;
 } Onion_Friend;
 
 typedef struct Onion_Data_Handler {

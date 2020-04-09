@@ -2989,15 +2989,16 @@ bool dht_non_lan_connected(const DHT *dht)
  */
 int ipport_self_copy(const DHT *dht, IP_Port *dest)
 {
-    for (size_t i = 0; i < LCLIENT_LIST; i++) {
-        const IP_Port *ip_port4 = &dht_get_close_client(dht, i)->assoc4.ret_ip_port;
+    for (size_t i = 0; i < LCLIENT_LIST; ++i) {
+        const Client_data *client = dht_get_close_client(dht, i);
+        const IP_Port *ip_port4 = &client->assoc4.ret_ip_port;
 
         if (ipport_isset(ip_port4)) {
             ipport_copy(dest, ip_port4);
             break;
         }
 
-        const IP_Port *ip_port6 = &dht_get_close_client(dht, i)->assoc6.ret_ip_port;
+        const IP_Port *ip_port6 = &client->assoc6.ret_ip_port;
 
         if (ipport_isset(ip_port6)) {
             ipport_copy(dest, ip_port6);
