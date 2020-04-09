@@ -128,11 +128,10 @@ typedef enum Userstatus {
     USERSTATUS_INVALID,
 } Userstatus;
 
-typedef enum {
+typedef enum Contact_Type {
     CONTACT_TYPE_FRIEND,
-    CONTACT_TYPE_GC
-}
-CONTACT_TYPE;
+    CONTACT_TYPE_GC,
+} Contact_Type;
 
 #define FILE_ID_LENGTH 32
 
@@ -248,7 +247,7 @@ typedef struct Friend {
     struct Receipts *receipts_start;
     struct Receipts *receipts_end;
 
-    CONTACT_TYPE type;
+    Contact_Type type;
 } Friend;
 
 struct Messenger {

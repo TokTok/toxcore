@@ -22,7 +22,7 @@ typedef struct State {
 static void group_invite_handler(Tox *tox, uint32_t friend_number, const uint8_t *invite_data, size_t length,
                                  const uint8_t *group_name, size_t group_name_length, void *user_data)
 {
-    Group_Chat_Self_Peer_Info self_info;
+    struct Tox_Group_peer_info self_info;
     self_info.nick = "tox1";
     self_info.nick_length = 4;
     self_info.user_status = TOX_USER_STATUS_NONE;
@@ -88,7 +88,7 @@ static void group_message_test(Tox **toxes, State *state)
     global_state_tox1 = &state[1];
 
     // tox0 makes new group.
-    Group_Chat_Self_Peer_Info self_info0;
+    struct Tox_Group_peer_info self_info0;
     self_info0.nick = "tox0";
     self_info0.nick_length = 4;
     self_info0.user_status = TOX_USER_STATUS_NONE;

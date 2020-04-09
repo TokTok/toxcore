@@ -52,11 +52,11 @@ typedef enum Group_Moderation_Event {
     MV_INVALID,
 } Group_Moderation_Event;
 
-typedef enum GROUP_INVITE_MESSAGE_TYPE {
+typedef enum Group_Invite_Message_Type {
     GROUP_INVITE,
     GROUP_INVITE_ACCEPTED,
-    GROUP_INVITE_CONFIRMATION
-} GROUP_INVITE_MESSAGE_TYPE;
+    GROUP_INVITE_CONFIRMATION,
+} Group_Invite_Message_Type;
 
 /* Group roles are hierarchical where each role has a set of privileges plus
  * all the privileges of the roles below it.

@@ -82,7 +82,7 @@ static void group_message_test(Tox **toxes, State *state)
     global_state_tox1 = &state[1];
 
     // tox0 makes new group.
-    Group_Chat_Self_Peer_Info self_info0;
+    struct Tox_Group_peer_info self_info0;
     self_info0.nick = "tox0";
     self_info0.nick_length = 4;
     self_info0.user_status = TOX_USER_STATUS_NONE;
@@ -100,7 +100,7 @@ static void group_message_test(Tox **toxes, State *state)
     ck_assert(err_id == TOX_ERR_GROUP_STATE_QUERIES_OK);
 
     // tox1 joins it.
-    Group_Chat_Self_Peer_Info self_info1;
+    struct Tox_Group_peer_info self_info1;
     self_info1.nick = "tox1";
     self_info1.nick_length = 4;
     self_info1.user_status = TOX_USER_STATUS_NONE;

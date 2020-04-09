@@ -184,7 +184,7 @@ START_TEST(test_text_all)
 
     /* Tox1 creates a group and is a founder of a newly created group */
     TOX_ERR_GROUP_NEW new_err;
-    Group_Chat_Self_Peer_Info *self_peer_info = tox_group_self_peer_info_new(nullptr);
+    struct Tox_Group_peer_info *self_peer_info = tox_group_group_peer_info_new(nullptr);
     self_peer_info->nick = "tox1";
     self_peer_info->nick_length = 4;
     uint32_t groupnum = tox_group_new(toxes[1], TOX_GROUP_PRIVACY_STATE_PUBLIC, (const uint8_t *)GROUP_NAME, GROUP_NAME_LEN,
@@ -210,7 +210,7 @@ START_TEST(test_text_all)
     /* All other peers join the group using the Chat ID and password */
     for (size_t i = 2; i < NUM_GROUP_TOXES; ++i) {
         TOX_ERR_GROUP_JOIN join_err;
-        Group_Chat_Self_Peer_Info *other_peer_info = tox_group_self_peer_info_new(nullptr);
+        struct Tox_Group_peer_info *other_peer_info = tox_group_group_peer_info_new(nullptr);
         char nick[5];
         int length = snprintf(nick, sizeof(nick), "tox%u", (unsigned)i);
         other_peer_info->nick = nick;
