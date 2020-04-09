@@ -114,9 +114,8 @@ static uint16_t address_checksum(const uint8_t *address, uint32_t len)
 {
     uint8_t checksum[2] = {0};
     uint16_t check;
-    uint32_t i;
 
-    for (i = 0; i < len; ++i) {
+    for (uint32_t i = 0; i < len; ++i) {
         checksum[i % 2] ^= address[i];
     }
 
@@ -2678,7 +2677,7 @@ static void try_pack_gc_data(const Messenger *m, GC_Chat *chat, Onion_Friend *on
             return;
         }
 
-        onion_friend->gc_data_length = (short)length;
+        onion_friend->gc_data_length = (int16_t)length;
 
         if (tcp_num > 0) {
             memcpy((void *)&chat->announced_node, &announce.base_announce.tcp_relays[0], sizeof(Node_format));
@@ -2696,7 +2695,7 @@ static void update_gc_friends_data(const Messenger *m)
 {
     int i;
 
-    for (i = 0; i < m->onion_c->num_friends; i++) {
+    for (i = 0; i < m->onion_c->num_friends; ++i) {
         Onion_Friend *onion_friend = &m->onion_c->friends_list[i];
 
         if (!onion_friend->gc_data_length) {
@@ -3482,9 +3481,9 @@ uint32_t count_friendlist(const Messenger *m)
     uint32_t ret = 0;
     uint32_t i;
 
-    for (i = 0; i < m->numfriends; i++) {
+    for (i = 0; i < m->numfriends; ++i) {
         if (m->friendlist[i].status > 0 && m->friendlist[i].type != CONTACT_TYPE_GC) {
-            ret++;
+            ++ret;
         }
     }
 
