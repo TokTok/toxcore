@@ -4409,6 +4409,10 @@ typedef TOX_ERR_GROUP_MOD_SET_ROLE Tox_Err_Group_Mod_Set_Role;
 typedef TOX_ERR_GROUP_MOD_REMOVE_PEER Tox_Err_Group_Mod_Remove_Peer;
 typedef TOX_ERR_GROUP_MOD_REMOVE_BAN Tox_Err_Group_Mod_Remove_Ban;
 typedef TOX_ERR_GROUP_BAN_QUERY Tox_Err_Group_Ban_Query;
+typedef TOX_ERR_GROUP_PEER_LIST_QUERY Tox_Err_Group_Peer_List_Query;
+typedef TOX_ERR_GROUP_DISCONNECT Tox_Err_Group_Disconnect;
+typedef TOX_ERR_GROUP_GROUP_PEER_INFO_NEW Tox_Err_Group_Group_Peer_Info_New;
+typedef TOX_ERR_GROUP_IS_CONNECTED Tox_Err_Group_Is_Connected;
 typedef TOX_USER_STATUS Tox_User_Status;
 typedef TOX_MESSAGE_TYPE Tox_Message_Type;
 typedef TOX_PROXY_TYPE Tox_Proxy_Type;
@@ -4421,6 +4425,7 @@ typedef TOX_GROUP_JOIN_FAIL Tox_Group_Join_Fail;
 typedef TOX_GROUP_PRIVACY_STATE Tox_Group_Privacy_State;
 typedef TOX_GROUP_MOD_EVENT Tox_Group_Mod_Event;
 typedef TOX_GROUP_ROLE Tox_Group_Role;
+typedef TOX_GROUP_BAN_TYPE Tox_Group_Ban_Type;
 
 #endif // C_TOXCORE_TOXCORE_TOX_H
 %}

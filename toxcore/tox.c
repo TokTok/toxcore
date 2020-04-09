@@ -2470,7 +2470,7 @@ uint16_t tox_self_get_tcp_port(const Tox *tox, Tox_Err_Get_Port *error)
     return 0;
 }
 
-/**************** GROUPCHAT FUNCTIONS *****************/
+/* GROUPCHAT FUNCTIONS */
 
 #ifndef VANILLA_NACL
 void tox_callback_group_invite(Tox *tox, tox_group_invite_cb *function)
@@ -2548,7 +2548,7 @@ void tox_callback_group_join_fail(Tox *tox, tox_group_join_fail_cb *function)
     tox->group_join_fail_callback = function;
 }
 
-struct Tox_Group_peer_info *tox_group_group_peer_info_new(TOX_ERR_GROUP_GROUP_PEER_INFO_NEW *error)
+struct Tox_Group_peer_info *tox_group_group_peer_info_new(Tox_Err_Group_Group_Peer_Info_New *error)
 {
     struct Tox_Group_peer_info *peer_info = (struct Tox_Group_peer_info *)calloc(1, sizeof(struct Tox_Group_peer_info));
 
@@ -2574,7 +2574,7 @@ static GC_SelfPeerInfo *create_self_peer_info(const struct Tox_Group_peer_info *
     GC_SelfPeerInfo *self_peer_info = (GC_SelfPeerInfo *)calloc(1, sizeof(GC_SelfPeerInfo));
 
     if (self_peer_info) {
-        self_peer_info->user_status = (GROUP_PEER_STATUS)peer_info->user_status;
+        self_peer_info->user_status = (Group_Peer_Status)peer_info->user_status;
         self_peer_info->nick_length = peer_info->nick_length;
         memcpy(self_peer_info->nick, peer_info->nick, peer_info->nick_length);
     }
@@ -2582,8 +2582,8 @@ static GC_SelfPeerInfo *create_self_peer_info(const struct Tox_Group_peer_info *
     return self_peer_info;
 }
 
-uint32_t tox_group_new(Tox *tox, TOX_GROUP_PRIVACY_STATE privacy_state, const uint8_t *group_name,
-                       size_t group_name_length, const struct Tox_Group_peer_info *peer_info, TOX_ERR_GROUP_NEW *error)
+uint32_t tox_group_new(Tox *tox, Tox_Group_Privacy_State privacy_state, const uint8_t *group_name,
+                       size_t group_name_length, const struct Tox_Group_peer_info *peer_info, Tox_Err_Group_New *error)
 {
     GC_SelfPeerInfo *self_peer_info = create_self_peer_info(peer_info);
     int ret = gc_group_add(tox->m->group_handler, privacy_state, group_name, group_name_length, self_peer_info);
@@ -2658,7 +2658,7 @@ uint32_t tox_group_join(Tox *tox, const uint8_t *chat_id, const uint8_t *passwor
     return UINT32_MAX;
 }
 
-bool tox_group_is_connected(Tox *tox, uint32_t group_number, TOX_ERR_GROUP_IS_CONNECTED *error)
+bool tox_group_is_connected(Tox *tox, uint32_t group_number, Tox_Err_Group_Is_Connected *error)
 {
     GC_Chat *chat = gc_get_group(tox->m->group_handler, group_number);
 
@@ -2672,7 +2672,7 @@ bool tox_group_is_connected(Tox *tox, uint32_t group_number, TOX_ERR_GROUP_IS_CO
     return chat->connection_state != CS_MANUALLY_DISCONNECTED;
 }
 
-bool tox_group_disconnect(Tox *tox, uint32_t group_number, TOX_ERR_GROUP_DISCONNECT *error)
+bool tox_group_disconnect(Tox *tox, uint32_t group_number, Tox_Err_Group_Disconnect *error)
 {
     GC_Chat *chat = gc_get_group(tox->m->group_handler, group_number);
 
@@ -2886,7 +2886,7 @@ bool tox_group_self_get_public_key(const Tox *tox, uint32_t group_number, uint8_
     return 1;
 }
 
-size_t tox_group_get_peers_list_size(const Tox *tox, uint32_t group_number, TOX_ERR_GROUP_PEER_LIST_QUERY *error)
+size_t tox_group_get_peers_list_size(const Tox *tox, uint32_t group_number, Tox_Err_Group_Peer_List_Query *error)
 {
     const GC_Chat *chat = gc_get_group(tox->m->group_handler, group_number);
 
@@ -2901,7 +2901,7 @@ size_t tox_group_get_peers_list_size(const Tox *tox, uint32_t group_number, TOX_
 }
 
 bool tox_group_get_peers_list(const Tox *tox, uint32_t group_number, uint32_t *peers_list,
-                              TOX_ERR_GROUP_PEER_LIST_QUERY *error)
+                              Tox_Err_Group_Peer_List_Query *error)
 {
     const GC_Chat *chat = gc_get_group(tox->m->group_handler, group_number);
 
@@ -3628,7 +3628,7 @@ bool tox_group_mod_remove_peer(Tox *tox, uint32_t group_number, uint32_t peer_id
 }
 
 bool tox_group_mod_ban_peer(Tox *tox, uint32_t group_number, uint32_t peer_id,
-                            TOX_GROUP_BAN_TYPE ban_type, TOX_ERR_GROUP_MOD_REMOVE_PEER *error)
+                            Tox_Group_Ban_Type ban_type, Tox_Err_Group_Mod_Remove_Peer *error)
 {
     int ret = gc_remove_peer(tox->m, group_number, peer_id, true, ban_type);
 
@@ -3741,34 +3741,34 @@ bool tox_group_ban_get_list(const Tox *tox, uint32_t group_number, uint32_t *lis
     return 1;
 }
 
-TOX_GROUP_BAN_TYPE tox_group_ban_get_type(const Tox *tox, uint32_t group_number, uint32_t ban_id,
-        TOX_ERR_GROUP_BAN_QUERY *error)
+Tox_Group_Ban_Type tox_group_ban_get_type(const Tox *tox, uint32_t group_number, uint32_t ban_id,
+        Tox_Err_Group_Ban_Query *error)
 {
     const GC_Chat *chat = gc_get_group(tox->m->group_handler, group_number);
 
     if (chat == nullptr) {
         SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_BAN_QUERY_GROUP_NOT_FOUND);
-        return (TOX_GROUP_BAN_TYPE)0;
+        return (Tox_Group_Ban_Type)0;
     }
 
     if (chat->connection_state == CS_MANUALLY_DISCONNECTED) {
         SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_BAN_QUERY_GROUP_IS_DISCONNECTED);
-        return (TOX_GROUP_BAN_TYPE)0;
+        return (Tox_Group_Ban_Type)0;
     }
 
     int ret = sanctions_list_get_ban_type(chat, ban_id);
 
     if (ret == -1) {
         SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_BAN_QUERY_BAD_ID);
-        return (TOX_GROUP_BAN_TYPE)0;
+        return (Tox_Group_Ban_Type)0;
     }
 
     SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_BAN_QUERY_OK);
-    return (TOX_GROUP_BAN_TYPE)ret;
+    return (Tox_Group_Ban_Type)ret;
 }
 
 size_t tox_group_ban_get_target_size(const Tox *tox, uint32_t group_number, uint32_t ban_id,
-                                     TOX_ERR_GROUP_BAN_QUERY *error)
+                                     Tox_Err_Group_Ban_Query *error)
 {
     const GC_Chat *chat = gc_get_group(tox->m->group_handler, group_number);
 
@@ -3794,7 +3794,7 @@ size_t tox_group_ban_get_target_size(const Tox *tox, uint32_t group_number, uint
 }
 
 bool tox_group_ban_get_target(const Tox *tox, uint32_t group_number, uint32_t ban_id, uint8_t *name,
-                              TOX_ERR_GROUP_BAN_QUERY *error)
+                              Tox_Err_Group_Ban_Query *error)
 {
     const GC_Chat *chat = gc_get_group(tox->m->group_handler, group_number);
 

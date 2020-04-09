@@ -28,20 +28,22 @@
 #define MAX_GC_SANCTIONS 200
 #define GC_SANCTIONS_CREDENTIALS_SIZE (sizeof(uint32_t) + GC_MODERATION_HASH_SIZE + SIG_PUBLIC_KEY + SIGNATURE_SIZE)
 
-typedef enum GROUP_SANCTION_TYPE {
+typedef enum Group_Sanction_Type {
     SA_BAN_IP_PORT,
     SA_BAN_PUBLIC_KEY,
     SA_BAN_NICK,
     SA_OBSERVER,
-    SA_INVALID
-} GROUP_SANCTION_TYPE;
+    SA_INVALID,
+} Group_Sanction_Type;
+
+typedef union GC_Ban_Target {
+    IP_Port ip_port;
+    uint8_t pk[ENC_PUBLIC_KEY];
+    uint8_t nick[MAX_GC_NICK_SIZE];
+} GC_Ban_Target;
 
 struct GC_Ban {
-    union {
-        IP_Port ip_port;
-        uint8_t pk[ENC_PUBLIC_KEY];
-        uint8_t nick[MAX_GC_NICK_SIZE];
-    } target;
+    GC_Ban_Target target;
 
     uint32_t    id;
 };
@@ -70,7 +72,7 @@ typedef struct GC_Sanction GC_Sanction;
 int mod_list_unpack(GC_Chat *chat, const uint8_t *data, uint32_t length, uint32_t num_mods);
 
 /* Packs moderator list into data.
- * data must have room for num_mods * GC_MOD_LIST_ENTRY_SIZE bytes.
+ * data must have room for `num_mods * GC_MOD_LIST_ENTRY_SIZE` bytes.
  */
 void mod_list_pack(const GC_Chat *chat, uint8_t *data);
 
@@ -220,7 +222,7 @@ void sanctions_list_cleanup(GC_Chat *chat);
 
 
 
-/********* Ban list queries *********/
+/* Ban list queries */
 
 
 /* Returns true if the IP address is in the ban list. */

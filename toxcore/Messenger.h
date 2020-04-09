@@ -125,11 +125,10 @@ typedef enum Userstatus {
     USERSTATUS_INVALID,
 } Userstatus;
 
-typedef enum {
+typedef enum Contact_Type {
     CONTACT_TYPE_FRIEND,
-    CONTACT_TYPE_GC
-}
-CONTACT_TYPE;
+    CONTACT_TYPE_GC,
+} Contact_Type;
 
 #define FILE_ID_LENGTH 32
 
@@ -245,7 +244,7 @@ typedef struct Friend {
     struct Receipts *receipts_start;
     struct Receipts *receipts_end;
 
-    CONTACT_TYPE type;
+    Contact_Type type;
 } Friend;
 
 struct Messenger {
@@ -592,8 +591,6 @@ void m_callback_core_connection(Messenger *m, m_self_connection_status_cb *funct
 void m_callback_conference_invite(Messenger *m, m_conference_invite_cb *function);
 
 /* Set the callback for group invites.
- *
- *  Function(Messenger *m, uint32_t friendnumber, const uint8_t *data, size_t length, void *userdata)
  */
 void m_callback_group_invite(Messenger *m, m_group_invite_cb *function, void *userdata);
 

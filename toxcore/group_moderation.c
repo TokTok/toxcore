@@ -86,7 +86,7 @@ int mod_list_unpack(GC_Chat *chat, const uint8_t *data, uint32_t length, uint32_
 }
 
 /* Packs moderator list into data.
- * data must have room for num_mods * GC_MOD_LIST_ENTRY_SIZE bytes.
+ * data must have room for `num_mods * GC_MOD_LIST_ENTRY_SIZE` bytes.
  */
 void mod_list_pack(const GC_Chat *chat, uint8_t *data)
 {
@@ -1102,7 +1102,7 @@ void sanctions_list_cleanup(GC_Chat *chat)
 }
 
 
-/********* Ban list queries *********/
+/* Ban list queries */
 
 
 /* Returns true if the IP address is in the ban list.
@@ -1190,7 +1190,7 @@ uint32_t sanctions_list_num_banned(const GC_Chat *chat)
 
     for (i = 0; i < chat->moderation.num_sanctions; ++i) {
         if (chat->moderation.sanctions[i].type <= SA_OBSERVER) {
-            count++;
+            ++count;
         }
     }
 
@@ -1238,7 +1238,8 @@ void sanctions_list_get_ban_list(const GC_Chat *chat, uint32_t *list)
 
     for (i = 0; i < chat->moderation.num_sanctions; ++i) {
         if (chat->moderation.sanctions[i].type <= SA_OBSERVER) {
-            list[count++] = chat->moderation.sanctions[i].ban_info.id;
+            list[count] = chat->moderation.sanctions[i].ban_info.id;
+            ++count;
         }
     }
 }
