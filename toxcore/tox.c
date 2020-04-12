@@ -313,12 +313,10 @@ static void tox_friend_lossy_packet_handler(Messenger *m, uint32_t friend_number
         const uint8_t *data, size_t length, void *user_data)
 {
     if (!data) {
-        // no error handling?
         return;
     }
 
     if (length < 1) {
-        // no error handling?
         return;
     }
 
@@ -336,22 +334,18 @@ static void tox_friend_lossless_packet_handler(Messenger *m, uint32_t friend_num
         const uint8_t *data, size_t length, void *user_data)
 {
     if (!data) {
-        // no error handling?
         return;
     }
 
     if (length < 1) {
-        // no error handling?
         return;
     }
 
     struct Tox_Userdata *tox_data = (struct Tox_Userdata *)user_data;
 
-    if (tox_data->tox->friend_lossless_packet_callback_per_pktid[data[0]] != nullptr) {
-        unlock(tox_data->tox);
-        tox_data->tox->friend_lossless_packet_callback_per_pktid[data[0]](tox_data->tox, friend_number, data, length,
+    if (tox_data->tox->friend_lossless_packet_callback_per_pktid[packet_id] != nullptr) {
+        tox_data->tox->friend_lossless_packet_callback_per_pktid[packet_id](tox_data->tox, friend_number, data, length,
                 tox_data->user_data);
-        lock(tox_data->tox);
     }
 }
 
@@ -2233,15 +2227,12 @@ void tox_callback_friend_lossy_packet(Tox *tox, tox_friend_lossy_packet_cb *call
 
 void tox_callback_friend_lossy_packet_per_pktid(Tox *tox, tox_friend_lossy_packet_cb *callback, uint8_t pktid)
 {
-    // no error code returned in this function?
-
     if (callback != nullptr) {
         if ((pktid >= PACKET_ID_RANGE_LOSSY_START) && (pktid <= PACKET_ID_RANGE_LOSSY_END)) {
             tox->friend_lossy_packet_callback_per_pktid[pktid] = callback;
         }
-    } else { // callback == nullptr
+    } else {
         if ((pktid >= PACKET_ID_RANGE_LOSSY_START) && (pktid <= PACKET_ID_RANGE_LOSSY_END)) {
-            // want to UNset the callback
             tox->friend_lossy_packet_callback_per_pktid[pktid] = nullptr;
         }
     }
@@ -2282,21 +2273,10 @@ void tox_callback_friend_lossless_packet(Tox *tox, tox_friend_lossless_packet_cb
 
 void tox_callback_friend_lossless_packet_per_pktid(Tox *tox, tox_friend_lossless_packet_cb *callback, uint8_t pktid)
 {
-    // no error code returned in this function?
-
-    if (callback != nullptr) {
-        if ((pktid >= PACKET_ID_RANGE_LOSSLESS_CUSTOM_START) && (pktid <= PACKET_ID_RANGE_LOSSLESS_CUSTOM_END)) {
-            tox->friend_lossless_packet_callback_per_pktid[pktid] = callback;
-        } else if (pktid == PACKET_ID_MSI) {
-            tox->friend_lossless_packet_callback_per_pktid[pktid] = callback;
-        }
-    } else { // callback == nullptr
-        if ((pktid >= PACKET_ID_RANGE_LOSSLESS_CUSTOM_START) && (pktid <= PACKET_ID_RANGE_LOSSLESS_CUSTOM_END)) {
-            // want to UNset the callback
-            tox->friend_lossless_packet_callback_per_pktid[pktid] = nullptr;
-        } else if (pktid == PACKET_ID_MSI) {
-            tox->friend_lossless_packet_callback_per_pktid[pktid] = nullptr;
-        }
+    if ((pktid >= PACKET_ID_RANGE_LOSSLESS_CUSTOM_START) && (pktid <= PACKET_ID_RANGE_LOSSLESS_CUSTOM_END)) {
+        tox->friend_lossless_packet_callback_per_pktid[pktid] = callback;
+    } else if (pktid == PACKET_ID_MSI) {
+        tox->friend_lossless_packet_callback_per_pktid[pktid] = callback;
     }
 }
 
