@@ -317,11 +317,9 @@ static void tox_friend_lossy_packet_handler(Messenger *m, uint32_t friend_number
 
     struct Tox_Userdata *tox_data = (struct Tox_Userdata *)user_data;
 
-    if (tox_data->tox->friend_lossy_packet_callback_per_pktid[data[0]] != nullptr) {
-        unlock(tox_data->tox);
-        tox_data->tox->friend_lossy_packet_callback_per_pktid[data[0]](tox_data->tox, friend_number, data, length,
+    if (tox_data->tox->friend_lossy_packet_callback_per_pktid[packet_id] != nullptr) {
+        tox_data->tox->friend_lossy_packet_callback_per_pktid[packet_id](tox_data->tox, friend_number, data, length,
                 tox_data->user_data);
-        lock(tox_data->tox);
     }
 }
 
