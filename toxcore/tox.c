@@ -2290,11 +2290,12 @@ void tox_set_av_object(Tox *tox, void *object)
     unlock(tox);
 }
 
-void tox_get_av_object(const Tox *tox, void **object)
+void *tox_get_av_object(const Tox *tox)
 {
     lock(tox);
-    *object = tox->toxav_object;
+    void *object = tox->toxav_object;
     unlock(tox);
+    return object;
 }
 
 uint16_t tox_self_get_udp_port(const Tox *tox, Tox_Err_Get_Port *error)
