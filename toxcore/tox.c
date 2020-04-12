@@ -2267,9 +2267,9 @@ void tox_callback_friend_lossless_packet(Tox *tox, tox_friend_lossless_packet_cb
 
 void tox_callback_friend_lossless_packet_per_pktid(Tox *tox, tox_friend_lossless_packet_cb *callback, uint8_t pktid)
 {
-    if ((pktid >= PACKET_ID_RANGE_LOSSLESS_CUSTOM_START) && (pktid <= PACKET_ID_RANGE_LOSSLESS_CUSTOM_END)) {
-        tox->friend_lossless_packet_callback_per_pktid[pktid] = callback;
-    } else if (pktid == PACKET_ID_MSI) {
+    if (((pktid >= PACKET_ID_RANGE_LOSSLESS_CUSTOM_START) && (pktid <= PACKET_ID_RANGE_LOSSLESS_CUSTOM_END))
+            ||
+            (pktid == PACKET_ID_MSI)) {
         tox->friend_lossless_packet_callback_per_pktid[pktid] = callback;
     }
 }
