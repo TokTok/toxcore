@@ -2227,14 +2227,8 @@ void tox_callback_friend_lossy_packet(Tox *tox, tox_friend_lossy_packet_cb *call
 
 void tox_callback_friend_lossy_packet_per_pktid(Tox *tox, tox_friend_lossy_packet_cb *callback, uint8_t pktid)
 {
-    if (callback != nullptr) {
-        if ((pktid >= PACKET_ID_RANGE_LOSSY_START) && (pktid <= PACKET_ID_RANGE_LOSSY_END)) {
-            tox->friend_lossy_packet_callback_per_pktid[pktid] = callback;
-        }
-    } else {
-        if ((pktid >= PACKET_ID_RANGE_LOSSY_START) && (pktid <= PACKET_ID_RANGE_LOSSY_END)) {
-            tox->friend_lossy_packet_callback_per_pktid[pktid] = nullptr;
-        }
+    if ((pktid >= PACKET_ID_RANGE_LOSSY_START) && (pktid <= PACKET_ID_RANGE_LOSSY_END)) {
+        tox->friend_lossy_packet_callback_per_pktid[pktid] = callback;
     }
 }
 
