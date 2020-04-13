@@ -2207,7 +2207,7 @@ bool tox_friend_send_lossy_packet(Tox *tox, uint32_t friend_number, const uint8_
 
 void tox_callback_friend_lossy_packet(Tox *tox, tox_friend_lossy_packet_cb *callback)
 {
-    /** start at PACKET_ID_RANGE_LOSSY_CUSTOM_START so ToxAV Packets are excluded if the old setter function is used */
+    /* start at PACKET_ID_RANGE_LOSSY_CUSTOM_START so ToxAV Packets are excluded */
     for (uint8_t i = PACKET_ID_RANGE_LOSSY_CUSTOM_START; i <= PACKET_ID_RANGE_LOSSY_END; ++i) {
         tox->friend_lossy_packet_callback_per_pktid[i] = callback;
     }
