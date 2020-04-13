@@ -70,15 +70,16 @@ enum {
  */
 int ipport_self_copy(const DHT *dht, IP_Port *dest)
 {
-    for (size_t i = 0; i < LCLIENT_LIST; i++) {
-        const IP_Port *ip_port4 = &dht_get_close_client(dht, i)->assoc4.ret_ip_port;
+    for (size_t i = 0; i < LCLIENT_LIST; ++i) {
+        const Client_data *const client = dht_get_close_client(dht, i);
+        const IP_Port *const ip_port4 = &client->assoc4.ret_ip_port;
 
         if (ipport_isset(ip_port4)) {
             ipport_copy(dest, ip_port4);
             break;
         }
 
-        const IP_Port *ip_port6 = &dht_get_close_client(dht, i)->assoc6.ret_ip_port;
+        const IP_Port *const ip_port6 = &client->assoc6.ret_ip_port;
 
         if (ipport_isset(ip_port6)) {
             ipport_copy(dest, ip_port6);
@@ -283,7 +284,7 @@ static int dispatch_packet_announce_request(GC_Announce *announce, const uint8_t
     uint16_t sent = 0;
 
     /* Relay announce request to all nclosest nodes */
-    for (i = 0; i < nclosest; i++) {
+    for (i = 0; i < nclosest; ++i) {
         if (origin_pk && id_equal(origin_pk, dht_nodes[i].public_key)) {
             continue;
         }
@@ -337,7 +338,7 @@ static int dispatch_packet_get_nodes_request(GC_Announce *announce, const uint8_
     uint32_t i;
     uint16_t sent = 0;
 
-    for (i = 0; i < nclosest; i++) {
+    for (i = 0; i < nclosest; ++i) {
         if (!self) {
             if (origin_pk && id_equal(origin_pk, dht_nodes[i].public_key)) {
                 continue;
@@ -396,12 +397,12 @@ static int add_requested_gc_nodes(GC_Announce *announce, const GC_Announce_Node 
     size_t i;
     uint32_t j;
 
-    for (i = 0; i < MAX_GCA_SELF_REQUESTS; i++) {
+    for (i = 0; i < MAX_GCA_SELF_REQUESTS; ++i) {
         if (announce->requests[i].req_id != req_id) {
             continue;
         }
 
-        for (j = 0; j < nodes_num && j < MAX_GCA_SENT_NODES; j++) {
+        for (j = 0; j < nodes_num && j < MAX_GCA_SENT_NODES; ++j) {
             if (ipport_isset(&node[j].ip_port)
                     && !id_equal(announce->requests[i].self_public_key, node[j].public_key)) {
                 memcpy(announce->requests[i].nodes[j].public_key, node[j].public_key, ENC_PUBLIC_KEY);
@@ -471,7 +472,7 @@ static uint32_t get_gc_announced_nodes(GC_Announce *announce, const uint8_t *cha
     size_t i;
     uint32_t num = 0;
 
-    for (i = 0; i < MAX_GCA_ANNOUNCED_NODES; i++) {
+    for (i = 0; i < MAX_GCA_ANNOUNCED_NODES; ++i) {
         if (!ipport_isset(&announce->announcements[i].node.ip_port)) {
             continue;
         }
@@ -821,7 +822,7 @@ static int handle_gca_get_nodes_response(void *object, IP_Port ipp, const uint8_
     int plain_length = 0;
     size_t i;
 
-    for (i = 0; i < MAX_GCA_SELF_REQUESTS; i++) {
+    for (i = 0; i < MAX_GCA_SELF_REQUESTS; ++i) {
         if (announce->requests[i].req_id == request_id) {
             plain_length = unwrap_gca_packet(announce->requests[i].self_public_key,
                                              announce->requests[i].self_secret_key,
@@ -874,7 +875,7 @@ size_t gca_get_requested_nodes(GC_Announce *announce, const uint8_t *chat_id, GC
 {
     size_t i, j, k = 0;
 
-    for (i = 0; i < MAX_GCA_SELF_REQUESTS; i++) {
+    for (i = 0; i < MAX_GCA_SELF_REQUESTS; ++i) {
         if (!(announce->requests[i].ready == 1 && announce->requests[i].req_id != 0)) {
             continue;
         }
@@ -883,7 +884,7 @@ size_t gca_get_requested_nodes(GC_Announce *announce, const uint8_t *chat_id, GC
             continue;
         }
 
-        for (j = 0; j < MAX_GCA_SENT_NODES; j++) {
+        for (j = 0; j < MAX_GCA_SENT_NODES; ++j) {
             if (ipport_isset(&announce->requests[i].nodes[j].ip_port)) {
                 memcpy(nodes[k].public_key, announce->requests[i].nodes[j].public_key, ENC_PUBLIC_KEY);
                 ipport_copy(&nodes[k].ip_port, &announce->requests[i].nodes[j].ip_port);
@@ -1100,7 +1101,7 @@ static void check_gca_node_timeouts(GC_Announce *announce)
 {
     size_t i;
 
-    for (i = 0; i < MAX_GCA_ANNOUNCED_NODES; i++) {
+    for (i = 0; i < MAX_GCA_ANNOUNCED_NODES; ++i) {
         if (!ipport_isset(&announce->announcements[i].node.ip_port)) {
             continue;
         }

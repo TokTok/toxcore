@@ -31,7 +31,7 @@ typedef struct GC_Announce GC_Announce;
 #define MAX_GCA_SELF_ANNOUNCEMENTS 30
 #define MAX_GCA_SENT_NODES 4
 
-typedef struct {
+typedef struct GC_Announce_Node {
     uint8_t public_key[ENC_PUBLIC_KEY];
     IP_Port ip_port;
 } GC_Announce_Node;
@@ -69,10 +69,12 @@ struct GC_AnnouncedSelf {
     bool is_set;
 };
 
+typedef void update_addresses_cb(GC_Announce *announce, const uint8_t *chat_id, void *user_data);
+
 struct GC_Announce {
     Mono_Time *mono_time;
     DHT *dht;
-    void (*update_addresses)(GC_Announce *, const uint8_t *, void *);
+    update_addresses_cb *update_addresses;
     void *update_addresses_obj;
 
     struct GC_AnnouncedNode announcements[MAX_GCA_ANNOUNCED_NODES];

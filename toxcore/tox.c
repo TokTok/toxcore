@@ -780,21 +780,21 @@ Tox *tox_new(const struct Tox_Options *options, Tox_Err_New *error)
     custom_lossless_packet_registerhandler(tox->m, tox_friend_lossless_packet_handler);
 
 #ifndef VANILLA_NACL
-    m_callback_group_invite(m, tox_group_invite_handler, tox);
-    gc_callback_message(m, tox_group_message_handler, tox);
-    gc_callback_private_message(m, tox_group_private_message_handler, tox);
-    gc_callback_custom_packet(m, tox_group_custom_packet_handler, tox);
-    gc_callback_moderation(m, tox_group_moderation_handler, tox);
-    gc_callback_nick_change(m, tox_group_peer_name_handler, tox);
-    gc_callback_status_change(m, tox_group_peer_status_handler, tox);
-    gc_callback_topic_change(m, tox_group_topic_handler, tox);
-    gc_callback_privacy_state(m, tox_group_privacy_state_handler, tox);
-    gc_callback_peer_limit(m, tox_group_peer_limit_handler, tox);
-    gc_callback_password(m, tox_group_password_handler, tox);
-    gc_callback_peer_join(m, tox_group_peer_join_handler, tox);
-    gc_callback_peer_exit(m, tox_group_peer_exit_handler, tox);
-    gc_callback_self_join(m, tox_group_self_join_handler, tox);
-    gc_callback_rejected(m, tox_group_join_fail_handler, tox);
+    m_callback_group_invite(tox->m, tox_group_invite_handler, tox);
+    gc_callback_message(tox->m, tox_group_message_handler, tox);
+    gc_callback_private_message(tox->m, tox_group_private_message_handler, tox);
+    gc_callback_custom_packet(tox->m, tox_group_custom_packet_handler, tox);
+    gc_callback_moderation(tox->m, tox_group_moderation_handler, tox);
+    gc_callback_nick_change(tox->m, tox_group_peer_name_handler, tox);
+    gc_callback_status_change(tox->m, tox_group_peer_status_handler, tox);
+    gc_callback_topic_change(tox->m, tox_group_topic_handler, tox);
+    gc_callback_privacy_state(tox->m, tox_group_privacy_state_handler, tox);
+    gc_callback_peer_limit(tox->m, tox_group_peer_limit_handler, tox);
+    gc_callback_password(tox->m, tox_group_password_handler, tox);
+    gc_callback_peer_join(tox->m, tox_group_peer_join_handler, tox);
+    gc_callback_peer_exit(tox->m, tox_group_peer_exit_handler, tox);
+    gc_callback_self_join(tox->m, tox_group_self_join_handler, tox);
+    gc_callback_rejected(tox->m, tox_group_join_fail_handler, tox);
 #endif
 
     tox_options_free(default_options);
@@ -1001,8 +1001,8 @@ void tox_iterate(Tox *tox, void *user_data)
 
     struct Tox_Userdata tox_data = { tox, user_data };
     tox->non_const_user_data = user_data;
-    do_messenger(m, &tox_data);
-    do_groupchats(m->conferences_object, &tox_data);
+    do_messenger(tox->m, &tox_data);
+    do_groupchats(tox->m->conferences_object, &tox_data);
 
     unlock(tox);
 }
@@ -2469,7 +2469,7 @@ uint16_t tox_self_get_tcp_port(const Tox *tox, Tox_Err_Get_Port *error)
     return 0;
 }
 
-/**************** GROUPCHAT FUNCTIONS *****************/
+/* GROUPCHAT FUNCTIONS */
 
 #ifndef VANILLA_NACL
 void tox_callback_group_invite(Tox *tox, tox_group_invite_cb *function, void *userdata)
