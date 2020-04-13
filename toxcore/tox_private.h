@@ -16,14 +16,14 @@ extern "C" {
 
 /**
  * Set the callback for the `friend_lossy_packet` event for a specific packet ID.
- * to Pass NULL to unset.
+ * Pass NULL to unset.
  *
  */
 void tox_callback_friend_lossy_packet_per_pktid(Tox *tox, tox_friend_lossy_packet_cb *callback, uint8_t pktid);
 
 /**
  * Set the callback for the `friend_lossless_packet` event for a specific packet ID.
- * to Pass NULL to unset.
+ * Pass NULL to unset.
  *
  */
 void tox_callback_friend_lossless_packet_per_pktid(Tox *tox, tox_friend_lossless_packet_cb *callback, uint8_t pktid);
