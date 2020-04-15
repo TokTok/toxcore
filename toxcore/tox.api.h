@@ -2668,7 +2668,7 @@ namespace friend {
     FRIEND_NOT_CONNECTED,
     /**
      * The first byte of data was not in the specified range for the packet type.
-     * This range is 200-254 for lossy, and 160-191 for lossless packets.
+     * This range is 200-254 for lossy, and (160-191 or 69) for lossless packets.
      */
     INVALID,
     /**
