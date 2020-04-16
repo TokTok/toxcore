@@ -1890,7 +1890,7 @@ int send_custom_lossless_packet(const Messenger *m, int32_t friendnumber, const 
     }
 
     if ((data[0] < PACKET_ID_RANGE_LOSSLESS_CUSTOM_START || data[0] > PACKET_ID_RANGE_LOSSLESS_CUSTOM_END)
-            && (data[0] != PACKET_ID_MSI)) {
+            && data[0] != PACKET_ID_MSI) {
         return -3;
     }
 
