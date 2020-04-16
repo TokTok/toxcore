@@ -10,8 +10,32 @@
 #define C_TOXCORE_TOXCORE_LOGGER_H
 
 #include <stdint.h>
+#include <stdarg.h>
+#include <pthread.h>
 
 #include "ccompat.h"
+
+/* TODO: Zoff remove me after ToxAV restruct */
+#undef USE_STDERR_LOGGER
+#define USE_STDERR_LOGGER 1
+/* TODO: Zoff remove me after ToxAV restruct */
+
+
+/*
+ * hook mutex function so we can nicely log them (to the NULL logger!)
+ */
+/* #define LOG_ALL_MUTEX_LOCK_UNLOCK_CALLS 1 */
+
+#ifdef LOG_ALL_MUTEX_LOCK_UNLOCK_CALLS
+#define pthread_mutex_lock(MTX) my_pthread_mutex_lock(MTX, #MTX, __FILE__, __LINE__, __func__)
+#define pthread_mutex_unlock(MTX) my_pthread_mutex_unlock(MTX, #MTX, __FILE__, __LINE__, __func__)
+#endif
+
+int my_pthread_mutex_lock(pthread_mutex_t *mutex, const char *mutex_name, const char *file, int line, const char *func);
+int my_pthread_mutex_unlock(pthread_mutex_t *mutex, const char *mutex_name, const char *file, int line,
+                            const char *func);
+
+
 
 #ifndef MIN_LOGGER_LEVEL
 #define MIN_LOGGER_LEVEL LOGGER_LEVEL_INFO
@@ -60,6 +84,40 @@ void logger_callback_log(Logger *log, logger_cb *function, void *context, void *
 void logger_write(
     const Logger *log, Logger_Level level, const char *file, int line, const char *func,
     const char *format, ...) GNU_PRINTF(6, 7);
+
+void logger_api_write(const Logger *log, Logger_Level level, const char *file, int line, const char *func,
+                      const char *format, va_list args) GNU_PRINTF(6, 0);
+
+
+/**
+ * ==================================================================================================
+ * toxcore public api call to logger, used by ToxAV
+ */
+#ifndef TOX_DEFINED
+#define TOX_DEFINED
+typedef struct Tox Tox;
+#endif /* TOX_DEFINED */
+
+void tox_logmsg(const Tox *tox, Logger_Level level, const char *file, int line, const char *func, const char *fmt,
+                ...) GNU_PRINTF(6, 7);
+
+#define LOGGER_API_TRACE(tox, ...)   LOGGER_API_WRITE(tox, LOGGER_LEVEL_TRACE  , __VA_ARGS__)
+#define LOGGER_API_DEBUG(tox, ...)   LOGGER_API_WRITE(tox, LOGGER_LEVEL_DEBUG  , __VA_ARGS__)
+#define LOGGER_API_INFO(tox, ...)    LOGGER_API_WRITE(tox, LOGGER_LEVEL_INFO   , __VA_ARGS__)
+#define LOGGER_API_WARNING(tox, ...) LOGGER_API_WRITE(tox, LOGGER_LEVEL_WARNING, __VA_ARGS__)
+#define LOGGER_API_ERROR(tox, ...)   LOGGER_API_WRITE(tox, LOGGER_LEVEL_ERROR  , __VA_ARGS__)
+
+#define LOGGER_API_WRITE(tox, level, ...) \
+    do { \
+        if (level >= MIN_LOGGER_LEVEL) { \
+            tox_logmsg(tox, level, __FILE__, __LINE__, __func__, __VA_ARGS__); \
+        } \
+    } while (0)
+
+/**
+ * ==================================================================================================
+ */
+
 
 
 #define LOGGER_WRITE(log, level, ...) \

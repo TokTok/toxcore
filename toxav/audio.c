@@ -15,6 +15,21 @@
 
 #include "../toxcore/logger.h"
 #include "../toxcore/mono_time.h"
+#include "../toxcore/network.h"
+
+/*
+ * Zoff: disable logging in ToxAV for now
+ */
+#undef LOGGER_DEBUG
+#define LOGGER_DEBUG(log, ...) dummy3()
+#undef LOGGER_ERROR
+#define LOGGER_ERROR(log, ...) dummy3()
+#undef LOGGER_WARNING
+#define LOGGER_WARNING(log, ...) dummy3()
+
+static void dummy3()
+{
+}
 
 static struct JitterBuffer *jbuf_new(uint32_t capacity);
 static void jbuf_clear(struct JitterBuffer *q);
@@ -286,6 +301,7 @@ static struct JitterBuffer *jbuf_new(uint32_t capacity)
     q->capacity = capacity;
     return q;
 }
+
 static void jbuf_clear(struct JitterBuffer *q)
 {
     for (; q->bottom != q->top; ++q->bottom) {
@@ -295,6 +311,7 @@ static void jbuf_clear(struct JitterBuffer *q)
         }
     }
 }
+
 static void jbuf_free(struct JitterBuffer *q)
 {
     if (!q) {
@@ -305,6 +322,11 @@ static void jbuf_free(struct JitterBuffer *q)
     free(q->queue);
     free(q);
 }
+
+/*
+ * if -1 is returned the RTPMessage m needs to be free'd by the caller
+ * if  0 is returned the RTPMessage m is stored in the ringbuffer and must NOT be freed by the caller
+ */
 static int jbuf_write(const Logger *log, struct JitterBuffer *q, struct RTPMessage *m)
 {
     uint16_t sequnum = m->header.sequnum;
@@ -333,6 +355,7 @@ static int jbuf_write(const Logger *log, struct JitterBuffer *q, struct RTPMessa
 
     return 0;
 }
+
 static struct RTPMessage *jbuf_read(struct JitterBuffer *q, int32_t *success)
 {
     if (q->top == q->bottom) {
@@ -359,6 +382,7 @@ static struct RTPMessage *jbuf_read(struct JitterBuffer *q, int32_t *success)
     *success = 0;
     return nullptr;
 }
+
 static OpusEncoder *create_audio_encoder(const Logger *log, int32_t bit_rate, int32_t sampling_rate,
         int32_t channel_count)
 {
