@@ -25,12 +25,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-/*
- * Zoff: disable logging in ToxAV for now
- */
-
-#include <stdio.h>
-
 // TODO(zoff99): don't hardcode this, let the application choose it
 // VPX Info: Time to spend encoding, in microseconds (it's a *soft* deadline)
 #define WANTED_MAX_ENCODER_FPS (40)
@@ -1419,7 +1413,7 @@ static bool call_prepare_transmission(ToxAVCall *call)
     call->bwc = bwc_new(av->tox, call->friend_number, callback_bwc, call, av->toxav_mono_time);
 
     { /* Prepare audio */
-        call->audio = ac_new(av->toxav_mono_time, nullptr, av, call->friend_number, av->acb, av->acb_user_data);
+        call->audio = ac_new(av->toxav_mono_time, av->tox, av, call->friend_number, av->acb, av->acb_user_data);
 
         if (!call->audio) {
             LOGGER_API_ERROR(av->tox, "Failed to create audio codec session");
@@ -1435,7 +1429,7 @@ static bool call_prepare_transmission(ToxAVCall *call)
         }
     }
     { /* Prepare video */
-        call->video = vc_new(av->toxav_mono_time, nullptr, av, call->friend_number, av->vcb, av->vcb_user_data);
+        call->video = vc_new(av->toxav_mono_time, av->tox, av, call->friend_number, av->vcb, av->vcb_user_data);
 
         if (!call->video) {
             LOGGER_API_ERROR(av->tox, "Failed to create video codec session");

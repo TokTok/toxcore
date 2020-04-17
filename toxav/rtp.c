@@ -21,11 +21,6 @@
 #include "../toxcore/net_crypto.h"
 #include "../toxcore/tox_private.h"
 
-/*
- * Zoff: disable logging in ToxAV for now
- */
-#include <stdio.h>
-
 Mono_Time *toxav_get_av_mono_time(ToxAV *toxav);
 int rtp_send_custom_lossy_packet(Tox *tox, int32_t friendnumber, const uint8_t *data, uint32_t length);
 

@@ -21,11 +21,6 @@
 
 #define MSI_MAXMSG_SIZE 256
 
-/*
- * Zoff: disable logging in ToxAV for now
- */
-#include <stdio.h>
-
 /**
  * Protocol:
  *
