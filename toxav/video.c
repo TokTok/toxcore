@@ -249,6 +249,7 @@ VCSession *vc_new(Mono_Time *mono_time, Tox *tox, ToxAV *av, uint32_t friend_num
         vpx_codec_destroy(vc->encoder);
         goto BASE_CLEANUP_1;
     }
+
 #endif
 
     vc->linfts = current_time_monotonic(mono_time);
