@@ -272,14 +272,14 @@ START_TEST(test_text_all)
         c_sleep(20);
     }
 
-    for (i = 0; i < NUM_GROUP_TOXES; ++i) {
+    for (size_t i = 0; i < NUM_GROUP_TOXES; ++i) {
         TOX_ERR_GROUP_LEAVE err_exit;
         tox_group_leave(toxes[i], groupnum, nullptr, 0, &err_exit);
         // TODO(JFreegman): Fix?
         // ck_assert(err_exit == TOX_ERR_GROUP_LEAVE_OK);
     }
 
-    for (i = 0; i < NUM_GROUP_TOXES; ++i) {
+    for (size_t i = 0; i < NUM_GROUP_TOXES; ++i) {
         tox_kill(toxes[i]);
     }
 
