@@ -169,13 +169,8 @@ long syscall(long number, ...);
 
 int my_pthread_mutex_lock(pthread_mutex_t *mutex, const char *mutex_name, const char *file, int line, const char *func)
 {
-#if defined(__linux__)
-    int32_t cur_pthread_tid = (int32_t)gettid();
-#else
-    pthread_t cur_pthread_tid = pthread_self();
-#endif
-
 #if !(defined(_WIN32) || defined(__WIN32__) || defined(WIN32))
+    pthread_t cur_pthread_tid = pthread_self();
     logger_write(NULL, LOGGER_LEVEL_DEBUG, file, line, func, "TID:%d:MTX_LOCK:S:%s:m=%p", (int32_t)cur_pthread_tid,
                  mutex_name, (void *)mutex);
 #endif
@@ -190,12 +185,8 @@ int my_pthread_mutex_lock(pthread_mutex_t *mutex, const char *mutex_name, const 
 int my_pthread_mutex_unlock(pthread_mutex_t *mutex, const char *mutex_name, const char *file, int line,
                             const char *func)
 {
-#if defined(__linux__)
-    int32_t cur_pthread_tid = (int32_t)gettid();
-#else
-    pthread_t cur_pthread_tid = pthread_self();
-#endif
 #if !(defined(_WIN32) || defined(__WIN32__) || defined(WIN32))
+    pthread_t cur_pthread_tid = pthread_self();
     logger_write(NULL, LOGGER_LEVEL_DEBUG, file, line, func, "TID:%d:MTX_unLOCK:S:%s:m=%p", (int32_t)cur_pthread_tid,
                  mutex_name, (void *)mutex);
 #endif
