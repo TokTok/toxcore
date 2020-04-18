@@ -160,12 +160,6 @@ void logger_api_write(const Logger *log, Logger_Level level, const char *file, i
 /*
  * hook mutex function so we can nicely log them (to the NULL logger!)
  */
-#if defined(__linux__)
-#include <unistd.h>
-#include <sys/syscall.h>
-long syscall(long number, ...);
-#define gettid() syscall(SYS_gettid)
-#endif
 
 int my_pthread_mutex_lock(pthread_mutex_t *mutex, const char *mutex_name, const char *file, int line, const char *func)
 {
