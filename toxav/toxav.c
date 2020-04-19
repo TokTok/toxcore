@@ -7,6 +7,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "toxav.h"
+#include "toxav_hacks.h"
 #include "../toxcore/tox.h"
 #include "../toxcore/tox_private.h"
 
