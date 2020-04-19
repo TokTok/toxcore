@@ -7,6 +7,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "msi.h"
+#include "toxav_hacks.h"
 
 #include "../toxcore/tox.h"
 #include "../toxcore/tox_private.h"
@@ -868,9 +869,6 @@ static void handle_pop(MSICall *call, const MSIMessage *msg)
 
     kill_call(call);
 }
-
-/* !!hack!! */
-MSISession *tox_av_msi_get(void *av);
 
 static void handle_msi_packet(Tox *tox, uint32_t friend_number, const uint8_t *data, size_t length2, void *object)
 {

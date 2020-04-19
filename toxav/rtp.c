@@ -7,6 +7,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "rtp.h"
+#include "toxav_hacks.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -455,11 +456,6 @@ static int handle_video_packet(RTPSession *session, const struct RTPHeader *head
 
     return 0;
 }
-
-/* !!hack!! TODO:fix me */
-void *call_get(void *av, uint32_t friend_number);
-RTPSession *rtp_session_get(void *call, int payload_type);
-/* !!hack!! TODO:fix me */
 
 /**
  * receive custom lossypackets and process them. they can be incoming audio or video packets

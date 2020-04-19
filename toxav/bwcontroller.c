@@ -7,6 +7,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "bwcontroller.h"
+#include "toxav_hacks.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -182,11 +183,6 @@ static int on_update(BWController *bwc, const struct BWCMessage *msg)
 
     return 0;
 }
-
-/* !!hack!! TODO:fix me */
-void *call_get(void *av, uint32_t friend_number);
-BWController *bwc_controller_get(void *call);
-/* !!hack!! TODO:fix me */
 
 static void bwc_handle_data(Tox *tox, uint32_t friendnumber, const uint8_t *data, size_t length, void *dummy)
 {
