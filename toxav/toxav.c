@@ -124,7 +124,6 @@ static void call_kill_transmission(ToxAVCall *call);
 
 MSISession *tox_av_msi_get(ToxAV *av);
 int toxav_friend_exists(const Tox *tox, int32_t friendnumber);
-Mono_Time *toxav_get_av_mono_time(ToxAV *toxav);
 ToxAVCall *call_get(ToxAV *av, uint32_t friend_number);
 RTPSession *rtp_session_get(void *call, int payload_type);
 BWController *bwc_controller_get(void *call);

@@ -13,5 +13,6 @@ void *call_get(void *av, uint32_t friend_number);
 RTPSession *rtp_session_get(void *call, int payload_type);
 MSISession *tox_av_msi_get(void *av);
 BWController *bwc_controller_get(void *call);
+Mono_Time *toxav_get_av_mono_time(ToxAV *toxav);
 
 #endif // C_TOXCORE_TOXAV_HACKS_H
