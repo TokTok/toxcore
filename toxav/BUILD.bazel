@@ -43,8 +43,10 @@ cc_library(
     name = "bwcontroller",
     srcs = ["bwcontroller.c"],
     hdrs = [
-         "bwcontroller.h",
          "toxav_hacks.h",
+         "bwcontroller.h",
+         "msi.h",
+         "rtp.h",
     ],
     deps = [
         ":ring_buffer",
@@ -59,6 +61,8 @@ cc_library(
     hdrs = [
         "rtp.h",
         "toxav_hacks.h",
+        "bwcontroller.h",
+        "msi.h",
     ],
     deps = [":bwcontroller"],
 )
@@ -96,6 +100,8 @@ cc_library(
         "msi.h",
         "video.h",
         "toxav_hacks.h",
+        "bwcontroller.h",
+        "rtp.h",
     ],
     deps = [
         ":audio",
