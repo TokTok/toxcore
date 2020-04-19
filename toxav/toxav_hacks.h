@@ -9,9 +9,14 @@
 #include "msi.h"
 #include "rtp.h"
 
-void *call_get(void *av, uint32_t friend_number);
+#ifndef TOXAV_CALL_DEFINED
+#define TOXAV_CALL_DEFINED
+typedef struct ToxAVCall ToxAVCall;
+#endif /* TOXAV_CALL_DEFINED */
+
+ToxAVCall *call_get(ToxAV *av, uint32_t friend_number);
 RTPSession *rtp_session_get(void *call, int payload_type);
-MSISession *tox_av_msi_get(void *av);
+MSISession *tox_av_msi_get(ToxAV *av);
 BWController *bwc_controller_get(void *call);
 Mono_Time *toxav_get_av_mono_time(ToxAV *toxav);
 

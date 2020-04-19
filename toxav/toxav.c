@@ -7,7 +7,6 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "toxav.h"
-#include "toxav_hacks.h"
 #include "../toxcore/tox.h"
 #include "../toxcore/tox_private.h"
 
@@ -39,6 +38,9 @@ VPX_DL_GOOD_QUALITY   (1000000) deadline parameter analogous to VPx GOOD QUALITY
 VPX_DL_BEST_QUALITY   (0)       deadline parameter analogous to VPx BEST QUALITY mode.
 */
 
+
+#ifndef TOXAV_CALL_DEFINED
+#define TOXAV_CALL_DEFINED
 typedef struct ToxAVCall_s {
     ToxAV *av;
 
@@ -67,6 +69,9 @@ typedef struct ToxAVCall_s {
     struct ToxAVCall_s *prev;
     struct ToxAVCall_s *next;
 } ToxAVCall;
+#endif /* TOXAV_CALL_DEFINED */
+
+#include "toxav_hacks.h"
 
 struct ToxAV {
     Tox *tox;

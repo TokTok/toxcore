@@ -469,7 +469,7 @@ void handle_rtp_packet(Tox *tox, uint32_t friendnumber, const uint8_t *data, siz
         return;
     }
 
-    void *toxav = tox_get_av_object(tox);
+    ToxAV *toxav = (ToxAV *)tox_get_av_object(tox);
 
     if (!toxav) {
         return;

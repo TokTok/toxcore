@@ -191,7 +191,7 @@ static void bwc_handle_data(Tox *tox, uint32_t friendnumber, const uint8_t *data
     }
 
     /* get BWController object from Tox and friend number */
-    void *toxav = tox_get_av_object(tox);
+    ToxAV *toxav = (ToxAV *)tox_get_av_object(tox);
 
     if (!toxav) {
         return;
