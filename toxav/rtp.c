@@ -22,7 +22,7 @@
 #include "../toxcore/net_crypto.h"
 #include "../toxcore/tox_private.h"
 
-int rtp_send_custom_lossy_packet(Tox *tox, int32_t friendnumber, const uint8_t *data, uint32_t length);
+static int rtp_send_custom_lossy_packet(Tox *tox, int32_t friendnumber, const uint8_t *data, uint32_t length);
 
 /**
  * The number of milliseconds we want to keep a keyframe in the buffer for,
