@@ -171,32 +171,25 @@ bool check_peer_offline_status(Tox *tox, MSISession *session, uint32_t friend_nu
         return false;
     }
 
-    TOX_ERR_FRIEND_QUERY f_con_query_error;
-    TOX_CONNECTION f_conn_status = tox_friend_get_connection_status(tox, friend_number, &f_con_query_error);
+    Tox_Err_Friend_Query f_con_query_error;
+    Tox_Connection f_conn_status = tox_friend_get_connection_status(tox, friend_number, &f_con_query_error);
 
-    switch (f_conn_status) {
-        case 0: { /* Friend is now offline */
-            LOGGER_API_DEBUG(tox, "Friend %d is now offline", friend_number);
+    if (f_conn_status == TOX_CONNECTION_NONE) {
+        /* Friend is now offline */
+        LOGGER_API_DEBUG(tox, "Friend %d is now offline", friend_number);
 
-            pthread_mutex_lock(session->mutex);
-            MSICall *call = get_call(session, friend_number);
+        pthread_mutex_lock(session->mutex);
+        MSICall *call = get_call(session, friend_number);
 
-            if (call == nullptr) {
-                pthread_mutex_unlock(session->mutex);
-                return true;
-            }
-
-            invoke_callback(call, MSI_ON_PEERTIMEOUT); /* Failure is ignored */
-            kill_call(call);
+        if (call == nullptr) {
             pthread_mutex_unlock(session->mutex);
+            return true;
         }
 
+        invoke_callback(call, MSI_ON_PEERTIMEOUT); /* Failure is ignored */
+        kill_call(call);
+        pthread_mutex_unlock(session->mutex);
         return true;
-
-        case TOX_CONNECTION_TCP:
-        case TOX_CONNECTION_UDP:
-        default:
-            break;
     }
 
     return false;
