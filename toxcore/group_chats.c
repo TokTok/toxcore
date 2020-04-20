@@ -6168,7 +6168,7 @@ int gc_invite_friend(GC_Session *c, GC_Chat *chat, int32_t friend_number,
 
 static int send_gc_invite_accepted_packet(Messenger *m, GC_Chat *chat, uint32_t friend_number)
 {
-    if (friend_not_valid(m, friend_number)) {
+    if (!friend_is_valid(m, friend_number)) {
         return -1;
     }
 
@@ -6201,7 +6201,7 @@ static int send_gc_invite_accepted_packet(Messenger *m, GC_Chat *chat, uint32_t 
 static int send_gc_invite_confirmed_packet(Messenger *m, GC_Chat *chat, uint32_t friend_number,
         const uint8_t *data, uint16_t length)
 {
-    if (friend_not_valid(m, friend_number)) {
+    if (!friend_is_valid(m, friend_number)) {
         return -1;
     }
 
@@ -6249,7 +6249,7 @@ int handle_gc_invite_confirmed_packet(GC_Session *c, int friend_number, const ui
         return -1;
     }
 
-    if (friend_not_valid(c->messenger, friend_number)) {
+    if (!friend_is_valid(c->messenger, friend_number)) {
         return -4;
     }
 
@@ -6334,7 +6334,7 @@ int handle_gc_invite_accepted_packet(GC_Session *c, int friend_number, const uin
 
     Messenger *m = c->messenger;
 
-    if (friend_not_valid(m, friend_number)) {
+    if (!friend_is_valid(m, friend_number)) {
         return -4;
     }
 
@@ -6421,7 +6421,7 @@ int gc_accept_invite(GC_Session *c, int32_t friend_number, const uint8_t *data, 
         return -1;
     }
 
-    if (friend_not_valid(c->messenger, friend_number)) {
+    if (!friend_is_valid(c->messenger, friend_number)) {
         return -4;
     }
 
