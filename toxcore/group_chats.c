@@ -4895,7 +4895,7 @@ int gc_peer_delete(Messenger *m, int groupnumber, uint32_t peernumber, const uin
     return 0;
 }
 
-/* Updates peer's peer info and generates a new peer_id.
+/* Updates peernumber with info from `peer`.
  *
  * Returns peernumber on success.
  * Returns -1 on failure.
@@ -4924,8 +4924,8 @@ static int peer_update(Messenger *m, int groupnumber, GC_GroupPeer *peer, uint32
         return -1;
     }
 
+    peer->peer_id = chat->group[peernumber].peer_id;
     memcpy(&chat->group[peernumber], peer, sizeof(GC_GroupPeer));
-    chat->group[peernumber].peer_id = get_new_peer_id(chat);
     chat->group[peernumber].ignore = false;
 
     return peernumber;
