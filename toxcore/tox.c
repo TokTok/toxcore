@@ -3388,7 +3388,7 @@ bool tox_group_invite_friend(Tox *tox, uint32_t group_number, uint32_t friend_nu
         return 0;
     }
 
-    if (!friend_is_valid(tox-:m, friend_number)) {
+    if (!friend_is_valid(tox->m, friend_number)) {
         SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_INVITE_FRIEND_FRIEND_NOT_FOUND);
         return 0;
     }
