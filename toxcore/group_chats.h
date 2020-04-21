@@ -255,8 +255,8 @@ typedef void gc_peer_limit_cb(Messenger *m, uint32_t group_number, uint32_t max_
 typedef void gc_privacy_state_cb(Messenger *m, uint32_t group_number, unsigned int state, void *user_data);
 typedef void gc_password_cb(Messenger *m, uint32_t group_number, const uint8_t *data, size_t length, void *user_data);
 typedef void gc_peer_join_cb(Messenger *m, uint32_t group_number, uint32_t peer_id, void *user_data);
-typedef void gc_peer_exit_cb(Messenger *m, uint32_t group_number, uint32_t peer_id, const uint8_t *data, size_t length,
-                             void *user_data);
+typedef void gc_peer_exit_cb(Messenger *m, uint32_t group_number, uint32_t peer_id, const uint8_t *nick,
+                             size_t nick_len, const uint8_t *data, size_t length, void *user_data);
 typedef void gc_self_join_cb(Messenger *m, uint32_t group_number, void *user_data);
 typedef void gc_rejected_cb(Messenger *m, uint32_t group_number, unsigned int type, void *user_data);
 
