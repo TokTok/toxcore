@@ -466,13 +466,13 @@ static void tox_group_peer_join_handler(Messenger *m, uint32_t groupnumber, uint
     }
 }
 
-static void tox_group_peer_exit_handler(Messenger *m, uint32_t groupnumber, uint32_t peer_id,
-                                        const uint8_t *part_message, size_t length, void *user_data)
+static void tox_group_peer_exit_handler(Messenger *m, uint32_t groupnumber, uint32_t peer_id, const uint8_t *name,
+                                        size_t name_length, const uint8_t *part_message, size_t length, void *user_data)
 {
     Tox *tox = (Tox *)user_data;
 
     if (tox->group_peer_exit_callback != nullptr) {
-        tox->group_peer_exit_callback(tox, groupnumber, peer_id, part_message, length, tox->non_const_user_data);
+        tox->group_peer_exit_callback(tox, groupnumber, peer_id, name, name_length, part_message, length, tox->non_const_user_data);
     }
 }
 

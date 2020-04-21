@@ -3853,11 +3853,13 @@ namespace group {
   event peer_exit {
     /**
      * @param groupnumber The group number of the group in which a peer has left.
-     * @param peer_id The ID of the peer who left the group.
+     * @param peer_id The ID of the peer who left the group. This ID no longer designates a valid peer
+     *     and cannot be used for API calls.
+     * @param name The nickname of the peer who left the group.
      * @param part_message The parting message data.
      * @param length The length of the parting message.
      */
-    typedef void(uint32_t groupnumber, uint32_t peer_id, const uint8_t[length <= MAX_PART_LENGTH] part_message);
+    typedef void(uint32_t groupnumber, uint32_t peer_id, const uint8_t[name_length <= MAX_NAME_LENGTH] name, const uint8_t[length <= MAX_PART_LENGTH] part_message);
   }
 
   /**

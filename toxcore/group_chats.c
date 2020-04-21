@@ -4857,9 +4857,9 @@ int gc_peer_delete(Messenger *m, int groupnumber, uint32_t peernumber, const uin
         return -1;
     }
 
-    /* Needs to occur before peer is removed*/
     if (c->peer_exit && gconn->confirmed) {
-        (*c->peer_exit)(m, groupnumber, chat->group[peernumber].peer_id, data, length, c->peer_exit_userdata);
+        (*c->peer_exit)(m, groupnumber, chat->group[peernumber].peer_id, chat->group[peernumber].nick,
+                        chat->group[peernumber].nick_len, data, length, c->peer_exit_userdata);
     }
 
     kill_tcp_connection_to(chat->tcp_conn, gconn->tcp_connection_num);
@@ -4917,7 +4917,8 @@ static int peer_update(Messenger *m, int groupnumber, GC_GroupPeer *peer, uint32
 
     if (nick_num != -1 && nick_num != peernumber) {   /* duplicate nick */
         if (c->peer_exit) {
-            (*c->peer_exit)(m, groupnumber, chat->group[peernumber].peer_id, nullptr, 0, c->peer_exit_userdata);
+            (*c->peer_exit)(m, groupnumber, chat->group[peernumber].peer_id, chat->group[peernumber].nick,
+                            chat->group[peernumber].nick_len, nullptr, 0, c->peer_exit_userdata);
         }
 
         gc_peer_delete(m, groupnumber, peernumber, nullptr, 0);
