@@ -4443,12 +4443,14 @@ void tox_callback_group_peer_join(Tox *tox, tox_group_peer_join_cb *callback, vo
 
 /**
  * @param groupnumber The group number of the group in which a peer has left.
- * @param peer_id The ID of the peer who left the group.
+ * @param peer_id The ID of the peer who left the group. This ID no longer designates a valid peer
+ *     and cannot be used for API calls.
+ * @param name The nickname of the peer who left the group.
  * @param part_message The parting message data.
  * @param length The length of the parting message.
  */
-typedef void tox_group_peer_exit_cb(Tox *tox, uint32_t groupnumber, uint32_t peer_id, const uint8_t *part_message,
-                                    size_t length, void *user_data);
+typedef void tox_group_peer_exit_cb(Tox *tox, uint32_t groupnumber, uint32_t peer_id, const uint8_t *name,
+                                    size_t name_length, const uint8_t *part_message, size_t length, void *user_data);
 
 
 /**
