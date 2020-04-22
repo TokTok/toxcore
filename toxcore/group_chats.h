@@ -370,6 +370,7 @@ int gc_send_custom_packet(GC_Chat *chat, bool lossless, const uint8_t *data, uin
  *
  * Returns 0 on success.
  * Returns -1 if the peer_id is invalid.
+ * Returns -2 if the caller attempted to ignore himself.
  */
 int gc_toggle_ignore(GC_Chat *chat, uint32_t peer_id, bool ignore);
 
@@ -483,6 +484,7 @@ uint8_t gc_get_role(const GC_Chat *chat, uint32_t peer_id);
  * Returns -3 if caller does not have sufficient permissions for the action.
  * Returns -4 if the role assignment is invalid.
  * Returns -5 if the role failed to be set.
+ * Returns -6 if the caller attempted to set their own role.
  */
 int gc_set_peer_role(Messenger *m, int groupnumber, uint32_t peer_id, uint8_t role);
 
@@ -530,6 +532,7 @@ int gc_founder_set_max_peers(GC_Chat *chat, int groupnumber, uint32_t maxpeers);
  * Returns -3 if the caller does not have sufficient permissions for this action.
  * Returns -4 if the action failed.
  * Returns -5 if the packet failed to send.
+ * Returns -6 if the caller attempted to remove himself.
  */
 int gc_remove_peer(Messenger *m, int groupnumber, uint32_t peer_id, bool set_ban);
 
