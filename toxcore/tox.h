@@ -4696,6 +4696,11 @@ typedef enum TOX_ERR_GROUP_TOGGLE_IGNORE {
      */
     TOX_ERR_GROUP_TOGGLE_IGNORE_PEER_NOT_FOUND,
 
+    /**
+     * The caller attempted to ignore himself.
+     */
+    TOX_ERR_GROUP_TOGGLE_IGNORE_SELF,
+
 } TOX_ERR_GROUP_TOGGLE_IGNORE;
 
 
@@ -4744,6 +4749,11 @@ typedef enum TOX_ERR_GROUP_MOD_SET_ROLE {
      * or if the packet fails to send.
      */
     TOX_ERR_GROUP_MOD_SET_ROLE_FAIL_ACTION,
+
+    /**
+     * The caller attempted to set their own role.
+     */
+    TOX_ERR_GROUP_MOD_SET_ROLE_SELF,
 
 } TOX_ERR_GROUP_MOD_SET_ROLE;
 
@@ -4800,6 +4810,11 @@ typedef enum TOX_ERR_GROUP_MOD_REMOVE_PEER {
      * The packet failed to send.
      */
     TOX_ERR_GROUP_MOD_REMOVE_PEER_FAIL_SEND,
+
+    /**
+     * The caller attempted to kick/ban himself.
+     */
+    TOX_ERR_GROUP_MOD_REMOVE_PEER_SELF,
 
 } TOX_ERR_GROUP_MOD_REMOVE_PEER;
 
