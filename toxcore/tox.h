@@ -4811,6 +4811,8 @@ typedef enum TOX_ERR_GROUP_MOD_REMOVE_PEER {
  * to the ban list. It will also send a packet to all group members requesting them
  * to do the same.
  *
+ * Note: This function will not trigger the `group_peer_exit` event for the caller.
+ *
  * @param groupnumber The group number of the group the ban is intended for.
  * @param peer_id The ID of the peer who will be kicked and/or added to the ban list.
  * @param set_ban Set to true if a ban shall be set on the peer's IP address.
@@ -4910,7 +4912,8 @@ typedef void tox_group_moderation_cb(Tox *tox, uint32_t groupnumber, uint32_t so
 /**
  * Set the callback for the `group_moderation` event. Pass NULL to unset.
  *
- * This event is triggered when a moderator or founder executes a moderation event.
+ * This event is triggered when a moderator or founder executes a moderation event, with the exception
+ * of the peer who initiates the event.
  */
 void tox_callback_group_moderation(Tox *tox, tox_group_moderation_cb *callback, void *user_data);
 

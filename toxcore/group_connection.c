@@ -289,7 +289,7 @@ void gcc_resend_packets(Messenger *m, GC_Chat *chat, uint32_t peernumber)
         }
 
         if (mono_time_is_timeout(m->mono_time, ary_entry->time_added, GC_CONFIRMED_PEER_TIMEOUT)) {
-            gc_peer_delete(m, chat->groupnumber, peernumber, (const uint8_t *)"Peer timed out", 14);
+            gc_peer_delete(m, chat->groupnumber, peernumber, (const uint8_t *)"Peer timed out", 14, false);
             return;
         }
     }
