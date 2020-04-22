@@ -4101,6 +4101,8 @@ namespace group {
      * to the ban list. It will also send a packet to all group members requesting them
      * to do the same.
      *
+     * Note: This function will not trigger the `${event peer_exit}` event for the caller.
+     *
      * @param groupnumber The group number of the group the ban is intended for.
      * @param peer_id The ID of the peer who will be kicked and/or added to the ban list.
      * @param set_ban Set to true if a ban shall be set on the peer's IP address.
@@ -4198,7 +4200,8 @@ namespace group {
   }
 
   /**
-   * This event is triggered when a moderator or founder executes a moderation event.
+   * This event is triggered when a moderator or founder executes a moderation event, with the exception
+   * of the peer who initiates the event.
    */
   event moderation {
     /**

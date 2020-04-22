@@ -193,7 +193,7 @@ typedef struct GC_Chat {
 
     GC_GroupPeer    *group;
     GC_Connection   *gcc;
-    GC_Moderation   moderation;
+    GC_Moderation    moderation;
 
     GC_SharedState  shared_state;
     uint8_t         shared_state_sig[SIGNATURE_SIZE];    /* Signed by founder using the chat secret key */
@@ -651,12 +651,14 @@ bool peernumber_valid(const GC_Chat *chat, int peernumber);
  */
 GC_Chat *gc_get_group(const GC_Session *c, int groupnumber);
 
-/* Deletets peernumber from group.
+/*
+ * Deletes peernumber from group. `no_callback` should be set to true if the `peer_exit` callback should not be triggered.
  *
  * Return 0 on success.
  * Return -1 on failure.
  */
-int gc_peer_delete(Messenger *m, int groupnumber, uint32_t peernumber, const uint8_t *data, uint16_t length);
+int gc_peer_delete(Messenger *m, int groupnumber, uint32_t peernumber, const uint8_t *data, uint16_t length,
+                   bool no_callback);
 
 /* Packs mod_list into data.
  * data must have room for `num_mods * SIG_PUBLIC_KEY` bytes.
