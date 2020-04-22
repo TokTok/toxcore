@@ -84,6 +84,45 @@ size_t net_socket_data_recv_buffer(Socket sock);
 #define MAX_UDP_PACKET_SIZE 65507
 
 typedef enum Net_Packet_Type {
+#if 1
+    NET_PACKET_PING_REQUEST         = 0x05, /* Ping request packet ID. */
+    NET_PACKET_PING_RESPONSE        = 0x06, /* Ping response packet ID. */
+    NET_PACKET_GET_NODES            = 0x07, /* Get nodes request packet ID. */
+    NET_PACKET_SEND_NODES_IPV6      = 0x08, /* Send nodes response packet ID for other addresses. */
+    NET_PACKET_COOKIE_REQUEST       = 0x1c, /* Cookie request packet */
+    NET_PACKET_COOKIE_RESPONSE      = 0x1d, /* Cookie response packet */
+    NET_PACKET_CRYPTO_HS            = 0x1e, /* Crypto handshake packet */
+    NET_PACKET_CRYPTO_DATA          = 0x1f, /* Crypto data packet */
+    NET_PACKET_CRYPTO               = 0x24, /* Encrypted data packet ID. */
+    NET_PACKET_LAN_DISCOVERY        = 0x25, /* LAN discovery packet ID. */
+
+    NET_PACKET_GC_HANDSHAKE         = 0x62, /* Group chat handshake packet ID */
+    NET_PACKET_GC_LOSSLESS          = 0x63, /* Group chat lossless packet ID */
+    NET_PACKET_GC_LOSSY             = 0x64, /* Group chat lossy packet ID */
+    NET_PACKET_GCA_ANNOUNCE         = 0x65, /* Group announce announcement packet ID */
+    NET_PACKET_GCA_GET_NODES        = 0x66, /* Group announce get nodes request packet ID */
+    NET_PACKET_GCA_SEND_NODES       = 0x67, /* Group announce send nodes packet ID */
+    NET_PACKET_GCA_PING_REQUEST     = 0x68, /* Group announce ping request packet ID */
+    NET_PACKET_GCA_PING_RESPONSE    = 0x69, /* Group announce ping response packet ID */
+
+    /* See: `docs/Prevent_Tracking.txt` and `onion.{c,h}` */
+    NET_PACKET_ONION_SEND_INITIAL   = 0x8f,
+    NET_PACKET_ONION_SEND_1         = 0x90,
+    NET_PACKET_ONION_SEND_2         = 0x91,
+
+    NET_PACKET_ANNOUNCE_REQUEST     = 0x92,
+    NET_PACKET_ANNOUNCE_RESPONSE    = 0x93,
+    NET_PACKET_ONION_DATA_REQUEST   = 0x94,
+    NET_PACKET_ONION_DATA_RESPONSE  = 0x95,
+
+    NET_PACKET_ONION_RECV_3         = 0x9b,
+    NET_PACKET_ONION_RECV_2         = 0x9c,
+    NET_PACKET_ONION_RECV_1         = 0x9d,
+
+    BOOTSTRAP_INFO_PACKET_ID        = 0xf1, /* Only used for bootstrap nodes */
+
+    NET_PACKET_MAX                  = 0xff, /* This type must remain within a single uint8. */
+#else
     NET_PACKET_PING_REQUEST         = 0x00, /* Ping request packet ID. */
     NET_PACKET_PING_RESPONSE        = 0x01, /* Ping response packet ID. */
     NET_PACKET_GET_NODES            = 0x02, /* Get nodes request packet ID. */
@@ -121,6 +160,7 @@ typedef enum Net_Packet_Type {
     BOOTSTRAP_INFO_PACKET_ID        = 0xf0, /* Only used for bootstrap nodes */
 
     NET_PACKET_MAX                  = 0xff, /* This type must remain within a single uint8. */
+#endif // test network
 } Net_Packet_Type;
 
 
