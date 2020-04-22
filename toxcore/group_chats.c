@@ -1506,7 +1506,7 @@ static int handle_gc_invite_request(Messenger *m, int groupnumber, uint32_t peer
 
 FAILED_INVITE:
     send_gc_invite_response_reject(chat, gconn, invite_error);
-    gc_peer_delete(m, groupnumber, peernumber, nullptr, 0);
+    gc_peer_delete(m, groupnumber, peernumber, nullptr, 0, false);
 
     return -1;
 }
@@ -1662,10 +1662,6 @@ int gc_set_self_status(Messenger *m, int groupnumber, uint8_t status)
 
     if (status >= GS_INVALID) {
         return -2;
-    }
-
-    if (c->status_change) {
-        (*c->status_change)(m, groupnumber, chat->group[0].peer_id, status, c->status_change_userdata);
     }
 
     chat->group[0].status = status;
@@ -1865,7 +1861,7 @@ static int handle_gc_peer_info_response(Messenger *m, int groupnumber, uint32_t 
     }
 
     if (validate_gc_peer_role(chat, peernumber) == -1) {
-        gc_peer_delete(m, groupnumber, peernumber, nullptr, 0);
+        gc_peer_delete(m, groupnumber, peernumber, nullptr, 0, false);
         fprintf(stderr, "failed to validate peer role\n");
         return -1;
     }
@@ -1995,7 +1991,7 @@ static int handle_gc_shared_state_error(Messenger *m, int groupnumber,
 {
     /* If we don't already have a valid shared state we will automatically try to get another invite.
        Otherwise we attempt to ask a different peer for a sync. */
-    gc_peer_delete(m, groupnumber, peernumber, (const uint8_t *)"BAD SHARED STATE", 10);
+    gc_peer_delete(m, groupnumber, peernumber, (const uint8_t *)"BAD SHARED STATE", 10, false);
 
     if (chat->shared_state.version == 0) {
         chat->connection_state = CS_DISCONNECTED;
@@ -2114,7 +2110,7 @@ static int handle_gc_mod_list(Messenger *m, int groupnumber, uint32_t peernumber
     return 0;
 
 ON_ERROR:
-    gc_peer_delete(m, groupnumber, peernumber, (const uint8_t *)"BAD MLIST", 9);
+    gc_peer_delete(m, groupnumber, peernumber, (const uint8_t *)"BAD MLIST", 9, false);
 
     if (chat->shared_state.version == 0) {
         chat->connection_state = CS_DISCONNECTED;
@@ -2135,7 +2131,7 @@ static int handle_gc_sanctions_list_error(Messenger *m, int groupnumber,
         return 0;
     }
 
-    gc_peer_delete(m, groupnumber, peernumber, (const uint8_t *)"BAD SCREDS", 10);
+    gc_peer_delete(m, groupnumber, peernumber, (const uint8_t *)"BAD SCREDS", 10, false);
 
     if (chat->shared_state.version == 0) {
         chat->connection_state = CS_DISCONNECTED;
@@ -2380,7 +2376,7 @@ static int handle_bc_peer_exit(Messenger *m, int groupnumber, uint32_t peernumbe
         length = MAX_GC_PART_MESSAGE_SIZE;
     }
 
-    return gc_peer_delete(m, groupnumber, peernumber, data, length);
+    return gc_peer_delete(m, groupnumber, peernumber, data, length, false);
 }
 
 /*
@@ -2412,10 +2408,6 @@ int gc_set_self_nick(Messenger *m, int groupnumber, const uint8_t *nick, uint16_
 
     if (get_nick_peernumber(chat, nick, length) != -1) {
         return -4;
-    }
-
-    if (c->nick_change) {
-        (*c->nick_change)(m, groupnumber, chat->group[0].peer_id, nick, length, c->nick_change_userdata);
     }
 
     memcpy(chat->group[0].nick, nick, length);
@@ -2514,7 +2506,7 @@ static int handle_bc_nick(Messenger *m, int groupnumber, uint32_t peernumber, co
 
     /* If this happens malicious behaviour is highly suspect */
     if (length == 0 || length > MAX_GC_NICK_SIZE || get_nick_peernumber(chat, nick, length) != -1) {
-        return gc_peer_delete(m, groupnumber, peernumber, nullptr, 0);
+        return gc_peer_delete(m, groupnumber, peernumber, nullptr, 0, false);
     }
 
     if (c->nick_change) {
@@ -3114,7 +3106,7 @@ static int mod_gc_set_observer(GC_Chat *chat, uint32_t peernumber, bool add_obs)
     return 0;
 }
 
-/* Sets the role of peernumber. role must be one of: GR_MODERATOR, GR_USER, GR_OBSERVER
+/* Sets the role of peernumber. role must be one of: GR_MODERATOR, GR_USER, GR_OBSERVER.
  *
  * Returns 0 on success.
  * Returns -1 if the groupnumber is invalid.
@@ -3225,11 +3217,6 @@ int gc_set_peer_role(Messenger *m, int groupnumber, uint32_t peer_id, uint8_t ro
         default: {
             return -4;
         }
-    }
-
-    if (c->moderation) {
-        (*c->moderation)(m, groupnumber, chat->group[0].peer_id, chat->group[peernumber].peer_id, mod_event,
-                         c->moderation_userdata);
     }
 
     chat->group[peernumber].role = role;
@@ -3602,7 +3589,7 @@ static int handle_bc_remove_peer(Messenger *m, int groupnumber, uint32_t peernum
                          mod_event, c->moderation_userdata);
     }
 
-    if (gc_peer_delete(m, groupnumber, target_peernum, nullptr, 0) == -1) {
+    if (gc_peer_delete(m, groupnumber, target_peernum, nullptr, 0, false) == -1) {
         return -1;
     }
 
@@ -3706,12 +3693,7 @@ int gc_remove_peer(Messenger *m, int groupnumber, uint32_t peer_id, bool set_ban
         return -5;
     }
 
-    if (c->moderation) {
-        (*c->moderation)(m, groupnumber, chat->group[0].peer_id, chat->group[peernumber].peer_id, mod_event,
-                         c->moderation_userdata);
-    }
-
-    if (gc_peer_delete(m, groupnumber, peernumber, nullptr, 0) == -1) {
+    if (gc_peer_delete(m, groupnumber, peernumber, nullptr, 0, true) == -1) {
         return -4;
     }
 
@@ -4293,7 +4275,7 @@ static int handle_gc_handshake_request(Messenger *m, int groupnumber, IP_Port *i
     int peer_exists = get_peernum_of_enc_pk(chat, sender_pk);
 
     if (peer_exists != -1) {
-        gc_peer_delete(m, groupnumber, peer_exists, nullptr, 0);
+        gc_peer_delete(m, groupnumber, peer_exists, nullptr, 0, false);
     }
 
     int peernumber = peer_add(m, groupnumber, ipp, sender_pk);
@@ -4320,7 +4302,7 @@ static int handle_gc_handshake_request(Messenger *m, int groupnumber, IP_Port *i
     uint8_t join_type = data[ENC_PUBLIC_KEY + SIG_PUBLIC_KEY + 1];
 
     if (join_type == HJ_PUBLIC && chat->shared_state.privacy_state != GI_PUBLIC) {
-        gc_peer_delete(m, groupnumber, peernumber, nullptr, 0);
+        gc_peer_delete(m, groupnumber, peernumber, nullptr, 0, false);
         return -1;
     }
 
@@ -4836,12 +4818,14 @@ void gc_callback_rejected(Messenger *m, gc_rejected_cb *function, void *userdata
     c->rejected_userdata = userdata;
 }
 
-/* Deletets peernumber from group.
+/*
+ * Deletes peernumber from group. `no_callback` should be set to true if the `peer_exit` callback should not be triggered.
  *
  * Return 0 on success.
  * Return -1 on failure.
  */
-int gc_peer_delete(Messenger *m, int groupnumber, uint32_t peernumber, const uint8_t *data, uint16_t length)
+int gc_peer_delete(Messenger *m, int groupnumber, uint32_t peernumber, const uint8_t *data, uint16_t length,
+                   bool no_callback)
 {
     GC_Session *c = m->group_handler;
 
@@ -4857,7 +4841,7 @@ int gc_peer_delete(Messenger *m, int groupnumber, uint32_t peernumber, const uin
         return -1;
     }
 
-    if (c->peer_exit && gconn->confirmed) {
+    if (!no_callback && c->peer_exit && gconn->confirmed) {
         (*c->peer_exit)(m, groupnumber, chat->group[peernumber].peer_id, chat->group[peernumber].nick,
                         chat->group[peernumber].nick_len, data, length, c->peer_exit_userdata);
     }
@@ -4921,7 +4905,7 @@ static int peer_update(Messenger *m, int groupnumber, GC_GroupPeer *peer, uint32
                             chat->group[peernumber].nick_len, nullptr, 0, c->peer_exit_userdata);
         }
 
-        gc_peer_delete(m, groupnumber, peernumber, nullptr, 0);
+        gc_peer_delete(m, groupnumber, peernumber, nullptr, 0, false);
         return -1;
     }
 
@@ -5046,7 +5030,7 @@ static void do_peer_connections(Messenger *m, int groupnumber)
         }
 
         if (peer_timed_out(m->mono_time, chat, &chat->gcc[i])) {
-            gc_peer_delete(m, groupnumber, i, (const uint8_t *)"Timed out", 9);
+            gc_peer_delete(m, groupnumber, i, (const uint8_t *)"Timed out", 9, false);
         } else {
             gcc_resend_packets(m, chat, i);   // This function may delete the peer
         }
@@ -5590,7 +5574,7 @@ void gc_rejoin_group(GC_Session *c, GC_Chat *chat)
 
     /* Remove all peers except self. Numpeers decrements with each call to gc_peer_delete */
     for (i = 1; chat->numpeers > 1;) {
-        if (gc_peer_delete(c->messenger, chat->groupnumber, i, nullptr, 0) == -1) {
+        if (gc_peer_delete(c->messenger, chat->groupnumber, i, nullptr, 0, true) == -1) {
             break;
         }
     }
