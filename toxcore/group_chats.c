@@ -3523,8 +3523,8 @@ static int handle_gc_custom_packet(Messenger *m, int groupnumber, uint32_t peern
     return 0;
 }
 
-static int handle_bc_remove_peer(Messenger *m, int groupnumber, uint32_t peernumber, const uint8_t *data,
-                                 uint32_t length)
+static int handle_bc_kick_peer(Messenger *m, int groupnumber, uint32_t peernumber, const uint8_t *data,
+                               uint32_t length)
 {
     if (length < 1 + ENC_PUBLIC_KEY) {
         return -1;
@@ -3543,7 +3543,7 @@ static int handle_bc_remove_peer(Messenger *m, int groupnumber, uint32_t peernum
 
     uint8_t mod_event = data[0];
 
-    if (mod_event != MV_KICK && mod_event != MV_BAN) {
+    if (mod_event != MV_KICK) {
         return -1;
     }
 
@@ -3553,7 +3553,6 @@ static int handle_bc_remove_peer(Messenger *m, int groupnumber, uint32_t peernum
     int target_peernum = get_peernum_of_enc_pk(chat, target_pk);
 
     if (peernumber_valid(chat, target_peernum)) {
-        /* Even if they're offline or this guard is removed a ban on a mod or founder won't work */
         if (chat->group[target_peernum].role != GR_USER) {
             return -1;
         }
@@ -3567,22 +3566,6 @@ static int handle_bc_remove_peer(Messenger *m, int groupnumber, uint32_t peernum
 
         group_delete(c, chat);
         return 0;
-    }
-
-    struct GC_Sanction_Creds creds;
-
-    if (mod_event == MV_BAN) {
-        struct GC_Sanction sanction;
-
-        if (sanctions_list_unpack(&sanction, &creds, 1, data + 1 + ENC_PUBLIC_KEY,
-                                  length - 1 - ENC_PUBLIC_KEY, nullptr) != 1) {
-            return -1;
-        }
-
-        if (sanctions_list_add_entry(chat, &sanction, &creds) == -1) {
-            fprintf(stderr, "sanctions_list_add_entry failed in remove peer\n");
-            return -1;
-        }
     }
 
     if (target_peernum == -1) {   /* we don't need to/can't kick a peer that isn't in our peerlist */
@@ -3603,37 +3586,20 @@ static int handle_bc_remove_peer(Messenger *m, int groupnumber, uint32_t peernum
 
 /* Sends a packet to instruct all peers to remove gconn from their peerlist.
  *
- * If mod_event is MV_BAN an updated sanctions list along with new credentials will be added to
- * the ban list.
- *
  * Returns 0 on success.
  * Returns -1 on failure.
  */
-static int send_gc_remove_peer(GC_Chat *chat, GC_Connection *gconn, struct GC_Sanction *sanction,
-                               uint8_t mod_event, bool send_new_creds)
+static int send_gc_kick_peer(GC_Chat *chat, GC_Connection *gconn)
 {
     uint32_t length = 1 + ENC_PUBLIC_KEY;
     uint8_t packet[MAX_GC_PACKET_SIZE];
-    packet[0] = mod_event;
+    packet[0] = MV_KICK;
     memcpy(packet + 1, gconn->addr.public_key, ENC_PUBLIC_KEY);
 
-    if (mod_event == MV_BAN) {
-        int packed_len = sanctions_list_pack(packet + length, sizeof(packet) - length, sanction,
-                                             &chat->moderation.sanctions_creds, 1);
-
-        if (packed_len < 0) {
-            fprintf(stderr, "sanctions_list_pack failed in send_gc_remove_peer\n");
-            return -1;
-        }
-
-        length += packed_len;
-    }
-
-    return send_gc_broadcast_message(chat, packet, length, GM_REMOVE_PEER);
+    return send_gc_broadcast_message(chat, packet, length, GM_KICK_PEER);
 }
 
 /* Instructs all peers to remove peer_id from their peerlist.
- * If set_ban is true peer will be added to the ban list.
  *
  * Returns 0 on success.
  * Returns -1 if the groupnumber is invalid.
@@ -3643,7 +3609,7 @@ static int send_gc_remove_peer(GC_Chat *chat, GC_Connection *gconn, struct GC_Sa
  * Returns -5 if the packet failed to send.
  * Returns -6 if the caller attempted to remove himself.
  */
-int gc_remove_peer(Messenger *m, int groupnumber, uint32_t peer_id, bool set_ban)
+int gc_kick_peer(Messenger *m, int groupnumber, uint32_t peer_id)
 {
     GC_Session *c = m->group_handler;
     GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
@@ -3687,106 +3653,12 @@ int gc_remove_peer(Messenger *m, int groupnumber, uint32_t peer_id, bool set_ban
         }
     }
 
-    uint8_t mod_event = set_ban ? MV_BAN : MV_KICK;
-    struct GC_Sanction sanction;
-
-    if (set_ban) {
-        if (sanctions_list_make_entry(chat, peernumber, &sanction, SA_BAN) == -1) {
-            fprintf(stderr, "sanctions_list_make_entry failed\n");
-            return -4;
-        }
-    }
-
-    bool send_new_creds = !set_ban && chat->group[peernumber].role == GR_OBSERVER;
-
-    if (send_gc_remove_peer(chat, gconn, &sanction, mod_event, send_new_creds) == -1) {
+    if (send_gc_kick_peer(chat, gconn) == -1) {
         return -5;
     }
 
     if (gc_peer_delete(m, groupnumber, peernumber, nullptr, 0, true) == -1) {
         return -4;
-    }
-
-    return 0;
-}
-
-static int handle_bc_remove_ban(Messenger *m, int groupnumber, uint32_t peernumber, const uint8_t *data,
-                                uint32_t length)
-{
-    if (length < sizeof(uint32_t)) {
-        return -1;
-    }
-
-    GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
-
-    if (chat == nullptr) {
-        return -1;
-    }
-
-    if (chat->group[peernumber].role >= GR_USER) {
-        return -1;
-    }
-
-    uint32_t ban_id;
-    net_unpack_u32(data, &ban_id);
-
-    struct GC_Sanction_Creds creds;
-    uint16_t unpacked_len = sanctions_creds_unpack(&creds, data + sizeof(uint32_t), length - sizeof(uint32_t));
-
-    if (unpacked_len != GC_SANCTIONS_CREDENTIALS_SIZE) {
-        return -1;
-    }
-
-    if (sanctions_list_remove_ban(chat, ban_id, &creds) == -1) {
-        fprintf(stderr, "sanctions_list_remove_ban failed in handle_bc_remove_ban\n");
-    }
-
-    return 0;
-}
-
-/* Sends a packet instructing all peers to remove a ban entry from the sanctions list.
- * Additionally sends updated sanctions credentials.
- *
- * Returns 0 on success.
- * Returns -1 on failure.
- */
-static int send_gc_remove_ban(GC_Chat *chat, uint32_t ban_id)
-{
-    uint8_t packet[sizeof(uint32_t) + GC_SANCTIONS_CREDENTIALS_SIZE];
-    net_pack_u32(packet, ban_id);
-    uint32_t length = sizeof(uint32_t);
-
-    uint16_t packed_len = sanctions_creds_pack(&chat->moderation.sanctions_creds, packet + length,
-                          sizeof(packet) - length);
-
-    if (packed_len != GC_SANCTIONS_CREDENTIALS_SIZE) {
-        return -1;
-    }
-
-    length += packed_len;
-
-    return send_gc_broadcast_message(chat, packet, length, GM_REMOVE_BAN);
-}
-
-/* Instructs all peers to remove ban_id from their ban list.
- *
- * Returns 0 on success.
- * Returns -1 if the caller does not have sufficient permissions for this action.
- * Returns -2 if the entry could not be removed.
- * Returns -3 if the packet failed to send.
- */
-int gc_remove_ban(GC_Chat *chat, uint32_t ban_id)
-{
-    if (chat->group[0].role >= GR_USER) {
-        return -1;
-    }
-
-    if (sanctions_list_remove_ban(chat, ban_id, nullptr) == -1) {
-        return -2;
-    }
-
-    if (send_gc_remove_ban(chat, ban_id) == -1) {
-        return -3;
     }
 
     return 0;
@@ -3967,11 +3839,8 @@ static int handle_gc_broadcast(Messenger *m, int groupnumber, uint32_t peernumbe
         case GM_PEER_EXIT:
             return handle_bc_peer_exit(m, groupnumber, peernumber, message, m_len);
 
-        case GM_REMOVE_PEER:
-            return handle_bc_remove_peer(m, groupnumber, peernumber, message, m_len);
-
-        case GM_REMOVE_BAN:
-            return handle_bc_remove_ban(m, groupnumber, peernumber, message, m_len);
+        case GM_KICK_PEER:
+            return handle_bc_kick_peer(m, groupnumber, peernumber, message, m_len);
 
         case GM_SET_MOD:
             return handle_bc_set_mod(m, groupnumber, peernumber, message, m_len);
@@ -4274,11 +4143,6 @@ static int handle_gc_handshake_request(Messenger *m, int groupnumber, IP_Port *i
 
     uint8_t public_sig_key[SIG_PUBLIC_KEY];
     memcpy(public_sig_key, data + ENC_PUBLIC_KEY, SIG_PUBLIC_KEY);
-
-    /* Check if IP is banned and make sure they aren't a moderator or founder */
-    if (sanctions_list_ip_banned(chat, ipp) && !mod_list_verify_sig_pk(chat, public_sig_key)) {
-        return -1;
-    }
 
     if (chat->connection_O_metre >= GC_NEW_PEER_CONNECTION_LIMIT) {
         chat->block_handshakes = true;
