@@ -39,7 +39,6 @@ typedef enum Group_Privacy_State {
 
 typedef enum Group_Moderation_Event {
     MV_KICK,
-    MV_BAN,
     MV_OBSERVER,
     MV_USER,
     MV_MODERATOR,
@@ -49,9 +48,10 @@ typedef enum Group_Moderation_Event {
 /* Group roles are hierarchical where each role has a set of privileges plus
  * all the privileges of the roles below it.
  *
- * - FOUNDER is all-powerful. Cannot be demoted or banned.
- * - OP may issue bans, promotions and demotions to all roles below founder.
- * - USER may talk, stream A/V, and change the group topic.
+ * - FOUNDER is all-powerful. Cannot be demoted or kicked.
+ * - MODERATOR may promote or demote peers below them to any role below them.
+ *             May also kick peers below them and set the topic.
+ * - USER may interact normally with the group.
  * - OBSERVER cannot interact with the group but may observe.
  */
 typedef enum Group_Role {
@@ -93,8 +93,7 @@ typedef enum Group_Broadcast_Type {
     GM_ACTION_MESSAGE,
     GM_PRVT_MESSAGE,
     GM_PEER_EXIT,
-    GM_REMOVE_PEER,
-    GM_REMOVE_BAN,
+    GM_KICK_PEER,
     GM_SET_MOD,
     GM_SET_OBSERVER,
 } Group_Broadcast_Type;
@@ -524,7 +523,6 @@ int gc_founder_set_privacy_state(Messenger *m, int groupnumber, uint8_t new_priv
 int gc_founder_set_max_peers(GC_Chat *chat, int groupnumber, uint32_t maxpeers);
 
 /* Instructs all peers to remove peer_id from their peerlist.
- * If set_ban is true peer will be added to the ban list.
  *
  * Returns 0 on success.
  * Returns -1 if the groupnumber is invalid.
@@ -532,18 +530,9 @@ int gc_founder_set_max_peers(GC_Chat *chat, int groupnumber, uint32_t maxpeers);
  * Returns -3 if the caller does not have sufficient permissions for this action.
  * Returns -4 if the action failed.
  * Returns -5 if the packet failed to send.
- * Returns -6 if the caller attempted to remove himself.
+ * Returns -6 if the caller attempted to kick himself.
  */
-int gc_remove_peer(Messenger *m, int groupnumber, uint32_t peer_id, bool set_ban);
-
-/* Instructs all peers to remove ban_id from their ban list.
- *
- * Returns 0 on success.
- * Returns -1 if the caller does not have sufficient permissions for this action.
- * Returns -2 if the entry could not be removed.
- * Returns -3 if the packet failed to send.
- */
-int gc_remove_ban(GC_Chat *chat, uint32_t ban_id);
+int gc_kick_peer(Messenger *m, int groupnumber, uint32_t peer_id);
 
 /* Copies the chat_id to dest */
 void gc_get_chat_id(const GC_Chat *chat, uint8_t *dest);
