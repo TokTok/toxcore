@@ -3612,7 +3612,7 @@ static int send_gc_kick_peer(GC_Chat *chat, GC_Connection *gconn)
 int gc_kick_peer(Messenger *m, int groupnumber, uint32_t peer_id)
 {
     GC_Session *c = m->group_handler;
-    GC_Chat *chat = gc_get_group(m->group_handler, groupnumber);
+    GC_Chat *chat = gc_get_group(c, groupnumber);
 
     if (chat == nullptr) {
         return -1;
