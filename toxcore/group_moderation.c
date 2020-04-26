@@ -136,22 +136,22 @@ bool mod_list_verify_sig_pk(const GC_Chat *chat, const uint8_t *sig_pk)
 /* Returns true if sig_pk is the designated sync moderator, which is defined as the
  * moderator (or founder) who has the closest signature public key to the Chat ID.
  */
-static bool mod_list_chosen_one(const GC_Chat *chat, const uint8_t *sig_pk)
-{
-    uint16_t i;
+// static bool mod_list_chosen_one(const GC_Chat *chat, const uint8_t *sig_pk)
+// {
+//     uint16_t i;
 
-    for (i = 0; i < chat->moderation.num_mods; ++i) {
-        if (id_closest(get_chat_id(chat->chat_public_key), sig_pk, chat->moderation.mod_list[i]) == 2) {
-            return false;
-        }
-    }
+//     for (i = 0; i < chat->moderation.num_mods; ++i) {
+//         if (id_closest(get_chat_id(chat->chat_public_key), sig_pk, chat->moderation.mod_list[i]) == 2) {
+//             return false;
+//         }
+//     }
 
-    if (id_closest(get_chat_id(chat->chat_public_key), sig_pk, get_sig_pk(chat->shared_state.founder_public_key)) == 2) {
-        return false;
-    }
+//     if (id_closest(get_chat_id(chat->chat_public_key), sig_pk, get_sig_pk(chat->shared_state.founder_public_key)) == 2) {
+//         return false;
+//     }
 
-    return true;
-}
+//     return true;
+// }
 
 /* Removes moderator at index-th position in the moderator list.
  *
