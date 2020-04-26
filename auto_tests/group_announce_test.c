@@ -51,21 +51,20 @@ static void group_join_fail_handler(Tox *tox, uint32_t groupnumber, TOX_GROUP_JO
     printf("join failed: %s\n", tox_str_group_join_fail(fail_type));
 }
 
-static State *global_state_tox0;
-static State *global_state_tox1;
-
 static void group_peer_join_handler(Tox *tox, uint32_t groupnumber, uint32_t peer_id, void *user_data)
 {
+    State *state = (State *)user_data;
     printf("peer %u joined, sending message\n", peer_id);
-    global_state_tox1->peer_joined = true;
+    state->peer_joined = true;
 }
 
 static void group_message_handler(Tox *tox, uint32_t groupnumber, uint32_t peer_id, TOX_MESSAGE_TYPE type,
                                   const uint8_t *message, size_t length, void *user_data)
 {
+    State *state = (State *)user_data;
     printf("peer %u sent message: %s\n", peer_id, (const char *)message);
     ck_assert(memcmp(message, "hello", 6) == 0);
-    global_state_tox0->message_received = true;
+    state->message_received = true;
 }
 
 static void group_message_test(Tox **toxes, State *state)
@@ -77,9 +76,6 @@ static void group_message_test(Tox **toxes, State *state)
     tox_callback_group_join_fail(toxes[1], group_join_fail_handler);
     tox_callback_group_peer_join(toxes[1], group_peer_join_handler);
     tox_callback_group_message(toxes[0], group_message_handler);
-
-    global_state_tox0 = &state[0];
-    global_state_tox1 = &state[1];
 
     // tox0 makes new group.
     struct Tox_Group_peer_info self_info0;
@@ -109,8 +105,7 @@ static void group_message_test(Tox **toxes, State *state)
     ck_assert(err_join == TOX_ERR_GROUP_JOIN_OK);
 
     while (!state[0].message_received) {
-        tox_iterate(toxes[0], &state[0]);
-        tox_iterate(toxes[1], &state[1]);
+        iterate_all_wait(2, toxes, state, ITERATION_INTERVAL);
 
         if (state[1].peer_joined && !state[1].message_sent) {
             TOX_ERR_GROUP_SEND_MESSAGE err_send;
@@ -118,9 +113,14 @@ static void group_message_test(Tox **toxes, State *state)
             ck_assert(err_send == TOX_ERR_GROUP_SEND_MESSAGE_OK);
             state[1].message_sent = true;
         }
-
-        c_sleep(ITERATION_INTERVAL);
     }
+
+    TOX_ERR_GROUP_LEAVE err_exit;
+    tox_group_leave(toxes[0], group_number, nullptr, 0, &err_exit);
+    ck_assert(err_exit == TOX_ERR_GROUP_LEAVE_OK);
+
+    tox_group_leave(toxes[1], group_number, nullptr, 0, &err_exit);
+    ck_assert(err_exit == TOX_ERR_GROUP_LEAVE_OK);
 }
 
 int main(void)
