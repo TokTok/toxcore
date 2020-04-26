@@ -5170,7 +5170,7 @@ int gc_peer_delete(Messenger *m, int group_number, uint32_t peer_number, const u
     /* Needs to occur before peer is removed*/
     if (c->peer_exit && gconn->confirmed) {
         (*c->peer_exit)(m, group_number, chat->group[peer_number].peer_id, chat->group[peer_number].nick,
-                        chat->group[peer_number].nick_len, data, length, c->peer_exit_userdata);
+                        chat->group[peer_number].nick_length, data, length, c->peer_exit_userdata);
     }
 
     kill_tcp_connection_to(chat->tcp_conn, gconn->tcp_connection_num);
@@ -5229,7 +5229,7 @@ static int peer_update(Messenger *m, int group_number, GC_GroupPeer *peer, uint3
     if ((nick_num != -1 && nick_num != peer_number) || is_nick_banned) {   /* duplicate or banned nick */
         if (c->peer_exit) {
             (*c->peer_exit)(m, group_number, chat->group[peer_number].peer_id, chat->group[peer_number].nick,
-                            chat->group[peer_number].nick_len, nullptr, 0, c->peer_exit_userdata);
+                            chat->group[peer_number].nick_length, nullptr, 0, c->peer_exit_userdata);
         }
 
         gc_peer_delete(m, group_number, peer_number, (const uint8_t *)"duplicate nick", 13);
