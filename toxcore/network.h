@@ -83,8 +83,8 @@ size_t net_socket_data_recv_buffer(Socket sock);
 
 #define MAX_UDP_PACKET_SIZE 65507
 
+#ifdef USE_TEST_NETWORK
 typedef enum Net_Packet_Type {
-#if 1
     NET_PACKET_PING_REQUEST         = 0x05, /* Ping request packet ID. */
     NET_PACKET_PING_RESPONSE        = 0x06, /* Ping response packet ID. */
     NET_PACKET_GET_NODES            = 0x07, /* Get nodes request packet ID. */
@@ -122,7 +122,9 @@ typedef enum Net_Packet_Type {
     BOOTSTRAP_INFO_PACKET_ID        = 0xf1, /* Only used for bootstrap nodes */
 
     NET_PACKET_MAX                  = 0xff, /* This type must remain within a single uint8. */
+} Net_Packet_Type;
 #else
+typedef enum Net_Packet_Type {
     NET_PACKET_PING_REQUEST         = 0x00, /* Ping request packet ID. */
     NET_PACKET_PING_RESPONSE        = 0x01, /* Ping response packet ID. */
     NET_PACKET_GET_NODES            = 0x02, /* Get nodes request packet ID. */
@@ -160,8 +162,8 @@ typedef enum Net_Packet_Type {
     BOOTSTRAP_INFO_PACKET_ID        = 0xf0, /* Only used for bootstrap nodes */
 
     NET_PACKET_MAX                  = 0xff, /* This type must remain within a single uint8. */
-#endif // test network
 } Net_Packet_Type;
+#endif // test network
 
 
 #define TOX_PORTRANGE_FROM 33445
