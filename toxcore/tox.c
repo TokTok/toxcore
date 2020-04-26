@@ -472,7 +472,8 @@ static void tox_group_peer_exit_handler(Messenger *m, uint32_t groupnumber, uint
     Tox *tox = (Tox *)user_data;
 
     if (tox->group_peer_exit_callback != nullptr) {
-        tox->group_peer_exit_callback(tox, groupnumber, peer_id, name, name_length, part_message, length, tox->non_const_user_data);
+        tox->group_peer_exit_callback(tox, groupnumber, peer_id, name, name_length, part_message, length,
+                                      tox->non_const_user_data);
     }
 }
 
