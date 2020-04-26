@@ -105,6 +105,11 @@ if(NOT USE_IPV6)
   add_definitions(-DUSE_IPV6=0)
 endif()
 
+option(USE_TEST_NETWORK "Use a separate test network with different packet IDs" OFF)
+if(NOT USE_TEST_NETWORK)
+  add_definitions(-DUSE_TEST_NETWORK=1)
+endif()
+
 option(USE_STDERR_LOGGER "Enable logging to stderr when the logger is NULL" OFF)
 if(USE_STDERR_LOGGER)
   add_definitions(-DUSE_STDERR_LOGGER=1)
