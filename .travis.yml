@@ -39,6 +39,7 @@ jobs:
       install:       .travis/$JOB install
       script:        .travis/$JOB script
     - stage: "Stage 1"
+      if: type IN (push, api, cron)
       env: JOB=tox-bootstrapd-docker
       services: [docker]
       script:        .travis/$JOB
