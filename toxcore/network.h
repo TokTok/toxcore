@@ -84,7 +84,7 @@ size_t net_socket_data_recv_buffer(Socket sock);
 #define MAX_UDP_PACKET_SIZE 65507
 
 typedef enum Net_Packet_Type {
-#if 1
+#ifdef USE_TEST_NETWORK
     NET_PACKET_PING_REQUEST         = 0x05, /* Ping request packet ID. */
     NET_PACKET_PING_RESPONSE        = 0x06, /* Ping response packet ID. */
     NET_PACKET_GET_NODES            = 0x07, /* Get nodes request packet ID. */
