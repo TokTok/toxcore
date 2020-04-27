@@ -1796,7 +1796,7 @@ void do_onion_client(Onion_Client *onion_c)
 
 Onion_Client *new_onion_client(Mono_Time *mono_time, Net_Crypto *c, GC_Session *gc_session)
 {
-    if (!c || !gc_session) {
+    if (!c) {
         return nullptr;
     }
 
@@ -1813,11 +1813,14 @@ Onion_Client *new_onion_client(Mono_Time *mono_time, Net_Crypto *c, GC_Session *
         return nullptr;
     }
 
+    if (gc_session) {
+        onion_c->gc_session = gc_session;
+    }
+
     onion_c->mono_time = mono_time;
     onion_c->dht = nc_get_dht(c);
     onion_c->net = dht_get_net(onion_c->dht);
     onion_c->c = c;
-    onion_c->gc_session = gc_session;
     new_symmetric_key(onion_c->secret_symmetric_key);
     crypto_new_keypair(onion_c->temp_public_key, onion_c->temp_secret_key);
     networking_registerhandler(onion_c->net, NET_PACKET_ANNOUNCE_RESPONSE, &handle_announce_response, onion_c);
