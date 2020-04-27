@@ -89,8 +89,7 @@ static int handle_test_3(void *object, IP_Port source, const uint8_t *packet, ui
 {
     Onion *onion = (Onion *)object;
 
-    if (length != (1 + CRYPTO_NONCE_SIZE + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH + 1 + CRYPTO_SHA256_SIZE +
-                   CRYPTO_MAC_SIZE)) {
+    if (length < ONION_ANNOUNCE_RESPONSE_MIN_SIZE || length > ONION_ANNOUNCE_RESPONSE_MAX_SIZE) {
         return 1;
     }
 
@@ -101,7 +100,7 @@ static int handle_test_3(void *object, IP_Port source, const uint8_t *packet, ui
     int len = decrypt_data(test_3_pub_key, dht_get_self_secret_key(onion->dht),
                            packet + 1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH,
                            packet + 1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH + CRYPTO_NONCE_SIZE,
-                           1 + CRYPTO_SHA256_SIZE + CRYPTO_MAC_SIZE, plain);
+                           1 + sizeof(plain) + CRYPTO_MAC_SIZE, plain);
 
     if (len == -1) {
         return 1;
