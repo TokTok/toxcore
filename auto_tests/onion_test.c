@@ -93,14 +93,14 @@ static int handle_test_3(void *object, IP_Port source, const uint8_t *packet, ui
         return 1;
     }
 
-    uint8_t plain[1 + CRYPTO_SHA256_SIZE];
+    uint8_t plain[2 + CRYPTO_SHA256_SIZE];
 #if 0
     print_client_id(packet, length);
 #endif
     int len = decrypt_data(test_3_pub_key, dht_get_self_secret_key(onion->dht),
                            packet + 1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH,
                            packet + 1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH + CRYPTO_NONCE_SIZE,
-                           1 + sizeof(plain) + CRYPTO_MAC_SIZE, plain);
+                           2 + CRYPTO_SHA256_SIZE + CRYPTO_MAC_SIZE, plain);
 
     if (len == -1) {
         return 1;
@@ -204,8 +204,9 @@ static void test_basic(void)
         do_onion(onion2);
     } while (handled_test_2 == 0);
 
-    Onion_Announce *onion1_a = new_onion_announce(mono_time1, onion1->dht, new_gca_list());
-    Onion_Announce *onion2_a = new_onion_announce(mono_time2, onion2->dht, new_gca_list());
+    GC_Announces_List unused_var;
+    Onion_Announce *onion1_a = new_onion_announce(mono_time1, onion1->dht, &unused_var);
+    Onion_Announce *onion2_a = new_onion_announce(mono_time2, onion2->dht, &unused_var);
     networking_registerhandler(onion1->net, NET_PACKET_ANNOUNCE_RESPONSE, &handle_test_3, onion1);
     ck_assert_msg((onion1_a != nullptr) && (onion2_a != nullptr), "Onion_Announce failed initializing.");
     uint8_t zeroes[64] = {0};
@@ -376,7 +377,8 @@ static Onions *new_onions(uint16_t port, uint32_t *index)
         return nullptr;
     }
 
-    on->onion_a = new_onion_announce(on->mono_time, dht, new_gca_list());
+    GC_Announces_List unused_var1;
+    on->onion_a = new_onion_announce(on->mono_time, dht, &unused_var1);
 
     if (!on->onion_a) {
         kill_onion(on->onion);
@@ -388,8 +390,9 @@ static Onions *new_onions(uint16_t port, uint32_t *index)
         return nullptr;
     }
 
+    GC_Session unused_var2;
     TCP_Proxy_Info inf = {{{{0}}}};
-    on->onion_c = new_onion_client(on->mono_time, new_net_crypto(on->log, on->mono_time, dht, &inf), nullptr);
+    on->onion_c = new_onion_client(on->mono_time, new_net_crypto(on->log, on->mono_time, dht, &inf), &unused_var2);
 
     if (!on->onion_c) {
         kill_onion_announce(on->onion_a);
