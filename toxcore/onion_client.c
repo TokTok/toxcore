@@ -1796,7 +1796,7 @@ void do_onion_client(Onion_Client *onion_c)
 
 Onion_Client *new_onion_client(Mono_Time *mono_time, Net_Crypto *c, GC_Session *gc_session)
 {
-    if (!c) {
+    if (!c || !gc_session) {
         return nullptr;
     }
 
@@ -1813,10 +1813,7 @@ Onion_Client *new_onion_client(Mono_Time *mono_time, Net_Crypto *c, GC_Session *
         return nullptr;
     }
 
-    if (gc_session) {
-        onion_c->gc_session = gc_session;
-    }
-
+    onion_c->gc_session = gc_session;
     onion_c->mono_time = mono_time;
     onion_c->dht = nc_get_dht(c);
     onion_c->net = dht_get_net(onion_c->dht);
