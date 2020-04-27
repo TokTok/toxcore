@@ -1,11 +1,21 @@
 # ![Project Tox](https://raw.github.com/TokTok/c-toxcore/master/other/tox.png "Project Tox")
 
-**Current build status:** [![Build Status](https://travis-ci.org/TokTok/c-toxcore.svg?branch=master)](https://travis-ci.org/TokTok/c-toxcore)
-**Current Coverage:** [![Coverage Status](https://coveralls.io/repos/github/TokTok/c-toxcore/badge.svg?branch=master)](https://coveralls.io/github/TokTok/c-toxcore?branch=master)
+**Current build status:**
+[![Build Status](https://travis-ci.org/TokTok/c-toxcore.svg?branch=master)](https://travis-ci.org/TokTok/c-toxcore)
+**Current Coverage:**
+[![Coverage Status](https://coveralls.io/repos/github/TokTok/c-toxcore/badge.svg?branch=master)](https://coveralls.io/github/TokTok/c-toxcore?branch=master)
 
-[**Website**](https://tox.chat) **|** [**Wiki**](https://wiki.tox.chat/) **|** [**Blog**](https://blog.tox.chat/) **|** [**FAQ**](https://wiki.tox.chat/doku.php?id=users:faq) **|** [**Binaries/Downloads**](https://wiki.tox.chat/Binaries) **|** [**Clients**](https://wiki.tox.chat/doku.php?id=clients) **|** [**Compiling**](/INSTALL.md) **|** [**Toxcore's Projects**](https://github.com/TokTok/c-toxcore/projects)
+[**Website**](https://tox.chat) **|** [**Wiki**](https://wiki.tox.chat/) **|**
+[**Blog**](https://blog.tox.chat/) **|**
+[**FAQ**](https://wiki.tox.chat/doku.php?id=users:faq) **|**
+[**Binaries/Downloads**](https://wiki.tox.chat/Binaries) **|**
+[**Clients**](https://wiki.tox.chat/doku.php?id=clients) **|**
+[**Compiling**](/INSTALL.md) **|**
+[**Toxcore's Projects**](https://github.com/TokTok/c-toxcore/projects)
 
-**IRC Channels:** Users: [#tox@freenode](https://webchat.freenode.net/?channels=tox), Developers: [#toktok@freenode](https://webchat.freenode.net/?channels=toktok)
+**IRC Channels:** Users:
+[#tox@freenode](https://webchat.freenode.net/?channels=tox), Developers:
+[#toktok@freenode](https://webchat.freenode.net/?channels=toktok)
 
 ## What is Tox
 
@@ -18,20 +28,20 @@ and privacy easy to obtain for regular users. It uses
 ### ![Danger: Experimental](other/tox-warning.png)
 
 This is an **experimental** cryptographic network library. It has not been
-formally audited by an independent third party that specializes in
-cryptography or cryptanalysis. **Use this library at your own risk.**
+formally audited by an independent third party that specializes in cryptography
+or cryptanalysis. **Use this library at your own risk.**
 
 The underlying crypto library [NaCl](https://nacl.cr.yp.to/install.html)
 provides reliable encryption, but the security model has not yet been fully
-specified. See [issue 210](https://github.com/TokTok/c-toxcore/issues/210) for
-a discussion on developing a threat model. See other issues for known
-weaknesses (e.g. [issue 426](https://github.com/TokTok/c-toxcore/issues/426)
-describes what can happen if your secret key is stolen).
+specified. See [issue 210](https://github.com/TokTok/c-toxcore/issues/210) for a
+discussion on developing a threat model. See other issues for known weaknesses
+(e.g. [issue 426](https://github.com/TokTok/c-toxcore/issues/426) describes what
+can happen if your secret key is stolen).
 
 ## Toxcore Development Roadmap
 
-The roadmap and changelog are generated from GitHub issues. You may view them
-on the website, where they are updated at least once every 24 hours:
+The roadmap and changelog are generated from GitHub issues. You may view them on
+the website, where they are updated at least once every 24 hours:
 
 -   Changelog: https://toktok.ltd/changelog/c-toxcore
 -   Roadmap: https://toktok.ltd/roadmap/c-toxcore
@@ -74,17 +84,17 @@ if (err_new != TOX_ERR_NEW_OK) {
 }
 ```
 
-Here, we simply exit the program, but in a real client you will probably want
-to do some error handling and proper error reporting to the user. The `NULL`
+Here, we simply exit the program, but in a real client you will probably want to
+do some error handling and proper error reporting to the user. The `NULL`
 argument given to the first parameter of `tox_new` is the `Tox_Options`. It
-contains various write-once network settings and allows you to load a
-previously serialised instance. See [toxcore/tox.h](tox.h) for details.
+contains various write-once network settings and allows you to load a previously
+serialised instance. See [toxcore/tox.h](tox.h) for details.
 
 ### Setting up callbacks
 
-Toxcore works with callbacks that you can register to listen for certain
-events. Examples of such events are "friend request received" or "friend sent
-a message". Search the API for `tox_callback_*` to find all of them.
+Toxcore works with callbacks that you can register to listen for certain events.
+Examples of such events are "friend request received" or "friend sent a
+message". Search the API for `tox_callback_*` to find all of them.
 
 Here, we will set up callbacks for receiving friend requests and receiving
 messages. We will always accept any friend request (because we're a bot), and
@@ -170,5 +180,5 @@ the API documentation in [toxcore/tox.h](toxcore/tox.h) for more information.
 
 ### Other resources
 
-- [Another echo bot](https://wiki.tox.chat/developers/client_examples/echo_bot)
-- [minitox](https://github.com/hqwrong/minitox) (A minimal tox client)
+-   [Another echo bot](https://wiki.tox.chat/developers/client_examples/echo_bot)
+-   [minitox](https://github.com/hqwrong/minitox) (A minimal tox client)
