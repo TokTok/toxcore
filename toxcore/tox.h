@@ -3541,11 +3541,6 @@ typedef enum TOX_ERR_GROUP_PEER_LIST_QUERY {
 } TOX_ERR_GROUP_PEER_LIST_QUERY;
 
 
-size_t tox_group_get_peers_list_size(const Tox *tox, uint32_t group_number, TOX_ERR_GROUP_PEER_LIST_QUERY *error);
-
-bool tox_group_get_peers_list(const Tox *tox, uint32_t group_number, uint32_t *peers_list,
-                              TOX_ERR_GROUP_PEER_LIST_QUERY *error);
-
 typedef enum TOX_ERR_GROUP_RECONNECT {
 
     /**
@@ -5258,7 +5253,6 @@ typedef TOX_ERR_GROUP_MOD_SET_ROLE Tox_Err_Group_Mod_Set_Role;
 typedef TOX_ERR_GROUP_MOD_REMOVE_PEER Tox_Err_Group_Mod_Remove_Peer;
 typedef TOX_ERR_GROUP_MOD_REMOVE_BAN Tox_Err_Group_Mod_Remove_Ban;
 typedef TOX_ERR_GROUP_BAN_QUERY Tox_Err_Group_Ban_Query;
-typedef TOX_ERR_GROUP_PEER_LIST_QUERY Tox_Err_Group_Peer_List_Query;
 typedef TOX_ERR_GROUP_DISCONNECT Tox_Err_Group_Disconnect;
 typedef TOX_ERR_GROUP_IS_CONNECTED Tox_Err_Group_Is_Connected;
 typedef TOX_USER_STATUS Tox_User_Status;
