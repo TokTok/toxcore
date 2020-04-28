@@ -2926,25 +2926,11 @@ namespace group {
  *
  ******************************************************************************/
 
-namespace groups{
+namespace groups {
   const void get_list(uint32_t *list);
 }
 
 namespace group {
-
-  class group_peer_info {
-      struct this [get, set] {
-          string nick;
-          uint8_t nick_length;
-          USER_STATUS user_status;
-      }
-
-      static this new(){
-        MALLOC,
-      }
-
-      void free();
-  }
 
   /**
    * Creates a new group chat.
@@ -2960,16 +2946,20 @@ namespace group {
    * @param group_name The name of the group. The name must be non-NULL.
    * @param group_name_length The length of the group name. This must be greater than zero and no larger than
    *   $MAX_GROUP_NAME_LENGTH.
+   * @param name The name of the peer creating the group.
+   * @param name_length The length of the peer's name. This must be greater than zero and no larger
+   *   than $MAX_NAME_LENGTH.
    *
    * @return group_number on success, UINT32_MAX on failure.
    */
-  uint32_t new(PRIVACY_STATE privacy_state, const uint8_t[group_name_length <= MAX_GROUP_NAME_LENGTH] group_name, const group_peer_info_t *peer_info) {
+  uint32_t new(PRIVACY_STATE privacy_state, const uint8_t[group_name_length <= MAX_GROUP_NAME_LENGTH] group_name,
+               const uint8_t[name_length <= MAX_NAME_LENGTH] name) {
     /**
-     * The group name exceeded $MAX_GROUP_NAME_LENGTH.
+     * name exceeds $MAX_NAME_LENGTH or group_name exceeded $MAX_GROUP_NAME_LENGTH.
      */
     TOO_LONG,
     /**
-     * group_name is NULL or length is zero.
+     * name or group_name is NULL or length is zero.
      */
     EMPTY,
     /**
@@ -2989,7 +2979,6 @@ namespace group {
      * The group failed to announce to the DHT. This indicates a network related error.
      */
     ANNOUNCE,
-    PEER_INFO,
   }
 
   /**
@@ -3003,10 +2992,14 @@ namespace group {
    * @param password The password required to join the group. Set to NULL if no password is required.
    * @param password_length The length of the password. If length is equal to zero,
    *   the password parameter is ignored. length must be no larger than $MAX_PASSWORD_SIZE.
+   * @param name The name of the peer joining the group.
+   * @param name_length The length of the peer's name. This must be greater than zero and no larger
+   *   than $MAX_NAME_LENGTH.
    *
    * @return group_number on success, UINT32_MAX on failure.
    */
-  uint32_t join(const uint8_t[CHAT_ID_SIZE] chat_id, const uint8_t[password_length <= MAX_PASSWORD_SIZE] password, group_peer_info_t *peer_info) {
+  uint32_t join(const uint8_t[CHAT_ID_SIZE] chat_id, const uint8_t[name_length <= MAX_NAME_LENGTH] name,
+                const uint8_t[password_length <= MAX_PASSWORD_SIZE] password) {
     /**
      * The group instance failed to initialize.
      */
@@ -3017,9 +3010,21 @@ namespace group {
      */
     BAD_CHAT_ID,
     /**
-     * Password length exceeded $MAX_PASSWORD_SIZE.
+     * name is NULL or name_length is zero.
+     */
+    EMPTY,
+    /**
+     * name exceeds $MAX_NAME_LENGTH.
      */
     TOO_LONG,
+    /**
+     * Failed to set password. This usually occurs if the password exceeds $MAX_PASSWORD_SIZE.
+     */
+    PASSWORD,
+    /**
+     * There was a core error when initiating the group.
+     */
+    CORE,
   }
 
   bool is_connected(uint32_t group_number) {
@@ -3092,7 +3097,6 @@ namespace group {
      */
     DELETE_FAIL,
   }
-
 }
 
 /*******************************************************************************
@@ -3848,13 +3852,18 @@ namespace group {
      *
      * @param invite_data The invite data received from the `${event invite}` event.
      * @param length The length of the invite data.
+     * @param name The name of the peer joining the group.
+     * @param name_length The length of the peer's name. This must be greater than zero and no larger
+     *   than $MAX_NAME_LENGTH.
      * @param password The password required to join the group. Set to NULL if no password is required.
      * @param password_length The length of the password. If password_length is equal to zero, the password
      *    parameter will be ignored. password_length must be no larger than $MAX_PASSWORD_SIZE.
      *
      * @return the group_number on success, UINT32_MAX on failure.
      */
-    uint32_t accept(uint32_t friend_number, const uint8_t[length] invite_data, const uint8_t[password_length <= MAX_PASSWORD_SIZE] password, group_peer_info_t *peer_info) {
+    uint32_t accept(uint32_t friend_number, const uint8_t[length] invite_data,
+                    const uint8_t[name_length <= MAX_NAME_LENGTH] name,
+                    const uint8_t[password_length <= MAX_PASSWORD_SIZE] password) {
       /**
        * The invite data is not in the expected format.
        */
@@ -3864,9 +3873,25 @@ namespace group {
        */
       INIT_FAILED,
       /**
-       * Password length exceeded $MAX_PASSWORD_SIZE.
+       * name exceeds $MAX_NAME_LENGTH
        */
       TOO_LONG,
+      /**
+       * name is NULL or name_length is zero.
+       */
+      EMPTY,
+      /**
+       * Failed to set password. This usually occurs if the password exceeds $MAX_PASSWORD_SIZE.
+       */
+      PASSWORD,
+      /**
+       * There was a core error when initiating the group.
+       */
+      CORE,
+      /**
+       * Packet failed to send.
+       */
+      FAIL_SEND,
     }
   }
 
@@ -4416,7 +4441,6 @@ typedef TOX_ERR_GROUP_MOD_REMOVE_BAN Tox_Err_Group_Mod_Remove_Ban;
 typedef TOX_ERR_GROUP_BAN_QUERY Tox_Err_Group_Ban_Query;
 typedef TOX_ERR_GROUP_PEER_LIST_QUERY Tox_Err_Group_Peer_List_Query;
 typedef TOX_ERR_GROUP_DISCONNECT Tox_Err_Group_Disconnect;
-typedef TOX_ERR_GROUP_GROUP_PEER_INFO_NEW Tox_Err_Group_Group_Peer_Info_New;
 typedef TOX_ERR_GROUP_IS_CONNECTED Tox_Err_Group_Is_Connected;
 typedef TOX_USER_STATUS Tox_User_Status;
 typedef TOX_MESSAGE_TYPE Tox_Message_Type;

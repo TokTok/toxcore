@@ -3352,51 +3352,6 @@ typedef enum TOX_GROUP_ROLE {
 
 void tox_groups_get_list(const Tox *tox, uint32_t *list);
 
-struct Tox_Group_peer_info {
-
-    const char *nick;
-
-
-    uint8_t nick_length;
-
-
-    TOX_USER_STATUS user_status;
-
-};
-
-
-const char *tox_group_group_peer_info_get_nick(const struct Tox_Group_peer_info *group_peer_info);
-
-void tox_group_group_peer_info_set_nick(struct Tox_Group_peer_info *group_peer_info, const char *nick);
-
-uint8_t tox_group_group_peer_info_get_nick_length(const struct Tox_Group_peer_info *group_peer_info);
-
-void tox_group_group_peer_info_set_nick_length(struct Tox_Group_peer_info *group_peer_info, uint8_t nick_length);
-
-TOX_USER_STATUS tox_group_group_peer_info_get_user_status(const struct Tox_Group_peer_info *group_peer_info);
-
-void tox_group_group_peer_info_set_user_status(struct Tox_Group_peer_info *group_peer_info,
-        TOX_USER_STATUS user_status);
-
-typedef enum TOX_ERR_GROUP_GROUP_PEER_INFO_NEW {
-
-    /**
-     * The function returned successfully.
-     */
-    TOX_ERR_GROUP_GROUP_PEER_INFO_NEW_OK,
-
-    /**
-     * TODO: Generate doc
-     */
-    TOX_ERR_GROUP_GROUP_PEER_INFO_NEW_MALLOC,
-
-} TOX_ERR_GROUP_GROUP_PEER_INFO_NEW;
-
-
-struct Tox_Group_peer_info *tox_group_group_peer_info_new(TOX_ERR_GROUP_GROUP_PEER_INFO_NEW *error);
-
-void tox_group_group_peer_info_free(struct Tox_Group_peer_info *group_peer_info);
-
 typedef enum TOX_ERR_GROUP_NEW {
 
     /**
@@ -3405,12 +3360,12 @@ typedef enum TOX_ERR_GROUP_NEW {
     TOX_ERR_GROUP_NEW_OK,
 
     /**
-     * The group name exceeded TOX_GROUP_MAX_GROUP_NAME_LENGTH.
+     * name exceeds TOX_MAX_NAME_LENGTH or group_name exceeded TOX_GROUP_MAX_GROUP_NAME_LENGTH.
      */
     TOX_ERR_GROUP_NEW_TOO_LONG,
 
     /**
-     * group_name is NULL or length is zero.
+     * name or group_name is NULL or length is zero.
      */
     TOX_ERR_GROUP_NEW_EMPTY,
 
@@ -3435,11 +3390,6 @@ typedef enum TOX_ERR_GROUP_NEW {
      */
     TOX_ERR_GROUP_NEW_ANNOUNCE,
 
-    /**
-     * TODO: Generate doc
-     */
-    TOX_ERR_GROUP_NEW_PEER_INFO,
-
 } TOX_ERR_GROUP_NEW;
 
 
@@ -3457,11 +3407,14 @@ typedef enum TOX_ERR_GROUP_NEW {
  * @param group_name The name of the group. The name must be non-NULL.
  * @param group_name_length The length of the group name. This must be greater than zero and no larger than
  *   TOX_GROUP_MAX_GROUP_NAME_LENGTH.
+ * @param name The name of the peer creating the group.
+ * @param name_length The length of the peer's name. This must be greater than zero and no larger
+ *   than TOX_MAX_NAME_LENGTH.
  *
  * @return group_number on success, UINT32_MAX on failure.
  */
 uint32_t tox_group_new(Tox *tox, TOX_GROUP_PRIVACY_STATE privacy_state, const uint8_t *group_name,
-                       size_t group_name_length, const struct Tox_Group_peer_info *peer_info, TOX_ERR_GROUP_NEW *error);
+                       size_t group_name_length, const uint8_t *name, size_t name_length, TOX_ERR_GROUP_NEW *error);
 
 typedef enum TOX_ERR_GROUP_JOIN {
 
@@ -3482,9 +3435,24 @@ typedef enum TOX_ERR_GROUP_JOIN {
     TOX_ERR_GROUP_JOIN_BAD_CHAT_ID,
 
     /**
-     * Password length exceeded TOX_GROUP_MAX_PASSWORD_SIZE.
+     * name is NULL or name_length is zero.
+     */
+    TOX_ERR_GROUP_JOIN_EMPTY,
+
+    /**
+     * name exceeds TOX_MAX_NAME_LENGTH.
      */
     TOX_ERR_GROUP_JOIN_TOO_LONG,
+
+    /**
+     * Failed to set password. This usually occurs if the password exceeds TOX_GROUP_MAX_PASSWORD_SIZE.
+     */
+    TOX_ERR_GROUP_JOIN_PASSWORD,
+
+    /**
+     * There was a core error when initiating the group.
+     */
+    TOX_ERR_GROUP_JOIN_CORE,
 
 } TOX_ERR_GROUP_JOIN;
 
@@ -3500,11 +3468,14 @@ typedef enum TOX_ERR_GROUP_JOIN {
  * @param password The password required to join the group. Set to NULL if no password is required.
  * @param password_length The length of the password. If length is equal to zero,
  *   the password parameter is ignored. length must be no larger than TOX_GROUP_MAX_PASSWORD_SIZE.
+ * @param name The name of the peer joining the group.
+ * @param name_length The length of the peer's name. This must be greater than zero and no larger
+ *   than TOX_MAX_NAME_LENGTH.
  *
  * @return group_number on success, UINT32_MAX on failure.
  */
-uint32_t tox_group_join(Tox *tox, const uint8_t *chat_id, const uint8_t *password, size_t password_length,
-                        struct Tox_Group_peer_info *peer_info, TOX_ERR_GROUP_JOIN *error);
+uint32_t tox_group_join(Tox *tox, const uint8_t *chat_id, const uint8_t *name, size_t name_length,
+                        const uint8_t *password, size_t password_length, TOX_ERR_GROUP_JOIN *error);
 
 typedef enum TOX_ERR_GROUP_IS_CONNECTED {
 
@@ -4548,9 +4519,29 @@ typedef enum TOX_ERR_GROUP_INVITE_ACCEPT {
     TOX_ERR_GROUP_INVITE_ACCEPT_INIT_FAILED,
 
     /**
-     * Password length exceeded TOX_GROUP_MAX_PASSWORD_SIZE.
+     * name exceeds TOX_MAX_NAME_LENGTH
      */
     TOX_ERR_GROUP_INVITE_ACCEPT_TOO_LONG,
+
+    /**
+     * name is NULL or name_length is zero.
+     */
+    TOX_ERR_GROUP_INVITE_ACCEPT_EMPTY,
+
+    /**
+     * Failed to set password. This usually occurs if the password exceeds TOX_GROUP_MAX_PASSWORD_SIZE.
+     */
+    TOX_ERR_GROUP_INVITE_ACCEPT_PASSWORD,
+
+    /**
+     * There was a core error when initiating the group.
+     */
+    TOX_ERR_GROUP_INVITE_ACCEPT_CORE,
+
+    /**
+     * Packet failed to send.
+     */
+    TOX_ERR_GROUP_INVITE_ACCEPT_FAIL_SEND,
 
 } TOX_ERR_GROUP_INVITE_ACCEPT;
 
@@ -4561,6 +4552,9 @@ typedef enum TOX_ERR_GROUP_INVITE_ACCEPT {
  *
  * @param invite_data The invite data received from the `group_invite` event.
  * @param length The length of the invite data.
+ * @param name The name of the peer joining the group.
+ * @param name_length The length of the peer's name. This must be greater than zero and no larger
+ *   than TOX_MAX_NAME_LENGTH.
  * @param password The password required to join the group. Set to NULL if no password is required.
  * @param password_length The length of the password. If password_length is equal to zero, the password
  *    parameter will be ignored. password_length must be no larger than TOX_GROUP_MAX_PASSWORD_SIZE.
@@ -4568,7 +4562,7 @@ typedef enum TOX_ERR_GROUP_INVITE_ACCEPT {
  * @return the group_number on success, UINT32_MAX on failure.
  */
 uint32_t tox_group_invite_accept(Tox *tox, uint32_t friend_number, const uint8_t *invite_data, size_t length,
-                                 const uint8_t *password, size_t password_length, struct Tox_Group_peer_info *peer_info,
+                                 const uint8_t *name, size_t name_length, const uint8_t *password, size_t password_length,
                                  TOX_ERR_GROUP_INVITE_ACCEPT *error);
 
 /**
@@ -5266,7 +5260,6 @@ typedef TOX_ERR_GROUP_MOD_REMOVE_BAN Tox_Err_Group_Mod_Remove_Ban;
 typedef TOX_ERR_GROUP_BAN_QUERY Tox_Err_Group_Ban_Query;
 typedef TOX_ERR_GROUP_PEER_LIST_QUERY Tox_Err_Group_Peer_List_Query;
 typedef TOX_ERR_GROUP_DISCONNECT Tox_Err_Group_Disconnect;
-typedef TOX_ERR_GROUP_GROUP_PEER_INFO_NEW Tox_Err_Group_Group_Peer_Info_New;
 typedef TOX_ERR_GROUP_IS_CONNECTED Tox_Err_Group_Is_Connected;
 typedef TOX_USER_STATUS Tox_User_Status;
 typedef TOX_MESSAGE_TYPE Tox_Message_Type;

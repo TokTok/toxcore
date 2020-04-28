@@ -180,12 +180,6 @@ typedef struct GC_SavedPeerInfo {
     IP_Port     ip_port;
 } GC_SavedPeerInfo;
 
-typedef struct GC_SelfPeerInfo {
-    uint8_t nick[MAX_GC_NICK_SIZE];
-    uint16_t nick_length;
-    Group_Peer_Status user_status;
-} GC_SelfPeerInfo;
-
 typedef struct GC_GroupPeer {
     uint8_t     role;
     uint8_t     nick[MAX_GC_NICK_SIZE];
@@ -630,28 +624,30 @@ int gc_group_load(GC_Session *c, Saved_Group *save, int group_number);
 
 /* Creates a new group.
  *
- * Return group_number on success.
- * Return -1 if the group name is too long.
- * Return -2 if the group name is empty.
+ * Return -1 if the nick or group name is too long.
+ * Return -2 if the nick group name is empty.
  * Return -3 if the privacy state is an invalid type.
  * Return -4 if the the group object fails to initialize.
  * Return -5 if the group state fails to initialize.
- * Return -6 if the group fails to announce to the DHT.
- */
+ * Return -6 if the announce was unsuccessful.
+*/
 int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name, uint16_t group_name_length,
-                 const GC_SelfPeerInfo *peer_info);
+                 const uint8_t *nick, size_t nick_length);
 
 /* Sends an invite request to a public group using the chat_id.
  *
  * If the group is not password protected password should be set to NULL and password_length should be 0.
  *
  * Return group_number on success.
- * Reutrn -1 if the group object fails to initialize.
- * Return -2 if chat_id is NULL or a group with chat_id already exists in the chats arr
- * Return -3 if there is an error setting the group password.
+ * Return -1 if the group object fails to initialize.
+ * Return -2 if chat_id is NULL or a group with chat_id already exists in the chats array.
+ * Return -3 if nick is too long.
+ * Return -4 if nick is empty or nick length is zero.
+ * Return -5 if there is an error setting the group password.
+ * Return -6 if there is an error adding a friend.
  */
-int gc_group_join(GC_Session *c, const uint8_t *chat_id, const uint8_t *passwd, uint16_t passwd_len,
-                  const GC_SelfPeerInfo *peer_info);
+int gc_group_join(GC_Session *c, const uint8_t *chat_id, const uint8_t *nick, size_t nick_length, const uint8_t *passwd,
+                  uint16_t passwd_len);
 
 bool gc_disconnect_from_group(GC_Session *c, GC_Chat *chat);
 
@@ -663,11 +659,14 @@ bool gc_rejoin_group(GC_Session *c, GC_Chat *chat);
  * Return group_number on success.
  * Return -1 if the invite data is malformed.
  * Return -2 if the group object fails to initialize.
- * Return -3 if there is an error setting the password.
+ * Return -3 if nick is too long.
+ * Return -4 if nick is empty or nick length is zero.
+ * Return -5 if there is an error setting the password.
+ * Return -6 if friend doesn't exist.
+ * Return -7 if sending packet failed.
  */
-int gc_accept_invite(GC_Session *c, int32_t friend_number, const uint8_t *data, uint16_t length,
-                     const uint8_t *passwd, uint16_t passwd_len,
-                     const GC_SelfPeerInfo *peer_info);
+int gc_accept_invite(GC_Session *c, int32_t friend_number, const uint8_t *data, uint16_t length, const uint8_t *nick,
+                     size_t nick_length, const uint8_t *passwd, uint16_t passwd_len);
 
 typedef int gc_send_group_invite_packet_cb(const Messenger *m, uint32_t friendnumber, const uint8_t *packet,
         size_t length);
