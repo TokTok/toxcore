@@ -28,6 +28,8 @@
 #define GROUP_NAME "The Gas Chamber"
 #define GROUP_NAME_LEN (sizeof(GROUP_NAME) - 1)
 
+#define PEER0_NICK "David"
+
 /* Returns 0 if group state is equal to the state passed to this function.
  * Returns negative integer if state is invalid.
  */
@@ -184,13 +186,8 @@ START_TEST(test_text_all)
 
     /* Tox1 creates a group and is a founder of a newly created group */
     TOX_ERR_GROUP_NEW new_err;
-    struct Tox_Group_peer_info *self_peer_info = tox_group_group_peer_info_new(nullptr);
-    self_peer_info->nick = "tox1";
-    self_peer_info->nick_length = 4;
     uint32_t groupnum = tox_group_new(toxes[1], TOX_GROUP_PRIVACY_STATE_PUBLIC, (const uint8_t *)GROUP_NAME, GROUP_NAME_LEN,
-                                      self_peer_info, &new_err);
-
-    tox_group_group_peer_info_free(self_peer_info);
+                                      (const uint8_t *)PEER0_NICK, strlen(PEER0_NICK), &new_err);
 
     ck_assert_msg(new_err == TOX_ERR_GROUP_NEW_OK, "tox_group_new failed: %d", new_err);
 
@@ -211,14 +208,11 @@ START_TEST(test_text_all)
 
     /* All other peers join the group using the Chat ID and password */
     for (size_t i = 2; i < NUM_GROUP_TOXES; ++i) {
+        char nick[TOX_MAX_NAME_LENGTH + 1];
+        snprintf(nick, sizeof(nick), "Follower%zu", i);
         TOX_ERR_GROUP_JOIN join_err;
-        struct Tox_Group_peer_info *other_peer_info = tox_group_group_peer_info_new(nullptr);
-        char nick[5];
-        int length = snprintf(nick, sizeof(nick), "tox%u", (unsigned)i);
-        other_peer_info->nick = nick;
-        other_peer_info->nick_length = length;
-        tox_group_join(toxes[i], chat_id, (const uint8_t *)PASSWORD, PASS_LEN, other_peer_info, &join_err);
-        tox_group_group_peer_info_free(other_peer_info);
+        tox_group_join(toxes[i], chat_id, (const uint8_t *)nick, strlen(nick), (const uint8_t *)PASSWORD, PASS_LEN,
+                       &join_err);
         ck_assert_msg(join_err == TOX_ERR_GROUP_JOIN_OK, "tox_group_join failed: %d", join_err);
         c_sleep(1000);
     }
