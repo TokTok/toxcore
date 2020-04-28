@@ -21,6 +21,8 @@ typedef struct State {
 
 #define TEST_MESSAGE "The kiosk in my temporal lobe is shaped like Rosalynn Carter"
 #define TEST_GROUP_NAME "NASA Headquarters"
+#define PEER0_NICK "Lois"
+#define PEER1_NICK "Benjamin"
 
 static void group_invite_handler(Tox *tox, uint32_t friend_number, const uint8_t *invite_data, size_t length,
                                  const uint8_t *group_name, size_t group_name_length, void *user_data)
@@ -90,15 +92,11 @@ static void group_message_test(Tox **toxes, State *state)
     tox_callback_group_message(toxes[0], group_message_handler);
 
     // tox0 makes new group.
-    struct Tox_Group_peer_info self_info0;
-    self_info0.nick = "tox0";
-    self_info0.nick_length = 4;
-    self_info0.user_status = TOX_USER_STATUS_NONE;
     TOX_ERR_GROUP_NEW err_new;
     uint32_t group_number =
         tox_group_new(
             toxes[0], TOX_GROUP_PRIVACY_STATE_PUBLIC,
-            (const uint8_t *) TEST_GROUP_NAME, strlen(TEST_GROUP_NAME), &self_info0, &err_new);
+            (const uint8_t *) TEST_GROUP_NAME, strlen(TEST_GROUP_NAME), (const uint8_t *)PEER0_NICK, strlen(PEER0_NICK), &err_new);
     ck_assert(err_new == TOX_ERR_GROUP_NEW_OK);
 
     // get the chat id of the new group.
@@ -108,12 +106,8 @@ static void group_message_test(Tox **toxes, State *state)
     ck_assert(err_id == TOX_ERR_GROUP_STATE_QUERIES_OK);
 
     // tox1 joins it.
-    struct Tox_Group_peer_info self_info1;
-    self_info1.nick = "tox1";
-    self_info1.nick_length = 4;
-    self_info1.user_status = TOX_USER_STATUS_NONE;
     TOX_ERR_GROUP_JOIN err_join;
-    tox_group_join(toxes[1], chat_id, nullptr, 0, &self_info1, &err_join);
+    tox_group_join(toxes[1], chat_id, (const uint8_t *)PEER1_NICK, strlen(PEER1_NICK), nullptr, 0, &err_join);
     ck_assert(err_join == TOX_ERR_GROUP_JOIN_OK);
 
     while (!state[0].message_received) {
@@ -121,7 +115,8 @@ static void group_message_test(Tox **toxes, State *state)
 
         if (state[1].peer_joined && !state[1].message_sent) {
             TOX_ERR_GROUP_SEND_MESSAGE err_send;
-            tox_group_send_message(toxes[1], group_number, TOX_MESSAGE_TYPE_NORMAL, (const uint8_t *)TEST_MESSAGE, strlen(TEST_MESSAGE), &err_send);
+            tox_group_send_message(toxes[1], group_number, TOX_MESSAGE_TYPE_NORMAL, (const uint8_t *)TEST_MESSAGE,
+                                   strlen(TEST_MESSAGE), &err_send);
             ck_assert(err_send == TOX_ERR_GROUP_SEND_MESSAGE_OK);
             state[1].message_sent = true;
         }
