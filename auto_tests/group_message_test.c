@@ -77,9 +77,35 @@ static void group_message_handler(Tox *tox, uint32_t groupnumber, uint32_t peer_
     memcpy(message_buf, message, length);
     message_buf[length] = 0;
 
+    TOX_ERR_GROUP_PEER_QUERY q_err;
+    size_t peer_name_len = tox_group_peer_get_name_size(tox, groupnumber, peer_id, &q_err);
+
+    ck_assert(q_err == TOX_ERR_GROUP_PEER_QUERY_OK);
+    ck_assert(peer_name_len <= TOX_MAX_NAME_LENGTH);
+
+    char peer_name[TOX_MAX_NAME_LENGTH + 1];
+    tox_group_peer_get_name(tox, groupnumber, peer_id, (uint8_t *) peer_name, &q_err);
+    peer_name[peer_name_len] = 0;
+
+    ck_assert(q_err == TOX_ERR_GROUP_PEER_QUERY_OK);
+    ck_assert(memcmp(peer_name, PEER1_NICK, peer_name_len));
+
+    TOX_ERR_GROUP_SELF_QUERY s_err;
+    size_t self_name_len = tox_group_self_get_name_size(tox, groupnumber, &s_err);
+    ck_assert(s_err == TOX_ERR_GROUP_SELF_QUERY_OK);
+    ck_assert(self_name_len <= TOX_MAX_NAME_LENGTH);
+
+    char self_name[TOX_MAX_NAME_LENGTH + 1];
+    tox_group_self_get_name(tox, groupnumber, (uint8_t *) self_name, &s_err);
+    self_name[self_name_len] = 0;
+
+    ck_assert(s_err == TOX_ERR_GROUP_SELF_QUERY_OK);
+    ck_assert(memcmp(self_name, PEER0_NICK, self_name_len));
+
+    printf("%s sent message to %s: %s\n", peer_name, self_name, message_buf);
+    ck_assert(memcmp(message_buf, TEST_MESSAGE, length) == 0);
+
     State *state = (State *)user_data;
-    printf("peer %u sent message: %s\n", peer_id, message_buf);
-    ck_assert(memcmp(message_buf, TEST_MESSAGE, strlen(TEST_MESSAGE)) == 0);
     state->message_received = true;
 }
 
