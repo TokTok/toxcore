@@ -5919,7 +5919,7 @@ int gc_group_load(GC_Session *c, Saved_Group *save, int group_number)
 /* Creates a new group.
  *
  * Return -1 if the nick or group name is too long.
- * Return -2 if the nick group name is empty.
+ * Return -2 if the nick or group name is empty.
  * Return -3 if the privacy state is an invalid type.
  * Return -4 if the the group object fails to initialize.
  * Return -5 if the group state fails to initialize.
@@ -6003,7 +6003,7 @@ int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name
  * Return -3 if nick is too long.
  * Return -4 if nick is empty or nick length is zero.
  * Return -5 if there is an error setting the group password.
- * Return -6 if there is an error adding a friend
+ * Return -6 if there is an error adding a friend.
  */
 int gc_group_join(GC_Session *c, const uint8_t *chat_id, const uint8_t *nick, size_t nick_length, const uint8_t *passwd,
                   uint16_t passwd_len)
@@ -6778,31 +6778,6 @@ int add_peers_from_announces(const GC_Session *gc_session, GC_Chat *chat, GC_Ann
     }
 
     return added_peers;
-}
-
-size_t group_get_peers_list_size(const GC_Chat *chat)
-{
-    int i, count = 0;
-
-    for (i = 0; i < chat->numpeers; ++i) {
-        if (chat->gcc[i].confirmed) {
-            ++count;
-        }
-    }
-
-    return count * sizeof(uint32_t);
-}
-
-void group_get_peers_list(const GC_Chat *chat, uint32_t *peers_list)
-{
-    int i, index = 0;
-
-    for (i = 0; i < chat->numpeers; ++i) {
-        if (chat->gcc[i].confirmed) {
-            peers_list[index] = chat->group[i].peer_id;
-            ++index;
-        }
-    }
 }
 
 #endif
