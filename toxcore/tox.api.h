@@ -3042,11 +3042,6 @@ namespace group {
     PARAMETER_IS_NULL,
   }
 
-  const size_t get_peers_list_size(uint32_t group_number) with error for peer_list_query;
-
-  const bool get_peers_list(uint32_t group_number, uint32_t *peers_list) with error for peer_list_query;
-
-
   /**
    * Reconnects to a group.
    *
@@ -4439,7 +4434,6 @@ typedef TOX_ERR_GROUP_MOD_SET_ROLE Tox_Err_Group_Mod_Set_Role;
 typedef TOX_ERR_GROUP_MOD_REMOVE_PEER Tox_Err_Group_Mod_Remove_Peer;
 typedef TOX_ERR_GROUP_MOD_REMOVE_BAN Tox_Err_Group_Mod_Remove_Ban;
 typedef TOX_ERR_GROUP_BAN_QUERY Tox_Err_Group_Ban_Query;
-typedef TOX_ERR_GROUP_PEER_LIST_QUERY Tox_Err_Group_Peer_List_Query;
 typedef TOX_ERR_GROUP_DISCONNECT Tox_Err_Group_Disconnect;
 typedef TOX_ERR_GROUP_IS_CONNECTED Tox_Err_Group_Is_Connected;
 typedef TOX_USER_STATUS Tox_User_Status;
