@@ -77,7 +77,7 @@ static void group_message_handler(Tox *tox, uint32_t groupnumber, uint32_t peer_
 
     State *state = (State *)user_data;
     printf("peer %u sent message: %s\n", peer_id, (const char *)message_buf);
-    ck_assert(memcmp(message_buf, TEST_MESSAGE, strlen(TEST_MESSAGE)) == 0);
+    ck_assert(memcmp(message_buf, TEST_MESSAGE, length) == 0);
     state->message_received = true;
 }
 
