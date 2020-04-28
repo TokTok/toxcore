@@ -1191,6 +1191,7 @@ static int handle_gc_sync_request(const Messenger *m, int group_number, int peer
     GC_Announce new_peer_announce;
 
     if (!create_announce_for_peer(chat, gconn, (uint32_t)peer_number, &new_peer_announce)) {
+        free(existing_peers_announces);
         return -1;
     }
 
@@ -1200,6 +1201,7 @@ static int handle_gc_sync_request(const Messenger *m, int group_number, int peer
                                         &new_peer_announce);
 
     if (announce_length == -1) {
+        free(existing_peers_announces);
         return -1;
     }
 
@@ -1231,6 +1233,8 @@ static int handle_gc_sync_request(const Messenger *m, int group_number, int peer
     size_t packed_announces_length;
     int announces_count = pack_announces_list(response + len, sizeof(response) - len, existing_peers_announces,
                           num, &packed_announces_length);
+
+    free(existing_peers_announces);
 
     if (announces_count != num) {
         return -1;

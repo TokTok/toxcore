@@ -19,6 +19,9 @@ typedef struct State {
 
 #include "run_auto_test.h"
 
+#define TEST_MESSAGE "Where is it I've read that someone condemned to death says or thinks, an hour before his death, that if he had to live on some high rock, on such a narrow ledge that he'd only room to stand, and the ocean, everlasting darkness, everlasting solitude, everlasting tempest around him, if he had to remain standing on a square yard of space all his life, a thousand years, eternity, it were better to live so than to die at once. Only to live, to live and live! Life, whatever it may be!"
+#define TEST_GROUP_NAME "Utah Data Center"
+
 static void group_invite_handler(Tox *tox, uint32_t friend_number, const uint8_t *invite_data, size_t length,
                                  const uint8_t *group_name, size_t group_name_length, void *user_data)
 {
@@ -67,9 +70,18 @@ static void group_peer_join_handler(Tox *tox, uint32_t groupnumber, uint32_t pee
 static void group_message_handler(Tox *tox, uint32_t groupnumber, uint32_t peer_id, TOX_MESSAGE_TYPE type,
                                   const uint8_t *message, size_t length, void *user_data)
 {
+    if (length > TOX_MAX_MESSAGE_LENGTH) {
+        printf("Failed to receive message. Invalid length: %zu\n", length);
+        return;
+    }
+
+    char message_buf[TOX_MAX_MESSAGE_LENGTH + 1];
+    memcpy(message_buf, message, length);
+    message_buf[length] = 0;
+
     State *state = (State *)user_data;
-    printf("peer %u sent message: %s\n", peer_id, (const char *)message);
-    ck_assert(memcmp(message, "hello", 6) == 0);
+    printf("peer %u sent message: %s\n", peer_id, message_buf);
+    ck_assert(memcmp(message_buf, TEST_MESSAGE, strlen(TEST_MESSAGE)) == 0);
     state->message_received = true;
 }
 
@@ -92,7 +104,7 @@ static void group_message_test(Tox **toxes, State *state)
     uint32_t group_number =
         tox_group_new(
             toxes[0], TOX_GROUP_PRIVACY_STATE_PRIVATE,
-            (const uint8_t *)"my cool group", strlen("my cool group"), &self_info0, &err_new);
+            (const uint8_t *)TEST_GROUP_NAME, strlen(TEST_GROUP_NAME), &self_info0, &err_new);
     ck_assert(err_new == TOX_ERR_GROUP_NEW_OK);
 
     // tox0 invites tox1
@@ -106,7 +118,7 @@ static void group_message_test(Tox **toxes, State *state)
 
         if (state[1].peer_joined && !state[1].message_sent) {
             TOX_ERR_GROUP_SEND_MESSAGE err_send;
-            tox_group_send_message(toxes[1], group_number, TOX_MESSAGE_TYPE_NORMAL, (const uint8_t *)"hello", 6, &err_send);
+            tox_group_send_message(toxes[1], group_number, TOX_MESSAGE_TYPE_NORMAL, (const uint8_t *)TEST_MESSAGE, strlen(TEST_MESSAGE), &err_send);
             ck_assert(err_send == TOX_ERR_GROUP_SEND_MESSAGE_OK);
             state[1].message_sent = true;
         }
