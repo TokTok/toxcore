@@ -2705,46 +2705,10 @@ void tox_callback_group_join_fail(Tox *tox, tox_group_join_fail_cb *function)
     tox->group_join_fail_callback = function;
 }
 
-struct Tox_Group_peer_info *tox_group_group_peer_info_new(Tox_Err_Group_Group_Peer_Info_New *error)
-{
-    struct Tox_Group_peer_info *peer_info = (struct Tox_Group_peer_info *)calloc(1, sizeof(struct Tox_Group_peer_info));
-
-    SET_ERROR_PARAMETER(error, peer_info ? TOX_ERR_GROUP_GROUP_PEER_INFO_NEW_OK : TOX_ERR_GROUP_GROUP_PEER_INFO_NEW_MALLOC);
-    return peer_info;
-}
-
-void tox_group_group_peer_info_free(struct Tox_Group_peer_info *self_peer_info)
-{
-    free(self_peer_info);
-}
-
-static GC_SelfPeerInfo *create_self_peer_info(const struct Tox_Group_peer_info *peer_info)
-{
-    if (!peer_info ||
-            !peer_info->nick ||
-            !peer_info->nick_length ||
-            peer_info->nick_length > TOX_GROUP_MAX_PEER_LENGTH ||
-            peer_info->user_status > TOX_USER_STATUS_BUSY) {
-        return nullptr;
-    }
-
-    GC_SelfPeerInfo *self_peer_info = (GC_SelfPeerInfo *)calloc(1, sizeof(GC_SelfPeerInfo));
-
-    if (self_peer_info) {
-        self_peer_info->user_status = (Group_Peer_Status)peer_info->user_status;
-        self_peer_info->nick_length = peer_info->nick_length;
-        memcpy(self_peer_info->nick, peer_info->nick, peer_info->nick_length);
-    }
-
-    return self_peer_info;
-}
-
 uint32_t tox_group_new(Tox *tox, Tox_Group_Privacy_State privacy_state, const uint8_t *group_name,
-                       size_t group_name_length, const struct Tox_Group_peer_info *peer_info, Tox_Err_Group_New *error)
+                       size_t group_name_length, const uint8_t *name, size_t name_length, Tox_Err_Group_New *error)
 {
-    GC_SelfPeerInfo *self_peer_info = create_self_peer_info(peer_info);
-    int ret = gc_group_add(tox->m->group_handler, privacy_state, group_name, group_name_length, self_peer_info);
-    free(self_peer_info);
+    int ret = gc_group_add(tox->m->group_handler, privacy_state, group_name, group_name_length, name, name_length);
 
     if (ret >= 0) {
         SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_NEW_OK);
@@ -2773,10 +2737,6 @@ uint32_t tox_group_new(Tox *tox, Tox_Group_Privacy_State privacy_state, const ui
             return UINT32_MAX;
 
         case -6:
-            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_NEW_PEER_INFO);
-            return UINT32_MAX;
-
-        case -7:
             SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_NEW_ANNOUNCE);
             return UINT32_MAX;
     }
@@ -2785,12 +2745,10 @@ uint32_t tox_group_new(Tox *tox, Tox_Group_Privacy_State privacy_state, const ui
     return UINT32_MAX;
 }
 
-uint32_t tox_group_join(Tox *tox, const uint8_t *chat_id, const uint8_t *password, size_t password_length,
-                        struct Tox_Group_peer_info *peer_info, Tox_Err_Group_Join *error)
+uint32_t tox_group_join(Tox *tox, const uint8_t *chat_id, const uint8_t *name, size_t name_length,
+                        const uint8_t *password, size_t password_length, Tox_Err_Group_Join *error)
 {
-    GC_SelfPeerInfo *self_peer_info = create_self_peer_info(peer_info);
-    int ret = gc_group_join(tox->m->group_handler, chat_id, password, password_length, self_peer_info);
-    free(self_peer_info);
+    int ret = gc_group_join(tox->m->group_handler, chat_id, name, name_length, password, password_length);
 
     if (ret >= 0) {
         SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_JOIN_OK);
@@ -2808,6 +2766,18 @@ uint32_t tox_group_join(Tox *tox, const uint8_t *chat_id, const uint8_t *passwor
 
         case -3:
             SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_JOIN_TOO_LONG);
+            return UINT32_MAX;
+
+        case -4:
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_JOIN_EMPTY);
+            return UINT32_MAX;
+
+        case -5:
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_JOIN_PASSWORD);
+            return UINT32_MAX;
+
+        case -6:
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_JOIN_CORE);
             return UINT32_MAX;
     }
 
@@ -3546,13 +3516,11 @@ bool tox_group_invite_friend(Tox *tox, uint32_t group_number, uint32_t friend_nu
 }
 
 uint32_t tox_group_invite_accept(Tox *tox, uint32_t friend_number, const uint8_t *invite_data, size_t length,
-                                 const uint8_t *password, size_t password_length, struct Tox_Group_peer_info *peer_info,
-                                 Tox_Err_Group_Invite_Accept *error)
+                                 const uint8_t *name, size_t name_length, const uint8_t *password,
+                                 size_t password_length, Tox_Err_Group_Invite_Accept *error)
 {
-    GC_SelfPeerInfo *self_peer_info = create_self_peer_info(peer_info);
-    int ret = gc_accept_invite(tox->m->group_handler, friend_number, invite_data, length, password, password_length,
-                               self_peer_info);
-    free(self_peer_info);
+    int ret = gc_accept_invite(tox->m->group_handler, friend_number, invite_data, length, name, name_length, password,
+                               password_length);
 
     if (ret >= 0) {
         SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_INVITE_ACCEPT_OK);
@@ -3570,6 +3538,22 @@ uint32_t tox_group_invite_accept(Tox *tox, uint32_t friend_number, const uint8_t
 
         case -3:
             SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_INVITE_ACCEPT_TOO_LONG);
+            return UINT32_MAX;
+
+        case -4:
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_INVITE_ACCEPT_EMPTY);
+            return UINT32_MAX;
+
+        case -5:
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_INVITE_ACCEPT_PASSWORD);
+            return UINT32_MAX;
+
+        case -6:
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_INVITE_ACCEPT_CORE);
+            return UINT32_MAX;
+
+        case -7:
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_INVITE_ACCEPT_FAIL_SEND);
             return UINT32_MAX;
     }
 

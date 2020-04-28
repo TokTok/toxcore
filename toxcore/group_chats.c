@@ -158,12 +158,6 @@ static bool is_peer_confirmed(const GC_Chat *chat, const uint8_t *peer_pk)
     return false;
 }
 
-static bool is_self_peer_info_valid(const GC_SelfPeerInfo *peer_info)
-{
-    return peer_info && peer_info->nick_length && peer_info->nick_length <= MAX_GC_NICK_SIZE && peer_info->nick
-           && peer_info->user_status < GS_INVALID;
-}
-
 bool is_public_chat(const GC_Chat *chat)
 {
     return chat->shared_state.privacy_state == GI_PUBLIC;
@@ -5693,8 +5687,16 @@ static int init_gc_tcp_connection(Messenger *m, GC_Chat *chat)
     return 0;
 }
 
-static int create_new_group(GC_Session *c, const GC_SelfPeerInfo *peer_info, bool founder)
+static int create_new_group(GC_Session *c, const uint8_t *nick, size_t nick_length, bool founder)
 {
+    if (nick == nullptr || nick_length == 0) {
+        return -1;
+    }
+
+    if (nick_length > MAX_GC_NICK_SIZE) {
+        return -1;
+    }
+
     int group_number = get_new_group_index(c);
 
     if (group_number == -1) {
@@ -5723,9 +5725,9 @@ static int create_new_group(GC_Session *c, const GC_SelfPeerInfo *peer_info, boo
         return -1;
     }
 
-    memcpy(chat->group[0].nick, peer_info->nick, peer_info->nick_length);
-    chat->group[0].nick_length = peer_info->nick_length;
-    chat->group[0].status = peer_info->user_status;
+    memcpy(chat->group[0].nick, nick, nick_length);
+    chat->group[0].nick_length = nick_length;
+    chat->group[0].status = GS_NONE;
     chat->group[0].role = founder ? GR_FOUNDER : GR_USER;
     chat->gcc[0].confirmed = true;
     chat->self_public_key_hash = chat->gcc[0].public_key_hash;
@@ -5916,19 +5918,21 @@ int gc_group_load(GC_Session *c, Saved_Group *save, int group_number)
 
 /* Creates a new group.
  *
- * Return group_number on success.
- * Return -1 if the group name is too long.
- * Return -2 if the group name is empty.
+ * Return -1 if the nick or group name is too long.
+ * Return -2 if the nick group name is empty.
  * Return -3 if the privacy state is an invalid type.
  * Return -4 if the the group object fails to initialize.
  * Return -5 if the group state fails to initialize.
- * Return -6 if the self peer info is invalid
- * Return -7 if the announce was unsuccessful
+ * Return -6 if the announce was unsuccessful.
 */
 int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name, uint16_t group_name_length,
-                 const GC_SelfPeerInfo *peer_info)
+                 const uint8_t *nick, size_t nick_length)
 {
     if (group_name_length > MAX_GC_GROUP_NAME_SIZE) {
+        return -1;
+    }
+
+    if (nick_length > MAX_GC_NICK_SIZE) {
         return -1;
     }
 
@@ -5936,15 +5940,15 @@ int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name
         return -2;
     }
 
-    if (!is_self_peer_info_valid(peer_info)) {
-        return -6;
+    if (nick_length == 0 || nick == nullptr) {
+        return -2;
     }
 
     if (privacy_state >= GI_INVALID) {
         return -3;
     }
 
-    int group_number = create_new_group(c, peer_info, true);
+    int group_number = create_new_group(c, nick, nick_length, true);
 
     if (group_number == -1) {
         return -4;
@@ -5982,7 +5986,7 @@ int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name
 
         if (friend_number < 0) {
             group_delete(c, chat);
-            return -7;
+            return -6;
         }
     }
 
@@ -5996,22 +6000,27 @@ int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name
  * Return group_number on success.
  * Return -1 if the group object fails to initialize.
  * Return -2 if chat_id is NULL or a group with chat_id already exists in the chats array.
- * Return -3 if there is an error setting the group password.
- * Return -4 if there is an error adding a friend
- * Return -5 if there is an error setting self name and status
+ * Return -3 if nick is too long.
+ * Return -4 if nick is empty or nick length is zero.
+ * Return -5 if there is an error setting the group password.
+ * Return -6 if there is an error adding a friend
  */
-int gc_group_join(GC_Session *c, const uint8_t *chat_id, const uint8_t *passwd, uint16_t passwd_len,
-                  const GC_SelfPeerInfo *peer_info)
+int gc_group_join(GC_Session *c, const uint8_t *chat_id, const uint8_t *nick, size_t nick_length, const uint8_t *passwd,
+                  uint16_t passwd_len)
 {
     if (chat_id == nullptr || group_exists(c, chat_id) || getfriend_id(c->messenger, chat_id) != -1) {
         return -2;
     }
 
-    if (!is_self_peer_info_valid(peer_info)) {
-        return -5;
+    if (nick_length > MAX_GC_NICK_SIZE) {
+        return -3;
     }
 
-    int group_number = create_new_group(c, peer_info, false);
+    if (nick == nullptr || nick_length == 0) {
+        return -4;
+    }
+
+    int group_number = create_new_group(c, nick, nick_length, false);
 
     if (group_number == -1) {
         return -1;
@@ -6031,14 +6040,14 @@ int gc_group_join(GC_Session *c, const uint8_t *chat_id, const uint8_t *passwd, 
 
     if (passwd != nullptr && passwd_len > 0) {
         if (set_gc_password_local(chat, passwd, passwd_len) == -1) {
-            return -3;
+            return -5;
         }
     }
 
     int friend_number = m_add_friend_gc(c->messenger, chat);
 
     if (friend_number < 0) {
-        return -4;
+        return -6;
     }
 
     return group_number;
@@ -6410,24 +6419,28 @@ int handle_gc_invite_accepted_packet(GC_Session *c, int friend_number, const uin
  * Return group_number on success.
  * Return -1 if the invite data is malformed.
  * Return -2 if the group object fails to initialize.
- * Return -3 if there is an error setting the password.
- * Return -4 if friend doesn't exist
- * Return -5 if sending packet failed
- * Return -6 if self peer info is invalid
+ * Return -3 if nick is too long.
+ * Return -4 if nick is empty or nick length is zero.
+ * Return -5 if there is an error setting the password.
+ * Return -6 if friend doesn't exist.
+ * Return -7 if sending packet failed.
  */
-int gc_accept_invite(GC_Session *c, int32_t friend_number, const uint8_t *data, uint16_t length,
-                     const uint8_t *passwd, uint16_t passwd_len,
-                     const GC_SelfPeerInfo *peer_info)
+int gc_accept_invite(GC_Session *c, int32_t friend_number, const uint8_t *data, uint16_t length, const uint8_t *nick,
+                     size_t nick_length, const uint8_t *passwd, uint16_t passwd_len)
 {
     if (length < CHAT_ID_SIZE + ENC_PUBLIC_KEY) {
         return -1;
     }
 
-    if (!friend_is_valid(c->messenger, friend_number)) {
+    if (nick_length > MAX_GC_NICK_SIZE) {
+        return -3;
+    }
+
+    if (nick == nullptr || nick_length == 0) {
         return -4;
     }
 
-    if (!is_self_peer_info_valid(peer_info)) {
+    if (!friend_is_valid(c->messenger, friend_number)) {
         return -6;
     }
 
@@ -6437,18 +6450,17 @@ int gc_accept_invite(GC_Session *c, int32_t friend_number, const uint8_t *data, 
     memcpy(chat_id, data, CHAT_ID_SIZE);
     memcpy(invite_chat_pk, data + CHAT_ID_SIZE, ENC_PUBLIC_KEY);
 
-    int err = -2;
-    int group_number = create_new_group(c, peer_info, false);
+    int group_number = create_new_group(c, nick, nick_length, false);
 
     if (group_number == -1) {
-        return err;
+        return -2;
     }
 
     GC_Chat *chat = gc_get_group(c, group_number);
 
     if (chat == nullptr) {
         group_delete(c, chat);
-        return err;
+        return -2;
     }
 
     expand_chat_id(chat->chat_public_key, chat_id);
@@ -6458,22 +6470,20 @@ int gc_accept_invite(GC_Session *c, int32_t friend_number, const uint8_t *data, 
     chat->last_join_attempt = mono_time_get(c->messenger->mono_time);
 
     if (passwd != nullptr && passwd_len > 0) {
-        err = -3;
-
         if (set_gc_password_local(chat, passwd, passwd_len) == -1) {
             group_delete(c, chat);
-            return err;
+            return -5;
         }
     }
 
     int peer_id = peer_add(c->messenger, group_number, nullptr, invite_chat_pk);
 
     if (peer_id < 0) {
-        return -1;
+        return -2;
     }
 
     if (send_gc_invite_accepted_packet(c->messenger, chat, friend_number)) {
-        return -5;
+        return -7;
     }
 
     return group_number;
