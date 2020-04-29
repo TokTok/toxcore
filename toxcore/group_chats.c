@@ -3239,6 +3239,7 @@ static int mod_gc_set_observer(GC_Chat *chat, uint32_t peer_number, bool add_obs
  * Returns -3 if caller does not have sufficient permissions for the action.
  * Returns -4 if the role assignment is invalid.
  * Returns -5 if the role failed to be set.
+ * Returns -6 if the caller attempted to set their own role.
  */
 int gc_set_peer_role(Messenger *m, int group_number, uint32_t peer_id, uint8_t role)
 {
@@ -3257,8 +3258,12 @@ int gc_set_peer_role(Messenger *m, int group_number, uint32_t peer_id, uint8_t r
 
     GC_Connection *gconn = gcc_get_connection(chat, peer_number);
 
-    if (peer_number == 0 || gconn == nullptr) {
+    if (gconn == nullptr) {
         return -2;
+    }
+
+    if (peer_number == 0) {
+        return -6;
     }
 
     if (!gconn->confirmed) {
@@ -3785,6 +3790,7 @@ static int send_gc_remove_peer(GC_Chat *chat, GC_Connection *gconn, struct GC_Sa
  * Returns -3 if the caller does not have sufficient permissions for this action.
  * Returns -4 if the action failed.
  * Returns -5 if the packet failed to send.
+ * Returns -6 if the caller attempted to remove himself.
  */
 int gc_remove_peer(Messenger *m, int group_number, uint32_t peer_id, bool set_ban, uint8_t ban_type)
 {
@@ -3796,6 +3802,10 @@ int gc_remove_peer(Messenger *m, int group_number, uint32_t peer_id, bool set_ba
     }
 
     int peer_number = get_peer_number_of_peer_id(chat, peer_id);
+
+    if (peer_number == 0) {
+        return -6;
+    }
 
     GC_Connection *gconn = gcc_get_connection(chat, peer_number);
 
@@ -4043,6 +4053,7 @@ static int handle_gc_hs_response_ack(Messenger *m, int group_number, GC_Connecti
  *
  * Returns 0 on success.
  * Returns -1 if the peer_id is invalid.
+ * Returns -2 if the caller attempted to ignore himself.
  */
 int gc_toggle_ignore(GC_Chat *chat, uint32_t peer_id, bool ignore)
 {
@@ -4050,6 +4061,10 @@ int gc_toggle_ignore(GC_Chat *chat, uint32_t peer_id, bool ignore)
 
     if (!peer_number_valid(chat, peer_number)) {
         return -1;
+    }
+
+    if (peer_number == 0) {
+        return -2;
     }
 
     chat->group[peer_number].ignore = ignore;
@@ -5099,7 +5114,7 @@ void gc_callback_rejected(Messenger *m, gc_rejected_cb *function, void *userdata
 }
 
 /*
- * Deletes peernumber from group. `no_callback` should be set to true if the `peer_exit` callback should not be triggered.
+ * Deletes peer_number from group. `no_callback` should be set to true if the `peer_exit` callback should not be triggered.
  *
  * Return 0 on success.
  * Return -1 on failure.
