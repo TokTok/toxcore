@@ -84,8 +84,8 @@ typedef enum Group_Peer_Status {
 typedef enum Group_Connection_State {
     CS_NONE,
     CS_FAILED,
-    CS_DISCONNECTED,
     CS_MANUALLY_DISCONNECTED,
+    CS_DISCONNECTED,
     CS_CONNECTING,
     CS_CONNECTED,
     CS_INVALID,
