@@ -983,7 +983,6 @@ static int handle_gc_sync_response(Messenger *m, int group_number, int peer_numb
 
         if (unpacked_announces == -1 || unpacked_announces != num_peers) {
             free(announces);
-
             return -1;
         }
 
@@ -2489,10 +2488,6 @@ int gc_set_self_nick(Messenger *m, int group_number, const uint8_t *nick, uint16
 
     if (get_nick_peer_number(chat, nick, length) != -1) {
         return -4;
-    }
-
-    if (c->nick_change) {
-        (*c->nick_change)(m, group_number, chat->group[0].peer_id, nick, length, c->nick_change_userdata);
     }
 
     memcpy(chat->group[0].nick, nick, length);

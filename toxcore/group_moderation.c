@@ -695,10 +695,7 @@ int sanctions_list_add_entry(GC_Chat *chat, struct GC_Sanction *sanction, struct
         return -1;   // TODO(JFreegman): remove oldest entry and continue
     }
 
-
-    int ret = sanctions_list_validate_entry(chat, sanction);
-
-    if (ret == -1) {
+    if (sanctions_list_validate_entry(chat, sanction) < 0) {
         fprintf(stderr, "sanctions_list_validate_entry failed in add entry\n");
         return -1;
     }
@@ -740,12 +737,6 @@ int sanctions_list_add_entry(GC_Chat *chat, struct GC_Sanction *sanction, struct
     sanctions_list_cleanup(chat);
     chat->moderation.sanctions = new_list;
     chat->moderation.num_sanctions = index + 1;
-
-    if (ret == -2) {
-        if (broadcast_gc_sanctions_list(chat) == -1) {
-            return -1;
-        }
-    }
 
     return 0;
 }
