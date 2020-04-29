@@ -4129,6 +4129,10 @@ namespace group {
        * The ID passed did not designate a valid peer.
        */
       PEER_NOT_FOUND,
+      /**
+       * The caller attempted to ignore himself.
+       */
+      SELF,
   }
 
   namespace mod {
@@ -4169,6 +4173,10 @@ namespace group {
        * or if the packet fails to send.
        */
       FAIL_ACTION,
+      /**
+       * The caller attempted to set their own role.
+       */
+      SELF,
     }
 
     /**
@@ -4209,7 +4217,10 @@ namespace group {
        * The packet failed to send.
        */
       FAIL_SEND,
-      INVALID_BAN_TYPE,
+      /**
+       * The caller attempted to set their own role.
+       */
+      SELF,
     }
 
     /**
