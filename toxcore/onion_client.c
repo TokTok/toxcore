@@ -740,7 +740,6 @@ static int handle_announce_response(void *object, IP_Port source, const uint8_t 
     Onion_Client *onion_c = (Onion_Client *)object;
 
     if (length < ONION_ANNOUNCE_RESPONSE_MIN_SIZE || length > ONION_ANNOUNCE_RESPONSE_MAX_SIZE) {
-        fprintf(stderr, "handle_announce_response error\n");
         return 1;
     }
 
@@ -807,9 +806,7 @@ static int handle_announce_response(void *object, IP_Port source, const uint8_t 
 #ifndef VANILLA_NACL
 
     if (len_nodes + 1 < length - ONION_ANNOUNCE_RESPONSE_MIN_SIZE) {
-        fprintf(stderr, "gc ann resp\n");
         GC_Announce announces[MAX_SENT_ANNOUNCES];
-
         GC_Chat *chat = gc_get_group_by_public_key(onion_c->gc_session,
                         onion_c->friends_list[num - 1].gc_public_key);
 
@@ -818,10 +815,8 @@ static int handle_announce_response(void *object, IP_Port source, const uint8_t 
         }
 
         int offset = 2 + ONION_PING_ID_SIZE + len_nodes;
-        fprintf(stderr, "gc ann pre resp %d\n", plain_size - offset);
         int gc_announces_count = unpack_announces_list(plain + offset, plain_size - offset,
                                  announces, MAX_SENT_ANNOUNCES, nullptr);
-        fprintf(stderr, "gc ann resp %d\n", gc_announces_count);
 
         if (gc_announces_count == -1) {
             return 1;
