@@ -3693,6 +3693,8 @@ static int handle_gc_kick_peer(Messenger *m, int group_number, uint32_t peer_num
             gc_peer_delete(m, group_number, 1, nullptr, 0, false);
         }
 
+        chat->connection_state = CS_FAILED;
+
         return 0;
     }
 
@@ -4582,6 +4584,8 @@ static int handle_gc_lossless_message(Messenger *m, GC_Chat *chat, const uint8_t
     int len = unwrap_group_packet(gconn->shared_key, data, &message_id, &packet_type, packet, length);
 
     if (len <= 0) {
+        char id_str[IDSTRING_LEN];
+        fprintf(stderr, "%s\n", id_to_string(sender_pk, id_str, IDSTRING_LEN));
         return -1;
     }
 
@@ -5294,7 +5298,7 @@ static int send_pending_handshake(GC_Chat *chat, GC_Connection *gconn, uint32_t 
 
 static void do_group_tcp(GC_Chat *chat, void *userdata)
 {
-    if (!chat->tcp_conn || chat->connection_state == CS_MANUALLY_DISCONNECTED) {
+    if (!chat->tcp_conn || chat->connection_state <= CS_MANUALLY_DISCONNECTED) {
         return;
     }
 
@@ -5946,8 +5950,11 @@ bool gc_rejoin_group(GC_Session *c, GC_Chat *chat)
         return false;
     }
 
-    return (chat->connection_state == CS_MANUALLY_DISCONNECTED ? gc_rejoin_disconnected_group
-            : gc_rejoin_connected_group)(c, chat);
+    if (chat->connection_state == CS_MANUALLY_DISCONNECTED) {
+        return gc_rejoin_disconnected_group(c, chat);
+    }
+
+    return gc_rejoin_connected_group(c, chat);
 }
 
 
@@ -6180,7 +6187,7 @@ int handle_gc_invite_accepted_packet(GC_Session *c, int friend_number, const uin
 
     GC_Chat *chat = gc_get_group_by_public_key(c, chat_id);
 
-    if (!chat || chat->connection_state <= CS_MANUALLY_DISCONNECTED) {
+    if (!chat || chat->connection_state <= CS_DISCONNECTED) {
         return -2;
     }
 
