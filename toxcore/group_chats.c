@@ -1021,7 +1021,7 @@ static int handle_gc_sync_response(Messenger *m, int group_number, int peer_numb
                 save_tcp_relay(peer_gconn, &curr_announce->tcp_relays[j]);
             }
 
-            char id_str[IDSTRING_LEN];
+            // char id_str[IDSTRING_LEN];
             //fprintf(stderr, "handle_gc_sync_response - added peer %s\n", id_to_string(curr_announce->peer_public_key, id_str, IDSTRING_LEN));
 
             if (curr_announce->ip_port_is_set && !curr_announce->tcp_relays_count) {
@@ -1515,11 +1515,6 @@ static int handle_gc_invite_request(Messenger *m, int group_number, uint32_t pee
         goto FAILED_INVITE;
     }
 
-    if (sanctions_list_nick_banned(chat, nick)) {
-        invite_error = GJ_NICK_BANNED;
-        goto FAILED_INVITE;
-    }
-
     if (length - sizeof(uint16_t) - nick_len < MAX_GC_PASSWORD_SIZE) {
         fprintf(stderr, "invite pass error\n");
         goto FAILED_INVITE;
@@ -1856,11 +1851,6 @@ static int handle_gc_peer_announcement(Messenger *m, int group_number, const uin
         return -1;
     }
 
-    if (sanctions_list_pk_banned(chat, new_peer_announce.peer_public_key)) {
-        fprintf(stderr, "in handle_gc_peer_announcement banned\n");
-        return -1;
-    }
-
     IP_Port *ip_port = new_peer_announce.ip_port_is_set ? &new_peer_announce.ip_port : nullptr;
 
     if (!ip_port && !new_peer_announce.tcp_relays_count) {
@@ -1877,7 +1867,7 @@ static int handle_gc_peer_announcement(Messenger *m, int group_number, const uin
         return -1;
     }
 
-    char id_str[IDSTRING_LEN];
+    // char id_str[IDSTRING_LEN];
     // fprintf(stderr, "peer add %s\n", id_to_string(new_peer_announce.peer_public_key, id_str, IDSTRING_LEN));
     GC_Connection *gconn = gcc_get_connection(chat, peer_number);
 
@@ -1949,12 +1939,6 @@ static int handle_gc_peer_info_response(Messenger *m, int group_number, uint32_t
 
     if (unpack_gc_peer(&peer, data + MAX_GC_PASSWORD_SIZE, length - MAX_GC_PASSWORD_SIZE) == -1) {
         fprintf(stderr, "unpack_gc_peer failed in handle_gc_peer_info_request\n");
-        return -1;
-    }
-
-    if (chat->shared_state.version > 0
-            && sanctions_list_nick_banned(chat, peer.nick)
-            && !mod_list_verify_sig_pk(chat, get_sig_pk(gconn->addr.public_key))) {
         return -1;
     }
 
@@ -3669,8 +3653,8 @@ static int handle_gc_custom_packet(Messenger *m, int group_number, uint32_t peer
     return 0;
 }
 
-static int handle_gc_remove_peer(Messenger *m, int group_number, uint32_t peer_number, const uint8_t *data,
-                                 uint32_t length)
+static int handle_gc_kick_peer(Messenger *m, int group_number, uint32_t peer_number, const uint8_t *data,
+                               uint32_t length)
 {
     if (length < 1 + ENC_PUBLIC_KEY) {
         return -1;
@@ -3689,7 +3673,7 @@ static int handle_gc_remove_peer(Messenger *m, int group_number, uint32_t peer_n
 
     uint8_t mod_event = data[0];
 
-    if (mod_event != MV_KICK && mod_event != MV_BAN) {
+    if (mod_event != MV_KICK) {
         return -1;
     }
 
@@ -3699,7 +3683,6 @@ static int handle_gc_remove_peer(Messenger *m, int group_number, uint32_t peer_n
     int target_peer_number = get_peernum_of_enc_pk(chat, target_pk);
 
     if (peer_number_valid(chat, target_peer_number)) {
-        /* Even if they're offline or this guard is removed a ban on a mod or founder won't work */
         if (chat->group[target_peer_number].role != GR_USER) {
             return -1;
         }
@@ -3716,22 +3699,6 @@ static int handle_gc_remove_peer(Messenger *m, int group_number, uint32_t peer_n
         }
 
         return 0;
-    }
-
-    struct GC_Sanction_Creds creds;
-
-    if (mod_event == MV_BAN) {
-        struct GC_Sanction sanction;
-
-        if (sanctions_list_unpack(&sanction, &creds, 1, data + 1 + ENC_PUBLIC_KEY,
-                                  length - 1 - ENC_PUBLIC_KEY, nullptr) != 1) {
-            return -1;
-        }
-
-        if (sanctions_list_add_entry(chat, &sanction, &creds) == -1) {
-            fprintf(stderr, "sanctions_list_add_entry failed in remove peer\n");
-            return -1;
-        }
     }
 
     if (target_peer_number == -1) {   /* we don't need to/can't kick a peer that isn't in our peerlist */
@@ -3752,37 +3719,20 @@ static int handle_gc_remove_peer(Messenger *m, int group_number, uint32_t peer_n
 
 /* Sends a packet to instruct all peers to remove gconn from their peerlist.
  *
- * If mod_event is MV_BAN an updated sanctions list along with new credentials will be added to
- * the ban list.
- *
  * Returns 0 on success.
  * Returns -1 on failure.
  */
-static int send_gc_remove_peer(GC_Chat *chat, GC_Connection *gconn, struct GC_Sanction *sanction,
-                               uint8_t mod_event, bool send_new_creds)
+static int send_gc_kick_peer(GC_Chat *chat, GC_Connection *gconn)
 {
     uint32_t length = 1 + ENC_PUBLIC_KEY;
     uint8_t packet[MAX_GC_PACKET_SIZE];
-    packet[0] = mod_event;
+    packet[0] = MV_KICK;
     memcpy(packet + 1, gconn->addr.public_key, ENC_PUBLIC_KEY);
 
-    if (mod_event == MV_BAN) {
-        int packed_len = sanctions_list_pack(packet + length, sizeof(packet) - length, sanction,
-                                             &chat->moderation.sanctions_creds, 1);
-
-        if (packed_len < 0) {
-            fprintf(stderr, "sanctions_list_pack failed in send_gc_remove_peer\n");
-            return -1;
-        }
-
-        length += packed_len;
-    }
-
-    return send_gc_broadcast_message(chat, packet, length, GM_REMOVE_PEER);
+    return send_gc_broadcast_message(chat, packet, length, GM_KICK_PEER);
 }
 
 /* Instructs all peers to remove peer_id from their peerlist.
- * If set_ban is true peer will be added to the ban list.
  *
  * Returns 0 on success.
  * Returns -1 if the group_number is invalid.
@@ -3790,12 +3740,12 @@ static int send_gc_remove_peer(GC_Chat *chat, GC_Connection *gconn, struct GC_Sa
  * Returns -3 if the caller does not have sufficient permissions for this action.
  * Returns -4 if the action failed.
  * Returns -5 if the packet failed to send.
- * Returns -6 if the caller attempted to remove himself.
+ * Returns -6 if the caller attempted to kick himself.
  */
-int gc_remove_peer(Messenger *m, int group_number, uint32_t peer_id, bool set_ban, uint8_t ban_type)
+int gc_kick_peer(Messenger *m, int group_number, uint32_t peer_id)
 {
     GC_Session *c = m->group_handler;
-    GC_Chat *chat = gc_get_group(m->group_handler, group_number);
+    GC_Chat *chat = gc_get_group(c, group_number);
 
     if (chat == nullptr) {
         return -1;
@@ -3829,10 +3779,6 @@ int gc_remove_peer(Messenger *m, int group_number, uint32_t peer_id, bool set_ba
         return -2;
     }
 
-    if (ban_type >= SA_OBSERVER && set_ban) {
-        return -6;
-    }
-
     if (chat->group[peer_number].role == GR_MODERATOR || chat->group[peer_number].role == GR_OBSERVER) {
         /* this first removes peer from any lists they're on and broadcasts new lists to group */
         if (gc_set_peer_role(m, group_number, peer_id, GR_USER) < 0) {
@@ -3840,106 +3786,12 @@ int gc_remove_peer(Messenger *m, int group_number, uint32_t peer_id, bool set_ba
         }
     }
 
-    uint8_t mod_event = set_ban ? MV_BAN : MV_KICK;
-    struct GC_Sanction sanction;
-
-    if (set_ban) {
-        if (sanctions_list_make_entry(chat, peer_number, &sanction, ban_type) == -1) {
-            fprintf(stderr, "sanctions_list_make_entry failed\n");
-            return -4;
-        }
-    }
-
-    bool send_new_creds = !set_ban && chat->group[peer_number].role == GR_OBSERVER;
-
-    if (send_gc_remove_peer(chat, gconn, &sanction, mod_event, send_new_creds) == -1) {
+    if (send_gc_kick_peer(chat, gconn) == -1) {
         return -5;
     }
 
     if (gc_peer_delete(m, group_number, peer_number, nullptr, 0, true) == -1) {
         return -4;
-    }
-
-    return 0;
-}
-
-static int handle_gc_remove_ban(Messenger *m, int group_number, uint32_t peer_number, const uint8_t *data,
-                                uint32_t length)
-{
-    if (length < sizeof(uint32_t)) {
-        return -1;
-    }
-
-    GC_Chat *chat = gc_get_group(m->group_handler, group_number);
-
-    if (chat == nullptr) {
-        return -1;
-    }
-
-    if (chat->group[peer_number].role >= GR_USER) {
-        return -1;
-    }
-
-    uint32_t ban_id;
-    net_unpack_u32(data, &ban_id);
-
-    struct GC_Sanction_Creds creds;
-    uint16_t unpacked_len = sanctions_creds_unpack(&creds, data + sizeof(uint32_t), length - sizeof(uint32_t));
-
-    if (unpacked_len != GC_SANCTIONS_CREDENTIALS_SIZE) {
-        return -1;
-    }
-
-    if (sanctions_list_remove_ban(chat, ban_id, &creds) == -1) {
-        fprintf(stderr, "sanctions_list_remove_ban failed in handle_bc_remove_ban\n");
-    }
-
-    return 0;
-}
-
-/* Sends a packet instructing all peers to remove a ban entry from the sanctions list.
- * Additionally sends updated sanctions credentials.
- *
- * Returns 0 on success.
- * Returns -1 on failure.
- */
-static int send_gc_remove_ban(GC_Chat *chat, uint32_t ban_id)
-{
-    uint8_t packet[sizeof(uint32_t) + GC_SANCTIONS_CREDENTIALS_SIZE];
-    net_pack_u32(packet, ban_id);
-    uint32_t length = sizeof(uint32_t);
-
-    uint16_t packed_len = sanctions_creds_pack(&chat->moderation.sanctions_creds, packet + length,
-                          sizeof(packet) - length);
-
-    if (packed_len != GC_SANCTIONS_CREDENTIALS_SIZE) {
-        return -1;
-    }
-
-    length += packed_len;
-
-    return send_gc_broadcast_message(chat, packet, length, GM_REMOVE_BAN);
-}
-
-/* Instructs all peers to remove ban_id from their ban list.
- *
- * Returns 0 on success.
- * Returns -1 if the caller does not have sufficient permissions for this action.
- * Returns -2 if the entry could not be removed.
- * Returns -3 if the packet failed to send.
- */
-int gc_remove_ban(GC_Chat *chat, uint32_t ban_id)
-{
-    if (chat->group[0].role >= GR_USER) {
-        return -1;
-    }
-
-    if (sanctions_list_remove_ban(chat, ban_id, nullptr) == -1) {
-        return -2;
-    }
-
-    if (send_gc_remove_ban(chat, ban_id) == -1) {
-        return -3;
     }
 
     return 0;
@@ -4128,11 +3980,8 @@ static int handle_gc_broadcast(Messenger *m, int group_number, uint32_t peer_num
         case GM_PEER_EXIT:
             return handle_gc_peer_exit(m, group_number, peer_number, message, m_len);
 
-        case GM_REMOVE_PEER:
-            return handle_gc_remove_peer(m, group_number, peer_number, message, m_len);
-
-        case GM_REMOVE_BAN:
-            return handle_gc_remove_ban(m, group_number, peer_number, message, m_len);
+        case GM_KICK_PEER:
+            return handle_gc_kick_peer(m, group_number, peer_number, message, m_len);
 
         case GM_SET_MOD:
             return handle_gc_set_mod(m, group_number, peer_number, message, m_len);
@@ -4468,13 +4317,6 @@ static int handle_gc_handshake_request(Messenger *m, int group_number, IP_Port *
 
     uint8_t public_sig_key[SIG_PUBLIC_KEY];
     memcpy(public_sig_key, data + ENC_PUBLIC_KEY, SIG_PUBLIC_KEY);
-
-    /* Check if IP or PK is banned and make sure they aren't a moderator or founder */
-    if (chat->shared_state.version > 0
-            && (sanctions_list_ip_banned(chat, ipp) || sanctions_list_pk_banned(chat, sender_pk))
-            && !mod_list_verify_sig_pk(chat, public_sig_key)) {
-        return -1;
-    }
 
     if (chat->connection_O_metre >= GC_NEW_PEER_CONNECTION_LIMIT) {
         chat->block_handshakes = true;
@@ -5205,9 +5047,8 @@ static int peer_update(Messenger *m, int group_number, GC_GroupPeer *peer, uint3
     }
 
     int nick_num = get_nick_peer_number(chat, peer->nick, peer->nick_length);
-    bool is_nick_banned = sanctions_list_nick_banned(chat, peer->nick);
 
-    if ((nick_num != -1 && nick_num != peer_number) || is_nick_banned) {   /* duplicate or banned nick */
+    if ((nick_num != -1 && nick_num != peer_number)) {   /* duplicate nick */
         if (c->peer_exit) {
             (*c->peer_exit)(m, group_number, chat->group[peer_number].peer_id, chat->group[peer_number].nick,
                             chat->group[peer_number].nick_length, nullptr, 0, c->peer_exit_userdata);
@@ -6758,7 +6599,7 @@ int add_peers_from_announces(const GC_Session *gc_session, GC_Chat *chat, GC_Ann
         }
 
         ++added_peers;
-        char id_str[IDSTRING_LEN];
+       // char id_str[IDSTRING_LEN];
         // fprintf(stderr, "Added peers %s\n", id_to_string(curr_announce->peer_public_key, id_str, IDSTRING_LEN));
     }
 
