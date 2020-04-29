@@ -2896,13 +2896,13 @@ namespace group {
    */
   enum class ROLE {
     /**
-     * May kick and ban all other peers as well as set their role to anything (except founder).
+     * May kick all other peers as well as set their role to anything (except founder).
      * Founders may also set the group password, toggle the privacy state, and set the peer limit.
      */
     FOUNDER,
 
     /**
-     * May kick, ban and set the user and observer roles for peers below this role.
+     * May kick and set the user and observer roles for peers below this role.
      * May also set the group topic.
      */
     MODERATOR,
@@ -3241,7 +3241,7 @@ namespace group {
        * Write the client's group public key designated by the given group number to a byte array.
        *
        * This key will be parmanently tied to the client's identity for this particular group until
-       * the client explicitly leaves the group or gets kicked/banned. This key is the only way for
+       * the client explicitly leaves the group or gets kicked. This key is the only way for
        * other peers to reliably identify the client across client restarts.
        *
        * `public_key` should have room for at least $PEER_PUBLIC_KEY_SIZE bytes.
@@ -3339,7 +3339,7 @@ namespace group {
        * Write the group public key with the designated peer_id for the designated group number to public_key.
        *
        * This key will be parmanently tied to a particular peer until they explicitly leave the group or
-       * get kicked/banned, and is the only way to reliably identify the same peer across client restarts.
+       * get kicked, and is the only way to reliably identify the same peer across client restarts.
        *
        * `public_key` should have room for at least $PEER_PUBLIC_KEY_SIZE bytes.
        *
@@ -4105,12 +4105,6 @@ namespace group {
 
 namespace group {
 
-  enum class BAN_TYPE {
-    IP_PORT,
-    PUBLIC_KEY,
-    NICK,
-  }
-
   /**
    * Ignore or unignore a peer.
    *
@@ -4180,18 +4174,18 @@ namespace group {
     }
 
     /**
-     * Kick/ban a peer.
+     * Kick a peer.
      *
-     * This function will remove a peer from the caller's peer list and optionally add their IP address
-     * to the ban list. It will also send a packet to all group members requesting them
-     * to do the same. Note: This function will not trigger the `${event peer_exit}` event for the caller.
+     * This function will remove a peer from the caller's peer list and send a packet to all
+     * group members requesting them to do the same. Note: This function will not trigger
+     * the `${event peer_exit}` event for the caller.
      *
-     * @param group_number The group number of the group the ban is intended for.
-     * @param peer_id The ID of the peer who will be kicked and/or added to the ban list.
+     * @param group_number The group number of the group the action is intended for.
+     * @param peer_id The ID of the peer who will be kicked.
      *
      * @return true on success.
      */
-    bool remove_peer(uint32_t group_number, uint32_t peer_id) {
+    bool kick_peer(uint32_t group_number, uint32_t peer_id) {
       /**
        * The group number passed did not designate a valid group.
        */
@@ -4205,12 +4199,7 @@ namespace group {
        */
       PERMISSIONS,
       /**
-       * The peer could not be removed from the group.
-       *
-       * If a ban was set, this error indicates that the ban entry could not be created.
-       * This is usually due to the peer's IP address already occurring in the ban list. It may also
-       * be due to the entry containing invalid peer information, or a failure to cryptographically
-       * authenticate the entry.
+       * The peer could not be kicked from the group.
        */
       FAIL_ACTION,
       /**
@@ -4222,40 +4211,6 @@ namespace group {
        */
       SELF,
     }
-
-    /**
-     * Removes a ban.
-     *
-     * This function removes a ban entry from the ban list, and sends a packet to the rest of
-     * the group requesting that they do the same.
-     *
-     * @param group_number The group number of the group in which the ban is to be removed.
-     * @param ban_id The ID of the ban entry that shall be removed.
-     *
-     * @return true on success
-     */
-    bool remove_ban(uint32_t group_number, uint32_t ban_id) {
-      /**
-       * The group number passed did not designate a valid group.
-       */
-      GROUP_NOT_FOUND,
-      /**
-       * The caller does not have the required permissions for this action.
-       */
-      PERMISSIONS,
-      /**
-       * The ban entry could not be removed. This may occur if ban_id does not designate
-       * a valid ban entry.
-       */
-      FAIL_ACTION,
-      /**
-       * The packet failed to send.
-       */
-      FAIL_SEND,
-      GROUP_IS_DISCONNECTED,
-    }
-
-    bool ban_peer(uint32_t group_number, uint32_t peer_id, BAN_TYPE ban_type) with error for remove_peer;
   }
 
 
@@ -4267,11 +4222,6 @@ namespace group {
      * A peer has been kicked from the group.
      */
     KICK,
-
-    /**
-     * A peer has been banned from the group.
-     */
-    BAN,
 
     /**
      * A peer as been given the observer role.
@@ -4301,88 +4251,6 @@ namespace group {
      * @param mod_type The type of event.
      */
     typedef void(uint32_t group_number, uint32_t source_peer_number, uint32_t target_peer_number, MOD_EVENT mod_type);
-  }
-
-}
-
-
-/*******************************************************************************
- *
- * :: Group chat ban list queries
- *
- ******************************************************************************/
-
-namespace group {
-
-  namespace ban {
-
-    /**
-     * Error codes for group ban list queries.
-     */
-    error for query {
-        /**
-         * The group number passed did not designate a valid group.
-         */
-        GROUP_NOT_FOUND,
-        /**
-         * The ban_id does not designate a valid ban list entry.
-         */
-        BAD_ID,
-        GROUP_IS_DISCONNECTED,
-    }
-
-    const BAN_TYPE get_type(uint32_t group_number, uint32_t ban_id) with error for query;
-
-    uint32_t[size] list {
-
-      /**
-       * Return the number of entries in the ban list for the group designated by
-       * the given group number. If the group number is invalid, the return value is unspecified.
-       */
-      size(uint32_t group_number) with error for query;
-
-      /**
-       * Copy a list of valid ban list ID's into an array.
-       *
-       * Call $size to determine the number of elements to allocate.
-       *
-       * @param list A memory region with enough space to hold the ban list. If
-       *   this parameter is NULL, this function has no effect.
-       *
-       * @return true on success.
-       */
-      get(uint32_t group_number) with error for query;
-    }
-
-    uint8_t[length <= MAX_NAME_LENGTH] target {
-
-      /**
-       * Return the length of the name for the ban list entry designated by ban_id, in the
-       * group designated by the given group number. If either group_number or ban_id is invalid,
-       * the return value is unspecified.
-       */
-      size(uint32_t group_number, uint32_t ban_id) with error for query;
-
-      /**
-       * Write the name of the ban entry designated by ban_id in the group designated by the
-       * given group number to a byte array.
-       *
-       * Call $size to find out how much memory to allocate for the result.
-       *
-       * @return true on success.
-       */
-      get(uint32_t group_number, uint32_t ban_id) with error for query;
-    }
-
-    uint64_t time_set {
-
-      /**
-       * Return a time stamp indicating the time the ban was set, for the ban list entry
-       * designated by ban_id, in the group designated by the given group number.
-       * If either group_number or ban_id is invalid, the return value is unspecified.
-       */
-      get(uint32_t group_number, uint32_t ban_id) with error for query;
-    }
   }
 }
 
@@ -4443,9 +4311,7 @@ typedef TOX_ERR_GROUP_FOUNDER_SET_PRIVACY_STATE Tox_Err_Group_Founder_Set_Privac
 typedef TOX_ERR_GROUP_FOUNDER_SET_PEER_LIMIT Tox_Err_Group_Founder_Set_Peer_Limit;
 typedef TOX_ERR_GROUP_TOGGLE_IGNORE Tox_Err_Group_Toggle_Ignore;
 typedef TOX_ERR_GROUP_MOD_SET_ROLE Tox_Err_Group_Mod_Set_Role;
-typedef TOX_ERR_GROUP_MOD_REMOVE_PEER Tox_Err_Group_Mod_Remove_Peer;
-typedef TOX_ERR_GROUP_MOD_REMOVE_BAN Tox_Err_Group_Mod_Remove_Ban;
-typedef TOX_ERR_GROUP_BAN_QUERY Tox_Err_Group_Ban_Query;
+typedef TOX_ERR_GROUP_MOD_KICK_PEER Tox_Err_Group_Mod_Kick_Peer;
 typedef TOX_ERR_GROUP_DISCONNECT Tox_Err_Group_Disconnect;
 typedef TOX_ERR_GROUP_IS_CONNECTED Tox_Err_Group_Is_Connected;
 typedef TOX_USER_STATUS Tox_User_Status;
@@ -4460,7 +4326,6 @@ typedef TOX_GROUP_JOIN_FAIL Tox_Group_Join_Fail;
 typedef TOX_GROUP_PRIVACY_STATE Tox_Group_Privacy_State;
 typedef TOX_GROUP_MOD_EVENT Tox_Group_Mod_Event;
 typedef TOX_GROUP_ROLE Tox_Group_Role;
-typedef TOX_GROUP_BAN_TYPE Tox_Group_Ban_Type;
 
 //!TOKSTYLE+
 
