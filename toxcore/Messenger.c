@@ -2682,7 +2682,6 @@ static void try_pack_gc_data(const Messenger *m, GC_Chat *chat, Onion_Friend *on
                                             MAX_ANNOUNCED_TCP_RELAYS);
     IP_Port self_ip_port = {{{0}}};
     int copy_ip_port_result = ipport_self_copy(m->dht, &self_ip_port);
-    fprintf(stderr, "copy_ip_port_result %d tcp %d\n", copy_ip_port_result, tcp_num);
     bool ip_port_is_set = copy_ip_port_result == 0;
     bool can_publish_announce = tcp_num > 0 || ip_port_is_set;
 
@@ -2717,7 +2716,6 @@ static void try_pack_gc_data(const Messenger *m, GC_Chat *chat, Onion_Friend *on
 
         add_gc_announce(m->mono_time, m->group_announce, &announce);
     } else {
-        fprintf(stderr, "pack error\n");
         onion_friend->gc_data_length = -1;  // new gc - no connected relays yet and no ip/port
     }
 }

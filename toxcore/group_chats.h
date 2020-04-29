@@ -705,12 +705,14 @@ bool peer_number_valid(const GC_Chat *chat, int peer_number);
  */
 GC_Chat *gc_get_group(const GC_Session *c, int group_number);
 
-/* Deletes peer_number from group.
+/*
+ * Deletes peernumber from group. `no_callback` should be set to true if the `peer_exit` callback should not be triggered.
  *
  * Return 0 on success.
  * Return -1 on failure.
  */
-int gc_peer_delete(Messenger *m, int group_number, uint32_t peer_number, const uint8_t *data, uint16_t length);
+int gc_peer_delete(Messenger *m, int group_number, uint32_t peer_number, const uint8_t *data, uint16_t length,
+                   bool no_callback);
 
 /* Copies up to max_addrs peer addresses from chat into addrs.
  *
