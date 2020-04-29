@@ -3711,37 +3711,37 @@ bool tox_group_mod_set_role(Tox *tox, uint32_t group_number, uint32_t peer_id, T
     return 0;
 }
 
-bool tox_group_mod_remove_peer(Tox *tox, uint32_t group_number, uint32_t peer_id, Tox_Err_Group_Mod_Remove_Peer *error)
+bool tox_group_mod_kick_peer(Tox *tox, uint32_t group_number, uint32_t peer_id, Tox_Err_Group_Mod_Kick_Peer *error)
 {
-    int ret = gc_remove_peer(tox->m, group_number, peer_id, false, -1);
+    int ret = gc_kick_peer(tox->m, group_number, peer_id);
 
     switch (ret) {
         case 0:
-            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_OK);
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_KICK_PEER_OK);
             return 1;
 
         case -1:
-            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_GROUP_NOT_FOUND);
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_KICK_PEER_GROUP_NOT_FOUND);
             return 0;
 
         case -2:
-            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_PEER_NOT_FOUND);
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_KICK_PEER_PEER_NOT_FOUND);
             return 0;
 
         case -3:
-            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_PERMISSIONS);
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_KICK_PEER_PERMISSIONS);
             return 0;
 
         case -4:
-            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_FAIL_ACTION);
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_KICK_PEER_FAIL_ACTION);
             return 0;
 
         case -5:
-            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_FAIL_SEND);
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_KICK_PEER_FAIL_SEND);
             return 0;
 
         case -6:
-            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_SELF);
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_KICK_PEER_SELF);
             return 0;
     }
 
@@ -3749,221 +3749,4 @@ bool tox_group_mod_remove_peer(Tox *tox, uint32_t group_number, uint32_t peer_id
     return 0;
 }
 
-bool tox_group_mod_ban_peer(Tox *tox, uint32_t group_number, uint32_t peer_id,
-                            Tox_Group_Ban_Type ban_type, Tox_Err_Group_Mod_Remove_Peer *error)
-{
-    int ret = gc_remove_peer(tox->m, group_number, peer_id, true, ban_type);
-
-    switch (ret) {
-        case 0:
-            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_OK);
-            return 1;
-
-        case -1:
-            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_GROUP_NOT_FOUND);
-            return 0;
-
-        case -2:
-            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_PEER_NOT_FOUND);
-            return 0;
-
-        case -3:
-            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_PERMISSIONS);
-            return 0;
-
-        case -4:
-            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_FAIL_ACTION);
-            return 0;
-
-        case -5:
-            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_FAIL_SEND);
-            return 0;
-
-        case -6:
-            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_SELF);
-            return 0;
-    }
-
-    /* can't happen */
-    return 0;
-}
-
-bool tox_group_mod_remove_ban(Tox *tox, uint32_t group_number, uint32_t ban_id, Tox_Err_Group_Mod_Remove_Ban *error)
-{
-    GC_Chat *chat = gc_get_group(tox->m->group_handler, group_number);
-
-    if (chat == nullptr) {
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_BAN_GROUP_NOT_FOUND);
-        return 0;
-    }
-
-    if (chat->connection_state == CS_MANUALLY_DISCONNECTED) {
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_BAN_GROUP_IS_DISCONNECTED);
-        return 0;
-    }
-
-    int ret = gc_remove_ban(chat, ban_id);
-
-    switch (ret) {
-        case 0:
-            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_BAN_OK);
-            return 1;
-
-        case -1:
-            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_BAN_PERMISSIONS);
-            return 0;
-
-        case -2:
-            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_BAN_FAIL_ACTION);
-            return 0;
-
-        case -3:
-            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_BAN_FAIL_SEND);
-            return 0;
-    }
-
-    /* can't happen */
-    return 0;
-}
-
-size_t tox_group_ban_get_list_size(const Tox *tox, uint32_t group_number, Tox_Err_Group_Ban_Query *error)
-{
-    const GC_Chat *chat = gc_get_group(tox->m->group_handler, group_number);
-
-    if (chat == nullptr) {
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_BAN_QUERY_GROUP_NOT_FOUND);
-        return -1;
-    }
-
-    if (chat->connection_state == CS_MANUALLY_DISCONNECTED) {
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_BAN_QUERY_GROUP_IS_DISCONNECTED);
-        return -1;
-    }
-
-    SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_BAN_QUERY_OK);
-    return sanctions_list_num_banned(chat);
-}
-
-bool tox_group_ban_get_list(const Tox *tox, uint32_t group_number, uint32_t *list, Tox_Err_Group_Ban_Query *error)
-{
-    const GC_Chat *chat = gc_get_group(tox->m->group_handler, group_number);
-
-    if (chat == nullptr) {
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_BAN_QUERY_GROUP_NOT_FOUND);
-        return 0;
-    }
-
-    if (chat->connection_state == CS_MANUALLY_DISCONNECTED) {
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_BAN_QUERY_GROUP_IS_DISCONNECTED);
-        return 0;
-    }
-
-    sanctions_list_get_ban_list(chat, list);
-    SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_BAN_QUERY_OK);
-    return 1;
-}
-
-Tox_Group_Ban_Type tox_group_ban_get_type(const Tox *tox, uint32_t group_number, uint32_t ban_id,
-        Tox_Err_Group_Ban_Query *error)
-{
-    const GC_Chat *chat = gc_get_group(tox->m->group_handler, group_number);
-
-    if (chat == nullptr) {
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_BAN_QUERY_GROUP_NOT_FOUND);
-        return (Tox_Group_Ban_Type)0;
-    }
-
-    if (chat->connection_state == CS_MANUALLY_DISCONNECTED) {
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_BAN_QUERY_GROUP_IS_DISCONNECTED);
-        return (Tox_Group_Ban_Type)0;
-    }
-
-    int ret = sanctions_list_get_ban_type(chat, ban_id);
-
-    if (ret == -1) {
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_BAN_QUERY_BAD_ID);
-        return (Tox_Group_Ban_Type)0;
-    }
-
-    SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_BAN_QUERY_OK);
-    return (Tox_Group_Ban_Type)ret;
-}
-
-size_t tox_group_ban_get_target_size(const Tox *tox, uint32_t group_number, uint32_t ban_id,
-                                     Tox_Err_Group_Ban_Query *error)
-{
-    const GC_Chat *chat = gc_get_group(tox->m->group_handler, group_number);
-
-    if (chat == nullptr) {
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_BAN_QUERY_GROUP_NOT_FOUND);
-        return -1;
-    }
-
-    if (chat->connection_state == CS_MANUALLY_DISCONNECTED) {
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_BAN_QUERY_GROUP_IS_DISCONNECTED);
-        return -1;
-    }
-
-    uint16_t ret = sanctions_list_get_ban_target_length(chat, ban_id);
-
-    if (ret == 0) {
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_BAN_QUERY_BAD_ID);
-        return -1;
-    }
-
-    SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_BAN_QUERY_OK);
-    return ret;
-}
-
-bool tox_group_ban_get_target(const Tox *tox, uint32_t group_number, uint32_t ban_id, uint8_t *name,
-                              Tox_Err_Group_Ban_Query *error)
-{
-    const GC_Chat *chat = gc_get_group(tox->m->group_handler, group_number);
-
-    if (chat == nullptr) {
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_BAN_QUERY_GROUP_NOT_FOUND);
-        return 0;
-    }
-
-    if (chat->connection_state == CS_MANUALLY_DISCONNECTED) {
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_BAN_QUERY_GROUP_IS_DISCONNECTED);
-        return -1;
-    }
-
-    int ret = sanctions_list_get_ban_target(chat, ban_id, name);
-
-    if (!ret) {
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_BAN_QUERY_BAD_ID);
-        return 0;
-    }
-
-    SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_BAN_QUERY_OK);
-    return 1;
-}
-
-uint64_t tox_group_ban_get_time_set(const Tox *tox, uint32_t group_number, uint32_t ban_id,
-                                    Tox_Err_Group_Ban_Query *error)
-{
-    const GC_Chat *chat = gc_get_group(tox->m->group_handler, group_number);
-
-    if (chat == nullptr) {
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_BAN_QUERY_GROUP_NOT_FOUND);
-        return -1;
-    }
-
-    if (chat->connection_state == CS_MANUALLY_DISCONNECTED) {
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_BAN_QUERY_GROUP_IS_DISCONNECTED);
-        return -1;
-    }
-
-    uint64_t ret = sanctions_list_get_ban_time_set(chat, ban_id);
-
-    if (ret == 0) {
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_BAN_QUERY_BAD_ID);
-        return -1;
-    }
-
-    SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_BAN_QUERY_OK);
-    return ret;
-}
 #endif /* VANILLA_NACL */
