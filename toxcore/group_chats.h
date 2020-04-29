@@ -410,6 +410,7 @@ int gc_send_custom_packet(GC_Chat *chat, bool lossless, const uint8_t *data, uin
  *
  * Returns 0 on success.
  * Returns -1 if the peer_id is invalid.
+ * Returns -2 if the caller attempted to ignore himself.
  */
 int gc_toggle_ignore(GC_Chat *chat, uint32_t peer_id, bool ignore);
 
@@ -525,6 +526,7 @@ uint8_t gc_get_role(const GC_Chat *chat, uint32_t peer_id);
  * Returns -3 if caller does not have sufficient permissions for the action.
  * Returns -4 if the role assignment is invalid.
  * Returns -5 if the role failed to be set.
+ * Returns -6 if the caller attempted to remove himself.
  */
 int gc_set_peer_role(Messenger *m, int group_number, uint32_t peer_id, uint8_t role);
 
@@ -572,6 +574,7 @@ int gc_founder_set_max_peers(GC_Chat *chat, uint32_t max_peers);
  * Returns -3 if the caller does not have sufficient permissions for this action.
  * Returns -4 if the action failed.
  * Returns -5 if the packet failed to send.
+ * Returns -6 if the caller attempted to remove himself.
  */
 int gc_remove_peer(Messenger *m, int group_number, uint32_t peer_id, bool set_ban, uint8_t ban_type);
 
@@ -707,7 +710,7 @@ bool peer_number_valid(const GC_Chat *chat, int peer_number);
 GC_Chat *gc_get_group(const GC_Session *c, int group_number);
 
 /*
- * Deletes peernumber from group. `no_callback` should be set to true if the `peer_exit` callback should not be triggered.
+ * Deletes peer_number from group. `no_callback` should be set to true if the `peer_exit` callback should not be triggered.
  *
  * Return 0 on success.
  * Return -1 on failure.

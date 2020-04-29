@@ -3655,13 +3655,22 @@ bool tox_group_toggle_ignore(Tox *tox, uint32_t group_number, uint32_t peer_id, 
 
     int ret = gc_toggle_ignore(chat, peer_id, ignore);
 
-    if (ret == -1) {
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_TOGGLE_IGNORE_PEER_NOT_FOUND);
-        return 0;
-    } else {
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_TOGGLE_IGNORE_OK);
-        return 1;
+    switch (ret) {
+        case 0:
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_TOGGLE_IGNORE_OK);
+            return 1;
+
+        case -1:
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_TOGGLE_IGNORE_PEER_NOT_FOUND);
+            return 0;
+
+        case -2:
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_TOGGLE_IGNORE_SELF);
+            return 0;
     }
+
+    /* can't happen */
+    return 0;
 }
 
 bool tox_group_mod_set_role(Tox *tox, uint32_t group_number, uint32_t peer_id, Tox_Group_Role role,
@@ -3692,6 +3701,10 @@ bool tox_group_mod_set_role(Tox *tox, uint32_t group_number, uint32_t peer_id, T
 
         case -5:
             SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_SET_ROLE_FAIL_ACTION);
+            return 0;
+
+        case -6:
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_SET_ROLE_SELF);
             return 0;
     }
 
@@ -3726,6 +3739,10 @@ bool tox_group_mod_remove_peer(Tox *tox, uint32_t group_number, uint32_t peer_id
 
         case -5:
             SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_FAIL_SEND);
+            return 0;
+
+        case -6:
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_SELF);
             return 0;
     }
 
@@ -3764,7 +3781,7 @@ bool tox_group_mod_ban_peer(Tox *tox, uint32_t group_number, uint32_t peer_id,
             return 0;
 
         case -6:
-            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_INVALID_BAN_TYPE);
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_MOD_REMOVE_PEER_SELF);
             return 0;
     }
 
