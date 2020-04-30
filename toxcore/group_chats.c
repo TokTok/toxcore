@@ -3267,8 +3267,6 @@ int gc_set_peer_role(Messenger *m, int group_number, uint32_t peer_id, uint8_t r
         return -4;
     }
 
-    uint8_t mod_event = MV_USER;
-
     /* New role must be applied after the old role is removed */
     switch (chat->group[peer_number].role) {
         case GR_MODERATOR: {
@@ -3279,8 +3277,6 @@ int gc_set_peer_role(Messenger *m, int group_number, uint32_t peer_id, uint8_t r
             chat->group[peer_number].role = GR_USER;
 
             if (role == GR_OBSERVER) {
-                mod_event = MV_OBSERVER;
-
                 if (mod_gc_set_observer(chat, peer_number, true) == -1) {
                     return -5;
                 }
@@ -3297,8 +3293,6 @@ int gc_set_peer_role(Messenger *m, int group_number, uint32_t peer_id, uint8_t r
             chat->group[peer_number].role = GR_USER;
 
             if (role == GR_MODERATOR) {
-                mod_event = MV_MODERATOR;
-
                 if (founder_gc_set_moderator(chat, gconn, true) == -1) {
                     return -5;
                 }
@@ -3309,14 +3303,10 @@ int gc_set_peer_role(Messenger *m, int group_number, uint32_t peer_id, uint8_t r
 
         case GR_USER: {
             if (role == GR_MODERATOR) {
-                mod_event = MV_MODERATOR;
-
                 if (founder_gc_set_moderator(chat, gconn, true) == -1) {
                     return -5;
                 }
             } else if (role == GR_OBSERVER) {
-                mod_event = MV_OBSERVER;
-
                 if (mod_gc_set_observer(chat, peer_number, true) == -1) {
                     return -5;
                 }
