@@ -1129,7 +1129,7 @@ static int handle_gc_sync_request(const Messenger *m, int group_number, int peer
         return -1;
     }
 
-    if (chat->connection_state != CS_CONNECTED || chat->shared_state.version == 0) {
+    if (chat->connection_state <= CS_MANUALLY_DISCONNECTED || chat->shared_state.version == 0) {
         fprintf(stderr, "handle gc sync request3\n");
         return -1;
     }
@@ -1319,6 +1319,7 @@ static int handle_gc_tcp_relays(Messenger *m, int group_number, GC_Connection *g
     }
 
     if (chat->connection_state != CS_CONNECTED) {
+        fprintf(stderr, "handle_gc_tcp_relays() failed. State: %d\n", chat->connection_state);
         return -1;
     }
 
@@ -1476,8 +1477,8 @@ static int handle_gc_invite_request(Messenger *m, int group_number, uint32_t pee
         return -1;
     }
 
-    if (chat->connection_state != CS_CONNECTED || chat->shared_state.version == 0) {
-        fprintf(stderr, "not connected - return\n");
+    if (chat->connection_state <= CS_MANUALLY_DISCONNECTED || chat->shared_state.version == 0) {
+        fprintf(stderr, "not connected - state: %d\n", chat->connection_state);
         return -1;
     }
 
@@ -1917,6 +1918,7 @@ static int handle_gc_peer_info_response(Messenger *m, int group_number, uint32_t
     }
 
     if (chat->connection_state != CS_CONNECTED) {
+        fprintf(stderr, "handle_gc_peer_info_response failed: state %d\n", chat->connection_state);
         return -1;
     }
 
@@ -3946,6 +3948,7 @@ static int handle_gc_broadcast(Messenger *m, int group_number, uint32_t peer_num
     }
 
     if (chat->connection_state != CS_CONNECTED) {
+        fprintf(stderr, "handle_gc_broadcast() failed. State: %d\n", chat->connection_state);
         return -1;
     }
 
@@ -4779,7 +4782,6 @@ static int handle_gc_tcp_packet(void *object, int id, const uint8_t *packet, uin
     } else if (packet[0] == NET_PACKET_GC_LOSSY) {
         return handle_gc_lossy_message(m, chat, packet, length, false);
     } else if (packet[0] == NET_PACKET_GC_HANDSHAKE) {
-        fprintf(stderr, "handle gc tcp handshake packet\n");
         return handle_gc_handshake_packet(m, chat, nullptr, packet, length, false);
     }
 
