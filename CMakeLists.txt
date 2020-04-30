@@ -552,11 +552,4 @@ if (BUILD_MISC_TESTS)
     testing/afl_toxsave.c)
   target_link_modules(afl_toxsave toxcore)
 
-  add_executable(group_bootstrap_n_chat ${CPUFEATURES}
-    testing/groupchats/group_bootstrap_n_chat.c)
-  target_link_modules(group_bootstrap_n_chat toxcore misc_tools)
-
-  add_executable(group_newpeers_dos_attack ${CPUFEATURES}
-    testing/groupchats/group_newpeers_dos_attack.c)
-  target_link_modules(group_newpeers_dos_attack toxcore misc_tools)
 endif()
