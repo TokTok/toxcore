@@ -154,6 +154,11 @@ static void group_message_test(Tox **toxes, State *state)
     }
 }
 
+#undef PEER1_NICK
+#undef PEER0_NICK
+#undef TEST_GROUP_NAME
+#undef TEST_MESSAGE
+
 int main(void)
 {
     setvbuf(stdout, nullptr, _IONBF, 0);
