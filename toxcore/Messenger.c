@@ -41,7 +41,7 @@ bool friend_is_valid(const Messenger *m, int32_t friendnumber)
 
 static bool group_is_valid(const Messenger *m, int32_t groupnumber)
 {
-    return groupnumber < m->numgroups;
+    return (unsigned int)groupnumber < m->numgroups && m->grouplist[groupnumber].active;
 }
 
 /* Set the size of the friend list to numfriends.
@@ -368,7 +368,7 @@ int32_t m_addfriend(Messenger *m, const uint8_t *address, const uint8_t *data, u
     return ret;
 }
 
-static int32_t m_add_contact_no_request(Messenger *m, const uint8_t *real_pk, Contact_Type type)
+static int32_t m_add_friend_contact_no_request(Messenger *m, const uint8_t *real_pk)
 {
     if (getfriend_id(m, real_pk) != -1) {
         return FAERR_ALREADYSENT;
@@ -378,21 +378,14 @@ static int32_t m_add_contact_no_request(Messenger *m, const uint8_t *real_pk, Co
         return FAERR_OWNKEY;
     }
 
-    if (type == CONTACT_FRIEND) {
-        return init_new_friend(m, real_pk, FRIEND_CONFIRMED);
-    }
+    return init_new_friend(m, real_pk, FRIEND_CONFIRMED);
+}
 
-    if (type != CONTACT_GROUP) {
-        return FAERR_BADCONTYPE;
-    }
-
-#ifndef VANILLA_NACL
-
-    if (gc_get_group_by_public_key(m->group_handler, real_pk)) {
+static int32_t m_add_group_contact_no_request(Messenger *m, const uint8_t *real_pk)
+{
+    if (get_group_id(m, real_pk) != -1) {
         return FAERR_ALREADYSENT;
     }
-
-#endif
 
     return init_new_group(m, real_pk);
 }
@@ -403,7 +396,7 @@ int32_t m_addfriend_norequest(Messenger *m, const uint8_t *real_pk)
         return FAERR_BADCHECKSUM;
     }
 
-    return m_add_contact_no_request(m, real_pk, CONTACT_FRIEND);
+    return m_add_friend_contact_no_request(m, real_pk);
 }
 
 static void try_pack_gc_data(const Messenger *m, GC_Chat *chat, Onion_Friend *onion_friend);
@@ -418,7 +411,7 @@ int32_t m_add_group(Messenger *m, GC_Chat *chat)
 {
     random_bytes(chat->m_group_public_key, CRYPTO_PUBLIC_KEY_SIZE);
 
-    int group_number = m_add_contact_no_request(m, chat->m_group_public_key, CONTACT_GROUP);
+    int group_number = m_add_group_contact_no_request(m, chat->m_group_public_key);
 
     if (group_number < 0) {
         return -1;
