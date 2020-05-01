@@ -13,4 +13,5 @@ cirrus-ci_task:
       --remote_download_minimal
       --config=ci
       --config=release
+      --config=testnet
       //c-toxcore/...
