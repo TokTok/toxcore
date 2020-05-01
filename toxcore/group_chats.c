@@ -933,7 +933,7 @@ static int send_gc_oob_handshake_packet(GC_Chat *chat, uint32_t peer_number, uin
 static int handle_gc_sync_response(Messenger *m, int group_number, int peer_number, GC_Connection *gconn,
                                    const uint8_t *data, uint32_t length)
 {
-    //fprintf(stderr, "gc sync resp start\n");
+    // fprintf(stderr, "gc sync resp start\n");
 
     if (length < sizeof(uint32_t)) {
         return -1;
@@ -1021,7 +1021,7 @@ static int handle_gc_sync_response(Messenger *m, int group_number, int peer_numb
             }
 
             // char id_str[IDSTRING_LEN];
-            //fprintf(stderr, "handle_gc_sync_response - added peer %s\n", id_to_string(curr_announce->peer_public_key, id_str, IDSTRING_LEN));
+            // fprintf(stderr, "handle_gc_sync_response - added peer %s\n", id_to_string(curr_announce->peer_public_key, id_str, IDSTRING_LEN));
 
             if (curr_announce->ip_port_is_set && !curr_announce->tcp_relays_count) {
                 send_gc_handshake_packet(chat, (uint32_t)new_peer_number, GH_REQUEST, HS_PEER_INFO_EXCHANGE,
@@ -1235,7 +1235,7 @@ static int handle_gc_sync_request(const Messenger *m, int group_number, int peer
     len += packed_announces_length;
 
     // TODO: split packet !important
-    //fprintf(stderr, "handle gc sync success\n");
+    // fprintf(stderr, "handle gc sync success\n");
 
     return send_gc_sync_response(chat, gconn, response, len);
 }
@@ -1353,7 +1353,7 @@ static int handle_gc_tcp_relays(Messenger *m, int group_number, GC_Connection *g
  */
 static int send_gc_invite_request(GC_Chat *chat, GC_Connection *gconn)
 {
-    //fprintf(stderr, "send gc invite request\n");
+    // fprintf(stderr, "send gc invite request\n");
     uint8_t data[MAX_GC_PACKET_SIZE];
     uint32_t length = HASH_ID_BYTES;
 
@@ -6574,7 +6574,7 @@ int add_peers_from_announces(const GC_Session *gc_session, GC_Chat *chat, GC_Ann
         }
 
         if (ip_port_set && !tcp_relays_count) {
-            //fprintf(stderr, "ip_port_set && !curr_announce->base_announce.tcp_relays_count\n");
+            // fprintf(stderr, "ip_port_set && !curr_announce->base_announce.tcp_relays_count\n");
             send_gc_handshake_packet(chat, peer_number, GH_REQUEST, HS_INVITE_REQUEST, chat->join_type);
             gconn->send_message_id = 2;
         } else {
