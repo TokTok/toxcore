@@ -292,12 +292,12 @@ typedef struct GC_Chat {
     /* keeps track of frequency of new inbound connections */
     uint8_t     connection_O_metre;
     uint64_t    connection_cooldown_timer;
-    bool        block_handshakes;  // TODO: ???
+    bool        block_handshakes;
 
     int32_t saved_invites[MAX_GC_SAVED_INVITES];
     uint8_t saved_invites_index;
 
-    uint8_t m_group_public_key[CRYPTO_PUBLIC_KEY_SIZE];  // Identifier for group's messenger friend connection
+    uint8_t m_group_public_key[CRYPTO_PUBLIC_KEY_SIZE];  /* Identifier for group's messenger friend connection */
     bool should_update_self_announces;
     bool should_start_sending_handshakes;
 
