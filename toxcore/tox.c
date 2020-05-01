@@ -428,12 +428,13 @@ static void tox_group_message_handler(Messenger *m, uint32_t group_number, uint3
 }
 
 static void tox_group_private_message_handler(Messenger *m, uint32_t group_number, uint32_t peer_id,
-        Tox_Message_Type type, const uint8_t *message, size_t length, void *user_data)
+        unsigned int type, const uint8_t *message, size_t length, void *user_data)
 {
     Tox *tox = (Tox *)user_data;
 
     if (tox->group_private_message_callback != nullptr) {
-        tox->group_private_message_callback(tox, group_number, peer_id, type, message, length, tox->non_const_user_data);
+        tox->group_private_message_callback(tox, group_number, peer_id, (Tox_Message_Type)type, message, length,
+                                            tox->non_const_user_data);
     }
 }
 
