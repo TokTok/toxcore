@@ -6586,7 +6586,7 @@ int add_peers_from_announces(const GC_Session *gc_session, GC_Chat *chat, GC_Ann
         }
 
         ++added_peers;
-       // char id_str[IDSTRING_LEN];
+        // char id_str[IDSTRING_LEN];
         // fprintf(stderr, "Added peers %s\n", id_to_string(curr_announce->peer_public_key, id_str, IDSTRING_LEN));
     }
 
