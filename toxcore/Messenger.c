@@ -381,19 +381,14 @@ static int32_t m_add_friend_contact_no_request(Messenger *m, const uint8_t *real
     return init_new_friend(m, real_pk, FRIEND_CONFIRMED);
 }
 
-static int32_t m_add_group_contact_no_request(Messenger *m, const uint8_t *real_pk)
-{
-    if (get_group_id(m, real_pk) != -1) {
-        return FAERR_ALREADYSENT;
-    }
-
-    return init_new_group(m, real_pk);
-}
-
 int32_t m_addfriend_norequest(Messenger *m, const uint8_t *real_pk)
 {
     if (!public_key_valid(real_pk)) {
         return FAERR_BADCHECKSUM;
+    }
+
+    if (id_equal(real_pk, nc_get_self_public_key(m->net_crypto))) {
+        return FAERR_OWNKEY;
     }
 
     return m_add_friend_contact_no_request(m, real_pk);
@@ -411,7 +406,7 @@ int32_t m_add_group(Messenger *m, GC_Chat *chat)
 {
     random_bytes(chat->m_group_public_key, CRYPTO_PUBLIC_KEY_SIZE);
 
-    int group_number = m_add_group_contact_no_request(m, chat->m_group_public_key);
+    int group_number = init_new_group(m, chat->m_group_public_key);
 
     if (group_number < 0) {
         return -1;
