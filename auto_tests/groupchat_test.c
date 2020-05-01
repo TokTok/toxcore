@@ -292,6 +292,25 @@ static Suite *text_groupchats_suite(void)
     return s;
 }
 
+#undef PEER0_NICK
+
+#undef GROUP_NAME_LEN
+#undef GROUP_NAME
+
+#undef TOPIC2_LEN
+#undef TOPIC2
+
+#undef TOPIC1_LEN
+#undef TOPIC1
+
+#undef PASS_LEN
+#undef PASSWORD
+
+#undef PEER_LIMIT_2
+#undef PEER_LIMIT_1
+
+#undef NUM_GROUP_TOXES
+
 int main(void)
 {
     srand((unsigned int) time(nullptr));
