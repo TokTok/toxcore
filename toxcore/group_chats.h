@@ -297,7 +297,7 @@ typedef struct GC_Chat {
     int32_t saved_invites[MAX_GC_SAVED_INVITES];
     uint8_t saved_invites_index;
 
-    uint8_t onion_friend_public_key[ENC_PUBLIC_KEY];
+    uint8_t m_group_public_key[CRYPTO_PUBLIC_KEY_SIZE];  // Identifier for group's messenger friend connection
     bool should_update_self_announces;
     bool should_start_sending_handshakes;
 
