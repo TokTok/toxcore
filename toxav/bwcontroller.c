@@ -18,9 +18,9 @@
 
 #include "../toxcore/logger.h"
 #include "../toxcore/mono_time.h"
-#include "../toxcore/util.h"
 #include "../toxcore/network.h"
 #include "../toxcore/tox_private.h"
+#include "../toxcore/util.h"
 
 
 #define BWC_PACKET_ID 196
