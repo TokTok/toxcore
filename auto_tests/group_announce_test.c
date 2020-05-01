@@ -130,6 +130,11 @@ static void group_message_test(Tox **toxes, State *state)
     ck_assert(err_exit == TOX_ERR_GROUP_LEAVE_OK);
 }
 
+#undef PEER1_NICK
+#undef PEER0_NICK
+#undef TEST_GROUP_NAME
+#undef TEST_MESSAGE
+
 int main(void)
 {
     setvbuf(stdout, nullptr, _IONBF, 0);
