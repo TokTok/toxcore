@@ -1,7 +1,7 @@
 ---
 cirrus-ci_task:
   container:
-    image: toxchat/toktok-stack:0.0.7
+    image: toxchat/toktok-stack:0.0.10
     cpu: 2
     memory: 2G
   configure_script:
@@ -10,6 +10,5 @@ cirrus-ci_task:
     - bazel test -k
         --remote_http_cache=http://$CIRRUS_HTTP_CACHE_HOST
         --config=ci
-        --config=docker
         --config=release
         //c-toxcore/...
