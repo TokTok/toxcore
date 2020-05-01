@@ -38,11 +38,6 @@ typedef enum Message_Type {
     MESSAGE_ACTION,
 } Message_Type;
 
-typedef enum Contact_Type {
-    CONTACT_FRIEND,
-    CONTACT_GROUP,
-} Contact_Type;
-
 #ifndef MESSENGER_DEFINED
 #define MESSENGER_DEFINED
 typedef struct Messenger Messenger;
@@ -109,7 +104,6 @@ typedef enum Friend_Add_Error {
     FAERR_BADCHECKSUM = -6,
     FAERR_SETNEWNOSPAM = -7,
     FAERR_NOMEM = -8,
-    FAERR_BADCONTYPE = -9,
 } Friend_Add_Error;
 
 
