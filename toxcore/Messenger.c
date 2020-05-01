@@ -181,26 +181,11 @@ void getaddress(const Messenger *m, uint8_t *address)
     memcpy(address + CRYPTO_PUBLIC_KEY_SIZE + sizeof(nospam), &checksum, sizeof(checksum));
 }
 
-static int send_online_packet(Messenger *m, int32_t friendnumber)
+static int send_online_packet(Messenger *m, int friendcon_id)
 {
-    if (!friend_is_valid(m, friendnumber)) {
-        return 0;
-    }
-
     uint8_t packet = PACKET_ID_ONLINE;
-    return write_cryptpacket(m->net_crypto, friend_connection_crypt_connection_id(m->fr_c,
-                             m->friendlist[friendnumber].friendcon_id), &packet, sizeof(packet), 0) != -1;
-}
-
-static int send_online_packet_group(Messenger *m, int32_t groupnumber)
-{
-    if (!group_is_valid(m, groupnumber)) {
-        return 0;
-    }
-
-    uint8_t packet = PACKET_ID_ONLINE;
-    return write_cryptpacket(m->net_crypto, friend_connection_crypt_connection_id(m->fr_c,
-                             m->grouplist[groupnumber].friendcon_id), &packet, sizeof(packet), 0) != -1;
+    return write_cryptpacket(m->net_crypto, friend_connection_crypt_connection_id(m->fr_c, friendcon_id), &packet,
+                             sizeof(packet), 0) != -1;
 }
 
 static int send_offline_packet(Messenger *m, int friendcon_id)
@@ -256,7 +241,7 @@ static int32_t init_new_friend(Messenger *m, const uint8_t *real_pk, uint8_t sta
             }
 
             if (friend_con_connected(m->fr_c, friendcon_id) == FRIENDCONN_STATUS_CONNECTED) {
-                send_online_packet(m, i);
+                send_online_packet(m, friendcon_id);
             }
 
             return i;
@@ -298,7 +283,7 @@ static int32_t init_new_group(Messenger *m, const uint8_t *real_pk)
         }
 
         if (friend_con_connected(m->fr_c, friendcon_id) == FRIENDCONN_STATUS_CONNECTED) {
-            send_online_packet_group(m, i);
+            send_online_packet(m, friendcon_id);
         }
 
         return i;
@@ -2400,7 +2385,7 @@ static int m_handle_status(void *object, int i, uint8_t status, void *userdata)
     Messenger *m = (Messenger *)object;
 
     if (status) { /* Went online. */
-        send_online_packet(m, i);
+        send_online_packet(m, m->friendlist[i].friendcon_id);
     } else { /* Went offline. */
         if (m->friendlist[i].status == FRIEND_ONLINE) {
             set_friend_status(m, i, FRIEND_CONFIRMED, userdata);
@@ -2424,7 +2409,7 @@ static int m_handle_packet(void *object, int i, const uint8_t *temp, uint16_t le
     if (m->friendlist[i].status != FRIEND_ONLINE) {
         if (packet_id == PACKET_ID_ONLINE && len == 1) {
             set_friend_status(m, i, FRIEND_ONLINE, userdata);
-            send_online_packet(m, i);
+            send_online_packet(m, m->friendlist[i].friendcon_id);
         } else {
             return -1;
         }
