@@ -30,7 +30,7 @@ set(CMAKE_MODULE_PATH ${toxcore_SOURCE_DIR}/cmake)
 # versions in a synchronised way.
 set(PROJECT_VERSION_MAJOR "0")
 set(PROJECT_VERSION_MINOR "2")
-set(PROJECT_VERSION_PATCH "11")
+set(PROJECT_VERSION_PATCH "12")
 set(PROJECT_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
 
 # set .so library version / following libtool scheme
@@ -82,6 +82,11 @@ else()
   message(STATUS "Supported C++ compiler features = ${CMAKE_CXX_COMPILE_FEATURES}")
 endif()
 
+option(EXECUTION_TRACE "Print a function trace during execution (for debugging)" OFF)
+if(EXECUTION_TRACE)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -finstrument-functions")
+endif()
+
 set(MIN_LOGGER_LEVEL "" CACHE STRING "Logging level to use (TRACE, DEBUG, INFO, WARNING, ERROR)")
 if(MIN_LOGGER_LEVEL)
   if(("${MIN_LOGGER_LEVEL}" STREQUAL "TRACE") OR
@@ -109,6 +114,8 @@ option(USE_STDERR_LOGGER "Enable logging to stderr when the logger is NULL" OFF)
 if(USE_STDERR_LOGGER)
   add_definitions(-DUSE_STDERR_LOGGER=1)
 endif()
+
+option(NON_HERMETIC_TESTS "Whether to build and run tests that depend on an internet connection" OFF)
 
 option(BUILD_TOXAV "Whether to build the tox AV library" ON)
 option(MUST_BUILD_TOXAV "Fail the build if toxav cannot be built" OFF)
@@ -373,9 +380,14 @@ unit_test(toxcore util)
 #
 ################################################################################
 
-add_library(misc_tools
+set(misc_tools_SOURCES
   testing/misc_tools.c
   testing/misc_tools.h)
+if(EXECUTION_TRACE)
+  set(misc_tools_SOURCES ${misc_tools_SOURCES}
+    testing/trace.cc)
+endif()
+add_library(misc_tools ${misc_tools_SOURCES})
 target_link_modules(misc_tools toxcore)
 
 set(TEST_TIMEOUT_SECONDS "" CACHE STRING "Limit runtime of each test to the number of seconds specified")
@@ -408,7 +420,6 @@ function(auto_test target)
 endfunction()
 
 auto_test(TCP)
-auto_test(bootstrap)
 auto_test(conference)
 auto_test(conference_double_invite)
 auto_test(conference_invite_merge)
@@ -442,7 +453,6 @@ auto_test(send_message)
 auto_test(set_name)
 auto_test(set_status_message)
 auto_test(skeleton)
-auto_test(tcp_relay)
 auto_test(tox_many)
 auto_test(tox_many_tcp)
 auto_test(tox_one)
@@ -450,6 +460,11 @@ auto_test(tox_strncasecmp)
 auto_test(typing)
 auto_test(version)
 auto_test(save_compatibility)
+
+if(NON_HERMETIC_TESTS)
+  auto_test(bootstrap)
+  auto_test(tcp_relay)
+endif()
 
 if(BUILD_TOXAV)
   auto_test(conference_av)
