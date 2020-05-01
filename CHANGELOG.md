@@ -1,4 +1,3 @@
-
 ## v0.2.12
 
 ### Merged PRs:
@@ -116,7 +115,7 @@
 - [#1310](https://github.com/TokTok/c-toxcore/pull/1310) Do not send the same packet to the same node twice
 - [#1309](https://github.com/TokTok/c-toxcore/pull/1309) add configurable limit on number of stored frozen peers
 - [#1305](https://github.com/TokTok/c-toxcore/pull/1305) Expose api functions for enabling and disabling AV in AV groups
-- [#1302](https://github.com/TokTok/c-toxcore/pull/1302) Specify that buffer size for tox_conference_peer_get_name is given by $size
+- [#1302](https://github.com/TokTok/c-toxcore/pull/1302) Specify that buffer size for tox_conference_peer_get_name is given by \$size
 
 ### Closed issues:
 
@@ -603,7 +602,7 @@
 - [#711](https://github.com/TokTok/c-toxcore/pull/711) Make the monolith test a C++ binary.
 - [#710](https://github.com/TokTok/c-toxcore/pull/710) Don't allocate or dereference Tox_Options in tests.
 - [#709](https://github.com/TokTok/c-toxcore/pull/709) Remove nTox from the repo.
-- [#708](https://github.com/TokTok/c-toxcore/pull/708) Add testing/*.c (except av_test) to bazel build.
+- [#708](https://github.com/TokTok/c-toxcore/pull/708) Add testing/\*.c (except av_test) to bazel build.
 - [#707](https://github.com/TokTok/c-toxcore/pull/707) Fix log message in simple_conference_test: invite -> message.
 - [#705](https://github.com/TokTok/c-toxcore/pull/705) Add correction support for conference
 - [#703](https://github.com/TokTok/c-toxcore/pull/703) Add a simple conference test with 3 friends.
@@ -1046,7 +1045,7 @@
 - [#151](https://github.com/TokTok/c-toxcore/pull/151) Revert #130 "Make ToxAV stateless"
 - [#148](https://github.com/TokTok/c-toxcore/pull/148) Added UB comment r/t deleting a friend w/ active call
 - [#146](https://github.com/TokTok/c-toxcore/pull/146) Make group callbacks stateless
-- [#145](https://github.com/TokTok/c-toxcore/pull/145) Make internal chat list function take uint32_t* as well.
+- [#145](https://github.com/TokTok/c-toxcore/pull/145) Make internal chat list function take uint32_t\* as well.
 - [#144](https://github.com/TokTok/c-toxcore/pull/144) Only build toxav if opus and vpx are found.
 - [#143](https://github.com/TokTok/c-toxcore/pull/143) Make toxcore code C++ compatible.
 - [#142](https://github.com/TokTok/c-toxcore/pull/142) Fix for windows dynamic libraries.
