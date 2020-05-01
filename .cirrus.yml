@@ -11,4 +11,5 @@ cirrus-ci_task:
         --remote_http_cache=http://$CIRRUS_HTTP_CACHE_HOST
         --config=ci
         --config=release
+        --config=testnet
         //c-toxcore/...
