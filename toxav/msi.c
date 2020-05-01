@@ -484,7 +484,7 @@ static int m_msi_packet(Tox *tox, int32_t friendnumber, const uint8_t *data, uin
 
     // TODO(Zoff): make this better later! -------------------
 
-    TOX_ERR_FRIEND_CUSTOM_PACKET error;
+    Tox_Err_Friend_Custom_Packet error;
     tox_friend_send_lossless_packet(tox, friendnumber, data_new, length_new, &error);
 
     // TODO(Zoff): make this better later! -------------------
