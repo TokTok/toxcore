@@ -38,6 +38,11 @@ typedef enum Message_Type {
     MESSAGE_ACTION,
 } Message_Type;
 
+typedef enum Contact_Type {
+    CONTACT_FRIEND,
+    CONTACT_GROUP,
+} Contact_Type;
+
 #ifndef MESSENGER_DEFINED
 #define MESSENGER_DEFINED
 typedef struct Messenger Messenger;
@@ -104,6 +109,7 @@ typedef enum Friend_Add_Error {
     FAERR_BADCHECKSUM = -6,
     FAERR_SETNEWNOSPAM = -7,
     FAERR_NOMEM = -8,
+    FAERR_BADCONTYPE = -9,
 } Friend_Add_Error;
 
 
@@ -127,11 +133,6 @@ typedef enum Userstatus {
     USERSTATUS_BUSY,
     USERSTATUS_INVALID,
 } Userstatus;
-
-typedef enum Contact_Type {
-    CONTACT_TYPE_FRIEND,
-    CONTACT_TYPE_GC,
-} Contact_Type;
 
 #define FILE_ID_LENGTH 32
 
@@ -246,9 +247,14 @@ typedef struct Friend {
 
     struct Receipts *receipts_start;
     struct Receipts *receipts_end;
-
-    Contact_Type type;
 } Friend;
+
+typedef struct Group {
+    uint8_t real_pk[CRYPTO_PUBLIC_KEY_SIZE];
+    int friendcon_id;
+    uint8_t last_connection_udp_tcp;
+    bool active;  // true if group is active.
+} Group;
 
 struct Messenger {
     Logger *log;
@@ -276,6 +282,9 @@ struct Messenger {
 
     Friend *friendlist;
     uint32_t numfriends;
+
+    Group *grouplist;
+    uint32_t numgroups;
 
     time_t lastdump;
 
@@ -362,9 +371,9 @@ int32_t m_addfriend(Messenger *m, const uint8_t *address, const uint8_t *data, u
  */
 int32_t m_addfriend_norequest(Messenger *m, const uint8_t *real_pk);
 
-int32_t m_add_friend_gc(Messenger *m, GC_Chat *chat);
+int32_t m_add_group(Messenger *m, GC_Chat *chat);
 
-int32_t m_remove_friend_gc(Messenger *m, const GC_Chat *chat);
+int32_t m_remove_group(Messenger *m, const GC_Chat *chat);
 
 /*  return the friend number associated to that client id.
  *  return -1 if no such friend.
@@ -390,6 +399,13 @@ int getfriendcon_id(const Messenger *m, int32_t friendnumber);
  *  return -1 if failure
  */
 int m_delfriend(Messenger *m, int32_t friendnumber);
+
+/* Remove a group.
+ *
+ * Return 0 if success.
+ * Return -1 if failure.
+ */
+int m_delgroup(Messenger *m, int32_t groupnumber);
 
 /* Checks friend's connecting status.
  *
