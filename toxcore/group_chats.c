@@ -2025,9 +2025,9 @@ static void do_gc_shared_state_changes(GC_Session *c, GC_Chat *chat, const GC_Sh
         }
 
         if (is_public_chat(chat)) {
-            m_add_friend_gc(c->messenger, chat);
+            m_add_group(c->messenger, chat);
         } else if (chat->shared_state.privacy_state == GI_PRIVATE) {
-            m_remove_friend_gc(c->messenger, chat);
+            m_remove_group(c->messenger, chat);
             cleanup_gca(c->announces_list, get_chat_id(chat->chat_public_key));
         }
     }
@@ -3378,9 +3378,9 @@ int gc_founder_set_privacy_state(Messenger *m, int group_number, uint8_t new_pri
 
     if (new_privacy_state == GI_PRIVATE) {
         cleanup_gca(c->announces_list, get_chat_id(chat->chat_public_key));
-        m_remove_friend_gc(c->messenger, chat);
+        m_remove_group(c->messenger, chat);
     } else {
-        m_add_friend_gc(c->messenger, chat);
+        m_add_group(c->messenger, chat);
     }
 
     if (broadcast_gc_shared_state(chat) == -1) {
@@ -5722,7 +5722,7 @@ int gc_group_load(GC_Session *c, Saved_Group *save, int group_number)
     }
 
     if (is_public_chat(chat)) {
-        m_add_friend_gc(m, chat);
+        m_add_group(m, chat);
     }
 
     uint16_t num_addrs = net_ntohs(save->num_addrs);
@@ -5797,7 +5797,7 @@ int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name
     self_gc_connected(c->messenger->mono_time, chat);
 
     if (is_public_chat(chat)) {
-        int friend_number = m_add_friend_gc(c->messenger, chat);
+        int friend_number = m_add_group(c->messenger, chat);
 
         if (friend_number < 0) {
             group_delete(c, chat);
@@ -5859,7 +5859,7 @@ int gc_group_join(GC_Session *c, const uint8_t *chat_id, const uint8_t *nick, si
         }
     }
 
-    int friend_number = m_add_friend_gc(c->messenger, chat);
+    int friend_number = m_add_group(c->messenger, chat);
 
     if (friend_number < 0) {
         return -6;
@@ -5923,8 +5923,8 @@ static bool gc_rejoin_connected_group(GC_Session *c, GC_Chat *chat)
     }
 
     if (is_public_chat(chat)) {
-        m_remove_friend_gc(c->messenger, chat);
-        m_add_friend_gc(c->messenger, chat);
+        m_remove_group(c->messenger, chat);
+        m_add_group(c->messenger, chat);
     }
 
     gc_load_peers(c->messenger, chat, peers, num_addrs);
@@ -6327,12 +6327,7 @@ GC_Session *new_dht_groupchats(Messenger *m)
 
 static void group_cleanup(GC_Session *c, GC_Chat *chat)
 {
-    if (!c || !chat) {
-        return;
-    }
-
-    m_remove_friend_gc(c->messenger, chat);
-
+    m_remove_group(c->messenger, chat);
     mod_list_cleanup(chat);
     sanctions_list_cleanup(chat);
 
