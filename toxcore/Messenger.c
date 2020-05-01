@@ -417,12 +417,9 @@ static void try_pack_gc_data(const Messenger *m, GC_Chat *chat, Onion_Friend *on
  */
 int32_t m_add_group(Messenger *m, GC_Chat *chat)
 {
-    uint8_t tmp_public_key[ENC_PUBLIC_KEY];
-    memcpy(tmp_public_key, get_chat_id(chat->chat_public_key), ENC_PUBLIC_KEY);
-    random_bytes(tmp_public_key + ENC_PUBLIC_KEY / 2, ENC_PUBLIC_KEY / 2);
-    memcpy(chat->onion_friend_public_key, tmp_public_key, ENC_PUBLIC_KEY);
+    random_bytes(chat->m_group_public_key, CRYPTO_PUBLIC_KEY_SIZE);
 
-    int group_number = m_add_contact_no_request(m, tmp_public_key, CONTACT_GROUP);
+    int group_number = m_add_contact_no_request(m, chat->m_group_public_key, CONTACT_GROUP);
 
     if (group_number < 0) {
         return -1;
@@ -442,7 +439,7 @@ int32_t m_add_group(Messenger *m, GC_Chat *chat)
 
 int32_t m_remove_group(Messenger *m, const GC_Chat *chat)
 {
-    int group_number = get_group_id(m, chat->onion_friend_public_key);
+    int group_number = get_group_id(m, chat->m_group_public_key);
 
     if (group_number >= 0) {
         m_delgroup(m, group_number);
