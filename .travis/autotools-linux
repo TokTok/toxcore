@@ -31,6 +31,7 @@ travis_script() {
   add_config_flag --with-nacl-libs="$CACHEDIR/lib/amd64"
   add_config_flag --with-nacl-headers="$CACHEDIR/include/amd64"
   add_config_flag --disable-ipv6
+  add_config_flag --enable-test-network
   add_config_flag --enable-nacl
   add_config_flag --enable-daemon
   add_config_flag --enable-logging
