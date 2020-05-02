@@ -49,3 +49,9 @@ cc_binary(
         "//c-toxcore/toxcore",
     ],
 )
+
+cc_library(
+    name = "oomer",
+    srcs = ["oomer.c"],
+    visibility = ["//visibility:public"],
+)

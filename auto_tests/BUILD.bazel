@@ -31,6 +31,7 @@ flaky_tests = {
         ":check_compat",
         ":run_auto_test",
         "//c-toxcore/testing:misc_tools",
+        "//c-toxcore/testing:oomer",
         "//c-toxcore/toxav",
         "//c-toxcore/toxcore",
         "//c-toxcore/toxcore:DHT_srcs",

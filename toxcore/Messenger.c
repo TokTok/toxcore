@@ -2012,7 +2012,7 @@ Messenger *new_messenger(Mono_Time *mono_time, Messenger_Options *options, unsig
     m->onion_c =  new_onion_client(m->mono_time, m->net_crypto);
     m->fr_c = new_friend_connections(m->mono_time, m->onion_c, options->local_discovery_enabled);
 
-    if (!(m->onion && m->onion_a && m->onion_c)) {
+    if (!(m->onion && m->onion_a && m->onion_c && m->fr_c)) {
         kill_friend_connections(m->fr_c);
         kill_onion(m->onion);
         kill_onion_announce(m->onion_a);

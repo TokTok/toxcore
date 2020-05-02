@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright © 2020 Tox project.
+"""Run an oomer-enabled program with an increasing number of max_allocs."""
+
+import os
+import subprocess
+import sys
+
+from typing import Dict, List
+
+
+def run(args: List[str], env: Dict[str, str]) -> None:
+    """Run a program with environment and print the env and args to stdout."""
+    print("-" * 60, "\x1b[0;32m")
+    for k in sorted(env.keys()):
+        print(f"{k}={env[k]} \\")
+    print(" ".join(args))
+    print("\x1b[0m", "-" * 60)
+    subprocess.run(args, env=env)
+
+
+def run_oomer(exe: str, max_allocs: int) -> bool:
+    """Run an oomer-enabled program with the provided max_allocs."""
+    print(f"\x1b[0;33mmax_allocs = {max_allocs}\x1b[0m")
+    done_file = f"oomer-{max_allocs}"
+    env = {
+        "OOMER_MAX_ALLOCS": str(max_allocs),
+        "OOMER_ONE_SHOT": "1",
+        "OOMER_FLAKY": "0",
+        "OOMER_DONE_FILE": done_file,
+    }
+    proc = subprocess.run([exe], env=env)
+
+    # The done_file is created by oomer.c when it considers the test complete.
+    if os.path.exists(done_file):
+        os.unlink(done_file)
+        return True
+
+    if proc.returncode >= 0:
+        # Process exited cleanly (success or failure).
+        pass
+    elif proc.returncode == -6:
+        # Assertion failed.
+        pass
+    elif proc.returncode == -14:
+        print(f"\x1b[1;31mProcess timed out at "
+              f"max_allocs = {max_allocs}\x1b[0m")
+        del env["OOMER_DONE_FILE"]
+        env["OOMER_TRAP_ON_FAIL"] = "1"
+        run(["gdb", "--eval-command=r", exe], env=env)
+        return True
+    else:
+        print(f"Process exited with signal {-proc.returncode} at "
+              f"max_allocs = {max_allocs}")
+        del env["OOMER_DONE_FILE"]
+        run(["gdb", "--eval-command=r", exe], env=env)
+        return True
+
+    return False
+
+
+def main(args: List[str]) -> None:
+    """Run an oomer-enabled program with an increasing number of max_allocs."""
+    if len(args) != 2:
+        print("Usage: oomer <exe>")
+        sys.exit(1)
+    exe = args[1]
+
+    for max_allocs in range(0, 1000):
+        if run_oomer(exe, max_allocs):
+            break
+
+
+if __name__ == "__main__":
+    main(sys.argv)

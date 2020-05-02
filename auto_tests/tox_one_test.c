@@ -38,8 +38,10 @@ static void test_one(void)
 
     uint32_t index[] = { 1, 2 };
     Tox *tox1 = tox_new_log(nullptr, nullptr, &index[0]);
+    ck_assert(tox1 != nullptr);
     set_random_name_and_status_message(tox1, name, status_message);
     Tox *tox2 = tox_new_log(nullptr, nullptr, &index[1]);
+    ck_assert(tox2 != nullptr);
     set_random_name_and_status_message(tox2, name2, status_message2);
 
     uint8_t address[TOX_ADDRESS_SIZE];
@@ -85,6 +87,7 @@ static void test_one(void)
     Tox_Err_New err_n;
 
     struct Tox_Options *options = tox_options_new(nullptr);
+    ck_assert(options != nullptr);
     tox_options_set_savedata_type(options, TOX_SAVEDATA_TYPE_TOX_SAVE);
     tox_options_set_savedata_data(options, data, save_size);
     tox2 = tox_new_log(options, &err_n, &index[1]);
