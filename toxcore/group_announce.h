@@ -38,14 +38,12 @@ struct GC_Announce {
 // Peer announce for specific group
 struct GC_Peer_Announce {
     GC_Announce base_announce;
-
     uint64_t timestamp;
 };
 
 // Used for announces in public groups
 struct GC_Public_Announce {
     GC_Announce base_announce;
-
     uint8_t chat_public_key[ENC_PUBLIC_KEY];
 };
 
