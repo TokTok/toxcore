@@ -2221,6 +2221,8 @@ Messenger *new_messenger(Mono_Time *mono_time, Messenger_Options *options, unsig
         kill_networking(m->net);
         kill_net_crypto(m->net_crypto);
         kill_dht(m->dht);
+        friendreq_kill(m->fr);
+        logger_kill(m->log);
         free(m);
         return nullptr;
     }
@@ -2237,7 +2239,6 @@ Messenger *new_messenger(Mono_Time *mono_time, Messenger_Options *options, unsig
         free(m);
         return nullptr;
     }
-
 #endif /* VANILLA_NACL */
 
     m->onion = new_onion(m->mono_time, m->dht);
@@ -2252,6 +2253,7 @@ Messenger *new_messenger(Mono_Time *mono_time, Messenger_Options *options, unsig
         kill_onion_client(m->onion_c);
 #ifndef VANILLA_NACL
         kill_dht_groupchats(m->group_handler);
+        kill_gca(m->group_announce);
 #endif /* VANILLA_NACL */
         kill_net_crypto(m->net_crypto);
         kill_dht(m->dht);
@@ -2712,7 +2714,7 @@ static int m_handle_packet(void *object, int i, const uint8_t *temp, uint16_t le
     return 0;
 }
 
-static void do_group_connections(Messenger *m, void *userdata)
+static void do_groups(Messenger *m, void *userdata)
 {
     uint32_t i;
 
@@ -2886,7 +2888,6 @@ static void update_gc_friends_data(const Messenger *m)
 
         if (onion_friend->gc_data_length == -1 || chat->should_update_self_announces) {
             try_pack_gc_data(m, chat, onion_friend);
-
             chat->should_update_self_announces = false;
         }
     }
@@ -2929,13 +2930,11 @@ void do_messenger(Messenger *m, void *userdata)
     do_net_crypto(m->net_crypto, userdata);
     do_onion_client(m->onion_c);
     do_friend_connections(m->fr_c, userdata);
+    do_friends(m, userdata);
+    do_groups(m, userdata);
 #ifndef VANILLA_NACL
     do_gc(m->group_handler, userdata);
     do_gca(m->mono_time, m->group_announce);
-#endif
-    do_friends(m, userdata);
-    do_group_connections(m, userdata);
-#ifndef VANILLA_NACL
     update_gc_friends_data(m);
 #endif
     connection_status_callback(m, userdata);
