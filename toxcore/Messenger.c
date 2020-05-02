@@ -2271,6 +2271,7 @@ Messenger *new_messenger(Mono_Time *mono_time, Messenger_Options *options, unsig
         free(m);
         return nullptr;
     }
+
 #endif /* VANILLA_NACL */
 
     m->onion = new_onion(m->mono_time, m->dht);
