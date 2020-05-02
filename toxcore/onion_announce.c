@@ -102,6 +102,8 @@ int create_announce_request(uint8_t *packet, uint16_t max_packet_length, const u
     return ONION_ANNOUNCE_REQUEST_MIN_SIZE;
 }
 
+#ifndef VANILLA_NACL
+
 // TODO: params - to struct
 int create_gc_announce_request(uint8_t *packet, uint16_t max_packet_length, const uint8_t *dest_client_id,
                                const uint8_t *public_key, const uint8_t *secret_key, const uint8_t *ping_id,
@@ -146,6 +148,7 @@ int create_gc_announce_request(uint8_t *packet, uint16_t max_packet_length, cons
 
     return full_length;
 }
+#endif  // VANILLA_NACL
 
 /* Create an onion data request packet in packet of max_packet_length (recommended size ONION_MAX_PACKET_SIZE).
  *
@@ -409,6 +412,10 @@ static int handle_gc_announce_request(Onion_Announce *onion_a, IP_Port source, c
         return 1;
     }
 
+#ifdef VANILLA_NACL
+    return 1;
+#endif
+
     const uint8_t *packet_public_key = packet + 1 + CRYPTO_NONCE_SIZE;
     uint8_t shared_key[CRYPTO_SHARED_KEY_SIZE];
     get_shared_key(onion_a->mono_time, &onion_a->shared_keys_recv, shared_key, dht_get_self_secret_key(onion_a->dht),
@@ -667,9 +674,17 @@ static int handle_data_request(void *object, IP_Port source, const uint8_t *pack
 
 Onion_Announce *new_onion_announce(Mono_Time *mono_time, DHT *dht, GC_Announces_List *gc_announces_list)
 {
-    if (dht == nullptr || gc_announces_list == nullptr) {
+    if (dht == nullptr) {
         return nullptr;
     }
+
+#ifndef VANILLA_NACL
+
+    if (gc_announces_list == nullptr) {
+        return nullptr;
+    }
+
+#endif
 
     Onion_Announce *onion_a = (Onion_Announce *)calloc(1, sizeof(Onion_Announce));
 
@@ -677,10 +692,10 @@ Onion_Announce *new_onion_announce(Mono_Time *mono_time, DHT *dht, GC_Announces_
         return nullptr;
     }
 
+    onion_a->gc_announces_list = gc_announces_list;
     onion_a->mono_time = mono_time;
     onion_a->dht = dht;
     onion_a->net = dht_get_net(dht);
-    onion_a->gc_announces_list = gc_announces_list;
     new_symmetric_key(onion_a->secret_bytes);
 
     networking_registerhandler(onion_a->net, NET_PACKET_ANNOUNCE_REQUEST, &handle_announce_request, onion_a);
