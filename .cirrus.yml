@@ -8,6 +8,9 @@ cirrus-ci_task:
     - /src/workspace/tools/inject-repo c-toxcore
   test_all_script:
     - TEST="bazel test -k
+      --build_tag_filters=-haskell
+      --test_tag_filters=-haskell
+      --remote_download_minimal
       --config=ci
       --config=release
       //c-toxcore/..."
