@@ -56,11 +56,11 @@ static struct RTPMessage *new_message(Tox *tox, const struct RTPHeader *header, 
     struct RTPMessage *msg = (struct RTPMessage *)calloc(1, sizeof(struct RTPMessage) + allocate_len);
 
     if (msg == nullptr) {
-        LOGGER_API_DEBUG(tox, "%s:%d:%s:msg=calloc(%d):NULL\n", __FILE__, __LINE__, __func__,
+        LOGGER_API_DEBUG(tox, "%s:%d:%s:msg=calloc(%d):NULL", __FILE__, __LINE__, __func__,
                          (int)(sizeof(struct RTPMessage) + allocate_len));
         return nullptr;
     } else {
-        LOGGER_API_DEBUG(tox, "%s:%d:%s:msg=calloc(%d):%p\n", __FILE__, __LINE__, __func__,
+        LOGGER_API_DEBUG(tox, "%s:%d:%s:msg=calloc(%d):%p", __FILE__, __LINE__, __func__,
                          (int)(sizeof(struct RTPMessage) + allocate_len), (void *)msg);
     }
 
@@ -283,7 +283,7 @@ static bool fill_data_into_slot(Tox *tox, struct RTPWorkBufferList *wkbl, const 
         struct RTPMessage *msg = (struct RTPMessage *)calloc(1, sizeof(struct RTPMessage) + header->data_length_full);
 
         if (msg == nullptr) {
-            LOGGER_API_ERROR(tox, "Out of memory while trying to allocate for frame of size %u\n",
+            LOGGER_API_ERROR(tox, "Out of memory while trying to allocate for frame of size %u",
                              (unsigned)header->data_length_full);
             // Out of memory: throw away the incoming data.
             return false;
