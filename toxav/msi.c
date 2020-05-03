@@ -22,6 +22,12 @@
 
 #define MSI_MAXMSG_SIZE 256
 
+#ifndef TOXAV_DEFINED
+#define TOXAV_DEFINED
+#undef ToxAV
+typedef struct ToxAV ToxAV;
+#endif /* TOXAV_DEFINED */
+
 /**
  * Protocol:
  *
@@ -878,7 +884,7 @@ static void handle_msi_packet(Tox *tox, uint32_t friend_number, const uint8_t *d
 
     LOGGER_API_DEBUG(tox, "Got msi message");
 
-    void *toxav = tox_get_av_object(tox);
+    ToxAV *toxav = tox_get_av_object(tox);
 
     if (!toxav) {
         return;
