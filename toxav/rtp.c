@@ -482,8 +482,7 @@ void handle_rtp_packet(Tox *tox, uint32_t friendnumber, const uint8_t *data, siz
         return;
     }
 
-    RTPSession *session = NULL;
-    session = rtp_session_get(call, data[0]);
+    RTPSession *session = rtp_session_get(call, data[0]);
 
     if (!session) {
         LOGGER_API_WARNING(tox, "No session!");
