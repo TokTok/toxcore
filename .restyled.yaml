@@ -1,0 +1,4 @@
+---
+restylers:
+  - astyle
+  - prettier-yaml

@@ -93,6 +93,6 @@ FIND="$FIND -and -not -wholename './toxencryptsave/crypto_pwhash*'"
 
 C_SOURCES=`eval "$FIND"`
 
-$ASTYLE -n --options=other/astyle/astylerc $C_SOURCES
+$ASTYLE -n --options=.astylerc $C_SOURCES
 
 git diff --exit-code
