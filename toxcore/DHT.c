@@ -2412,66 +2412,66 @@ static int handle_hardening(void *object, IP_Port source, const uint8_t *source_
     }
 
     switch (packet[0]) {
-        case CHECK_TYPE_GETNODE_REQ: {
-            if (length != HARDREQ_DATA_SIZE) {
-                return 1;
-            }
-
-            Node_format node, tocheck_node;
-            node.ip_port = source;
-            memcpy(node.public_key, source_pubkey, CRYPTO_PUBLIC_KEY_SIZE);
-            memcpy(&tocheck_node, packet + 1, sizeof(Node_format));
-
-            if (getnodes(dht, tocheck_node.ip_port, tocheck_node.public_key, packet + 1 + sizeof(Node_format), &node) == -1) {
-                return 1;
-            }
-
-            return 0;
+    case CHECK_TYPE_GETNODE_REQ: {
+        if (length != HARDREQ_DATA_SIZE) {
+            return 1;
         }
 
-        case CHECK_TYPE_GETNODE_RES: {
-            if (length <= CRYPTO_PUBLIC_KEY_SIZE + 1) {
-                return 1;
-            }
+        Node_format node, tocheck_node;
+        node.ip_port = source;
+        memcpy(node.public_key, source_pubkey, CRYPTO_PUBLIC_KEY_SIZE);
+        memcpy(&tocheck_node, packet + 1, sizeof(Node_format));
 
-            if (length > 1 + CRYPTO_PUBLIC_KEY_SIZE + sizeof(Node_format) * MAX_SENT_NODES) {
-                return 1;
-            }
-
-            uint16_t length_nodes = length - 1 - CRYPTO_PUBLIC_KEY_SIZE;
-            Node_format nodes[MAX_SENT_NODES];
-            const int num_nodes = unpack_nodes(nodes, MAX_SENT_NODES, nullptr, packet + 1 + CRYPTO_PUBLIC_KEY_SIZE,
-                                               length_nodes, 0);
-
-            /* TODO(irungentoo): MAX_SENT_NODES nodes should be returned at all times
-             (right now we have a small network size so it could cause problems for testing and etc..) */
-            if (num_nodes <= 0) {
-                return 1;
-            }
-
-            /* NOTE: This should work for now but should be changed to something better. */
-            if (have_nodes_closelist(dht, nodes, num_nodes) < (uint32_t)((num_nodes + 2) / 2)) {
-                return 1;
-            }
-
-            IPPTsPng *const temp = get_closelist_IPPTsPng(dht, packet + 1, nodes[0].ip_port.ip.family);
-
-            if (temp == nullptr) {
-                return 1;
-            }
-
-            if (mono_time_is_timeout(dht->mono_time, temp->hardening.send_nodes_timestamp, HARDENING_INTERVAL)) {
-                return 1;
-            }
-
-            if (!id_equal(temp->hardening.send_nodes_pingedid, source_pubkey)) {
-                return 1;
-            }
-
-            /* If Nodes look good and the request checks out */
-            temp->hardening.send_nodes_ok = 1;
-            return 0;/* success*/
+        if (getnodes(dht, tocheck_node.ip_port, tocheck_node.public_key, packet + 1 + sizeof(Node_format), &node) == -1) {
+            return 1;
         }
+
+        return 0;
+    }
+
+    case CHECK_TYPE_GETNODE_RES: {
+        if (length <= CRYPTO_PUBLIC_KEY_SIZE + 1) {
+            return 1;
+        }
+
+        if (length > 1 + CRYPTO_PUBLIC_KEY_SIZE + sizeof(Node_format) * MAX_SENT_NODES) {
+            return 1;
+        }
+
+        uint16_t length_nodes = length - 1 - CRYPTO_PUBLIC_KEY_SIZE;
+        Node_format nodes[MAX_SENT_NODES];
+        const int num_nodes = unpack_nodes(nodes, MAX_SENT_NODES, nullptr, packet + 1 + CRYPTO_PUBLIC_KEY_SIZE,
+                                           length_nodes, 0);
+
+        /* TODO(irungentoo): MAX_SENT_NODES nodes should be returned at all times
+         (right now we have a small network size so it could cause problems for testing and etc..) */
+        if (num_nodes <= 0) {
+            return 1;
+        }
+
+        /* NOTE: This should work for now but should be changed to something better. */
+        if (have_nodes_closelist(dht, nodes, num_nodes) < (uint32_t)((num_nodes + 2) / 2)) {
+            return 1;
+        }
+
+        IPPTsPng *const temp = get_closelist_IPPTsPng(dht, packet + 1, nodes[0].ip_port.ip.family);
+
+        if (temp == nullptr) {
+            return 1;
+        }
+
+        if (mono_time_is_timeout(dht->mono_time, temp->hardening.send_nodes_timestamp, HARDENING_INTERVAL)) {
+            return 1;
+        }
+
+        if (!id_equal(temp->hardening.send_nodes_pingedid, source_pubkey)) {
+            return 1;
+        }
+
+        /* If Nodes look good and the request checks out */
+        temp->hardening.send_nodes_ok = 1;
+        return 0;/* success*/
+    }
     }
 
     return 1;
@@ -2908,36 +2908,36 @@ static State_Load_Status dht_load_state_callback(void *outer, const uint8_t *dat
     DHT *dht = (DHT *)outer;
 
     switch (type) {
-        case DHT_STATE_TYPE_NODES: {
-            if (length == 0) {
-                break;
-            }
-
-            free(dht->loaded_nodes_list);
-            // Copy to loaded_clients_list
-            dht->loaded_nodes_list = (Node_format *)calloc(MAX_SAVED_DHT_NODES, sizeof(Node_format));
-
-            if (dht->loaded_nodes_list == nullptr) {
-                LOGGER_ERROR(dht->log, "could not allocate %u nodes", MAX_SAVED_DHT_NODES);
-                dht->loaded_num_nodes = 0;
-                break;
-            }
-
-            const int num = unpack_nodes(dht->loaded_nodes_list, MAX_SAVED_DHT_NODES, nullptr, data, length, 0);
-
-            if (num > 0) {
-                dht->loaded_num_nodes = num;
-            } else {
-                dht->loaded_num_nodes = 0;
-            }
-
+    case DHT_STATE_TYPE_NODES: {
+        if (length == 0) {
             break;
         }
 
-        default:
-            LOGGER_ERROR(dht->log, "Load state (DHT): contains unrecognized part (len %u, type %u)",
-                         length, type);
+        free(dht->loaded_nodes_list);
+        // Copy to loaded_clients_list
+        dht->loaded_nodes_list = (Node_format *)calloc(MAX_SAVED_DHT_NODES, sizeof(Node_format));
+
+        if (dht->loaded_nodes_list == nullptr) {
+            LOGGER_ERROR(dht->log, "could not allocate %u nodes", MAX_SAVED_DHT_NODES);
+            dht->loaded_num_nodes = 0;
             break;
+        }
+
+        const int num = unpack_nodes(dht->loaded_nodes_list, MAX_SAVED_DHT_NODES, nullptr, data, length, 0);
+
+        if (num > 0) {
+            dht->loaded_num_nodes = num;
+        } else {
+            dht->loaded_num_nodes = 0;
+        }
+
+        break;
+    }
+
+    default:
+        LOGGER_ERROR(dht->log, "Load state (DHT): contains unrecognized part (len %u, type %u)",
+                     length, type);
+        break;
     }
 
     return STATE_LOAD_STATUS_CONTINUE;
