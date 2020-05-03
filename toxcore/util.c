@@ -17,6 +17,11 @@
 
 #include "util.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
 // Need dht because of ENC_SECRET_KEY and ENC_PUBLIC_KEY
 #define ENC_PUBLIC_KEY CRYPTO_PUBLIC_KEY_SIZE
 #define ENC_SECRET_KEY CRYPTO_SECRET_KEY_SIZE
@@ -26,11 +31,6 @@
 
 #include "crypto_core.h" /* for CRYPTO_PUBLIC_KEY_SIZE */
 #include "network.h" /* for current_time_monotonic */
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
 
 bool is_power_of_2(uint64_t x)
 {

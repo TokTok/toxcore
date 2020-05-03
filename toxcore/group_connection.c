@@ -7,13 +7,13 @@
  * An implementation of massive text only group chats.
  */
 
+#include "logger.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
 #include "DHT.h"
 #include "mono_time.h"
@@ -68,12 +68,12 @@ uint16_t gcc_get_array_index(uint64_t message_id)
  * Return 0 on success.
  * Return -1 on failure.
  */
-static int create_array_entry(const Mono_Time *mono_time, struct GC_Message_Array_Entry *array_entry,
-                              const uint8_t *data, uint32_t length,
-                              uint8_t packet_type, uint64_t message_id)
+static int create_array_entry(const Logger *logger, const Mono_Time *mono_time,
+                              struct GC_Message_Array_Entry *array_entry, const uint8_t *data, uint32_t length, uint8_t packet_type,
+                              uint64_t message_id)
 {
     if (data == nullptr || length == 0) {
-        fprintf(stderr, "Attempt to add empty packet for packet type %d\n", packet_type);
+        LOGGER_ERROR(logger, "Attempt to add empty packet for packet type %d", packet_type);
         return -1;
     }
 
@@ -99,8 +99,8 @@ static int create_array_entry(const Mono_Time *mono_time, struct GC_Message_Arra
  * Returns 0 on success and increments gconn's send_message_id.
  * Returns -1 on failure.
  */
-int gcc_add_to_send_array(const Mono_Time *mono_time, GC_Connection *gconn, const uint8_t *data, uint32_t length,
-                          uint8_t packet_type)
+int gcc_add_to_send_array(const Logger *logger, const Mono_Time *mono_time, GC_Connection *gconn, const uint8_t *data,
+                          uint32_t length, uint8_t packet_type)
 {
     /* check if send_array is full */
     if ((gconn->send_message_id % GCC_BUFFER_SIZE) == (uint16_t)(gconn->send_array_start - 1)) {
@@ -114,7 +114,7 @@ int gcc_add_to_send_array(const Mono_Time *mono_time, GC_Connection *gconn, cons
         return -1;
     }
 
-    if (create_array_entry(mono_time, array_entry, data, length, packet_type, gconn->send_message_id) == -1) {
+    if (create_array_entry(logger, mono_time, array_entry, data, length, packet_type, gconn->send_message_id) == -1) {
         return -1;
     }
 
@@ -191,7 +191,7 @@ int gcc_handle_received_message(GC_Chat *chat, uint32_t peer_number, const uint8
             return -1;
         }
 
-        if (create_array_entry(chat->mono_time, ary_entry, data, length, packet_type, message_id) == -1) {
+        if (create_array_entry(chat->logger, chat->mono_time, ary_entry, data, length, packet_type, message_id) == -1) {
             return -1;
         }
 

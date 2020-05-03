@@ -13,7 +13,6 @@
 #include "Messenger.h"
 
 #include <assert.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -2245,8 +2244,8 @@ Messenger *new_messenger(Mono_Time *mono_time, Messenger_Options *options, unsig
 
     m->onion = new_onion(m->mono_time, m->dht);
     m->onion_a = new_onion_announce(m->mono_time, m->dht, m->group_announce);
-    m->onion_c =  new_onion_client(m->mono_time, m->net_crypto, m->group_handler);
-    m->fr_c = new_friend_connections(m->mono_time, m->onion_c, options->local_discovery_enabled);
+    m->onion_c =  new_onion_client(m->log, m->mono_time, m->net_crypto, m->group_handler);
+    m->fr_c = new_friend_connections(m->log, m->mono_time, m->onion_c, options->local_discovery_enabled);
 
     if (!(m->onion && m->onion_a && m->onion_c && m->fr_c)) {
         kill_friend_connections(m->fr_c);
@@ -2267,8 +2266,8 @@ Messenger *new_messenger(Mono_Time *mono_time, Messenger_Options *options, unsig
     }
 
     if (options->tcp_server_port) {
-        m->tcp_server = new_TCP_server(options->ipv6enabled, 1, &options->tcp_server_port, dht_get_self_secret_key(m->dht),
-                                       m->onion);
+        m->tcp_server = new_TCP_server(m->log, options->ipv6enabled, 1, &options->tcp_server_port,
+                                       dht_get_self_secret_key(m->dht), m->onion);
 
         if (m->tcp_server == nullptr) {
             kill_friend_connections(m->fr_c);

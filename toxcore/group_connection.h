@@ -83,7 +83,7 @@ GC_Connection *gcc_get_connection(const GC_Chat *chat, int peer_number);
  * Returns 0 on success and increments gconn's send_message_id.
  * Returns -1 on failure.
  */
-int gcc_add_to_send_array(const Mono_Time *mono_time, GC_Connection *gconn, const uint8_t *data,
+int gcc_add_to_send_array(const Logger *logger, const Mono_Time *mono_time, GC_Connection *gconn, const uint8_t *data,
                           uint32_t length, uint8_t packet_type);
 
 /* Decides if message need to be put in received_array or immediately handled.

@@ -13,10 +13,8 @@
 
 #include "onion_client.h"
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
 #include "LAN_discovery.h"
 #include "group_chats.h"
@@ -104,6 +102,7 @@ typedef struct Onion_Data_Handler {
 
 struct Onion_Client {
     Mono_Time *mono_time;
+    const Logger *logger;
 
     DHT     *dht;
     Net_Crypto *c;
@@ -968,7 +967,7 @@ static int handle_announce_response(void *object, IP_Port source, const uint8_t 
         }
 
         int offset = 2 + ONION_PING_ID_SIZE + len_nodes;
-        int gc_announces_count = gca_unpack_announces_list(plain + offset, plain_size - offset, announces,
+        int gc_announces_count = gca_unpack_announces_list(onion_c->logger, plain + offset, plain_size - offset, announces,
                                  GCA_MAX_SENT_ANNOUNCES, nullptr);
 
         if (gc_announces_count == -1) {
@@ -1944,7 +1943,7 @@ void do_onion_client(Onion_Client *onion_c)
     onion_c->last_run = mono_time_get(onion_c->mono_time);
 }
 
-Onion_Client *new_onion_client(Mono_Time *mono_time, Net_Crypto *c, GC_Session *gc_session)
+Onion_Client *new_onion_client(const Logger *logger, Mono_Time *mono_time, Net_Crypto *c, GC_Session *gc_session)
 {
     if (!c) {
         return nullptr;
@@ -1973,6 +1972,7 @@ Onion_Client *new_onion_client(Mono_Time *mono_time, Net_Crypto *c, GC_Session *
 
     onion_c->gc_session = gc_session;
     onion_c->mono_time = mono_time;
+    onion_c->logger = logger;
     onion_c->dht = nc_get_dht(c);
     onion_c->net = dht_get_net(onion_c->dht);
     onion_c->c = c;

@@ -222,7 +222,7 @@ TCP_Connections *new_tcp_connections(Mono_Time *mono_time, const uint8_t *secret
 
 int kill_tcp_relay_connection(TCP_Connections *tcp_c, int tcp_connections_number);
 
-void do_tcp_connections(TCP_Connections *tcp_c, void *userdata);
+void do_tcp_connections(const Logger *logger, TCP_Connections *tcp_c, void *userdata);
 void kill_tcp_connections(TCP_Connections *tcp_c);
 
 #endif

@@ -255,6 +255,7 @@ typedef struct Saved_Group Saved_Group;
 
 typedef struct GC_Chat {
     const Mono_Time *mono_time;
+    const Logger *logger;
     uint8_t confirmed_peers[MAX_GC_CONFIRMED_PEERS][ENC_PUBLIC_KEY];
     uint8_t confirmed_peers_index;
     Node_format announced_node;
