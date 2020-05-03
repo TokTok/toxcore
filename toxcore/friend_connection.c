@@ -59,6 +59,7 @@ struct Friend_Conn {
 
 struct Friend_Connections {
     const Mono_Time *mono_time;
+    const Logger *logger;
     Net_Crypto *net_crypto;
     DHT *dht;
     Onion_Client *onion_c;
