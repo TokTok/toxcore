@@ -54,19 +54,19 @@ FIND_QUERY="$FIND_QUERY -and -not -name av_test.c"
 FIND_QUERY="$FIND_QUERY -and -not -name dht_test.c"
 FIND_QUERY="$FIND_QUERY -and -not -name version_test.c"
 
-(for i in $(eval "$FIND_QUERY"); do
+(for i in "$(eval "$FIND_QUERY")"; do
   grep -o '#include <[^>]*>' "$i" \
     | grep -E -v '<win|<ws|<iphlp|<libc|<mach/|<crypto_|<randombytes|<u.h>|<sys/filio|<linux'
 done) | sort -u >> amalgamation.cc
 
 echo 'namespace {' >> amalgamation.cc
-for i in $(eval "$FIND_QUERY"); do
+for i in "$(eval "$FIND_QUERY")"; do
   if ! grep -q '^int main(' "$i"; then
     put "$i"
   fi
 done
 
-for i in $(eval "$FIND_QUERY"); do
+for i in "$(eval "$FIND_QUERY")"; do
   if grep -q '^int main(' "$i"; then
     putmain "$i"
   fi
@@ -77,7 +77,7 @@ echo "static void call(int m(int, char **), int argc, char **argv) { m(argc, arg
 echo '}  // namespace' >> amalgamation.cc
 
 echo "int main(int argc, char **argv) {" >> amalgamation.cc
-for i in $(eval "$FIND_QUERY"); do
+for i in "$(eval "$FIND_QUERY")"; do
   if grep -q '^int main(' "$i"; then
     callmain "$i"
   fi
