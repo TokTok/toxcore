@@ -26,7 +26,7 @@ cmake -B_build -H. -GNinja			\
 
 cd _build
 
-ninja install -j$(nproc)
+ninja install -j"$(nproc)"
 
 export ASAN_OPTIONS="detect_invalid_pointer_pairs=1"
 export ASAN_OPTIONS="$ASAN_OPTIONS,detect_stack_use_after_return=1"
