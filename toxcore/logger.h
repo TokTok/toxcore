@@ -15,28 +15,6 @@
 
 #include "ccompat.h"
 
-/* TODO: Zoff remove me after ToxAV restruct */
-#undef USE_STDERR_LOGGER
-#define USE_STDERR_LOGGER 1
-/* TODO: Zoff remove me after ToxAV restruct */
-
-
-/*
- * hook mutex function so we can nicely log them (to the NULL logger!)
- */
-/* #define LOG_ALL_MUTEX_LOCK_UNLOCK_CALLS 1 */
-
-#ifdef LOG_ALL_MUTEX_LOCK_UNLOCK_CALLS
-#define pthread_mutex_lock(MTX) my_pthread_mutex_lock(MTX, #MTX, __FILE__, __LINE__, __func__)
-#define pthread_mutex_unlock(MTX) my_pthread_mutex_unlock(MTX, #MTX, __FILE__, __LINE__, __func__)
-#endif
-
-int my_pthread_mutex_lock(pthread_mutex_t *mutex, const char *mutex_name, const char *file, int line, const char *func);
-int my_pthread_mutex_unlock(pthread_mutex_t *mutex, const char *mutex_name, const char *file, int line,
-                            const char *func);
-
-
-
 #ifndef MIN_LOGGER_LEVEL
 #define MIN_LOGGER_LEVEL LOGGER_LEVEL_INFO
 #endif
