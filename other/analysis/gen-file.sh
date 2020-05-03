@@ -1,18 +1,18 @@
 #!/bin/bash
 
-CPPFLAGS="$CPPFLAGS -DMIN_LOGGER_LEVEL=LOGGER_LEVEL_TRACE"
-CPPFLAGS="$CPPFLAGS -isystem /usr/include/opus"
-CPPFLAGS="$CPPFLAGS -Iauto_tests"
-CPPFLAGS="$CPPFLAGS -Iother"
-CPPFLAGS="$CPPFLAGS -Iother/bootstrap_daemon/src"
-CPPFLAGS="$CPPFLAGS -Iother/fun"
-CPPFLAGS="$CPPFLAGS -Itesting"
-CPPFLAGS="$CPPFLAGS -Itesting/groupchats"
-CPPFLAGS="$CPPFLAGS -Itoxcore"
-CPPFLAGS="$CPPFLAGS -Itoxav"
-CPPFLAGS="$CPPFLAGS -Itoxencryptsave"
+CPPFLAGS=(-DMIN_LOGGER_LEVEL=LOGGER_LEVEL_TRACE)
+CPPFLAGS+=(-isystem /usr/include/opus)
+CPPFLAGS+=(-Iauto_tests)
+CPPFLAGS+=(-Iother)
+CPPFLAGS+=(-Iother/bootstrap_daemon/src)
+CPPFLAGS+=(-Iother/fun)
+CPPFLAGS+=(-Itesting)
+CPPFLAGS+=(-Itesting/groupchats)
+CPPFLAGS+=(-Itoxcore)
+CPPFLAGS+=(-Itoxav)
+CPPFLAGS+=(-Itoxencryptsave)
 
-LDFLAGS="$LDFLAGS -lopus -lsodium -lvpx -lpthread -lconfig"
+LDFLAGS=(-lopus -lsodium -lvpx -lpthread -lconfig)
 
 put() {
   if [ "$SKIP_LINES" = "" ]; then
