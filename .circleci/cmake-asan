@@ -9,19 +9,19 @@ add_flag -Werror
 add_flag -fdiagnostics-color=always
 add_flag -fno-omit-frame-pointer
 add_flag -fsanitize=address,undefined
-cmake -B_build -H. -GNinja			\
-  -DCMAKE_C_FLAGS="$C_FLAGS"			\
-  -DCMAKE_CXX_FLAGS="$CXX_FLAGS"		\
-  -DCMAKE_EXE_LINKER_FLAGS="$LD_FLAGS"		\
-  -DCMAKE_SHARED_LINKER_FLAGS="$LD_FLAGS"	\
-  -DCMAKE_INSTALL_PREFIX:PATH="$PWD/_install"	\
-  -DMIN_LOGGER_LEVEL=TRACE			\
-  -DMUST_BUILD_TOXAV=ON				\
-  -DNON_HERMETIC_TESTS=ON			\
-  -DSTRICT_ABI=ON				\
-  -DTEST_TIMEOUT_SECONDS=120			\
-  -DUSE_IPV6=OFF				\
-  -DUSE_TEST_NETWORK=ON				\
+cmake -B_build -H. -GNinja \
+  -DCMAKE_C_FLAGS="$C_FLAGS" \
+  -DCMAKE_CXX_FLAGS="$CXX_FLAGS" \
+  -DCMAKE_EXE_LINKER_FLAGS="$LD_FLAGS" \
+  -DCMAKE_SHARED_LINKER_FLAGS="$LD_FLAGS" \
+  -DCMAKE_INSTALL_PREFIX:PATH="$PWD/_install" \
+  -DMIN_LOGGER_LEVEL=TRACE \
+  -DMUST_BUILD_TOXAV=ON \
+  -DNON_HERMETIC_TESTS=ON \
+  -DSTRICT_ABI=ON \
+  -DTEST_TIMEOUT_SECONDS=120 \
+  -DUSE_IPV6=OFF \
+  -DUSE_TEST_NETWORK=ON \
   -DAUTOTEST=ON
 
 cd _build
@@ -34,4 +34,4 @@ export ASAN_OPTIONS="$ASAN_OPTIONS,strict_init_order=1"
 export ASAN_OPTIONS="$ASAN_OPTIONS,strict_string_checks=1"
 export ASAN_OPTIONS="$ASAN_OPTIONS,symbolize=1"
 ctest -j50 --output-on-failure ||
-ctest -j50 --output-on-failure --rerun-failed
+  ctest -j50 --output-on-failure --rerun-failed
