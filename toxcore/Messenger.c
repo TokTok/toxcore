@@ -18,6 +18,7 @@
 #include <string.h>
 #include <time.h>
 
+#include "friend_connection.h"
 #include "group_chats.h"
 #include "group_moderation.h"
 #include "logger.h"
@@ -415,10 +416,10 @@ int32_t m_add_group(Messenger *m, GC_Chat *chat)
 
     Group *g = &m->grouplist[group_number];
     int friend_connection_id = g->friendcon_id;
-    Friend_Conn *connection = &m->fr_c->conns[friend_connection_id];
-    int onion_friend_number = connection->onion_friendnum;
-    Onion_Friend *onion_friend = &m->onion_c->friends_list[onion_friend_number];
-    memcpy(onion_friend->gc_public_key, get_chat_id(chat->chat_public_key), ENC_PUBLIC_KEY);
+    Friend_Conn *connection = get_conn(m->fr_c, friend_connection_id);
+    int onion_friend_number = friend_conn_get_onion_friendnum(connection);
+    Onion_Friend *onion_friend = onion_get_friend(m->onion_c, onion_friend_number);
+    onion_friend_set_gc_public_key(onion_friend, get_chat_id(chat->chat_public_key));
 
     try_pack_gc_data(m, chat, onion_friend);
 
@@ -2854,13 +2855,14 @@ static void try_pack_gc_data(const Messenger *m, GC_Chat *chat, Onion_Friend *on
         memcpy(announce.base_announce.peer_public_key, chat->self_public_key, ENC_PUBLIC_KEY);
         memcpy(announce.chat_public_key, get_chat_id(chat->chat_public_key), ENC_PUBLIC_KEY);
 
-        int length = gca_pack_public_announce(onion_friend->gc_data, GCA_MAX_DATA_LENGTH, &announce);
+        uint8_t gc_data[GCA_MAX_DATA_LENGTH];
+        int length = gca_pack_public_announce(gc_data, GCA_MAX_DATA_LENGTH, &announce);
 
         if (length == -1) {
             return;
         }
 
-        onion_friend->gc_data_length = (int16_t)length;
+        onion_friend_set_gc_data(onion_friend, gc_data, (int16_t)length);
 
         if (tcp_num > 0) {
             memcpy((void *)&chat->announced_node, &announce.base_announce.tcp_relays[0], sizeof(Node_format));
@@ -2868,29 +2870,31 @@ static void try_pack_gc_data(const Messenger *m, GC_Chat *chat, Onion_Friend *on
 
         gca_add_announce(m->mono_time, m->group_announce, &announce);
     } else {
-        onion_friend->gc_data_length = -1;  // new gc - no connected relays yet and no ip/port
+        // new gc - no connected relays yet and no ip/port
+        onion_friend_set_gc_data(onion_friend, nullptr, -1);
     }
 }
 
 #ifndef VANILLA_NACL
 static void update_gc_friends_data(const Messenger *m)
 {
-    int i;
+    const uint16_t num_friends = onion_get_friend_count(m->onion_c);
 
-    for (i = 0; i < m->onion_c->num_friends; ++i) {
-        Onion_Friend *onion_friend = &m->onion_c->friends_list[i];
+    for (uint16_t i = 0; i < num_friends; ++i) {
+        Onion_Friend *onion_friend = onion_get_friend(m->onion_c, i);
+        const int16_t gc_data_length = onion_friend_gc_data_length(onion_friend);
 
-        if (!onion_friend->gc_data_length) {
+        if (gc_data_length == 0) {
             continue;
         }
 
-        GC_Chat *chat = gc_get_group_by_public_key(m->group_handler, onion_friend->gc_public_key);
+        GC_Chat *chat = gc_get_group_by_public_key(m->group_handler, onion_friend_get_gc_public_key(onion_friend));
 
         if (!chat) {
             continue;
         }
 
-        if (onion_friend->gc_data_length == -1 || chat->should_update_self_announces) {
+        if (gc_data_length == -1 || chat->should_update_self_announces) {
             try_pack_gc_data(m, chat, onion_friend);
             chat->should_update_self_announces = false;
         }
