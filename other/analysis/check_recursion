@@ -1,8 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Tool to check for recursive calls in toxcore C code.
 
-Usage: 
+Usage:
 
 cat toxav/*.c toxcore/*.c toxencryptsave/*.c \
   | clang `pkg-config --cflags libsodium opus vpx` \
@@ -10,8 +10,6 @@ cat toxav/*.c toxcore/*.c toxencryptsave/*.c \
   | opt -analyze -print-callgraph 2>&1 \
   | other/analysis/check_recursion
 """
-
-from __future__ import print_function
 
 import collections
 import fileinput
