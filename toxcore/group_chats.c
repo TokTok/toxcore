@@ -251,42 +251,42 @@ static int validate_gc_peer_role(const GC_Chat *chat, uint32_t peer_number)
     }
 
     switch (chat->group[peer_number].role) {
-        case GR_FOUNDER: {
-            if (memcmp(chat->shared_state.founder_public_key, gconn->addr.public_key, ENC_PUBLIC_KEY) != 0) {
-                return -1;
-            }
-
-            break;
-        }
-
-        case GR_MODERATOR: {
-            if (mod_list_index_of_sig_pk(chat, get_sig_pk(gconn->addr.public_key)) == -1) {
-                return -1;
-            }
-
-            break;
-        }
-
-        case GR_USER: {
-            if (sanctions_list_is_observer(chat, gconn->addr.public_key)) {
-                return -1;
-            }
-
-            break;
-        }
-
-        case GR_OBSERVER: {
-            /* Don't validate self as this is called when we don't have the sanctions list yet */
-            if (!sanctions_list_is_observer(chat, gconn->addr.public_key) && peer_number != 0) {
-                return -1;
-            }
-
-            break;
-        }
-
-        default: {
+    case GR_FOUNDER: {
+        if (memcmp(chat->shared_state.founder_public_key, gconn->addr.public_key, ENC_PUBLIC_KEY) != 0) {
             return -1;
         }
+
+        break;
+    }
+
+    case GR_MODERATOR: {
+        if (mod_list_index_of_sig_pk(chat, get_sig_pk(gconn->addr.public_key)) == -1) {
+            return -1;
+        }
+
+        break;
+    }
+
+    case GR_USER: {
+        if (sanctions_list_is_observer(chat, gconn->addr.public_key)) {
+            return -1;
+        }
+
+        break;
+    }
+
+    case GR_OBSERVER: {
+        /* Don't validate self as this is called when we don't have the sanctions list yet */
+        if (!sanctions_list_is_observer(chat, gconn->addr.public_key) && peer_number != 0) {
+            return -1;
+        }
+
+        break;
+    }
+
+    default: {
+        return -1;
+    }
     }
 
     return 0;
@@ -3234,55 +3234,55 @@ int gc_set_peer_role(Messenger *m, int group_number, uint32_t peer_id, uint8_t r
 
     /* New role must be applied after the old role is removed */
     switch (chat->group[peer_number].role) {
-        case GR_MODERATOR: {
-            if (founder_gc_set_moderator(chat, gconn, false) == -1) {
+    case GR_MODERATOR: {
+        if (founder_gc_set_moderator(chat, gconn, false) == -1) {
+            return -5;
+        }
+
+        chat->group[peer_number].role = GR_USER;
+
+        if (role == GR_OBSERVER) {
+            if (mod_gc_set_observer(chat, peer_number, true) == -1) {
                 return -5;
             }
-
-            chat->group[peer_number].role = GR_USER;
-
-            if (role == GR_OBSERVER) {
-                if (mod_gc_set_observer(chat, peer_number, true) == -1) {
-                    return -5;
-                }
-            }
-
-            break;
         }
 
-        case GR_OBSERVER: {
-            if (mod_gc_set_observer(chat, peer_number, false) == -1) {
+        break;
+    }
+
+    case GR_OBSERVER: {
+        if (mod_gc_set_observer(chat, peer_number, false) == -1) {
+            return -5;
+        }
+
+        chat->group[peer_number].role = GR_USER;
+
+        if (role == GR_MODERATOR) {
+            if (founder_gc_set_moderator(chat, gconn, true) == -1) {
                 return -5;
             }
+        }
 
-            chat->group[peer_number].role = GR_USER;
+        break;
+    }
 
-            if (role == GR_MODERATOR) {
-                if (founder_gc_set_moderator(chat, gconn, true) == -1) {
-                    return -5;
-                }
+    case GR_USER: {
+        if (role == GR_MODERATOR) {
+            if (founder_gc_set_moderator(chat, gconn, true) == -1) {
+                return -5;
             }
-
-            break;
-        }
-
-        case GR_USER: {
-            if (role == GR_MODERATOR) {
-                if (founder_gc_set_moderator(chat, gconn, true) == -1) {
-                    return -5;
-                }
-            } else if (role == GR_OBSERVER) {
-                if (mod_gc_set_observer(chat, peer_number, true) == -1) {
-                    return -5;
-                }
+        } else if (role == GR_OBSERVER) {
+            if (mod_gc_set_observer(chat, peer_number, true) == -1) {
+                return -5;
             }
-
-            break;
         }
 
-        default: {
-            return -4;
-        }
+        break;
+    }
+
+    default: {
+        return -4;
+    }
     }
 
     chat->group[peer_number].role = role;
@@ -3922,34 +3922,34 @@ static int handle_gc_broadcast(Messenger *m, int group_number, uint32_t peer_num
     memcpy(message, data + 1 + TIME_STAMP_SIZE, m_len);
 
     switch (broadcast_type) {
-        case GM_STATUS:
-            return handle_gc_status(m, group_number, peer_number, message, m_len);
+    case GM_STATUS:
+        return handle_gc_status(m, group_number, peer_number, message, m_len);
 
-        case GM_NICK:
-            return handle_gc_nick(m, group_number, peer_number, message, m_len);
+    case GM_NICK:
+        return handle_gc_nick(m, group_number, peer_number, message, m_len);
 
-        case GM_ACTION_MESSAGE:  // intentional fallthrough
-        case GM_PLAIN_MESSAGE:
-            return handle_gc_message(m, group_number, peer_number, message, m_len, broadcast_type);
+    case GM_ACTION_MESSAGE:  // intentional fallthrough
+    case GM_PLAIN_MESSAGE:
+        return handle_gc_message(m, group_number, peer_number, message, m_len, broadcast_type);
 
-        case GM_PRIVATE_MESSAGE:
-            return handle_gc_private_message(m, group_number, peer_number, message, m_len);
+    case GM_PRIVATE_MESSAGE:
+        return handle_gc_private_message(m, group_number, peer_number, message, m_len);
 
-        case GM_PEER_EXIT:
-            return handle_gc_peer_exit(m, group_number, peer_number, message, m_len);
+    case GM_PEER_EXIT:
+        return handle_gc_peer_exit(m, group_number, peer_number, message, m_len);
 
-        case GM_KICK_PEER:
-            return handle_gc_kick_peer(m, group_number, peer_number, message, m_len);
+    case GM_KICK_PEER:
+        return handle_gc_kick_peer(m, group_number, peer_number, message, m_len);
 
-        case GM_SET_MOD:
-            return handle_gc_set_mod(m, group_number, peer_number, message, m_len);
+    case GM_SET_MOD:
+        return handle_gc_set_mod(m, group_number, peer_number, message, m_len);
 
-        case GM_SET_OBSERVER:
-            return handle_gc_set_observer(m, group_number, peer_number, message, m_len);
+    case GM_SET_OBSERVER:
+        return handle_gc_set_observer(m, group_number, peer_number, message, m_len);
 
-        default:
-            fprintf(stderr, "Warning: handle_gc_broadcast received an invalid broadcast type %u\n", broadcast_type);
-            return -1;
+    default:
+        fprintf(stderr, "Warning: handle_gc_broadcast received an invalid broadcast type %u\n", broadcast_type);
+        return -1;
     }
 }
 
@@ -4188,27 +4188,27 @@ static int handle_gc_handshake_response(Messenger *m, int group_number, const ui
     int ret;
 
     switch (request_type) {
-        case HS_INVITE_REQUEST:
-            net_unpack_u32(data + ENC_PUBLIC_KEY + SIG_PUBLIC_KEY + 2, &gconn->friend_shared_state_version);
+    case HS_INVITE_REQUEST:
+        net_unpack_u32(data + ENC_PUBLIC_KEY + SIG_PUBLIC_KEY + 2, &gconn->friend_shared_state_version);
 
-            // client with shared version < than friend has will send invite request
-            // if shared versions are the same compare public keys of peers
-            if (gconn->friend_shared_state_version < gconn->self_sent_shared_state_version
-                    || (gconn->friend_shared_state_version == gconn->self_sent_shared_state_version
-                        && id_cmp(chat->self_public_key, gconn->addr.public_key) > 0)) {
-                return peer_number;
-            }
+        // client with shared version < than friend has will send invite request
+        // if shared versions are the same compare public keys of peers
+        if (gconn->friend_shared_state_version < gconn->self_sent_shared_state_version
+                || (gconn->friend_shared_state_version == gconn->self_sent_shared_state_version
+                    && id_cmp(chat->self_public_key, gconn->addr.public_key) > 0)) {
+            return peer_number;
+        }
 
-            ret = send_gc_invite_request(chat, gconn);
-            break;
+        ret = send_gc_invite_request(chat, gconn);
+        break;
 
-        case HS_PEER_INFO_EXCHANGE:
-            ret = send_gc_peer_exchange(m->group_handler, chat, gconn);
-            break;
+    case HS_PEER_INFO_EXCHANGE:
+        ret = send_gc_peer_exchange(m->group_handler, chat, gconn);
+        break;
 
-        default:
-            fprintf(stderr, "Warning: received invalid request type in handle_gc_handshake_response\n");
-            return -1;
+    default:
+        fprintf(stderr, "Warning: received invalid request type in handle_gc_handshake_response\n");
+        return -1;
     }
 
     if (ret == -1) {
@@ -4455,51 +4455,51 @@ int handle_gc_lossless_helper(Messenger *m, int group_number, uint32_t peer_numb
     }
 
     switch (packet_type) {
-        case GP_BROADCAST:
-            return handle_gc_broadcast(m, group_number, peer_number, data, length);
+    case GP_BROADCAST:
+        return handle_gc_broadcast(m, group_number, peer_number, data, length);
 
-        case GP_PEER_ANNOUNCE:
-            return handle_gc_peer_announcement(m, group_number, data, length);
+    case GP_PEER_ANNOUNCE:
+        return handle_gc_peer_announcement(m, group_number, data, length);
 
-        case GP_PEER_INFO_REQUEST:
-            return handle_gc_peer_info_request(m, group_number, gconn);
+    case GP_PEER_INFO_REQUEST:
+        return handle_gc_peer_info_request(m, group_number, gconn);
 
-        case GP_PEER_INFO_RESPONSE:
-            return handle_gc_peer_info_response(m, group_number, peer_number, data, length);
+    case GP_PEER_INFO_RESPONSE:
+        return handle_gc_peer_info_response(m, group_number, peer_number, data, length);
 
-        case GP_SYNC_REQUEST:
-            return handle_gc_sync_request(m, group_number, peer_number, gconn, data, length);
+    case GP_SYNC_REQUEST:
+        return handle_gc_sync_request(m, group_number, peer_number, gconn, data, length);
 
-        case GP_SYNC_RESPONSE:
-            return handle_gc_sync_response(m, group_number, peer_number, gconn, data, length);
+    case GP_SYNC_RESPONSE:
+        return handle_gc_sync_response(m, group_number, peer_number, gconn, data, length);
 
-        case GP_INVITE_REQUEST:
-            return handle_gc_invite_request(m, group_number, peer_number, data, length);
+    case GP_INVITE_REQUEST:
+        return handle_gc_invite_request(m, group_number, peer_number, data, length);
 
-        case GP_INVITE_RESPONSE:
-            return handle_gc_invite_response(m, group_number, gconn, data, length);
+    case GP_INVITE_RESPONSE:
+        return handle_gc_invite_response(m, group_number, gconn, data, length);
 
-        case GP_TOPIC:
-            return handle_gc_topic(m, group_number, peer_number, data, length);
+    case GP_TOPIC:
+        return handle_gc_topic(m, group_number, peer_number, data, length);
 
-        case GP_SHARED_STATE:
-            return handle_gc_shared_state(m, group_number, peer_number, data, length);
+    case GP_SHARED_STATE:
+        return handle_gc_shared_state(m, group_number, peer_number, data, length);
 
-        case GP_MOD_LIST:
-            return handle_gc_mod_list(m, group_number, peer_number, data, length);
+    case GP_MOD_LIST:
+        return handle_gc_mod_list(m, group_number, peer_number, data, length);
 
-        case GP_SANCTIONS_LIST:
-            return handle_gc_sanctions_list(m, group_number, peer_number, data, length);
+    case GP_SANCTIONS_LIST:
+        return handle_gc_sanctions_list(m, group_number, peer_number, data, length);
 
-        case GP_HS_RESPONSE_ACK:
-            return handle_gc_hs_response_ack(m, group_number, gconn);
+    case GP_HS_RESPONSE_ACK:
+        return handle_gc_hs_response_ack(m, group_number, gconn);
 
-        case GP_CUSTOM_PACKET:
-            return handle_gc_custom_packet(m, group_number, peer_number, data, length);
+    case GP_CUSTOM_PACKET:
+        return handle_gc_custom_packet(m, group_number, peer_number, data, length);
 
-        default:
-            fprintf(stderr, "Warning: handling invalid lossless group packet type %u\n", packet_type);
-            return -1;
+    default:
+        fprintf(stderr, "Warning: handling invalid lossless group packet type %u\n", packet_type);
+        return -1;
     }
 }
 
@@ -4658,29 +4658,29 @@ static int handle_gc_lossy_message(Messenger *m, GC_Chat *chat, const uint8_t *p
     int ret;
 
     switch (packet_type) {
-        case GP_MESSAGE_ACK:
-            ret = handle_gc_message_ack(chat, gconn, real_data, len);
-            break;
+    case GP_MESSAGE_ACK:
+        ret = handle_gc_message_ack(chat, gconn, real_data, len);
+        break;
 
-        case GP_PING:
-            ret = handle_gc_ping(m, chat->group_number, gconn, real_data, len);
-            break;
+    case GP_PING:
+        ret = handle_gc_ping(m, chat->group_number, gconn, real_data, len);
+        break;
 
-        case GP_INVITE_RESPONSE_REJECT:
-            ret = handle_gc_invite_response_reject(m, chat->group_number, real_data, len);
-            break;
+    case GP_INVITE_RESPONSE_REJECT:
+        ret = handle_gc_invite_response_reject(m, chat->group_number, real_data, len);
+        break;
 
-        case GP_TCP_RELAYS:
-            ret = handle_gc_tcp_relays(m, chat->group_number, gconn, real_data, len);
-            break;
+    case GP_TCP_RELAYS:
+        ret = handle_gc_tcp_relays(m, chat->group_number, gconn, real_data, len);
+        break;
 
-        case GP_CUSTOM_PACKET:
-            ret = handle_gc_custom_packet(m, chat->group_number, peer_number, real_data, len);
-            break;
+    case GP_CUSTOM_PACKET:
+        ret = handle_gc_custom_packet(m, chat->group_number, peer_number, real_data, len);
+        break;
 
-        default:
-            fprintf(stderr, "Warning: handling invalid lossy group packet type %u\n", packet_type);
-            return -1;
+    default:
+        fprintf(stderr, "Warning: handling invalid lossy group packet type %u\n", packet_type);
+        return -1;
     }
 
     if (ret != -1 && direct_conn) {
@@ -5277,52 +5277,52 @@ void do_gc(GC_Session *c, void *userdata)
         do_group_tcp(chat, userdata);
 
         switch (chat->connection_state) {
-            case CS_CONNECTED: {
-                ping_group(chat);
-                do_peer_connections(c->messenger, i);
-                do_new_connection_cooldown(chat);
+        case CS_CONNECTED: {
+            ping_group(chat);
+            do_peer_connections(c->messenger, i);
+            do_new_connection_cooldown(chat);
+            break;
+        }
+
+        case CS_CONNECTING: {
+            if (mono_time_is_timeout(chat->mono_time, chat->last_join_attempt, GROUP_JOIN_ATTEMPT_INTERVAL)) {
+                chat->connection_state = CS_DISCONNECTED;
+            }
+
+            break;
+        }
+
+        case CS_DISCONNECTED: {
+            Node_format tcp_relays[TCP_RELAYS_TEST_COUNT];
+            int tcp_num = tcp_copy_connected_relays(chat->tcp_conn, tcp_relays, TCP_RELAYS_TEST_COUNT);
+
+            if (tcp_num != TCP_RELAYS_TEST_COUNT) {
+                add_tcp_relays_to_chat(c->messenger, chat);
+            }
+
+            if (chat->numpeers <= 1
+                    || !mono_time_is_timeout(c->messenger->mono_time, chat->last_join_attempt, GROUP_JOIN_ATTEMPT_INTERVAL)) {
                 break;
             }
 
-            case CS_CONNECTING: {
-                if (mono_time_is_timeout(chat->mono_time, chat->last_join_attempt, GROUP_JOIN_ATTEMPT_INTERVAL)) {
-                    chat->connection_state = CS_DISCONNECTED;
-                }
+            chat->last_join_attempt = mono_time_get(c->messenger->mono_time);
+            chat->connection_state = CS_CONNECTING;
 
-                break;
+            for (j = 1; j < chat->numpeers; ++j) {
+                GC_Connection *gconn = &chat->gcc[j];
+
+                if (!gconn->handshaked && !gconn->pending_handshake) {
+                    gconn->pending_handshake = mono_time_get(c->messenger->mono_time) + HANDSHAKE_SENDING_TIMEOUT;
+                }
             }
 
-            case CS_DISCONNECTED: {
-                Node_format tcp_relays[TCP_RELAYS_TEST_COUNT];
-                int tcp_num = tcp_copy_connected_relays(chat->tcp_conn, tcp_relays, TCP_RELAYS_TEST_COUNT);
+            break;
+        }
 
-                if (tcp_num != TCP_RELAYS_TEST_COUNT) {
-                    add_tcp_relays_to_chat(c->messenger, chat);
-                }
-
-                if (chat->numpeers <= 1
-                        || !mono_time_is_timeout(c->messenger->mono_time, chat->last_join_attempt, GROUP_JOIN_ATTEMPT_INTERVAL)) {
-                    break;
-                }
-
-                chat->last_join_attempt = mono_time_get(c->messenger->mono_time);
-                chat->connection_state = CS_CONNECTING;
-
-                for (j = 1; j < chat->numpeers; ++j) {
-                    GC_Connection *gconn = &chat->gcc[j];
-
-                    if (!gconn->handshaked && !gconn->pending_handshake) {
-                        gconn->pending_handshake = mono_time_get(c->messenger->mono_time) + HANDSHAKE_SENDING_TIMEOUT;
-                    }
-                }
-
-                break;
-            }
-
-            case CS_MANUALLY_DISCONNECTED:
-            case CS_FAILED: {
-                break;
-            }
+        case CS_MANUALLY_DISCONNECTED:
+        case CS_FAILED: {
+            break;
+        }
         }
     }
 }
