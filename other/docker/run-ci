@@ -2,7 +2,7 @@
 
 set -eu
 
-readarray -t FILES <<< "$(git ls-files | sed -e 's,^,c-toxcore/,')"
+readarray -t FILES <<<"$(git ls-files | sed -e 's,^,c-toxcore/,')"
 
 if [ -f .git ]; then
   cd ..

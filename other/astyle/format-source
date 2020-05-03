@@ -100,7 +100,7 @@ FIND="$FIND -and -not -wholename './super_donators/*'"
 FIND="$FIND -and -not -wholename './third_party/*'"
 FIND="$FIND -and -not -wholename './toxencryptsave/crypto_pwhash*'"
 
-readarray -t C_SOURCES <<< "$(eval "$FIND")"
+readarray -t C_SOURCES <<<"$(eval "$FIND")"
 
 "$ASTYLE" -n --options=other/astyle/astylerc "${C_SOURCES[@]}"
 
