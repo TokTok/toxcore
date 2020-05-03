@@ -13,10 +13,8 @@
 
 #include "onion_client.h"
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
 #include "LAN_discovery.h"
 #include "group_chats.h"
@@ -104,6 +102,7 @@ typedef struct Onion_Data_Handler {
 
 struct Onion_Client {
     Mono_Time *mono_time;
+    const Logger *logger;
 
     DHT     *dht;
     Net_Crypto *c;
@@ -970,7 +969,7 @@ static int handle_announce_response(void *object, IP_Port source, const uint8_t 
         }
 
         int offset = 2 + ONION_PING_ID_SIZE + len_nodes;
-        int gc_announces_count = gca_unpack_announces_list(plain + offset, plain_size - offset, announces,
+        int gc_announces_count = gca_unpack_announces_list(onion_c->logger, plain + offset, plain_size - offset, announces,
                                  GCA_MAX_SENT_ANNOUNCES, nullptr);
 
         if (gc_announces_count == -1) {

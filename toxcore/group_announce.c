@@ -7,8 +7,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <wchar.h>
-#include <stdio.h>
 
 #include "util.h"
 
@@ -277,8 +275,8 @@ int gca_pack_announces_list(uint8_t *data, uint16_t length, GC_Announce *announc
     return announces_count;
 }
 
-int gca_unpack_announces_list(const uint8_t *data, uint16_t length, GC_Announce *announces, uint8_t max_announces_count,
-                              size_t *processed)
+int gca_unpack_announces_list(const Logger *logger, const uint8_t *data, uint16_t length, GC_Announce *announces,
+                              uint8_t max_announces_count, size_t *processed)
 {
     if (!data || !announces) {
         return -1;
@@ -291,7 +289,7 @@ int gca_unpack_announces_list(const uint8_t *data, uint16_t length, GC_Announce 
         int unpacked_length = gca_unpack_announce(data + offset, length - offset, &announces[i]);
 
         if (unpacked_length == -1) {
-            fprintf(stderr, "unpack error: %d %d\n", length, offset);
+            LOGGER_ERROR(logger, "unpack error: %d %d", length, offset);
             return -1;
         }
 

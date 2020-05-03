@@ -86,8 +86,8 @@ int gca_unpack_announce(const uint8_t *data, uint16_t length, GC_Announce *annou
 int gca_pack_announces_list(uint8_t *data, uint16_t length, GC_Announce *announces, uint8_t announces_count,
                             size_t *processed);
 
-int gca_unpack_announces_list(const uint8_t *data, uint16_t length, GC_Announce *announces, uint8_t max_announces_count,
-                              size_t *processed);
+int gca_unpack_announces_list(const Logger *logger, const uint8_t *data, uint16_t length, GC_Announce *announces,
+                              uint8_t max_announces_count, size_t *processed);
 
 int gca_pack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce *announce);
 

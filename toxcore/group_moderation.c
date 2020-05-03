@@ -599,7 +599,7 @@ static int sanctions_list_remove_index(GC_Chat *chat, uint32_t index, struct GC_
 
     if (creds) {
         if (sanctions_creds_validate(chat, new_list, creds, new_num) == -1) {
-            fprintf(stderr, "sanctions_creds_validate failed in sanctions_list_remove_index\n");
+            LOGGER_ERROR(chat->logger, "sanctions_creds_validate failed in sanctions_list_remove_index");
             free(new_list);
             return -1;
         }
@@ -696,7 +696,7 @@ int sanctions_list_add_entry(GC_Chat *chat, struct GC_Sanction *sanction, struct
     }
 
     if (sanctions_list_validate_entry(chat, sanction) < 0) {
-        fprintf(stderr, "sanctions_list_validate_entry failed in add entry\n");
+        LOGGER_ERROR(chat->logger, "sanctions_list_validate_entry failed in add entry");
         return -1;
     }
 
@@ -726,7 +726,7 @@ int sanctions_list_add_entry(GC_Chat *chat, struct GC_Sanction *sanction, struct
 
     if (creds) {
         if (sanctions_creds_validate(chat, new_list, creds, index + 1) == -1) {
-            fprintf(stderr, "sanctions_creds_validate failed in add entry\n");
+            LOGGER_ERROR(chat->logger, "sanctions_creds_validate failed in add entry");
             free(new_list);
             return -1;
         }
@@ -792,7 +792,7 @@ int sanctions_list_make_entry(GC_Chat *chat, uint32_t peer_number, struct GC_San
     }
 
     if (sanctions_list_add_entry(chat, sanction, nullptr) == -1) {
-        fprintf(stderr, "sanctions_list_add_entry failed in sanctions_list_make_entry\n");
+        LOGGER_ERROR(chat->logger, "sanctions_list_add_entry failed in sanctions_list_make_entry");
         return -1;
     }
 
