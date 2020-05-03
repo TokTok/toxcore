@@ -197,8 +197,7 @@ static void bwc_handle_data(Tox *tox, uint32_t friendnumber, const uint8_t *data
         return;
     }
 
-    void *call = NULL;
-    call = (void *)call_get(toxav, friendnumber);
+    void *call = (void *)call_get(toxav, friendnumber);
 
     if (!call) {
         return;
