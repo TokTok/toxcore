@@ -3801,6 +3801,10 @@ static int handle_gc_message_ack(GC_Chat *chat, GC_Connection *gconn, const uint
     uint64_t tm = mono_time_get(chat->mono_time);
     uint16_t idx = gcc_get_array_index(request_id);
 
+    if (gconn->send_array[idx].data == nullptr || gconn->send_array[idx].data_length == 0) {
+        return -1;
+    }
+
     /* re-send requested packet */
     if (gconn->send_array[idx].message_id == request_id
             && (gconn->send_array[idx].last_send_try != tm || gconn->send_array[idx].time_added == tm)) {
