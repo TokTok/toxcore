@@ -169,11 +169,13 @@ RTPSession *rtp_session_get(ToxAVCall *call, int payload_type)
 
 BWController *bwc_controller_get(void *call)
 {
-    if (((ToxAVCall *)call) == nullptr) {
+    ToxAVCall *toxavcall = (ToxAVCall *)call;
+
+    if (toxavcall == nullptr) {
         return nullptr;
     }
 
-    return ((ToxAVCall *)call)->bwc;
+    return toxavcall->bwc;
 }
 
 ToxAV *toxav_new(Tox *tox, Toxav_Err_New *error)
