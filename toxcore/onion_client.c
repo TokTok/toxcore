@@ -169,6 +169,7 @@ void onion_friend_set_gc_data(Onion_Friend *onion_friend, const uint8_t *gc_data
     if (gc_data_length >= 0) {
         memcpy(onion_friend->gc_data, gc_data, gc_data_length);
     }
+
     onion_friend->gc_data_length = gc_data_length;
 }
 
