@@ -73,6 +73,7 @@ static int create_array_entry(const Mono_Time *mono_time, struct GC_Message_Arra
                               uint8_t packet_type, uint64_t message_id)
 {
     if (data == nullptr || length == 0) {
+        fprintf(stderr, "Attempt to add empty packet for packet type %d\n", packet_type);
         return -1;
     }
 
@@ -312,7 +313,7 @@ void gcc_resend_packets(Messenger *m, GC_Chat *chat, uint32_t peer_number)
 int gcc_send_group_packet(const GC_Chat *chat, const GC_Connection *gconn, const uint8_t *packet,
                           uint16_t length, uint8_t packet_type)
 {
-    if (!packet || length == 0) {
+    if (packet == nullptr || length == 0) {
         return -1;
     }
 
