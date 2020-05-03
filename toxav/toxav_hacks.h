@@ -15,7 +15,7 @@ typedef struct ToxAVCall ToxAVCall;
 #endif /* TOXAV_CALL_DEFINED */
 
 ToxAVCall *call_get(ToxAV *av, uint32_t friend_number);
-RTPSession *rtp_session_get(void *call, int payload_type);
+RTPSession *rtp_session_get(ToxAVCall *call, int payload_type);
 MSISession *tox_av_msi_get(ToxAV *av);
 BWController *bwc_controller_get(void *call);
 Mono_Time *toxav_get_av_mono_time(ToxAV *toxav);
