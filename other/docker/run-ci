@@ -15,7 +15,7 @@ fi
 cd ..
 tar -c "${FILES[@]}" |
   docker build -f "c-toxcore/other/docker/travis/Dockerfile" \
-  -t localbuild/travis -
+    -t localbuild/travis -
 tar -c "${FILES[@]}" |
   docker build -f "c-toxcore/other/docker/$STAGE/Dockerfile" \
-  -t "localbuild/$STAGE" -
+    -t "localbuild/$STAGE" -
