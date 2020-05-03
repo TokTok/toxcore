@@ -72,15 +72,17 @@ static int create_array_entry(const Mono_Time *mono_time, struct GC_Message_Arra
                               const uint8_t *data, uint32_t length,
                               uint8_t packet_type, uint64_t message_id)
 {
-    if (length) {
-        array_entry->data = (uint8_t *)malloc(sizeof(uint8_t) * length);
-
-        if (array_entry->data == nullptr) {
-            return -1;
-        }
-
-        memcpy(array_entry->data, data, length);
+    if (data == nullptr || length == 0) {
+        return -1;
     }
+
+    array_entry->data = (uint8_t *)malloc(sizeof(uint8_t) * length);
+
+    if (array_entry->data == nullptr) {
+        return -1;
+    }
+
+    memcpy(array_entry->data, data, length);
 
     array_entry->data_length = length;
     array_entry->packet_type = packet_type;
