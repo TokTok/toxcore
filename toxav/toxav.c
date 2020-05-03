@@ -412,7 +412,7 @@ void toxav_callback_call(ToxAV *av, toxav_call_cb *callback, void *user_data)
     pthread_mutex_unlock(av->mutex);
 }
 
-int toxav_friend_exists(const Tox *tox, int32_t friendnumber)
+static int toxav_friend_exists(const Tox *tox, int32_t friendnumber)
 {
     if (tox) {
         bool res = tox_friend_exists(tox, friendnumber);
