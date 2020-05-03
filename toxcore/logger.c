@@ -230,7 +230,7 @@ int addr2line(void const *const addr, char *message_line)
 }
 
 #define MAX_STACK_FRAMES 10
-void print_stacktrace()
+void print_stacktrace(void)
 {
     int i;
     int trace_size = 0;
