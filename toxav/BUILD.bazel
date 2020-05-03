@@ -29,113 +29,46 @@ cc_test(
     ],
 )
 
-cc_library(
-    name = "ring_buffer_srcs",
-    hdrs = [
-        "ring_buffer.c",
-        "ring_buffer.h",
-    ],
-    visibility = ["//c-toxcore/testing:__pkg__"],
-    deps = ["//c-toxcore/toxcore:ccompat"],
-)
-
-cc_library(
-    name = "bwcontroller",
-    srcs = ["bwcontroller.c"],
-    hdrs = [
-         "toxav_hacks.h",
-         "bwcontroller.h",
-         "msi.h",
-         "rtp.h",
-    ],
-    deps = [
-        ":ring_buffer",
-        "//c-toxcore/toxcore",
-        "//c-toxcore/toxcore:Messenger",
-    ],
-)
-
-cc_library(
-    name = "rtp",
-    srcs = ["rtp.c"],
-    hdrs = [
-        "rtp.h",
-        "toxav_hacks.h",
-        "bwcontroller.h",
-        "msi.h",
-    ],
-    deps = [":bwcontroller"],
-)
-
 cc_test(
     name = "rtp_test",
     size = "small",
     srcs = ["rtp_test.cc"],
     deps = [
-        ":rtp",
+        ":toxav",
         "//c-toxcore/toxcore:crypto_core",
         "@com_google_googletest//:gtest_main",
     ],
 )
 
 cc_library(
-    name = "audio",
-    srcs = ["audio.c"],
-    hdrs = ["audio.h"],
-    deps = [
-        ":public",
-        ":rtp",
-        "//c-toxcore/toxcore:network",
-        "@opus",
-    ],
-)
-
-cc_library(
-    name = "video",
+    name = "toxav",
     srcs = [
+        "audio.c",
+        "bwcontroller.c",
+        "groupav.c",
         "msi.c",
+        "rtp.c",
+        "toxav.c",
+        "toxav_old.c",
         "video.c",
     ],
     hdrs = [
-        "msi.h",
-        "video.h",
-        "toxav_hacks.h",
+        "audio.h",
         "bwcontroller.h",
+        "groupav.h",
+        "msi.h",
         "rtp.h",
-    ],
-    deps = [
-        ":audio",
-        ":public",
-        "//c-toxcore/toxcore:network",
-        "@libvpx",
-    ],
-)
-
-cc_library(
-    name = "groupav",
-    srcs = ["groupav.c"],
-    hdrs = ["groupav.h"],
-    deps = [
-        "//c-toxcore/toxcore",
-        "@opus",
-    ],
-)
-
-cc_library(
-    name = "toxav",
-    srcs = [
-        "toxav.c",
-        "toxav_old.c",
-    ],
-    hdrs = [
         "toxav.api.h",
         "toxav.h",
         "toxav_hacks.h",
+        "video.h",
     ],
     visibility = ["//c-toxcore:__subpackages__"],
     deps = [
-        ":groupav",
-        ":video",
+        ":ring_buffer",
+        "//c-toxcore/toxcore",
+        "@libvpx",
+        "@opus",
     ],
 )
 
