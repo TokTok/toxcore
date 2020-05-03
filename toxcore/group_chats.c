@@ -5991,8 +5991,8 @@ static bool copy_ip_port_to_gconn(Messenger *m, int friend_number, GC_Connection
 {
     Friend *f = &m->friendlist[friend_number];
     int friend_connection_id = f->friendcon_id;
-    Friend_Conn *connection = &m->fr_c->conns[friend_connection_id];
-    IP_Port *friend_ip_port = &connection->dht_ip_port;
+    Friend_Conn *connection = get_conn(m->fr_c, friend_connection_id);
+    const IP_Port *friend_ip_port = friend_conn_get_dht_ip_port(connection);
 
     if (!ipport_isset(friend_ip_port)) {
         return false;
