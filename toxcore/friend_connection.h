@@ -158,63 +158,11 @@ void do_friend_connections(Friend_Connections *fr_c, void *userdata);
 /* Free everything related with friend_connections. */
 void kill_friend_connections(Friend_Connections *fr_c);
 
-typedef struct Friend_Conn_Callbacks {
-    fc_status_cb *status_callback;
-    fc_data_cb *data_callback;
-    fc_lossy_data_cb *lossy_data_callback;
+typedef struct Friend_Conn Friend_Conn;
 
-    void *callback_object;
-    int callback_id;
-} Friend_Conn_Callbacks;
+Friend_Conn *get_conn(const Friend_Connections *fr_c, int friendcon_id);
 
-typedef struct Friend_Conn {
-    uint8_t status;
-
-    uint8_t real_public_key[CRYPTO_PUBLIC_KEY_SIZE];
-    uint8_t dht_temp_pk[CRYPTO_PUBLIC_KEY_SIZE];
-    uint16_t dht_lock;
-    IP_Port dht_ip_port;
-    uint64_t dht_pk_lastrecv;
-    uint64_t dht_ip_port_lastrecv;
-
-    int onion_friendnum;
-    int crypt_connection_id;
-
-    uint64_t ping_lastrecv;
-    uint64_t ping_lastsent;
-    uint64_t share_relays_lastsent;
-
-    Friend_Conn_Callbacks callbacks[MAX_FRIEND_CONNECTION_CALLBACKS];
-
-    uint16_t lock_count;
-
-    Node_format tcp_relays[FRIEND_MAX_STORED_TCP_RELAYS];
-    uint16_t tcp_relay_counter;
-
-    bool hosting_tcp_relay;
-} Friend_Conn;
-
-
-struct Friend_Connections {
-    const Mono_Time *mono_time;
-    const Logger *logger;
-    Net_Crypto *net_crypto;
-    DHT *dht;
-    Onion_Client *onion_c;
-
-    Friend_Conn *conns;
-    uint32_t num_cons;
-
-    fr_request_cb *fr_request_callback;
-    void *fr_request_object;
-
-    global_status_cb *global_status_callback;
-    void *global_status_callback_object;
-
-    uint64_t last_lan_discovery;
-    uint16_t next_lan_port;
-
-    bool local_discovery_enabled;
-};
+int friend_conn_get_onion_friendnum(const Friend_Conn *fc);
+const IP_Port *friend_conn_get_dht_ip_port(const Friend_Conn *fc);
 
 #endif
