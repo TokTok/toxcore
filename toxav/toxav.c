@@ -1008,7 +1008,7 @@ bool toxav_video_send_frame(ToxAV *av, uint32_t friend_number, uint16_t width, u
 
         if (vrc != VPX_CODEC_OK) {
             pthread_mutex_unlock(call->mutex_video);
-            LOGGER_API_ERROR(av->tox, "Could not encode video frame: %s\n", vpx_codec_err_to_string(vrc));
+            LOGGER_API_ERROR(av->tox, "Could not encode video frame: %s", vpx_codec_err_to_string(vrc));
             rc = TOXAV_ERR_SEND_FRAME_INVALID;
             goto RETURN;
         }
@@ -1399,7 +1399,7 @@ static bool call_prepare_transmission(ToxAVCall *call)
     }
 
     if (call->active) {
-        LOGGER_API_WARNING(av->tox, "Call already active!\n");
+        LOGGER_API_WARNING(av->tox, "Call already active!");
         return true;
     }
 
