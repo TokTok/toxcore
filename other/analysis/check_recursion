@@ -1,8 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Tool to check for recursive calls in toxcore C code.
 
-Usage: 
+Usage:
 
 cat toxav/*.c toxcore/*.c toxencryptsave/*.c \
   | clang `pkg-config --cflags libsodium opus vpx` \
@@ -10,14 +10,12 @@ cat toxav/*.c toxcore/*.c toxencryptsave/*.c \
   | opt -analyze -print-callgraph 2>&1 \
   | other/analysis/check_recursion
 """
-
-from __future__ import print_function
-
 import collections
 import fileinput
 import re
 import sys
 import time
+
 
 def load_callgraph():
     """
@@ -39,6 +37,7 @@ def load_callgraph():
 
     return {k: sorted(v) for k, v in graph.items()}
 
+
 def walk(visited, callgraph, cycles, stack, cur):
     """
     Detects cycles in the callgraph and adds them to the cycles parameter.
@@ -54,11 +53,13 @@ def walk(visited, callgraph, cycles, stack, cur):
             visited.add(callee)
     stack.pop()
 
+
 def get_time():
     """
     Return the current time in milliseconds.
     """
     return int(round(time.time() * 1000))
+
 
 def find_recursion(expected):
     """
@@ -97,6 +98,7 @@ def find_recursion(expected):
         print("Expected recursion no longer present: " + str(list(expected)))
     if expected or cycles:
         sys.exit(1)
+
 
 find_recursion(expected={
     "add_to_closest -> add_to_closest",
