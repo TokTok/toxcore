@@ -194,12 +194,14 @@ static void bwc_handle_data(Tox *tox, uint32_t friendnumber, const uint8_t *data
     ToxAV *toxav = (ToxAV *)tox_get_av_object(tox);
 
     if (!toxav) {
+        LOGGER_API_ERROR(tox, "Could not get ToxAV object from Tox");
         return;
     }
 
     void *call = (void *)call_get(toxav, friendnumber);
 
     if (!call) {
+        LOGGER_API_ERROR(tox, "Could not get ToxAVCall object from ToxAV");
         return;
     }
 
