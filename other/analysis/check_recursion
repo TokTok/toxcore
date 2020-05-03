@@ -41,13 +41,7 @@ def load_callgraph() -> Dict:
     return {k: sorted(v) for k, v in graph.items()}
 
 
-def walk(
-        visited: Set,
-        callgraph: Dict,
-        cycles: Set,
-        stack: List,
-        cur: str,
-) -> None:
+def walk(visited: Set, callgraph: Dict, cycles: Set, stack: List, cur: str,) -> None:
     """
     Detects cycles in the callgraph and adds them to the cycles parameter.
     """
@@ -56,7 +50,7 @@ def walk(
     stack.append(cur)
     for callee in callgraph.get(cur, ()):
         try:
-            cycles.add(" -> ".join(stack[stack.index(callee):] + [callee]))
+            cycles.add(" -> ".join(stack[stack.index(callee) :] + [callee]))
         except ValueError:
             walk(visited, callgraph, cycles, stack, callee)
             visited.add(callee)
@@ -109,7 +103,6 @@ def find_recursion(expected: Set) -> None:
         sys.exit(1)
 
 
-find_recursion(expected={
-    "add_to_closest -> add_to_closest",
-    "add_to_list -> add_to_list",
-})
+find_recursion(
+    expected={"add_to_closest -> add_to_closest", "add_to_list -> add_to_list",}
+)
