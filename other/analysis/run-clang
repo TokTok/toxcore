@@ -4,8 +4,8 @@
 
 echo "Running Clang compiler"
 clang++ -o /dev/null amalgamation.cc		\
-	$CPPFLAGS				\
-	$LDFLAGS				\
+	"$CPPFLAGS"				\
+	"$LDFLAGS"				\
 	-std=c++11				\
 	-Werror					\
 	-Weverything				\

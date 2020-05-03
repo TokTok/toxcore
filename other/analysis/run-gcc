@@ -5,8 +5,8 @@
 echo "Running GCC"
 # TODO(iphydf): Get rid of all VLAs, then enable -fstack-protector -Wstack-protector
 g++ -O3 -o /dev/null amalgamation.cc		\
-	$CPPFLAGS				\
-	$LDFLAGS				\
+	"$CPPFLAGS"				\
+	"$LDFLAGS"				\
 	-std=c++11				\
 	-pedantic				\
 	-fdiagnostics-color=always		\

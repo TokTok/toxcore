@@ -2,4 +2,4 @@
 
 . other/analysis/gen-file.sh
 
-cppcheck amalgamation.cc $CPPFLAGS
+cppcheck amalgamation.cc "$CPPFLAGS"
