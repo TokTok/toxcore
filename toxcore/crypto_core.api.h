@@ -1,12 +1,12 @@
-%{
-/* SPDX-License-Identifier: GPL-3.0-or-later
- * Copyright © 2016-2018 The TokTok team.
- * Copyright © 2013 Tox project.
- */
+% {
+    /* SPDX-License-Identifier: GPL-3.0-or-later
+     * Copyright © 2016-2018 The TokTok team.
+     * Copyright © 2013 Tox project.
+     */
 
-/*
- * Functions for the core crypto.
- */
+    /*
+     * Functions for the core crypto.
+     */
 #ifndef C_TOXCORE_TOXCORE_CRYPTO_CORE_H
 #define C_TOXCORE_TOXCORE_CRYPTO_CORE_H
 
@@ -15,9 +15,10 @@
 #include <stdint.h>
 
 #ifdef __cplusplus
-extern "C" {
+    extern "C" {
 #endif
-%}
+    %
+}
 
 /**
  * The number of bytes in a signature.
@@ -271,10 +272,11 @@ static void increment_nonce_number(uint8_t[CRYPTO_NONCE_SIZE] nonce, uint32_t ho
  */
 static void new_symmetric_key(uint8_t[CRYPTO_SYMMETRIC_KEY_SIZE] key);
 
-%{
+% {
 #ifdef __cplusplus
 }  // extern "C"
 #endif
 
 #endif // C_TOXCORE_TOXCORE_CRYPTO_CORE_H
-%}
+%
+}
