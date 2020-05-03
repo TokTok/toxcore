@@ -73,7 +73,7 @@ if grep '<unresolved>' ./*/*.h; then
   exit 1
 fi
 
-CC_SOURCES=($(find . '(' -name '*.cc' ')'))
+CC_SOURCES=("$(find . '(' -name '*.cc' ')')")
 CC_SOURCES+=(toxcore/crypto_core.c)
 CC_SOURCES+=(toxcore/ping_array.c)
 
@@ -91,7 +91,7 @@ FIND="$FIND -and -not -wholename './super_donators/*'"
 FIND="$FIND -and -not -wholename './third_party/*'"
 FIND="$FIND -and -not -wholename './toxencryptsave/crypto_pwhash*'"
 
-C_SOURCES=($(eval "$FIND"))
+C_SOURCES=("$(eval "$FIND")")
 
 "$ASTYLE" -n --options=other/astyle/astylerc "${C_SOURCES[@]}"
 
