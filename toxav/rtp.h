@@ -37,7 +37,6 @@ typedef enum RTP_Type {
 
 #ifndef TOXAV_DEFINED
 #define TOXAV_DEFINED
-#undef ToxAV
 typedef struct ToxAV ToxAV;
 #endif /* TOXAV_DEFINED */
 
