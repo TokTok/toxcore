@@ -30,7 +30,7 @@
  */
 GC_Connection *gcc_get_connection(const GC_Chat *chat, int peer_number)
 {
-    if (!peer_number_valid(chat, peer_number)) {
+    if (!gc_peer_number_is_valid(chat, peer_number)) {
         return nullptr;
     }
 
@@ -58,7 +58,7 @@ static void clear_array_entry(struct GC_Message_Array_Entry *array_entry)
 }
 
 /* Returns ary index for message_id */
-uint16_t get_array_index(uint64_t message_id)
+uint16_t gcc_get_array_index(uint64_t message_id)
 {
     return message_id % GCC_BUFFER_SIZE;
 }
@@ -106,7 +106,7 @@ int gcc_add_to_send_array(const Mono_Time *mono_time, GC_Connection *gconn, cons
         return -1;
     }
 
-    uint16_t idx = get_array_index(gconn->send_message_id);
+    uint16_t idx = gcc_get_array_index(gconn->send_message_id);
     struct GC_Message_Array_Entry *array_entry = &gconn->send_array[idx];
 
     if (!array_entry_is_empty(array_entry)) {
@@ -129,7 +129,7 @@ int gcc_add_to_send_array(const Mono_Time *mono_time, GC_Connection *gconn, cons
  */
 int gcc_handle_ack(GC_Connection *gconn, uint64_t message_id)
 {
-    uint16_t idx = get_array_index(message_id);
+    uint16_t idx = gcc_get_array_index(message_id);
     struct GC_Message_Array_Entry *array_entry = &gconn->send_array[idx];
 
     if (array_entry_is_empty(array_entry)) {
@@ -183,7 +183,7 @@ int gcc_handle_received_message(GC_Chat *chat, uint32_t peer_number, const uint8
 
     /* we're missing an older message from this peer so we store it in received_array */
     if (message_id > gconn->received_message_id + 1) {
-        uint16_t idx = get_array_index(message_id);
+        uint16_t idx = gcc_get_array_index(message_id);
         struct GC_Message_Array_Entry *ary_entry = &gconn->received_array[idx];
 
         if (!array_entry_is_empty(ary_entry)) {
