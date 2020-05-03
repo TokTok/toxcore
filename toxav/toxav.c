@@ -152,16 +152,16 @@ ToxAVCall *call_get(ToxAV *av, uint32_t friend_number)
     return av->calls[friend_number];
 }
 
-RTPSession *rtp_session_get(void *call, int payload_type)
+RTPSession *rtp_session_get(ToxAVCall *call, int payload_type)
 {
-    if (((ToxAVCall *)call) == nullptr) {
+    if (call == nullptr) {
         return nullptr;
     }
 
     if (payload_type == RTP_TYPE_VIDEO) {
-        return ((ToxAVCall *)call)->video_rtp;
+        return call->video_rtp;
     } else {
-        return ((ToxAVCall *)call)->audio_rtp;
+        return call->audio_rtp;
     }
 
     return nullptr;
