@@ -689,7 +689,7 @@ uint32_t gc_count_groups(const GC_Session *c);
 void gc_copy_groups_numbers(const GC_Session *c, uint32_t *list);
 
 /* Returns true if peer_number exists */
-bool peer_number_valid(const GC_Chat *chat, int peer_number);
+bool gc_peer_number_is_valid(const GC_Chat *chat, int peer_number);
 
 /* Return group_number's GC_Chat pointer on success
  * Return NULL on failure
@@ -718,14 +718,6 @@ int gc_send_message_ack(const GC_Chat *chat, GC_Connection *gconn, uint64_t read
 
 int handle_gc_lossless_helper(Messenger *m, int group_number, uint32_t peer_number, const uint8_t *data,
                               uint16_t length, uint64_t message_id, uint8_t packet_type);
-
-/* Sends the sanctions list to all peers in group.
- *
- * Returns 0 on success.
- * Returns -1 on failure.
- */
-int broadcast_gc_sanctions_list(GC_Chat *chat);
-
 
 int handle_gc_invite_accepted_packet(GC_Session *c, int friend_number, const uint8_t *data,
                                      uint32_t length);
