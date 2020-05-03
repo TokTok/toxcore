@@ -2696,6 +2696,11 @@ DHT *new_dht(const Logger *log, Mono_Time *mono_time, Networking_Core *net, bool
     dht->dht_ping_array = ping_array_new(DHT_PING_ARRAY_SIZE, PING_TIMEOUT);
     dht->dht_harden_ping_array = ping_array_new(DHT_PING_ARRAY_SIZE, PING_TIMEOUT);
 
+    if (dht->dht_ping_array == nullptr || dht->dht_harden_ping_array == nullptr) {
+        kill_dht(dht);
+        return nullptr;
+    }
+
     for (uint32_t i = 0; i < DHT_FAKE_FRIEND_NUMBER; ++i) {
         uint8_t random_public_key_bytes[CRYPTO_PUBLIC_KEY_SIZE];
         uint8_t random_secret_key_bytes[CRYPTO_SECRET_KEY_SIZE];
@@ -2886,6 +2891,12 @@ static State_Load_Status dht_load_state_callback(void *outer, const uint8_t *dat
             free(dht->loaded_nodes_list);
             // Copy to loaded_clients_list
             dht->loaded_nodes_list = (Node_format *)calloc(MAX_SAVED_DHT_NODES, sizeof(Node_format));
+
+            if (dht->loaded_nodes_list == nullptr) {
+                LOGGER_ERROR(dht->log, "could not allocate %u nodes", MAX_SAVED_DHT_NODES);
+                dht->loaded_num_nodes = 0;
+                break;
+            }
 
             const int num = unpack_nodes(dht->loaded_nodes_list, MAX_SAVED_DHT_NODES, nullptr, data, length, 0);
 

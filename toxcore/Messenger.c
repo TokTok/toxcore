@@ -1689,38 +1689,6 @@ int file_data(const Messenger *m, int32_t friendnumber, uint32_t filenumber, uin
     return -6;
 }
 
-/* Give the number of bytes left to be sent/received.
- *
- *  send_receive is 0 if we want the sending files, 1 if we want the receiving.
- *
- *  return number of bytes remaining to be sent/received on success
- *  return 0 on failure
- */
-uint64_t file_dataremaining(const Messenger *m, int32_t friendnumber, uint8_t filenumber, uint8_t send_receive)
-{
-    if (!friend_is_valid(m, friendnumber)) {
-        return 0;
-    }
-
-    const struct File_Transfers *const sending = &m->friendlist[friendnumber].file_sending[filenumber];
-
-    if (send_receive == 0) {
-        if (sending->status == FILESTATUS_NONE) {
-            return 0;
-        }
-
-        return sending->size - sending->transferred;
-    }
-
-    const struct File_Transfers *const receiving = &m->friendlist[friendnumber].file_receiving[filenumber];
-
-    if (receiving->status == FILESTATUS_NONE) {
-        return 0;
-    }
-
-    return receiving->size - receiving->transferred;
-}
-
 /**
  * Iterate over all file transfers and request chunks (from the client) for each
  * of them.
@@ -2238,8 +2206,8 @@ Messenger *new_messenger(Mono_Time *mono_time, Messenger_Options *options, unsig
     m->net_crypto = new_net_crypto(m->log, m->mono_time, m->dht, &options->proxy_info);
 
     if (m->net_crypto == nullptr) {
-        kill_networking(m->net);
         kill_dht(m->dht);
+        kill_networking(m->net);
         friendreq_kill(m->fr);
         logger_kill(m->log);
         free(m);
@@ -2279,7 +2247,7 @@ Messenger *new_messenger(Mono_Time *mono_time, Messenger_Options *options, unsig
     m->onion_c =  new_onion_client(m->mono_time, m->net_crypto, m->group_handler);
     m->fr_c = new_friend_connections(m->mono_time, m->onion_c, options->local_discovery_enabled);
 
-    if (!(m->onion && m->onion_a && m->onion_c)) {
+    if (!(m->onion && m->onion_a && m->onion_c && m->fr_c)) {
         kill_friend_connections(m->fr_c);
         kill_onion(m->onion);
         kill_onion_announce(m->onion_a);
