@@ -1,4 +1,7 @@
 ---
+exclude:
+  - "**/*.api.h"
+
 restylers:
   - astyle:
       arguments: ["--options=other/astyle/astylerc"]
