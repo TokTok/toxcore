@@ -493,10 +493,10 @@ static int client_send_announce_request(Onion_Client *onion_c, uint32_t num, IP_
         } else if (onion_friend->gc_data_length > 0)  { // contact is a gc
 
 #ifndef VANILLA_NACL
-            len = create_gc_announce_request(request, sizeof(request), dest_pubkey, onion_friend->temp_public_key,
-                                             onion_friend->temp_secret_key, ping_id, onion_friend->real_public_key,
-                                             zero_ping_id, sendback, onion_friend->gc_data,
-                                             onion_friend->gc_data_length);
+            len = create_gca_announce_request(request, sizeof(request), dest_pubkey, onion_friend->temp_public_key,
+                                              onion_friend->temp_secret_key, ping_id, onion_friend->real_public_key,
+                                              zero_ping_id, sendback, onion_friend->gc_data,
+                                              onion_friend->gc_data_length);
 #else
             return -1;
 #endif  // VANILLA_NACL
@@ -811,7 +811,7 @@ static int handle_announce_response(void *object, IP_Port source, const uint8_t 
 #ifndef VANILLA_NACL
 
     if (len_nodes + 1 < length - ONION_ANNOUNCE_RESPONSE_MIN_SIZE) {
-        GC_Announce announces[MAX_SENT_ANNOUNCES];
+        GC_Announce announces[GCA_MAX_SENT_ANNOUNCES];
         GC_Chat *chat = gc_get_group_by_public_key(onion_c->gc_session,
                         onion_c->friends_list[num - 1].gc_public_key);
 
@@ -820,8 +820,8 @@ static int handle_announce_response(void *object, IP_Port source, const uint8_t 
         }
 
         int offset = 2 + ONION_PING_ID_SIZE + len_nodes;
-        int gc_announces_count = unpack_announces_list(plain + offset, plain_size - offset,
-                                 announces, MAX_SENT_ANNOUNCES, nullptr);
+        int gc_announces_count = gca_unpack_announces_list(plain + offset, plain_size - offset, announces,
+                                 GCA_MAX_SENT_ANNOUNCES, nullptr);
 
         if (gc_announces_count == -1) {
             return 1;

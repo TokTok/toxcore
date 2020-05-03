@@ -97,7 +97,7 @@ int gcc_handle_received_message(GC_Chat *chat, uint32_t peer_number, const uint8
                                 uint8_t packet_type, uint64_t message_id);
 
 /* Return array index for message_id */
-uint16_t get_array_index(uint64_t message_id);
+uint16_t gcc_get_array_index(uint64_t message_id);
 
 /* Removes send_array item with message_id.
  *
