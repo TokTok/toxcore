@@ -17,6 +17,7 @@ import re
 import sys
 import time
 
+
 def load_callgraph():
     """
     Parses the output from opt -print-callgraph from stdin or argv.
@@ -37,6 +38,7 @@ def load_callgraph():
 
     return {k: sorted(v) for k, v in graph.items()}
 
+
 def walk(visited, callgraph, cycles, stack, cur):
     """
     Detects cycles in the callgraph and adds them to the cycles parameter.
@@ -52,11 +54,13 @@ def walk(visited, callgraph, cycles, stack, cur):
             visited.add(callee)
     stack.pop()
 
+
 def get_time():
     """
     Return the current time in milliseconds.
     """
     return int(round(time.time() * 1000))
+
 
 def find_recursion(expected):
     """
@@ -95,6 +99,7 @@ def find_recursion(expected):
         print("Expected recursion no longer present: " + str(list(expected)))
     if expected or cycles:
         sys.exit(1)
+
 
 find_recursion(expected={
     "add_to_closest -> add_to_closest",
