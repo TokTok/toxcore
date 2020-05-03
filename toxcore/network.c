@@ -175,7 +175,6 @@ static int inet_pton6(const char *addrString, struct in6_addr *addrbuf)
 #endif
 
 #include <assert.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
