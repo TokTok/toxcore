@@ -21,7 +21,7 @@ travis_install() {
     # Work around https://github.com/eddyxu/cpp-coveralls/issues/108 by manually
     # installing the pyOpenSSL module and injecting it into urllib3 as per
     # https://urllib3.readthedocs.io/en/latest/user-guide.html#ssl-py2
-    sed -i -e '/^import sys$/a import urllib3.contrib.pyopenssl\nurllib3.contrib.pyopenssl.inject_into_urllib3()' `which coveralls`
+    sed -i -e '/^import sys$/a import urllib3.contrib.pyopenssl\nurllib3.contrib.pyopenssl.inject_into_urllib3()' "$(which coveralls)"
   }
 
   # Install astyle (version in ubuntu-precise too old).
@@ -34,12 +34,12 @@ travis_install() {
 }
 
 run_static_analysis() {
-  pylint -E other/analysis/check_recursion
+  pylint3 -E other/analysis/check_recursion
 
   export CPPFLAGS="-isystem $CACHEDIR/include"
   export LDFLAGS="-L$CACHEDIR/lib"
   cat toxav/*.c toxcore/*.c toxencryptsave/*.c \
-    | clang `pkg-config --cflags libsodium opus vpx` \
+    | clang "$(pkg-config --cflags libsodium opus vpx)" \
         -Itoxav -Itoxcore -Itoxencryptsave -S -emit-llvm -xc - -o- \
     | opt -analyze -print-callgraph 2>&1 \
     | other/analysis/check_recursion
@@ -65,7 +65,7 @@ travis_script() {
   "$HOME/.local/bin/check-cimple"
 
   # Use () to run in a separate process so the exports are local.
-  (run_static_analysis)
+  #(run_static_analysis)
 
   other/analysis/check_logger_levels
 
