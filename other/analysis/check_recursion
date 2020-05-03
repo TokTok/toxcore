@@ -48,7 +48,7 @@ def walk(visited, callgraph, cycles, stack, cur):
     stack.append(cur)
     for callee in callgraph.get(cur, ()):
         try:
-            cycles.add(" -> ".join(stack[stack.index(callee):] + [callee]))
+            cycles.add(" -> ".join(stack[stack.index(callee) :] + [callee]))
         except ValueError:
             walk(visited, callgraph, cycles, stack, callee)
             visited.add(callee)
@@ -101,7 +101,6 @@ def find_recursion(expected):
         sys.exit(1)
 
 
-find_recursion(expected={
-    "add_to_closest -> add_to_closest",
-    "add_to_list -> add_to_list",
-})
+find_recursion(
+    expected={"add_to_closest -> add_to_closest", "add_to_list -> add_to_list",}
+)
