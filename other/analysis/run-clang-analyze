@@ -3,6 +3,6 @@
 . other/analysis/gen-file.sh
 
 echo "Running Clang static analyzer"
-clang++ --analyze amalgamation.cc		\
-	"$CPPFLAGS"				\
-	-std=c++11
+clang++ --analyze amalgamation.cc \
+  "$CPPFLAGS" \
+  -std=c++11
