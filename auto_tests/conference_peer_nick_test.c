@@ -130,6 +130,6 @@ int main(void)
 {
     setvbuf(stdout, nullptr, _IONBF, 0);
 
-    run_auto_test(2, conference_peer_nick_test, false);
+    run_auto_test(2, conference_peer_nick_test, FRIEND_ADD_MODE_MESH);
     return 0;
 }

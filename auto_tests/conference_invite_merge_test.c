@@ -241,6 +241,6 @@ int main(void)
 {
     setvbuf(stdout, nullptr, _IONBF, 0);
 
-    run_auto_test(NUM_INVITE_MERGE_TOX, conference_invite_merge_test, true);
+    run_auto_test(NUM_INVITE_MERGE_TOX, conference_invite_merge_test, FRIEND_ADD_MODE_CHAIN);
     return 0;
 }

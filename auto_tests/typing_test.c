@@ -59,6 +59,6 @@ static void test_typing(Tox **toxes, State *state)
 int main(void)
 {
     setvbuf(stdout, nullptr, _IONBF, 0);
-    run_auto_test(2, test_typing, false);
+    run_auto_test(2, test_typing, FRIEND_ADD_MODE_MESH);
     return 0;
 }

@@ -16,86 +16,46 @@
 #include "../toxcore/util.h"
 #include "check_compat.h"
 
+typedef struct State {
+    uint32_t index;
+    uint64_t clock;
+    bool nickname_updated;
+} State;
+
+#include "run_auto_test.h"
+
 #define NICKNAME "Gentoo"
 
 static void nickchange_callback(Tox *tox, uint32_t friendnumber, const uint8_t *string, size_t length, void *userdata)
 {
     ck_assert_msg(length == sizeof(NICKNAME) && memcmp(string, NICKNAME, sizeof(NICKNAME)) == 0, "Name not correct");
-    bool *nickname_updated = (bool *)userdata;
-    *nickname_updated = true;
+    State *state = (State *)userdata;
+    state->nickname_updated = true;
 }
 
-static void test_set_name(void)
+static void test_set_name(Tox **toxes, State *state)
 {
-    printf("initialising 2 toxes\n");
-    uint32_t index[] = { 1, 2 };
-    const time_t cur_time = time(nullptr);
-    Tox *const tox1 = tox_new_log(nullptr, nullptr, &index[0]);
-    Tox *const tox2 = tox_new_log(nullptr, nullptr, &index[1]);
-
-    ck_assert_msg(tox1 && tox2, "failed to create 2 tox instances");
-
-    printf("tox1 adds tox2 as friend, tox2 adds tox1\n");
-    uint8_t public_key[TOX_PUBLIC_KEY_SIZE];
-    tox_self_get_public_key(tox2, public_key);
-    tox_friend_add_norequest(tox1, public_key, nullptr);
-    tox_self_get_public_key(tox1, public_key);
-    tox_friend_add_norequest(tox2, public_key, nullptr);
-
-    printf("bootstrapping tox2 off tox1\n");
-    uint8_t dht_key[TOX_PUBLIC_KEY_SIZE];
-    tox_self_get_dht_id(tox1, dht_key);
-    const uint16_t dht_port = tox_self_get_udp_port(tox1, nullptr);
-
-    tox_bootstrap(tox2, "localhost", dht_port, dht_key, nullptr);
-
-    do {
-        tox_iterate(tox1, nullptr);
-        tox_iterate(tox2, nullptr);
-        c_sleep(ITERATION_INTERVAL);
-    } while (tox_self_get_connection_status(tox1) == TOX_CONNECTION_NONE ||
-             tox_self_get_connection_status(tox2) == TOX_CONNECTION_NONE);
-
-    printf("toxes are online, took %lu seconds\n", (unsigned long)(time(nullptr) - cur_time));
-    const time_t con_time = time(nullptr);
-
-    do {
-        tox_iterate(tox1, nullptr);
-        tox_iterate(tox2, nullptr);
-        c_sleep(ITERATION_INTERVAL);
-    } while (tox_friend_get_connection_status(tox1, 0, nullptr) != TOX_CONNECTION_UDP ||
-             tox_friend_get_connection_status(tox2, 0, nullptr) != TOX_CONNECTION_UDP);
-
-    printf("tox clients connected took %lu seconds\n", (unsigned long)(time(nullptr) - con_time));
-
-    tox_callback_friend_name(tox2, nickchange_callback);
+    tox_callback_friend_name(toxes[1], nickchange_callback);
     Tox_Err_Set_Info err_n;
-    bool ret = tox_self_set_name(tox1, (const uint8_t *)NICKNAME, sizeof(NICKNAME), &err_n);
+    bool ret = tox_self_set_name(toxes[0], (const uint8_t *)NICKNAME, sizeof(NICKNAME), &err_n);
     ck_assert_msg(ret && err_n == TOX_ERR_SET_INFO_OK, "tox_self_set_name failed because %u\n", err_n);
 
-    bool nickname_updated = false;
+    state[1].nickname_updated = false;
 
     do {
-        tox_iterate(tox1, nullptr);
-        tox_iterate(tox2, &nickname_updated);
-        c_sleep(ITERATION_INTERVAL);
-    } while (!nickname_updated);
+        iterate_all_wait(2, toxes, state, ITERATION_INTERVAL);
+    } while (!state[1].nickname_updated);
 
-    ck_assert_msg(tox_friend_get_name_size(tox2, 0, nullptr) == sizeof(NICKNAME), "Name length not correct");
+    ck_assert_msg(tox_friend_get_name_size(toxes[1], 0, nullptr) == sizeof(NICKNAME), "Name length not correct");
     uint8_t temp_name[sizeof(NICKNAME)];
-    tox_friend_get_name(tox2, 0, temp_name, nullptr);
+    tox_friend_get_name(toxes[1], 0, temp_name, nullptr);
     ck_assert_msg(memcmp(temp_name, NICKNAME, sizeof(NICKNAME)) == 0, "Name not correct");
-
-    printf("test_set_name succeeded, took %lu seconds\n", (unsigned long)(time(nullptr) - cur_time));
-
-    tox_kill(tox1);
-    tox_kill(tox2);
 }
 
 int main(void)
 {
     setvbuf(stdout, nullptr, _IONBF, 0);
 
-    test_set_name();
+    run_auto_test(2, test_set_name, FRIEND_ADD_MODE_MESH);
     return 0;
 }
