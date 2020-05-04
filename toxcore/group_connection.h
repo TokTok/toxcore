@@ -21,9 +21,6 @@
 /* The time between attempts to share our TCP relays with a peer */
 #define GCC_TCP_SHARED_RELAYS_TIMEOUT 300
 
-/* The time before the direct UDP connection is considered dead */
-#define GCC_UDP_DIRECT_TIMEOUT (GC_PING_INTERVAL * 2 + 2)
-
 #define HANDSHAKE_SENDING_TIMEOUT 3
 
 struct GC_Message_Array_Entry {
@@ -51,7 +48,7 @@ struct GC_Connection {
     uint8_t     shared_key[CRYPTO_SHARED_KEY_SIZE];  /* made with our session sk and peer's session pk */
 
     int         tcp_connection_num;
-    uint64_t    last_received_direct_time;   /* the last time we received a direct packet from this peer */
+    uint64_t    last_received_direct_time;   /* the last time we received a direct UDP packet from this connection */
     uint64_t    last_tcp_relays_shared;  /* the last time we tried to send this peer our tcp relays */
 
     Node_format connected_tcp_relays[MAX_FRIEND_TCP_CONNECTIONS];
@@ -94,7 +91,7 @@ int gcc_add_to_send_array(const Logger *logger, const Mono_Time *mono_time, GC_C
  * Return -1 on failure
  */
 int gcc_handle_received_message(GC_Chat *chat, uint32_t peer_number, const uint8_t *data, uint32_t length,
-                                uint8_t packet_type, uint64_t message_id);
+                                uint8_t packet_type, uint64_t message_id, bool direct_conn);
 
 /* Return array index for message_id */
 uint16_t gcc_get_array_index(uint64_t message_id);
@@ -106,7 +103,21 @@ uint16_t gcc_get_array_index(uint64_t message_id);
  */
 int gcc_handle_ack(GC_Connection *gconn, uint64_t message_id);
 
+/*
+ * Sets the send_message_id and send_array_start for gconn to id. This is used for the
+ * initiation of peer connections.
+ */
+void gcc_set_send_message_id(GC_Connection *gconn, uint16_t id);
+
+/*
+ * Returns true if the IP is set for gconn.
+ */
 bool gcc_is_ip_set(GC_Connection *gconn);
+
+/*
+ * Sets the ip for gconn to ipp. If ipp is null this function has no effect.
+ */
+void gcc_set_ip_port(GC_Connection *gconn, const IP_Port *ipp);
 
 /* Checks for and handles messages that are in proper sequence in gconn's received_array.
  * This should always be called after a new packet is successfully handled.
@@ -126,8 +137,7 @@ bool gcc_connection_is_direct(const Mono_Time *mono_time, const GC_Connection *g
  * Return 0 on success.
  * Return -1 on failure.
  */
-int gcc_send_group_packet(const GC_Chat *chat, const GC_Connection *gconn, const uint8_t *packet,
-                          uint16_t length, uint8_t packet_type);
+int gcc_send_group_packet(const GC_Chat *chat, GC_Connection *gconn, const uint8_t *packet, uint16_t length);
 
 /* called when a peer leaves the group */
 void gcc_peer_cleanup(GC_Connection *gconn);
