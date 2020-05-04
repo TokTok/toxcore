@@ -4548,7 +4548,8 @@ static int handle_gc_lossless_message(Messenger *m, GC_Chat *chat, const uint8_t
         ++gconn->received_message_id;
     }
 
-    int lossless_ret = gcc_handle_received_message(chat, peer_number, real_data, real_len, packet_type, message_id, direct_conn);
+    int lossless_ret = gcc_handle_received_message(chat, peer_number, real_data, real_len, packet_type, message_id,
+                       direct_conn);
 
     if (packet_type == GP_INVITE_REQUEST && !gconn->handshaked) {  // race condition
         LOGGER_ERROR(m->log, "race condition %d", packet_type);
