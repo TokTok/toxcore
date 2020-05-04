@@ -25,6 +25,10 @@
 
 #ifndef VANILLA_NACL
 
+/* The time before the direct UDP connection is considered dead */
+#define GCC_UDP_DIRECT_TIMEOUT (GC_PING_INTERVAL * 2 + 2)
+
+
 /* Returns group connection object for peer_number.
  * Returns NULL if peer_number is invalid.
  */
@@ -61,6 +65,16 @@ static void clear_array_entry(struct GC_Message_Array_Entry *array_entry)
 uint16_t gcc_get_array_index(uint64_t message_id)
 {
     return message_id % GCC_BUFFER_SIZE;
+}
+
+/*
+ * Sets the send_message_id and send_array_start for gconn to id. This is used for the
+ * initiation of peer connections.
+ */
+void gcc_set_send_message_id(GC_Connection *gconn, uint16_t id)
+{
+    gconn->send_message_id = id;
+    gconn->send_array_start = id % GCC_BUFFER_SIZE;
 }
 
 /* Puts packet data in ary_entry.
@@ -104,6 +118,7 @@ int gcc_add_to_send_array(const Logger *logger, const Mono_Time *mono_time, GC_C
 {
     /* check if send_array is full */
     if ((gconn->send_message_id % GCC_BUFFER_SIZE) == (uint16_t)(gconn->send_array_start - 1)) {
+        LOGGER_ERROR(logger, "Send array is full.");
         return -1;
     }
 
@@ -156,9 +171,22 @@ int gcc_handle_ack(GC_Connection *gconn, uint64_t message_id)
     return 0;
 }
 
+/*
+ * Returns true if the IP is set for gconn.
+ */
 bool gcc_is_ip_set(GC_Connection *gconn)
 {
     return gconn->addr.ip_port.ip.family.value != 0;
+}
+
+/*
+ * Sets the ip for gconn to ipp. If ipp is null this function has no effect.
+ */
+void gcc_set_ip_port(GC_Connection *gconn, const IP_Port *ipp)
+{
+    if (ipp) {
+        memcpy(&gconn->addr.ip_port, ipp, sizeof(IP_Port));
+    }
 }
 
 /* Decides if message need to be put in received_array or immediately handled.
@@ -169,12 +197,16 @@ bool gcc_is_ip_set(GC_Connection *gconn)
  * Return -1 on failure
  */
 int gcc_handle_received_message(GC_Chat *chat, uint32_t peer_number, const uint8_t *data, uint32_t length,
-                                uint8_t packet_type, uint64_t message_id)
+                                uint8_t packet_type, uint64_t message_id, bool direct_conn)
 {
     GC_Connection *gconn = gcc_get_connection(chat, peer_number);
 
-    if (!gconn) {
+    if (gconn == nullptr) {
         return -1;
+    }
+
+    if (direct_conn) {
+        gconn->last_received_direct_time = mono_time_get(chat->mono_time);
     }
 
     /* Appears to be a duplicate packet so we discard it */
@@ -294,7 +326,7 @@ void gcc_resend_packets(Messenger *m, GC_Chat *chat, uint32_t peer_number)
 
         /* if this occurrs less than once per second this won't be reliable */
         if (delta > 1 && is_power_of_2(delta)) {
-            gcc_send_group_packet(chat, gconn, array_entry->data, array_entry->data_length, array_entry->packet_type);
+            gcc_send_group_packet(chat, gconn, array_entry->data, array_entry->data_length);
             continue;
         }
 
@@ -310,8 +342,7 @@ void gcc_resend_packets(Messenger *m, GC_Chat *chat, uint32_t peer_number)
  * Returns 0 on success.
  * Returns -1 on failure.
  */
-int gcc_send_group_packet(const GC_Chat *chat, const GC_Connection *gconn, const uint8_t *packet,
-                          uint16_t length, uint8_t packet_type)
+int gcc_send_group_packet(const GC_Chat *chat, GC_Connection *gconn, const uint8_t *packet, uint16_t length)
 {
     if (packet == nullptr || length == 0) {
         return -1;
@@ -328,10 +359,8 @@ int gcc_send_group_packet(const GC_Chat *chat, const GC_Connection *gconn, const
             return -1;
         }
 
-        if (packet_type != GP_BROADCAST && packet_type != GP_MESSAGE_ACK) {
-            if ((uint16_t) sendpacket(chat->net, gconn->addr.ip_port, packet, length) == length) {
-                direct_send_attempt = true;
-            }
+        if ((uint16_t) sendpacket(chat->net, gconn->addr.ip_port, packet, length) == length) {
+            direct_send_attempt = true;
         }
     }
 
