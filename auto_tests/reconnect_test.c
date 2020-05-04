@@ -24,78 +24,80 @@
 
 #include "run_auto_test.h"
 
-static uint32_t tox_connected_count(uint32_t tox_count, AutoTox *autotoxes, uint32_t index)
-{
-    const size_t friend_count = tox_self_get_friend_list_size(autotoxes[index].tox);
-    uint32_t connected_count = 0;
+static uint32_t tox_connected_count(uint32_t tox_count, AutoTox *autotoxes,
+                                    uint32_t index) {
+  const size_t friend_count =
+      tox_self_get_friend_list_size(autotoxes[index].tox);
+  uint32_t connected_count = 0;
 
-    for (size_t j = 0; j < friend_count; j++) {
-        if (tox_friend_get_connection_status(autotoxes[index].tox, j, nullptr) != TOX_CONNECTION_NONE) {
-            ++connected_count;
-        }
+  for (size_t j = 0; j < friend_count; j++) {
+    if (tox_friend_get_connection_status(autotoxes[index].tox, j, nullptr) !=
+        TOX_CONNECTION_NONE) {
+      ++connected_count;
+    }
+  }
+
+  return connected_count;
+}
+
+static bool all_disconnected_from(uint32_t tox_count, AutoTox *autotoxes,
+                                  uint32_t index) {
+  for (uint32_t i = 0; i < tox_count; i++) {
+    if (i == index) {
+      continue;
     }
 
-    return connected_count;
+    if (tox_connected_count(tox_count, autotoxes, i) >= tox_count - 1) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
-static bool all_disconnected_from(uint32_t tox_count, AutoTox *autotoxes, uint32_t index)
-{
-    for (uint32_t i = 0; i < tox_count; i++) {
-        if (i == index) {
-            continue;
-        }
+static void test_reconnect(AutoTox *autotoxes) {
+  const time_t test_start_time = time(nullptr);
 
-        if (tox_connected_count(tox_count, autotoxes, i) >= tox_count - 1) {
-            return false;
-        }
+  printf("letting connections settle\n");
+
+  do {
+    iterate_all_wait(TOX_COUNT, autotoxes, ITERATION_INTERVAL);
+  } while (time(nullptr) - test_start_time < 2);
+
+  uint16_t disconnect = random_u16() % TOX_COUNT;
+  printf("disconnecting #%u\n", autotoxes[disconnect].index);
+
+  do {
+    for (uint16_t i = 0; i < TOX_COUNT; ++i) {
+      if (i != disconnect) {
+        tox_iterate(autotoxes[i].tox, &autotoxes[i]);
+        autotoxes[i].clock += 1000;
+      }
     }
 
-    return true;
+    c_sleep(20);
+  } while (!all_disconnected_from(TOX_COUNT, autotoxes, disconnect));
+
+  const uint64_t reconnect_start_time = autotoxes[0].clock;
+
+  printf("reconnecting\n");
+
+  do {
+    iterate_all_wait(TOX_COUNT, autotoxes, ITERATION_INTERVAL);
+  } while (!all_friends_connected(TOX_COUNT, autotoxes));
+
+  const uint64_t reconnect_time = autotoxes[0].clock - reconnect_start_time;
+  ck_assert_msg(reconnect_time <= RECONNECT_TIME_MAX * 1000,
+                "reconnection took %d seconds; expected at most %d seconds",
+                (int)(reconnect_time / 1000), RECONNECT_TIME_MAX);
+
+  printf("test_reconnect succeeded, took %d seconds\n",
+         (int)(time(nullptr) - test_start_time));
 }
 
-static void test_reconnect(AutoTox *autotoxes)
-{
-    const time_t test_start_time = time(nullptr);
+int main(void) {
+  setvbuf(stdout, nullptr, _IONBF, 0);
 
-    printf("letting connections settle\n");
-
-    do {
-        iterate_all_wait(TOX_COUNT, autotoxes, ITERATION_INTERVAL);
-    } while (time(nullptr) - test_start_time < 2);
-
-    uint16_t disconnect = random_u16() % TOX_COUNT;
-    printf("disconnecting #%u\n", autotoxes[disconnect].index);
-
-    do {
-        for (uint16_t i = 0; i < TOX_COUNT; ++i) {
-            if (i != disconnect) {
-                tox_iterate(autotoxes[i].tox, &autotoxes[i]);
-                autotoxes[i].clock += 1000;
-            }
-        }
-
-        c_sleep(20);
-    } while (!all_disconnected_from(TOX_COUNT, autotoxes, disconnect));
-
-    const uint64_t reconnect_start_time = autotoxes[0].clock;
-
-    printf("reconnecting\n");
-
-    do {
-        iterate_all_wait(TOX_COUNT, autotoxes, ITERATION_INTERVAL);
-    } while (!all_friends_connected(TOX_COUNT, autotoxes));
-
-    const uint64_t reconnect_time = autotoxes[0].clock - reconnect_start_time;
-    ck_assert_msg(reconnect_time <= RECONNECT_TIME_MAX * 1000, "reconnection took %d seconds; expected at most %d seconds",
-                  (int)(reconnect_time / 1000), RECONNECT_TIME_MAX);
-
-    printf("test_reconnect succeeded, took %d seconds\n", (int)(time(nullptr) - test_start_time));
-}
-
-int main(void)
-{
-    setvbuf(stdout, nullptr, _IONBF, 0);
-
-    run_auto_test(TOX_COUNT, test_reconnect, 0, &default_run_auto_options);
-    return 0;
+  run_auto_test(TOX_COUNT, test_reconnect, 0, &default_run_auto_options);
+  return 0;
 }

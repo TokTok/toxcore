@@ -16,48 +16,50 @@
 #include "check_compat.h"
 
 typedef struct State {
-    bool friend_is_typing;
+  bool friend_is_typing;
 } State;
 
 #include "run_auto_test.h"
 
-static void typing_callback(Tox *m, uint32_t friendnumber, bool typing, void *user_data)
-{
-    const AutoTox *autotox = (AutoTox *)user_data;
-    State *state = (State *)autotox->state;
-    state->friend_is_typing = typing;
+static void typing_callback(Tox *m, uint32_t friendnumber, bool typing,
+                            void *user_data) {
+  const AutoTox *autotox = (AutoTox *)user_data;
+  State *state = (State *)autotox->state;
+  state->friend_is_typing = typing;
 }
 
-static void test_typing(AutoTox *autotoxes)
-{
-    time_t cur_time = time(nullptr);
+static void test_typing(AutoTox *autotoxes) {
+  time_t cur_time = time(nullptr);
 
-    tox_callback_friend_typing(autotoxes[1].tox, &typing_callback);
-    tox_self_set_typing(autotoxes[0].tox, 0, true, nullptr);
+  tox_callback_friend_typing(autotoxes[1].tox, &typing_callback);
+  tox_self_set_typing(autotoxes[0].tox, 0, true, nullptr);
 
-    do {
-        iterate_all_wait(2, autotoxes, 200);
-    } while (!((State *)autotoxes[1].state)->friend_is_typing);
+  do {
+    iterate_all_wait(2, autotoxes, 200);
+  } while (!((State *)autotoxes[1].state)->friend_is_typing);
 
-    ck_assert_msg(tox_friend_get_typing(autotoxes[1].tox, 0, nullptr) == 1,
-                  "tox_friend_get_typing should have returned true, but it didn't");
-    tox_self_set_typing(autotoxes[0].tox, 0, false, nullptr);
+  ck_assert_msg(
+      tox_friend_get_typing(autotoxes[1].tox, 0, nullptr) == 1,
+      "tox_friend_get_typing should have returned true, but it didn't");
+  tox_self_set_typing(autotoxes[0].tox, 0, false, nullptr);
 
-    do {
-        iterate_all_wait(2, autotoxes, 200);
-    } while (((State *)autotoxes[1].state)->friend_is_typing);
+  do {
+    iterate_all_wait(2, autotoxes, 200);
+  } while (((State *)autotoxes[1].state)->friend_is_typing);
 
-    Tox_Err_Friend_Query err_t;
-    ck_assert_msg(tox_friend_get_typing(autotoxes[1].tox, 0, &err_t) == 0,
-                  "tox_friend_get_typing should have returned false, but it didn't");
-    ck_assert_msg(err_t == TOX_ERR_FRIEND_QUERY_OK, "tox_friend_get_typing call did not return correct error");
+  Tox_Err_Friend_Query err_t;
+  ck_assert_msg(
+      tox_friend_get_typing(autotoxes[1].tox, 0, &err_t) == 0,
+      "tox_friend_get_typing should have returned false, but it didn't");
+  ck_assert_msg(err_t == TOX_ERR_FRIEND_QUERY_OK,
+                "tox_friend_get_typing call did not return correct error");
 
-    printf("test_typing succeeded, took %lu seconds\n", (unsigned long)(time(nullptr) - cur_time));
+  printf("test_typing succeeded, took %lu seconds\n",
+         (unsigned long)(time(nullptr) - cur_time));
 }
 
-int main(void)
-{
-    setvbuf(stdout, nullptr, _IONBF, 0);
-    run_auto_test(2, test_typing, sizeof(State), &default_run_auto_options);
-    return 0;
+int main(void) {
+  setvbuf(stdout, nullptr, _IONBF, 0);
+  run_auto_test(2, test_typing, sizeof(State), &default_run_auto_options);
+  return 0;
 }

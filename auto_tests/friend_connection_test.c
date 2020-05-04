@@ -13,15 +13,13 @@
 
 #include "run_auto_test.h"
 
-static void friend_connection_test(AutoTox *toxes)
-{
-    // Nothing to do here. When copying this test, add test-specific code here.
+static void friend_connection_test(AutoTox *toxes) {
+  // Nothing to do here. When copying this test, add test-specific code here.
 }
 
-int main(void)
-{
-    setvbuf(stdout, nullptr, _IONBF, 0);
+int main(void) {
+  setvbuf(stdout, nullptr, _IONBF, 0);
 
-    run_auto_test(2, friend_connection_test, 0, &default_run_auto_options);
-    return 0;
+  run_auto_test(2, friend_connection_test, 0, &default_run_auto_options);
+  return 0;
 }
