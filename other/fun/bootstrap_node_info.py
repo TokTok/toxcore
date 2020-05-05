@@ -51,8 +51,7 @@ INFO_REQUEST_PACKET_LENGTH = 78
 # first byte is INFO_REQUEST_ID, other bytes don't matter as long as reqest's
 # length matches INFO_REQUEST_LENGTH
 INFO_REQUEST_PACKET = INFO_PACKET_ID + (
-    b"0" * (INFO_REQUEST_PACKET_LENGTH - len(INFO_PACKET_ID))
-)
+    b"0" * (INFO_REQUEST_PACKET_LENGTH - len(INFO_PACKET_ID)))
 
 PACKET_ID_LENGTH = len(INFO_PACKET_ID)
 # https://github.com/irungentoo/toxcore/blob/881b2d900d1998981fb6b9938ec66012d049635f/other/bootstrap_node_packets.c#L44
@@ -83,15 +82,11 @@ def main(protocol: str, host: str, port: int) -> None:
     try:
         data, _ = sock.recvfrom(MAX_INFO_RESPONSE_PACKET_LENGTH)
     except socket.timeout:
-        print(
-            "The DHT bootstrap node didn't reply in "
-            + str(SOCK_TIMEOUT_SECONDS)
-            + " sec."
-        )
+        print("The DHT bootstrap node didn't reply in " +
+              str(SOCK_TIMEOUT_SECONDS) + " sec.")
         print(
             "The likely reason for that is that the DHT bootstrap node is either "
-            "offline or has no info set."
-        )
+            "offline or has no info set.")
         sys.exit(2)
 
     packet_id = data[:PACKET_ID_LENGTH]
@@ -107,14 +102,13 @@ def main(protocol: str, host: str, port: int) -> None:
         )
         print(
             "Are you sure that you are pointing the script at a Tox DHT bootstrap "
-            "node and that the script is up to date?"
-        )
+            "node and that the script is up to date?")
         sys.exit(3)
 
-    version = int.from_bytes(
-        data[PACKET_ID_LENGTH : PACKET_ID_LENGTH + VERSION_LENGTH], byteorder="big"
-    )
-    motd = data[PACKET_ID_LENGTH + VERSION_LENGTH :].decode("utf-8")
+    version = int.from_bytes(data[PACKET_ID_LENGTH:PACKET_ID_LENGTH +
+                                  VERSION_LENGTH],
+                             byteorder="big")
+    motd = data[PACKET_ID_LENGTH + VERSION_LENGTH:].decode("utf-8")
     print("Version: " + str(version))
     print("MOTD:    " + motd)
     sys.exit(0)
@@ -126,5 +120,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     main(
-        protocol=sys.argv[1], host=sys.argv[2], port=int(sys.argv[3]),
+        protocol=sys.argv[1],
+        host=sys.argv[2],
+        port=int(sys.argv[3]),
     )
