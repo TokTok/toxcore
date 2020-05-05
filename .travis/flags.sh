@@ -1,6 +1,6 @@
 #!/bin/bash
 
-add_config_flag() { CONFIG_FLAGS+=($@); }
+add_config_flag() { CONFIG_FLAGS+=("$@"); }
 add_c_flag() { C_FLAGS="$C_FLAGS $@"; }
 add_cxx_flag() { CXX_FLAGS="$CXX_FLAGS $@"; }
 add_ld_flag() { LD_FLAGS="$LD_FLAGS $@"; }
