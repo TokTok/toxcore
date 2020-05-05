@@ -870,15 +870,17 @@ static int send_lossless_group_packet(GC_Chat *chat, GC_Connection *gconn, const
                                 length, message_id, packet_type, chat->chat_id_hash, NET_PACKET_GC_LOSSLESS);
 
     if (len == -1) {
-        LOGGER_ERROR(chat->logger, "wrap_group_packet failed (type: %u, len: %d)", packet_type, len);
+        LOGGER_ERROR(chat->logger, "wrap_group_packet() failed (type: %u, len: %d)", packet_type, len);
         return -1;
     }
 
     if (gcc_add_to_send_array(chat->logger, chat->mono_time, gconn, packet, len, packet_type) == -1) {
+        LOGGER_ERROR(chat->logger, "gcc_add_to_send_array() failed (type: %u, len: %d)", packet_type, len);
         return -1;
     }
 
     if (gcc_send_group_packet(chat, gconn, packet, len) == -1) {
+        LOGGER_ERROR(chat->logger, "gcc_send_group_packet() failed(type: %u, len: %d)", packet_type, len);
         return -1;
     }
 
@@ -973,6 +975,7 @@ static int handle_gc_sync_response(Messenger *m, int group_number, int peer_numb
                                  nullptr);
 
         if (unpacked_announces != num_peers) {
+            LOGGER_ERROR(m->log, "Failed to unpack announces");
             free(announces);
             return -1;
         }
@@ -1029,6 +1032,7 @@ static int handle_gc_sync_response(Messenger *m, int group_number, int peer_numb
     gconn = gcc_get_connection(chat, peer_number);
 
     if (gconn == nullptr) {
+        LOGGER_ERROR(m->log, "Invalid peer connection");
         return -1;
     }
 
@@ -1105,19 +1109,17 @@ static int handle_gc_sync_request(const Messenger *m, int group_number, int peer
                                   uint32_t length)
 {
     if (length != sizeof(uint32_t) + MAX_GC_PASSWORD_SIZE) {
-        LOGGER_ERROR(m->log, "handle gc sync request1");
         return -1;
     }
 
     GC_Chat *chat = gc_get_group(m->group_handler, group_number);
 
     if (!chat) {
-        LOGGER_ERROR(m->log, "handle gc sync request2");
         return -1;
     }
 
     if (chat->connection_state <= CS_MANUALLY_DISCONNECTED || chat->shared_state.version == 0) {
-        LOGGER_ERROR(m->log, "handle gc sync request3");
+        LOGGER_ERROR(m->log, "Invalid state or version number");
         return -1;
     }
 
@@ -1126,27 +1128,29 @@ static int handle_gc_sync_request(const Messenger *m, int group_number, int peer
         memcpy(password, data + sizeof(uint32_t), MAX_GC_PASSWORD_SIZE);
 
         if (memcmp(chat->shared_state.password, password, chat->shared_state.password_length) != 0) {
-            LOGGER_ERROR(m->log, "handle gc sync request4");
+            LOGGER_ERROR(m->log, "Invalid password");
             return -1;
         }
     }
 
     /* Do not change the order of these four calls or else */
     if (send_peer_shared_state(chat, gconn) == -1) {
-        LOGGER_ERROR(m->log, "handle gc sync request5");
+        LOGGER_ERROR(m->log, "Failed to send shared state");
         return -1;
     }
 
     if (send_peer_mod_list(chat, gconn) == -1) {
-        LOGGER_ERROR(m->log, "handle gc sync request6");
+        LOGGER_ERROR(m->log, "Failed to send mod list");
         return -1;
     }
 
     if (send_peer_sanctions_list(chat, gconn) == -1) {
+        LOGGER_ERROR(m->log, "Failed to send sactions list");
         return -1;
     }
 
     if (send_peer_topic(chat, gconn) == -1) {
+        LOGGER_ERROR(m->log, "Failed to send topic");
         return -1;
     }
 
@@ -1158,6 +1162,7 @@ static int handle_gc_sync_request(const Messenger *m, int group_number, int peer
     GC_Announce *existing_peers_announces = (GC_Announce *)malloc(sizeof(GC_Announce) * (chat->numpeers - 1));
 
     if (!existing_peers_announces) {
+        LOGGER_ERROR(m->log, "No existing peer announces");
         return -1;
     }
 
@@ -1166,6 +1171,7 @@ static int handle_gc_sync_request(const Messenger *m, int group_number, int peer
 
     if (!create_announce_for_peer(chat, gconn, (uint32_t)peer_number, &new_peer_announce)) {
         free(existing_peers_announces);
+        LOGGER_ERROR(m->log, "Failed to create announce");
         return -1;
     }
 
@@ -1175,6 +1181,7 @@ static int handle_gc_sync_request(const Messenger *m, int group_number, int peer
                                             &new_peer_announce);
 
     if (announce_length == -1) {
+        LOGGER_ERROR(m->log, "Failed to pack announce");
         free(existing_peers_announces);
         return -1;
     }
@@ -1271,6 +1278,7 @@ static int send_gc_tcp_relays(const Mono_Time *mono_time, GC_Chat *chat, GC_Conn
     length += nodes_len;
 
     if (send_lossy_group_packet(chat, gconn, data, length, GP_TCP_RELAYS) == -1) {
+        LOGGER_ERROR(chat->logger, "Failed to send lossy packet");
         return -1;
     }
 
@@ -1299,11 +1307,12 @@ static int handle_gc_tcp_relays(Messenger *m, int group_number, GC_Connection *g
     }
 
     if (chat->connection_state != CS_CONNECTED) {
-        LOGGER_ERROR(m->log, "handle_gc_tcp_relays() failed. State: %d", chat->connection_state);
+        LOGGER_ERROR(m->log, "Invalid connetion state %d", chat->connection_state);
         return -1;
     }
 
     if (!gconn->confirmed) {
+        LOGGER_ERROR(m->log, "Peer not confirmed");
         return -1;
     }
 
@@ -1808,14 +1817,14 @@ static int handle_gc_peer_announcement(Messenger *m, int group_number, const uin
     int unpack_result = gca_unpack_announce((const uint8_t *)data, length, &new_peer_announce);
 
     if (unpack_result == -1) {
-        LOGGER_ERROR(m->log, "in handle_gc_peer_announcement unpack error");
+        LOGGER_ERROR(m->log, "Unpack error");
         return -1;
     }
 
     IP_Port *ip_port = new_peer_announce.ip_port_is_set ? &new_peer_announce.ip_port : nullptr;
 
     if (!ip_port && !new_peer_announce.tcp_relays_count) {
-        LOGGER_ERROR(m->log, "in handle_gc_peer_announcement invalid info");
+        LOGGER_ERROR(m->log, "Invalid IP info");
         return -1;
     }
 
@@ -1824,7 +1833,7 @@ static int handle_gc_peer_announcement(Messenger *m, int group_number, const uin
     if (peer_number == -2) {
         return 0;
     } else if (peer_number == -1) {
-        LOGGER_ERROR(m->log, "peer add failed");
+        LOGGER_ERROR(m->log, "Failed to add peer");
         return -1;
     }
 
@@ -2024,8 +2033,7 @@ static int validate_gc_shared_state(const GC_SharedState *state)
     return 0;
 }
 
-static int handle_gc_shared_state_error(Messenger *m, int group_number,
-                                        uint32_t peer_number, GC_Chat *chat)
+static int handle_gc_shared_state_error(Messenger *m, int group_number, uint32_t peer_number, GC_Chat *chat)
 {
     /* If we don't already have a valid shared state we will automatically try to get another invite.
        Otherwise we attempt to ask a different peer for a sync. */
@@ -3803,6 +3811,7 @@ static int handle_gc_message_ack(GC_Chat *chat, GC_Connection *gconn, const uint
 
         if (ret == 0) {
             gconn->send_array[idx].last_send_try = tm;
+            LOGGER_ERROR(chat->logger, "Resent requested packet %lu", request_id);
         }
     }
 
@@ -4105,6 +4114,7 @@ static int send_gc_handshake_packet(GC_Chat *chat, uint32_t peer_number, uint8_t
     ret2 = send_packet_tcp_connection(chat->tcp_conn, gconn->tcp_connection_num, packet, length);
 
     if (ret1 == -1 && ret2 == -1) {
+        LOGGER_ERROR(chat->logger, "Send handshake packet failed");
         return -1;
     }
 
@@ -4524,6 +4534,7 @@ static int handle_gc_lossless_message(Messenger *m, GC_Chat *chat, const uint8_t
     int len = unwrap_group_packet(m->log, gconn->shared_key, data, &message_id, &packet_type, packet, length);
 
     if (len <= 0) {
+        LOGGER_ERROR(m->log, "Failed to unwrap lossless packet type %d", packet_type);
         return -1;
     }
 
@@ -4619,6 +4630,7 @@ static int handle_gc_lossy_message(Messenger *m, GC_Chat *chat, const uint8_t *p
     }
 
     if (!gconn->handshaked) {
+        LOGGER_ERROR(m->log, "Got packet from invalid peer");
         return -1;
     }
 
@@ -4628,6 +4640,7 @@ static int handle_gc_lossy_message(Messenger *m, GC_Chat *chat, const uint8_t *p
     int len = unwrap_group_packet(m->log, gconn->shared_key, data, nullptr, &packet_type, packet, length);
 
     if (len <= 0) {
+        LOGGER_ERROR(m->log, "Failed to unwrap packet");
         return -1;
     }
 
@@ -4671,6 +4684,10 @@ static int handle_gc_lossy_message(Messenger *m, GC_Chat *chat, const uint8_t *p
 
     if (ret != -1 && direct_conn) {
         gconn->last_received_direct_time = mono_time_get(m->mono_time);
+    }
+
+    if (ret < 0 && packet_type != GP_MESSAGE_ACK) {
+        LOGGER_ERROR(m->log, "Failed to handle lossy packet type %d", packet_type);
     }
 
     return ret;
@@ -5021,6 +5038,7 @@ static int peer_add(Messenger *m, int group_number, const IP_Port *ipp, const ui
         tcp_connection_num = new_tcp_connection_to(chat->tcp_conn, public_key, 0);
 
         if (tcp_connection_num == -1) {
+            LOGGER_ERROR(m->log, "Failed to init tcp connection");
             return -1;
         }
     }
@@ -5139,9 +5157,7 @@ static void ping_group(GC_Chat *chat)
     net_pack_u32(data + HASH_ID_BYTES + (sizeof(uint32_t) * 2), chat->moderation.sanctions_creds.version);
     net_pack_u32(data + HASH_ID_BYTES + (sizeof(uint32_t) * 3), chat->topic_info.version);
 
-    uint32_t i;
-
-    for (i = 1; i < chat->numpeers; ++i) {
+    for (uint32_t i = 1; i < chat->numpeers; ++i) {
         if (chat->gcc[i].confirmed) {
             send_lossy_group_packet(chat, &chat->gcc[i], data, length, GP_PING);
         }
