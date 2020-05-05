@@ -206,8 +206,7 @@ static void bwc_handle_data(Tox *tox, uint32_t friendnumber, const uint8_t *data
     }
 
     /* get Call object from Tox and friend number */
-    BWController *bwc = NULL;
-    bwc = bwc_controller_get(call);
+    BWController *bwc = bwc_controller_get(call);
 
     if (!bwc) {
         LOGGER_API_WARNING(tox, "No session!");
@@ -251,5 +250,5 @@ void bwc_allow_receiving(Tox *tox)
 
 void bwc_stop_receiving(Tox *tox)
 {
-    tox_callback_friend_lossy_packet_per_pktid(tox, NULL, BWC_PACKET_ID);
+    tox_callback_friend_lossy_packet_per_pktid(tox, nullptr, BWC_PACKET_ID);
 }

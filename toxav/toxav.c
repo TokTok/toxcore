@@ -1248,13 +1248,15 @@ static ToxAVCall *call_new(ToxAV *av, uint32_t friend_number, Toxav_Err_Call *er
     Toxav_Err_Call rc = TOXAV_ERR_CALL_OK;
     ToxAVCall *call = nullptr;
 
+    Tox_Err_Friend_Query f_con_query_error;
+    Tox_Connection f_conn_status = TOX_CONNECTION_NONE;
+
     if (toxav_friend_exists(av->tox, friend_number) == 0) {
         rc = TOXAV_ERR_CALL_FRIEND_NOT_FOUND;
         goto RETURN;
     }
 
-    Tox_Err_Friend_Query f_con_query_error;
-    Tox_Connection f_conn_status = tox_friend_get_connection_status(av->tox, friend_number, &f_con_query_error);
+    f_conn_status = tox_friend_get_connection_status(av->tox, friend_number, &f_con_query_error);
 
     if (f_conn_status == TOX_CONNECTION_NONE) {
         rc = TOXAV_ERR_CALL_FRIEND_NOT_CONNECTED;

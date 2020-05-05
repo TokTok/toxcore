@@ -342,11 +342,11 @@ static void update_bwc_values(RTPSession *session, const struct RTPMessage *msg)
 static Mono_Time *rtp_get_mono_time_from_rtpsession(RTPSession *session)
 {
     if (!session) {
-        return NULL;
+        return nullptr;
     }
 
     if (!session->toxav) {
-        return NULL;
+        return nullptr;
     }
 
     return toxav_get_av_mono_time(session->toxav);
@@ -475,8 +475,7 @@ void handle_rtp_packet(Tox *tox, uint32_t friendnumber, const uint8_t *data, siz
         return;
     }
 
-    void *call = NULL;
-    call = (void *)call_get(toxav, friendnumber);
+    ToxAVCall *call = (ToxAVCall *)call_get(toxav, friendnumber);
 
     if (!call) {
         return;

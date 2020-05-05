@@ -475,7 +475,7 @@ static int m_msi_packet(Tox *tox, int32_t friendnumber, const uint8_t *data, uin
 {
     // TODO(Zoff): make this better later! -------------------
     size_t length_new = length + 1;
-    uint8_t *data_new = calloc(1, length_new);
+    uint8_t *data_new = (uint8_t *)calloc(1, length_new);
 
     if (!data_new) {
         return 0;
@@ -883,7 +883,7 @@ static void handle_msi_packet(Tox *tox, uint32_t friend_number, const uint8_t *d
 
     LOGGER_API_DEBUG(tox, "Got msi message");
 
-    ToxAV *toxav = tox_get_av_object(tox);
+    ToxAV *toxav = (ToxAV *)tox_get_av_object(tox);
 
     if (!toxav) {
         return;
