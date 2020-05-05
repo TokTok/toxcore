@@ -507,7 +507,7 @@ int m_send_message_generic(Messenger *m, int32_t friendnumber, uint8_t type, con
         return -3;
     }
 
-    VLA(uint8_t, packet, length + 1);
+    static uint8_t packet[MAX_CRYPTO_DATA_SIZE + 1];
     packet[0] = PACKET_ID_MESSAGE + type;
 
     if (length != 0) {
@@ -965,7 +965,7 @@ static int write_cryptpacket_id(const Messenger *m, int32_t friendnumber, uint8_
         return 0;
     }
 
-    VLA(uint8_t, packet, length + 1);
+    static uint8_t packet[MAX_CRYPTO_DATA_SIZE + 1];
     packet[0] = packet_id;
 
     if (length != 0) {
@@ -1095,7 +1095,7 @@ static int file_sendrequest(const Messenger *m, int32_t friendnumber, uint8_t fi
         return 0;
     }
 
-    VLA(uint8_t, packet, 1 + sizeof(file_type) + sizeof(filesize) + FILE_ID_LENGTH + filename_length);
+    static uint8_t packet[2 + sizeof(file_type) + sizeof(filesize) + FILE_ID_LENGTH + MAX_FILENAME_LENGTH];
     packet[0] = filenumber;
     file_type = net_htonl(file_type);
     memcpy(packet + 1, &file_type, sizeof(file_type));
@@ -1106,7 +1106,8 @@ static int file_sendrequest(const Messenger *m, int32_t friendnumber, uint8_t fi
         memcpy(packet + 1 + sizeof(file_type) + sizeof(filesize) + FILE_ID_LENGTH, filename, filename_length);
     }
 
-    return write_cryptpacket_id(m, friendnumber, PACKET_ID_FILE_SENDREQUEST, packet, SIZEOF_VLA(packet), 0);
+    const size_t packet_size = 1 + sizeof(file_type) + sizeof(filesize) + FILE_ID_LENGTH + filename_length;
+    return write_cryptpacket_id(m, friendnumber, PACKET_ID_FILE_SENDREQUEST, packet, packet_size, 0);
 }
 
 /* Send a file send request.
@@ -1173,7 +1174,7 @@ static int send_file_control_packet(const Messenger *m, int32_t friendnumber, ui
         return -1;
     }
 
-    VLA(uint8_t, packet, 3 + data_length);
+    static uint8_t packet[1 + 3 + MAX_CRYPTO_DATA_SIZE];
 
     packet[0] = send_receive;
     packet[1] = filenumber;
@@ -1183,7 +1184,8 @@ static int send_file_control_packet(const Messenger *m, int32_t friendnumber, ui
         memcpy(packet + 3, data, data_length);
     }
 
-    return write_cryptpacket_id(m, friendnumber, PACKET_ID_FILE_CONTROL, packet, SIZEOF_VLA(packet), 0);
+    const size_t packet_size = 3 + data_length;
+    return write_cryptpacket_id(m, friendnumber, PACKET_ID_FILE_CONTROL, packet, packet_size, 0);
 }
 
 /* Send a file control request.
@@ -1351,6 +1353,7 @@ int file_seek(const Messenger *m, int32_t friendnumber, uint32_t filenumber, uin
     return 0;
 }
 
+#define MAX_FILE_DATA_SIZE (MAX_CRYPTO_DATA_SIZE - 2)
 /* return packet number on success.
  * return -1 on failure.
  */
@@ -1361,7 +1364,12 @@ static int64_t send_file_data_packet(const Messenger *m, int32_t friendnumber, u
         return -1;
     }
 
-    VLA(uint8_t, packet, 2 + length);
+    // Double check to make sure that "packet" array is big enough
+    if (length > MAX_FILE_DATA_SIZE) {
+        return -1;
+    }
+
+    static uint8_t packet[2 + MAX_FILE_DATA_SIZE];
     packet[0] = PACKET_ID_FILE_DATA;
     packet[1] = filenumber;
 
@@ -1369,11 +1377,11 @@ static int64_t send_file_data_packet(const Messenger *m, int32_t friendnumber, u
         memcpy(packet + 2, data, length);
     }
 
+    const size_t packet_length = 2 + length;
     return write_cryptpacket(m->net_crypto, friend_connection_crypt_connection_id(m->fr_c,
-                             m->friendlist[friendnumber].friendcon_id), packet, SIZEOF_VLA(packet), 1);
+                             m->friendlist[friendnumber].friendcon_id), packet, packet_length, 1);
 }
 
-#define MAX_FILE_DATA_SIZE (MAX_CRYPTO_DATA_SIZE - 2)
 #define MIN_SLOTS_FREE (CRYPTO_MIN_QUEUE_LENGTH / 4)
 /* Send file data.
  *
@@ -2137,7 +2145,7 @@ static int m_handle_packet(void *object, int i, const uint8_t *temp, uint16_t le
             }
 
             /* Make sure the NULL terminator is present. */
-            VLA(uint8_t, data_terminated, data_length + 1);
+            static uint8_t data_terminated[MAX_NAME_LENGTH + 1];
             memcpy(data_terminated, data, data_length);
             data_terminated[data_length] = 0;
 
@@ -2158,7 +2166,7 @@ static int m_handle_packet(void *object, int i, const uint8_t *temp, uint16_t le
             }
 
             /* Make sure the NULL terminator is present. */
-            VLA(uint8_t, data_terminated, data_length + 1);
+            static uint8_t data_terminated[MAX_STATUSMESSAGE_LENGTH + 1];
             memcpy(data_terminated, data, data_length);
             data_terminated[data_length] = 0;
 
@@ -2215,7 +2223,7 @@ static int m_handle_packet(void *object, int i, const uint8_t *temp, uint16_t le
             uint16_t message_length = data_length;
 
             /* Make sure the NULL terminator is present. */
-            VLA(uint8_t, message_terminated, message_length + 1);
+            uint8_t *const message_terminated = malloc(message_length + 1);
             memcpy(message_terminated, message, message_length);
             message_terminated[message_length] = 0;
             uint8_t type = packet_id - PACKET_ID_MESSAGE;
@@ -2223,6 +2231,8 @@ static int m_handle_packet(void *object, int i, const uint8_t *temp, uint16_t le
             if (m->friend_message) {
                 (*m->friend_message)(m, i, type, message_terminated, message_length, userdata);
             }
+
+            free(message_terminated);
 
             break;
         }
@@ -2280,7 +2290,7 @@ static int m_handle_packet(void *object, int i, const uint8_t *temp, uint16_t le
             ft->paused = FILE_PAUSE_NOT;
             memcpy(ft->id, data + 1 + sizeof(uint32_t) + sizeof(uint64_t), FILE_ID_LENGTH);
 
-            VLA(uint8_t, filename_terminated, filename_length + 1);
+            static uint8_t filename_terminated[MAX_FILENAME_LENGTH + 1];
             uint8_t *filename = nullptr;
 
             if (filename_length) {
@@ -2527,6 +2537,11 @@ uint32_t messenger_run_interval(const Messenger *m)
     return crypto_interval;
 }
 
+/* 16 friends requests by default because:
+ * 1. should fit one L1 cache line
+ * 2. it should be enough in most cases */
+#define NUM_FRIENDS_REQUESTS 16
+
 /* The main loop that needs to be run at least 20 times per second. */
 void do_messenger(Messenger *m, void *userdata)
 {
@@ -2597,10 +2612,21 @@ void do_messenger(Messenger *m, void *userdata)
 
         uint32_t friend_idx, dhtfriend;
 
+        static int32_t static_m2dht[NUM_FRIENDS_REQUESTS];
+        static int32_t static_dht2m[NUM_FRIENDS_REQUESTS];
+
         /* dht contains additional "friends" (requests) */
-        uint32_t num_dhtfriends = dht_get_num_friends(m->dht);
-        VLA(int32_t, m2dht, num_dhtfriends);
-        VLA(int32_t, dht2m, num_dhtfriends);
+        const uint32_t num_dhtfriends = dht_get_num_friends(m->dht);
+        int32_t *m2dht;
+        int32_t *dht2m;
+
+        if (num_dhtfriends <= NUM_FRIENDS_REQUESTS) {
+            m2dht = static_m2dht;
+            dht2m = static_dht2m;
+        } else {
+            m2dht = malloc(num_dhtfriends * sizeof(int32_t));
+            dht2m = malloc(num_dhtfriends * sizeof(int32_t));
+        }
 
         for (friend_idx = 0; friend_idx < num_dhtfriends; ++friend_idx) {
             m2dht[friend_idx] = -1;
@@ -2674,6 +2700,11 @@ void do_messenger(Messenger *m, void *userdata)
                     }
                 }
             }
+        }
+
+        if (m2dht != static_m2dht) {
+            free(dht2m);
+            free(m2dht);
         }
     }
 }
