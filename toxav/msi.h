@@ -73,7 +73,7 @@ typedef struct MSICall_s {
     uint32_t             friend_number;     /* Index of this call in MSISession */
     MSIError             error;             /* Last error */
 
-    struct ToxAVCall_s  *av_call;           /* Pointer to av call handler */
+    struct ToxAVCall    *av_call;           /* Pointer to av call handler */
 
     struct MSICall_s    *next;
     struct MSICall_s    *prev;

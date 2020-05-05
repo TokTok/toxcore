@@ -41,7 +41,10 @@ VPX_DL_BEST_QUALITY   (0)       deadline parameter analogous to VPx BEST QUALITY
 
 #ifndef TOXAV_CALL_DEFINED
 #define TOXAV_CALL_DEFINED
-typedef struct ToxAVCall_s {
+typedef struct ToxAVCall ToxAVCall;
+#endif /* TOXAV_CALL_DEFINED */
+
+struct ToxAVCall {
     ToxAV *av;
 
     pthread_mutex_t mutex_audio[1];
@@ -66,10 +69,9 @@ typedef struct ToxAVCall_s {
 
     pthread_mutex_t toxav_call_mutex[1];
 
-    struct ToxAVCall_s *prev;
-    struct ToxAVCall_s *next;
-} ToxAVCall;
-#endif /* TOXAV_CALL_DEFINED */
+    ToxAVCall *prev;
+    ToxAVCall *next;
+};
 
 #include "toxav_hacks.h"
 
