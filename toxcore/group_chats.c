@@ -107,7 +107,6 @@ void pack_group_info(const GC_Chat *chat, Saved_Group *temp, bool can_use_cached
     // copy info from cached save struct if possible (for disconnected groups only)
     if (can_use_cached_value && chat->save) {
         memcpy(temp, chat->save, sizeof(Saved_Group));
-
         return;
     }
 
@@ -2319,6 +2318,10 @@ static int make_gc_sanctions_list_packet(GC_Chat *chat, uint8_t *data, uint32_t 
  */
 static int send_peer_sanctions_list(GC_Chat *chat, GC_Connection *gconn)
 {
+    if (chat->moderation.sanctions_creds.version == 0) {
+        return 0;
+    }
+
     uint8_t packet[GC_MAX_PACKET_SIZE];
     int packet_len = make_gc_sanctions_list_packet(chat, packet, sizeof(packet));
 
