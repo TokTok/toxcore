@@ -2,7 +2,7 @@
 
 set -exu
 
-readarray -t FILES<<<"$(git ls-files)"
+readarray -t FILES <<<"$(git ls-files)"
 
 tar c "${FILES[@]}" | docker build -f other/bootstrap_daemon/docker/Dockerfile -t toxchat/bootstrap-node -
 sudo useradd \
