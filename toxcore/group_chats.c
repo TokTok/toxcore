@@ -3811,7 +3811,7 @@ static int handle_gc_message_ack(GC_Chat *chat, GC_Connection *gconn, const uint
 
         if (ret == 0) {
             gconn->send_array[idx].last_send_try = tm;
-            LOGGER_ERROR(chat->logger, "Resent requested packet %lu", request_id);
+            LOGGER_DEBUG(chat->logger, "Re-sent requested packet %lu", request_id);
         }
     }
 
@@ -4589,16 +4589,22 @@ static int handle_gc_lossless_message(Messenger *m, GC_Chat *chat, const uint8_t
 
     int ret = handle_gc_lossless_helper(m, chat->group_number, peer_number, real_data, real_len, message_id, packet_type);
 
-    if (ret == -1) {
-        LOGGER_ERROR(m->log, "lossless handler failed (type %u)", packet_type);
-        return -1;
-    }
-
     /* we need to get the peer_number and gconn again because it may have changed */
     peer_number = get_peernum_of_enc_pk(chat, sender_pk);
     gconn = gcc_get_connection(chat, peer_number);
 
-    if (lossless_ret == 2 && peer_number != -1) {
+    /* packet handler failed. ask for the packet again. */
+    if (ret < 0) {
+        if (gconn != nullptr) {
+            gc_send_message_ack(chat, gconn, 0, message_id);
+        }
+
+        LOGGER_ERROR(m->log, "lossless handler failed (type %u)", packet_type);
+        return -1;
+    }
+
+    /* packet successfully handled - send message ack. */
+    if (lossless_ret == 2 && gconn != nullptr) {
         gc_send_message_ack(chat, gconn, message_id, 0);
         gcc_check_received_array(m, chat->group_number, peer_number);
     }
@@ -5248,7 +5254,6 @@ static void do_group_tcp(GC_Chat *chat, void *userdata)
         GC_Connection *gconn = &chat->gcc[i];
         bool tcp_set = !gcc_connection_is_direct(chat->mono_time, gconn);
         set_tcp_connection_to_status(chat->tcp_conn, gconn->tcp_connection_num, tcp_set);
-
         send_pending_handshake(chat, gconn, i);
     }
 
@@ -5958,7 +5963,7 @@ static int send_gc_invite_accepted_packet(Messenger *m, GC_Chat *chat, uint32_t 
     length += ENC_PUBLIC_KEY;
 
     if (send_group_invite_packet(m, friend_number, packet, length) == -1) {
-        LOGGER_ERROR(m->log, "send_gc_invite_accepted_packet error");
+        LOGGER_ERROR(m->log, "Failed to send invite packet");
         return -3;
     }
 
@@ -5983,6 +5988,7 @@ static int send_gc_invite_confirmed_packet(Messenger *m, GC_Chat *chat, uint32_t
     memcpy(packet + 2, data, length);
 
     if (send_group_invite_packet(m, friend_number, packet, length + 2) == -1) {
+        LOGGER_ERROR(m->log, "Failed to send invite packet");
         return -3;
     }
 
@@ -6031,6 +6037,7 @@ int handle_gc_invite_confirmed_packet(GC_Session *c, int friend_number, const ui
     int peer_number = get_peernum_of_enc_pk(chat, invite_chat_pk);
 
     if (peer_number < 0) {
+        LOGGER_ERROR(chat->logger, "Invalid peer");
         return -3;
     }
 
@@ -6044,6 +6051,7 @@ int handle_gc_invite_confirmed_packet(GC_Session *c, int friend_number, const ui
     bool copy_ip_port_result = copy_friend_ip_port_to_gconn(c->messenger, friend_number, gconn);
 
     if (num_nodes <= 0 && !copy_ip_port_result) {
+        LOGGER_ERROR(chat->logger, "Failed to confirm invite: No nodes and invalid ip");
         return -1;
     }
 
@@ -6075,7 +6083,6 @@ static bool friend_was_invited(GC_Chat *chat, int friend_number)
     for (i = 0; i < MAX_GC_SAVED_INVITES; ++i) {
         if (chat->saved_invites[i] == friend_number) {
             chat->saved_invites[i] = -1;
-
             return true;
         }
     }
@@ -6115,6 +6122,7 @@ int handle_gc_invite_accepted_packet(GC_Session *c, int friend_number, const uin
     int peer_number = peer_add(m, chat->group_number, nullptr, invite_chat_pk);
 
     if (peer_number < 0) {
+        LOGGER_ERROR(chat->logger, "Invalid peer");
         return -3;
     }
 
@@ -6126,6 +6134,7 @@ int handle_gc_invite_accepted_packet(GC_Session *c, int friend_number, const uin
     bool copy_ip_port_result = copy_friend_ip_port_to_gconn(m, friend_number, gconn);
 
     if (num <= 0 && !copy_ip_port_result) {
+        LOGGER_ERROR(chat->logger, "Failed to confirm invite: No nodes and invalid ip");
         return -1;
     }
 
@@ -6144,6 +6153,7 @@ int handle_gc_invite_accepted_packet(GC_Session *c, int friend_number, const uin
         int nodes_len = pack_nodes(send_data + len, sizeof(send_data) - len, tcp_relays, num);
 
         if (nodes_len <= 0 && !copy_ip_port_result) {
+            LOGGER_ERROR(chat->logger, "Failed to confirm invite: No nodes and invalid ip");
             return -1;
         }
 
