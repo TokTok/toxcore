@@ -109,6 +109,40 @@ void reload(AutoTox *autotox)
     autotox->alive = true;
 }
 
+static void initialise_autotox(AutoTox *autotox, uint32_t index, uint32_t state_size, const Run_Auto_Options *options)
+{
+    struct Tox_Options *opts = tox_options_new(nullptr);
+    ck_assert(opts != nullptr);
+
+    if (index < options->tcp_relays) {
+        printf("tox #%u is TCP relay\n", index);
+        tox_options_set_tcp_port(opts, options->tcp_first_port + index);
+    }
+
+    autotox->index = index;
+    autotox->tox = tox_new_log(opts, nullptr, &autotox->index);
+    ck_assert_msg(autotox->tox != nullptr, "failed to create tox instance #%u", index);
+
+    tox_options_free(opts);
+
+    set_mono_time_callback(autotox);
+
+    autotox->alive = true;
+    autotox->save_state = nullptr;
+
+    if (state_size > 0) {
+        autotox->state = calloc(1, state_size);
+        ck_assert(autotox->state != nullptr);
+        ck_assert_msg(autotox->state != nullptr, "failed to allocate state");
+    } else {
+        autotox->state = nullptr;
+    }
+
+    if (options->init_autotox != nullptr) {
+        options->init_autotox(autotox, index);
+    }
+}
+
 void run_auto_test(uint32_t tox_count, void test(AutoTox *autotoxes),
                    uint32_t state_size, const Run_Auto_Options *options)
 {
@@ -119,37 +153,7 @@ void run_auto_test(uint32_t tox_count, void test(AutoTox *autotoxes),
     ck_assert(autotoxes != nullptr);
 
     for (uint32_t i = 0; i < tox_count; i++) {
-        struct Tox_Options *opts = tox_options_new(nullptr);
-        ck_assert(opts != nullptr);
-
-        if (i < options->tcp_relays) {
-            printf("tox #%u is TCP relay\n", i);
-            tox_options_set_tcp_port(opts, options->tcp_first_port + i);
-        }
-
-        autotoxes[i].index = i;
-        autotoxes[i].tox = tox_new_log(opts, nullptr, &autotoxes[i].index);
-        ck_assert(autotoxes[i].tox != nullptr);
-        ck_assert_msg(autotoxes[i].tox, "failed to create %u tox instances", i + 1);
-
-        tox_options_free(opts);
-
-        set_mono_time_callback(&autotoxes[i]);
-
-        autotoxes[i].alive = true;
-        autotoxes[i].save_state = nullptr;
-
-        if (state_size > 0) {
-            autotoxes[i].state = calloc(1, state_size);
-            ck_assert(autotoxes[i].state != nullptr);
-            ck_assert_msg(autotoxes[i].state != nullptr, "failed to allocate state");
-        } else {
-            autotoxes[i].state = nullptr;
-        }
-
-        if (options->init_autotox != nullptr) {
-            options->init_autotox(&autotoxes[i], i);
-        }
+        initialise_autotox(&autotoxes[i], i, state_size, options);
     }
 
     if (options->graph == GRAPH_LINEAR) {
