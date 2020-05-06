@@ -66,18 +66,22 @@ static void check_mod_event(State *state, Tox **toxes, size_t num_peers, TOX_GRO
                     check = state[i].mod_check;
                     break;
                 }
+
                 case TOX_GROUP_MOD_EVENT_OBSERVER: {
                     check = state[i].observer_check;
                     break;
                 }
+
                 case TOX_GROUP_MOD_EVENT_USER: {
                     check = state[i].user_check;
                     break;
                 }
+
                 case TOX_GROUP_MOD_EVENT_KICK: {
                     check = state[i].kick_check;
                     break;
                 }
+
                 default: {
                     ck_assert(0);
                 }
@@ -152,7 +156,7 @@ static void group_peer_join_handler(Tox *tox, uint32_t group_number, uint32_t pe
 }
 
 static void group_mod_event_handler(Tox *tox, uint32_t group_number, uint32_t source_peer_id, uint32_t target_peer_id,
-                                      TOX_GROUP_MOD_EVENT event, void *user_data)
+                                    TOX_GROUP_MOD_EVENT event, void *user_data)
 {
     State *state = (State *)user_data;
 
@@ -177,11 +181,13 @@ static void group_mod_event_handler(Tox *tox, uint32_t group_number, uint32_t so
             state->mod_check = true;
             break;
         }
+
         case TOX_GROUP_MOD_EVENT_OBSERVER: {
             ck_assert(!memcmp(peer_name, state->observer_name, peer_name_len));
             state->observer_check = true;
             break;
         }
+
         case TOX_GROUP_MOD_EVENT_USER: {
             // The mod is first auto-demoted to user before being kicked. Mod must be kicked after observer is promoted back to user.
             if (state->user_check) {
@@ -190,13 +196,16 @@ static void group_mod_event_handler(Tox *tox, uint32_t group_number, uint32_t so
                 ck_assert(!memcmp(peer_name, state->observer_name, peer_name_len)); // we promoted the observer back to user
                 state->user_check = true;
             }
+
             break;
         }
+
         case TOX_GROUP_MOD_EVENT_KICK: {
             ck_assert(!memcmp(peer_name, state->mod_name, peer_name_len));  // we kick the same peer we previously promoted to mod
             state->kick_check = true;
             break;
         }
+
         default: {
             ck_assert_msg(0, "Got invalid moderator event %d", event);
             return;
@@ -243,7 +252,8 @@ static void group_message_test(Tox **toxes, State *state)
 
     for (size_t i = 1; i < MAX_NUM_PEERS; ++i) {
         TOX_ERR_GROUP_JOIN join_err;
-        state[i].group_number = tox_group_join(toxes[i], chat_id, (const uint8_t *)state[i].self_name, state[i].self_name_length,
+        state[i].group_number = tox_group_join(toxes[i], chat_id, (const uint8_t *)state[i].self_name,
+                                               state[i].self_name_length,
                                                nullptr, 0, &join_err);
         ck_assert_msg(join_err == TOX_ERR_GROUP_JOIN_OK, "Peer %zu failed to join group. error %d", i, join_err);
         c_sleep(1000);
@@ -307,7 +317,8 @@ static void group_message_test(Tox **toxes, State *state)
     fprintf(stderr, "%s is promoting %s back to user\n", state[idx].self_name, state[0].peers[1].name);
 
     tox_group_mod_set_role(toxes[idx], state[idx].group_number, obs_peer_id, TOX_GROUP_ROLE_USER, &role_err);
-    ck_assert_msg(role_err == TOX_ERR_GROUP_MOD_SET_ROLE_OK, "Failed to promote observer back to user. error: %d", role_err);
+    ck_assert_msg(role_err == TOX_ERR_GROUP_MOD_SET_ROLE_OK, "Failed to promote observer back to user. error: %d",
+                  role_err);
 
     check_mod_event(state, toxes, MAX_NUM_PEERS, TOX_GROUP_MOD_EVENT_USER);
 
