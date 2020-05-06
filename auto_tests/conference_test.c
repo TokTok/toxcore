@@ -242,6 +242,10 @@ static void run_conference_tests(AutoTox *autotoxes)
     for (uint32_t i = 0; i < NUM_GROUP_TOX; ++i) {
         if (restarting[i]) {
             reload(&autotoxes[i]);
+            Tox_Err_Conference_Set_Max_Offline err;
+            tox_conference_set_max_offline(autotoxes[i].tox, 0, max_frozen, &err);
+            ck_assert_msg(err == TOX_ERR_CONFERENCE_SET_MAX_OFFLINE_OK,
+                          "tox #%u failed to set max offline: err = %d", autotoxes[i].index, err);
         }
     }
 
