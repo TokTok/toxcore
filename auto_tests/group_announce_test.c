@@ -24,36 +24,9 @@ typedef struct State {
 #define PEER0_NICK "Lois"
 #define PEER1_NICK "Benjamin"
 
-static void group_invite_handler(Tox *tox, uint32_t friend_number, const uint8_t *invite_data, size_t length,
-                                 const uint8_t *group_name, size_t group_name_length, void *user_data)
-{
-    if (tox != nullptr) {
-        ck_abort_msg("we should not get invited");
-    }
-}
-
-static const char *tox_str_group_join_fail(TOX_GROUP_JOIN_FAIL v)
-{
-    switch (v) {
-        case TOX_GROUP_JOIN_FAIL_NAME_TAKEN:
-            return "NAME_TAKEN";
-
-        case TOX_GROUP_JOIN_FAIL_PEER_LIMIT:
-            return "PEER_LIMIT";
-
-        case TOX_GROUP_JOIN_FAIL_INVALID_PASSWORD:
-            return "INVALID_PASSWORD";
-
-        case TOX_GROUP_JOIN_FAIL_UNKNOWN:
-            return "UNKNOWN";
-    }
-
-    return "<invalid>";
-}
-
 static void group_join_fail_handler(Tox *tox, uint32_t groupnumber, TOX_GROUP_JOIN_FAIL fail_type, void *user_data)
 {
-    printf("join failed: %s\n", tox_str_group_join_fail(fail_type));
+    fprintf(stderr, "Failed to join group: %d", fail_type);
 }
 
 static void group_peer_join_handler(Tox *tox, uint32_t groupnumber, uint32_t peer_id, void *user_data)
@@ -86,17 +59,15 @@ static void group_message_test(Tox **toxes, State *state)
     tox_self_set_name(toxes[0], (const uint8_t *)"a", 1, nullptr);
     tox_self_set_name(toxes[1], (const uint8_t *)"b", 1, nullptr);
 
-    tox_callback_group_invite(toxes[1], group_invite_handler);
     tox_callback_group_join_fail(toxes[1], group_join_fail_handler);
     tox_callback_group_peer_join(toxes[1], group_peer_join_handler);
     tox_callback_group_message(toxes[0], group_message_handler);
 
     // tox0 makes new group.
     TOX_ERR_GROUP_NEW err_new;
-    uint32_t group_number =
-        tox_group_new(
-            toxes[0], TOX_GROUP_PRIVACY_STATE_PUBLIC,
-            (const uint8_t *) TEST_GROUP_NAME, strlen(TEST_GROUP_NAME), (const uint8_t *)PEER0_NICK, strlen(PEER0_NICK), &err_new);
+    uint32_t group_number = tox_group_new(toxes[0], TOX_GROUP_PRIVACY_STATE_PUBLIC, (const uint8_t *) TEST_GROUP_NAME,
+                                          strlen(TEST_GROUP_NAME), (const uint8_t *)PEER0_NICK, strlen(PEER0_NICK),
+                                          &err_new);
     ck_assert(err_new == TOX_ERR_GROUP_NEW_OK);
 
     // get the chat id of the new group.
