@@ -1,4 +1,6 @@
-/* Tests that we can send messages to friends.
+/*
+ * Tests that we can invite a friend to a private group chat and exchange messages with them.
+ * In addition, we spam many messages at once and ensure that they all arrive in the correct order.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -9,16 +11,24 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "../toxcore/tox.h"
+
 typedef struct State {
     uint32_t index;
     uint64_t clock;
     bool peer_joined;
     bool message_sent;
     bool message_received;
+
+    bool lossless_check;
+    int last_msg_recv;
 } State;
+
 
 #include "run_auto_test.h"
 
+
+#define MAX_NUM_MESSAGES 1000
 #define TEST_MESSAGE "Where is it I've read that someone condemned to death says or thinks, an hour before his death, that if he had to live on some high rock, on such a narrow ledge that he'd only room to stand, and the ocean, everlasting darkness, everlasting solitude, everlasting tempest around him, if he had to remain standing on a square yard of space all his life, a thousand years, eternity, it were better to live so than to die at once. Only to live, to live and live! Life, whatever it may be!"
 #define TEST_GROUP_NAME "Utah Data Center"
 #define PEER0_NICK "Victor"
@@ -34,28 +44,9 @@ static void group_invite_handler(Tox *tox, uint32_t friend_number, const uint8_t
     ck_assert(err_accept == TOX_ERR_GROUP_INVITE_ACCEPT_OK);
 }
 
-static const char *tox_str_group_join_fail(TOX_GROUP_JOIN_FAIL v)
-{
-    switch (v) {
-        case TOX_GROUP_JOIN_FAIL_NAME_TAKEN:
-            return "NAME_TAKEN";
-
-        case TOX_GROUP_JOIN_FAIL_PEER_LIMIT:
-            return "PEER_LIMIT";
-
-        case TOX_GROUP_JOIN_FAIL_INVALID_PASSWORD:
-            return "INVALID_PASSWORD";
-
-        case TOX_GROUP_JOIN_FAIL_UNKNOWN:
-            return "UNKNOWN";
-    }
-
-    return "<invalid>";
-}
-
 static void group_join_fail_handler(Tox *tox, uint32_t groupnumber, TOX_GROUP_JOIN_FAIL fail_type, void *user_data)
 {
-    printf("join failed: %s\n", tox_str_group_join_fail(fail_type));
+    printf("join failed: %d\n", fail_type);
 }
 
 static void group_peer_join_handler(Tox *tox, uint32_t groupnumber, uint32_t peer_id, void *user_data)
@@ -102,11 +93,34 @@ static void group_message_handler(Tox *tox, uint32_t groupnumber, uint32_t peer_
     ck_assert(s_err == TOX_ERR_GROUP_SELF_QUERY_OK);
     ck_assert(memcmp(self_name, PEER1_NICK, self_name_len) == 0);
 
-    printf("%s sent message to %s: %s\n", peer_name, self_name, message_buf);
+    printf("%s sent message to %s: %s\n\n", peer_name, self_name, message_buf);
     ck_assert(memcmp(message_buf, TEST_MESSAGE, length) == 0);
 
     State *state = (State *)user_data;
     state->message_received = true;
+}
+
+static void group_message_handler_2(Tox *tox, uint32_t groupnumber, uint32_t peer_id, TOX_MESSAGE_TYPE type,
+                                    const uint8_t *message, size_t length, void *user_data)
+{
+    State *state = (State *)user_data;
+    ck_assert(state != nullptr);
+    ck_assert(length > 0 && length <= TOX_MAX_MESSAGE_LENGTH);
+
+    char c[TOX_MAX_MESSAGE_LENGTH + 1];
+    memcpy(c, message, length);
+    c[length] = 0;
+
+    int n = strtol((const char *) c, nullptr, 10);
+
+    ck_assert_msg(n == state->last_msg_recv + 1, "Expected %d, got %d", state->last_msg_recv + 1, n);
+    state->last_msg_recv = n;
+
+    // fprintf(stderr, "Got %d\n", state->last_msg_recv);
+
+    if (state->last_msg_recv == MAX_NUM_MESSAGES) {
+        state->lossless_check = true;
+    }
 }
 
 static void group_message_test(Tox **toxes, State *state)
@@ -121,10 +135,9 @@ static void group_message_test(Tox **toxes, State *state)
 
     // tox0 makes new group.
     TOX_ERR_GROUP_NEW err_new;
-    uint32_t group_number =
-        tox_group_new(
-            toxes[0], TOX_GROUP_PRIVACY_STATE_PRIVATE,
-            (const uint8_t *)TEST_GROUP_NAME, strlen(TEST_GROUP_NAME), (const uint8_t *)PEER1_NICK, strlen(PEER1_NICK), &err_new);
+    uint32_t group_number = tox_group_new(toxes[0], TOX_GROUP_PRIVACY_STATE_PRIVATE, (const uint8_t *)TEST_GROUP_NAME,
+                                          strlen(TEST_GROUP_NAME), (const uint8_t *)PEER1_NICK, strlen(PEER1_NICK), &err_new);
+
     ck_assert(err_new == TOX_ERR_GROUP_NEW_OK);
 
     // tox0 invites tox1
@@ -133,8 +146,7 @@ static void group_message_test(Tox **toxes, State *state)
     ck_assert(err_invite == TOX_ERR_GROUP_INVITE_FRIEND_OK);
 
     while (!state[0].message_received) {
-        tox_iterate(toxes[0], &state[0]);
-        tox_iterate(toxes[1], &state[1]);
+        iterate_all_wait(2, toxes, state, ITERATION_INTERVAL);
 
         if (state[1].peer_joined && !state[1].message_sent) {
             TOX_ERR_GROUP_SEND_MESSAGE err_send;
@@ -143,8 +155,31 @@ static void group_message_test(Tox **toxes, State *state)
             ck_assert(err_send == TOX_ERR_GROUP_SEND_MESSAGE_OK);
             state[1].message_sent = true;
         }
+    }
 
-        c_sleep(ITERATION_INTERVAL);
+    // tox0 spams messages to tox1
+    fprintf(stderr, "Doing lossless packet test...\n");
+
+    tox_callback_group_message(toxes[1], group_message_handler_2);
+    iterate_all_wait(2, toxes, state, ITERATION_INTERVAL);
+
+    state[1].last_msg_recv = -1;
+
+    for (size_t i = 0; i <= MAX_NUM_MESSAGES; ++i) {
+        char m[10];
+        snprintf(m, sizeof(m), "%zu", i);
+        TOX_ERR_GROUP_SEND_MESSAGE err_send;
+        tox_group_send_message(toxes[0], group_number, TOX_MESSAGE_TYPE_NORMAL, (const uint8_t *)m, strlen(m), &err_send);
+
+        // fprintf(stderr, "Send: %zu\n", i);
+
+        ck_assert(err_send == TOX_ERR_GROUP_SEND_MESSAGE_OK);
+    }
+
+    fprintf(stderr, "Waiting for packets to be received...\n");
+
+    while (!state[1].lossless_check) {
+        iterate_all_wait(2, toxes, state, ITERATION_INTERVAL);
     }
 
     for (size_t i = 0; i < 2; i++) {
@@ -152,12 +187,15 @@ static void group_message_test(Tox **toxes, State *state)
         tox_group_leave(toxes[i], group_number, nullptr, 0, &err_exit);
         ck_assert(err_exit == TOX_ERR_GROUP_LEAVE_OK);
     }
+
+    fprintf(stderr, "All tests passed!\n");
 }
 
 #undef PEER1_NICK
 #undef PEER0_NICK
 #undef TEST_GROUP_NAME
 #undef TEST_MESSAGE
+#undef MAX_NUM_MESSAGES
 
 int main(void)
 {

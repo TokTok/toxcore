@@ -1,3 +1,8 @@
+/*
+ * Tests that we can successfully change the group state and that all peers in the group
+ * receive the correct state changes.
+ */
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
