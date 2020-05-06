@@ -242,7 +242,8 @@ static int get_peer_index(const Group_c *g, uint16_t peer_number)
 
 static uint64_t calculate_comp_value(const uint8_t *pk1, const uint8_t *pk2)
 {
-    uint64_t cmp1 = 0, cmp2 = 0;
+    uint64_t cmp1 = 0;
+    uint64_t cmp2 = 0;
 
     for (size_t i = 0; i < sizeof(uint64_t); ++i) {
         cmp1 = (cmp1 << 8) + (uint64_t)pk1[i];
@@ -1932,7 +1933,8 @@ static void handle_friend_invite_packet(Messenger *m, uint32_t friendnumber, con
                 return;
             }
 
-            uint16_t other_groupnum, groupnum;
+            uint16_t other_groupnum;
+            uint16_t groupnum;
             net_unpack_u16(data + 1, &other_groupnum);
             net_unpack_u16(data + 1 + sizeof(uint16_t), &groupnum);
 
@@ -1979,7 +1981,8 @@ static void handle_friend_invite_packet(Messenger *m, uint32_t friendnumber, con
                 return;
             }
 
-            uint8_t real_pk[CRYPTO_PUBLIC_KEY_SIZE], temp_pk[CRYPTO_PUBLIC_KEY_SIZE];
+            uint8_t real_pk[CRYPTO_PUBLIC_KEY_SIZE];
+            uint8_t temp_pk[CRYPTO_PUBLIC_KEY_SIZE];
             get_friendcon_public_keys(real_pk, temp_pk, g_c->fr_c, friendcon_id);
 
             addpeer(g_c, groupnum, real_pk, temp_pk, peer_number, userdata, true, true);
@@ -2097,7 +2100,8 @@ static int handle_packet_online(Group_Chats *g_c, int friendcon_id, const uint8_
     send_packet_online(g_c->fr_c, friendcon_id, groupnumber, g->type, g->id);
 
     if (g->connections[index].reasons & GROUPCHAT_CONNECTION_REASON_INTRODUCING) {
-        uint8_t real_pk[CRYPTO_PUBLIC_KEY_SIZE], temp_pk[CRYPTO_PUBLIC_KEY_SIZE];
+        uint8_t real_pk[CRYPTO_PUBLIC_KEY_SIZE];
+        uint8_t temp_pk[CRYPTO_PUBLIC_KEY_SIZE];
         get_friendcon_public_keys(real_pk, temp_pk, g_c->fr_c, friendcon_id);
 
         const int peer_index = peer_in_group(g, real_pk);
@@ -2129,7 +2133,8 @@ static int handle_packet_rejoin(Group_Chats *g_c, int friendcon_id, const uint8_
         return -1;
     }
 
-    uint8_t real_pk[CRYPTO_PUBLIC_KEY_SIZE], temp_pk[CRYPTO_PUBLIC_KEY_SIZE];
+    uint8_t real_pk[CRYPTO_PUBLIC_KEY_SIZE];
+    uint8_t temp_pk[CRYPTO_PUBLIC_KEY_SIZE];
     get_friendcon_public_keys(real_pk, temp_pk, g_c->fr_c, friendcon_id);
 
     uint16_t peer_number;
@@ -2366,7 +2371,9 @@ static unsigned int send_lossy_all_connections(const Group_Chats *g_c, const Gro
         uint16_t length,
         int receiver)
 {
-    unsigned int sent = 0, num_connected_closest = 0, connected_closest[DESIRED_CLOSEST];
+    unsigned int sent = 0;
+    unsigned int num_connected_closest = 0;
+    unsigned int connected_closest[DESIRED_CLOSEST];
 
     for (unsigned int i = 0; i < MAX_GROUP_CONNECTIONS; ++i) {
         if (g->connections[i].type != GROUPCHAT_CONNECTION_ONLINE) {
@@ -2877,7 +2884,9 @@ static int handle_lossy(void *object, int friendcon_id, const uint8_t *data, uin
         return -1;
     }
 
-    uint16_t groupnumber, peer_number, message_number;
+    uint16_t groupnumber;
+    uint16_t peer_number;
+    uint16_t message_number;
     memcpy(&groupnumber, data + 1, sizeof(uint16_t));
     memcpy(&peer_number, data + 1 + sizeof(uint16_t), sizeof(uint16_t));
     memcpy(&message_number, data + 1 + sizeof(uint16_t) * 2, sizeof(uint16_t));

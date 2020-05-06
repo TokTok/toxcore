@@ -239,7 +239,8 @@ int32_t m_addfriend(Messenger *m, const uint8_t *address, const uint8_t *data, u
         return FAERR_BADCHECKSUM;
     }
 
-    uint16_t check, checksum = address_checksum(address, FRIEND_ADDRESS_SIZE - sizeof(checksum));
+    uint16_t check;
+    uint16_t checksum = address_checksum(address, FRIEND_ADDRESS_SIZE - sizeof(checksum));
     memcpy(&check, address + CRYPTO_PUBLIC_KEY_SIZE + sizeof(uint32_t), sizeof(check));
 
     if (check != checksum) {
@@ -1031,7 +1032,8 @@ int file_get_id(const Messenger *m, int32_t friendnumber, uint32_t filenumber, u
     }
 
     uint32_t temp_filenum;
-    uint8_t send_receive, file_number;
+    uint8_t send_receive;
+    uint8_t file_number;
 
     if (filenumber >= (1 << 16)) {
         send_receive = 1;
@@ -1193,7 +1195,8 @@ int file_control(const Messenger *m, int32_t friendnumber, uint32_t filenumber, 
     }
 
     uint32_t temp_filenum;
-    uint8_t send_receive, file_number;
+    uint8_t send_receive;
+    uint8_t file_number;
 
     if (filenumber >= (1 << 16)) {
         send_receive = 1;
@@ -1911,8 +1914,8 @@ Messenger *new_messenger(Mono_Time *mono_time, Messenger_Options *options, unsig
 
     m->onion = new_onion(m->mono_time, m->dht);
     m->onion_a = new_onion_announce(m->mono_time, m->dht);
-    m->onion_c =  new_onion_client(m->mono_time, m->net_crypto);
-    m->fr_c = new_friend_connections(m->mono_time, m->onion_c, options->local_discovery_enabled);
+    m->onion_c =  new_onion_client(m->log, m->mono_time, m->net_crypto);
+    m->fr_c = new_friend_connections(m->log, m->mono_time, m->onion_c, options->local_discovery_enabled);
 
     if (!(m->onion && m->onion_a && m->onion_c && m->fr_c)) {
         kill_friend_connections(m->fr_c);
@@ -1929,8 +1932,8 @@ Messenger *new_messenger(Mono_Time *mono_time, Messenger_Options *options, unsig
     }
 
     if (options->tcp_server_port) {
-        m->tcp_server = new_TCP_server(options->ipv6enabled, 1, &options->tcp_server_port, dht_get_self_secret_key(m->dht),
-                                       m->onion);
+        m->tcp_server = new_TCP_server(m->log, options->ipv6enabled, 1, &options->tcp_server_port,
+                                       dht_get_self_secret_key(m->dht), m->onion);
 
         if (m->tcp_server == nullptr) {
             kill_friend_connections(m->fr_c);
@@ -2495,9 +2498,9 @@ void do_messenger(Messenger *m, void *userdata)
 
     if (mono_time_get(m->mono_time) > m->lastdump + DUMPING_CLIENTS_FRIENDS_EVERY_N_SECONDS) {
         m->lastdump = mono_time_get(m->mono_time);
-        uint32_t client, last_pinged;
+        uint32_t last_pinged;
 
-        for (client = 0; client < LCLIENT_LIST; ++client) {
+        for (uint32_t client = 0; client < LCLIENT_LIST; ++client) {
             const Client_data *cptr = dht_get_close_client(m->dht, client);
             const IPPTsPng *const assocs[] = { &cptr->assoc4, &cptr->assoc6, nullptr };
 
@@ -2522,14 +2525,12 @@ void do_messenger(Messenger *m, void *userdata)
         }
 
 
-        uint32_t friend_idx, dhtfriend;
-
         /* dht contains additional "friends" (requests) */
         uint32_t num_dhtfriends = dht_get_num_friends(m->dht);
         VLA(int32_t, m2dht, num_dhtfriends);
         VLA(int32_t, dht2m, num_dhtfriends);
 
-        for (friend_idx = 0; friend_idx < num_dhtfriends; ++friend_idx) {
+        for (uint32_t friend_idx = 0; friend_idx < num_dhtfriends; ++friend_idx) {
             m2dht[friend_idx] = -1;
             dht2m[friend_idx] = -1;
 
@@ -2537,7 +2538,7 @@ void do_messenger(Messenger *m, void *userdata)
                 continue;
             }
 
-            for (dhtfriend = 0; dhtfriend < dht_get_num_friends(m->dht); ++dhtfriend) {
+            for (uint32_t dhtfriend = 0; dhtfriend < dht_get_num_friends(m->dht); ++dhtfriend) {
                 if (id_equal(m->friendlist[friend_idx].real_pk, dht_get_friend_public_key(m->dht, dhtfriend))) {
                     m2dht[friend_idx] = dhtfriend;
                     break;
@@ -2545,7 +2546,7 @@ void do_messenger(Messenger *m, void *userdata)
             }
         }
 
-        for (friend_idx = 0; friend_idx < num_dhtfriends; ++friend_idx) {
+        for (uint32_t friend_idx = 0; friend_idx < num_dhtfriends; ++friend_idx) {
             if (m2dht[friend_idx] >= 0) {
                 dht2m[m2dht[friend_idx]] = friend_idx;
             }
@@ -2558,7 +2559,7 @@ void do_messenger(Messenger *m, void *userdata)
         Friend *msgfptr;
         DHT_Friend *dhtfptr;
 
-        for (friend_idx = 0; friend_idx < num_dhtfriends; ++friend_idx) {
+        for (uint32_t friend_idx = 0; friend_idx < num_dhtfriends; ++friend_idx) {
             if (dht2m[friend_idx] >= 0) {
                 msgfptr = &m->friendlist[dht2m[friend_idx]];
             } else {
@@ -2578,7 +2579,7 @@ void do_messenger(Messenger *m, void *userdata)
                              id_to_string(dht_friend_public_key(dhtfptr), id_str, sizeof(id_str)));
             }
 
-            for (client = 0; client < MAX_FRIEND_CLIENTS; ++client) {
+            for (uint32_t client = 0; client < MAX_FRIEND_CLIENTS; ++client) {
                 const Client_data *cptr = dht_friend_client(dhtfptr, client);
                 const IPPTsPng *const assocs[] = {&cptr->assoc4, &cptr->assoc6};
 
