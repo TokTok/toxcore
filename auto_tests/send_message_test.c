@@ -13,7 +13,7 @@ typedef struct State {
     bool message_received;
 } State;
 
-#include "run_auto_test.h"
+#include "auto_test_support.h"
 
 #define MESSAGE_FILLER 'G'
 

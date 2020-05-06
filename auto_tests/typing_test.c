@@ -19,7 +19,7 @@ typedef struct State {
     bool friend_is_typing;
 } State;
 
-#include "run_auto_test.h"
+#include "auto_test_support.h"
 
 static void typing_callback(Tox *m, uint32_t friendnumber, bool typing, void *user_data)
 {

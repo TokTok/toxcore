@@ -22,7 +22,7 @@
 #define TOX_COUNT 2
 #define RECONNECT_TIME_MAX (FRIEND_CONNECTION_TIMEOUT + 3)
 
-#include "run_auto_test.h"
+#include "auto_test_support.h"
 
 static uint32_t tox_connected_count(uint32_t tox_count, AutoTox *autotoxes, uint32_t index)
 {

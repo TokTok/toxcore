@@ -17,7 +17,7 @@
 #define NUM_AV_DISCONNECT (NUM_AV_GROUP_TOX / 2)
 #define NUM_AV_DISABLE (NUM_AV_GROUP_TOX / 2)
 
-#include "run_auto_test.h"
+#include "auto_test_support.h"
 
 typedef struct State {
     bool invited_next;

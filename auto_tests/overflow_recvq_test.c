@@ -11,7 +11,7 @@ typedef struct State {
     uint32_t recv_count;
 } State;
 
-#include "run_auto_test.h"
+#include "auto_test_support.h"
 
 #define NUM_MSGS 40000
 

@@ -7,10 +7,10 @@ cc_library(
 )
 
 cc_library(
-    name = "run_auto_test",
+    name = "auto_test_support",
     testonly = True,
-    srcs = ["run_auto_test.c"],
-    hdrs = ["run_auto_test.h"],
+    srcs = ["auto_test_support.c"],
+    hdrs = ["auto_test_support.h"],
     deps = [
         ":check_compat",
         "//c-toxcore/testing:misc_tools",
@@ -35,7 +35,7 @@ flaky_tests = {
     ),
     deps = [
         ":check_compat",
-        ":run_auto_test",
+        ":auto_test_support",
         "//c-toxcore/testing:misc_tools",
         "//c-toxcore/toxav",
         "//c-toxcore/toxcore",

@@ -20,7 +20,7 @@ typedef struct State {
     bool custom_packet_received;
 } State;
 
-#include "run_auto_test.h"
+#include "auto_test_support.h"
 
 #define LOSSLESS_PACKET_FILLER 160
 

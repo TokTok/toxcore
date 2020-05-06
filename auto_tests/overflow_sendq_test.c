@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 
-#include "run_auto_test.h"
+#include "auto_test_support.h"
 
 #define NUM_MSGS 40000
 

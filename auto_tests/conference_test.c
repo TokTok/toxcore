@@ -26,7 +26,7 @@ typedef struct State {
     bool invited_next;
 } State;
 
-#include "run_auto_test.h"
+#include "auto_test_support.h"
 
 static void handle_self_connection_status(
     Tox *tox, Tox_Connection connection_status, void *user_data)

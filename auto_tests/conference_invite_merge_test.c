@@ -13,7 +13,7 @@ typedef struct State {
 
 #define NUM_INVITE_MERGE_TOX 5
 
-#include "run_auto_test.h"
+#include "auto_test_support.h"
 
 static void handle_conference_invite(
     Tox *tox, uint32_t friend_number, Tox_Conference_Type type,

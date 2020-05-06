@@ -11,7 +11,7 @@
 
 #include <stdint.h>
 
-#include "run_auto_test.h"
+#include "auto_test_support.h"
 
 static void friend_connection_test(AutoTox *toxes)
 {

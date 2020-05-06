@@ -5,7 +5,7 @@
 #include "../toxcore/Messenger.h"
 #include "../toxcore/mono_time.h"
 
-#include "run_auto_test.h"
+#include "auto_test_support.h"
 
 const Run_Auto_Options default_run_auto_options = { GRAPH_COMPLETE, 0, 0, nullptr };
 
