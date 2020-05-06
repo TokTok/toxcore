@@ -27,10 +27,6 @@ bool all_friends_connected(uint32_t tox_count, AutoTox *toxes);
 
 void iterate_all_wait(uint32_t tox_count, AutoTox *toxes, uint32_t wait);
 
-bool init_null_state(void **state);
-
-void free_null_state(void *state);
-
 void save(AutoTox *autotox);
 void kill(AutoTox *autotox);
 void reload(AutoTox *autotox);
