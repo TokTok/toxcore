@@ -162,7 +162,7 @@ int gcc_handle_ack(GC_Connection *gconn, uint64_t message_id)
     if (idx == gconn->send_array_start) {
         uint16_t end = gconn->send_message_id % GCC_BUFFER_SIZE;
 
-        while (array_entry_is_empty(array_entry) && gconn->send_array_start != end) {
+        while (array_entry_is_empty(&gconn->send_array[idx]) && gconn->send_array_start != end) {
             gconn->send_array_start = (gconn->send_array_start + 1) % GCC_BUFFER_SIZE;
             idx = (idx + 1) % GCC_BUFFER_SIZE;
         }
