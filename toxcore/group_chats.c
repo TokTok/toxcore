@@ -2222,7 +2222,7 @@ static int handle_gc_sanctions_list(Messenger *m, int group_number, uint32_t pee
     }
 
     if (sanctions_list_check_integrity(chat, &creds, sanctions, num_sanctions) == -1) {
-        LOGGER_ERROR(m->log, "sanctions_list_check_integrity failed in handle_gc_sanctions_list");
+        LOGGER_ERROR(m->log, "sanctions_list_check_integrity failed");
         free(sanctions);
         return handle_gc_sanctions_list_error(m, group_number, peer_number, chat);
     }
