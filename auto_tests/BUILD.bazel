@@ -8,6 +8,7 @@ cc_library(
 
 cc_library(
     name = "run_auto_test",
+    testonly = True,
     srcs = ["run_auto_test.c"],
     hdrs = ["run_auto_test.h"],
     deps = [
