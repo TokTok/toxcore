@@ -19,13 +19,13 @@
 #define PASSWORD "dadada"
 #define PASS_LEN (sizeof(PASSWORD) - 1)
 
-#define TOPIC1 "This kills the skype"
+#define TOPIC1 "Eternally indestructible"
 #define TOPIC1_LEN (sizeof(TOPIC1) - 1)
 
 #define TOPIC2 "The interjection zone"
 #define TOPIC2_LEN (sizeof(TOPIC2) - 1)
 
-#define GROUP_NAME "The Gas Chamber"
+#define GROUP_NAME "The Crystal Palace"
 #define GROUP_NAME_LEN (sizeof(GROUP_NAME) - 1)
 
 #define PEER0_NICK "David"
@@ -217,6 +217,8 @@ START_TEST(test_text_all)
         c_sleep(1000);
     }
 
+    fprintf(stderr, "Peers attempting to join group\n");
+
     /* Keep checking if all instances have connected to the group until test times out */
     while (1) {
         for (size_t i = 0; i < NUM_GROUP_TOXES; ++i) {
@@ -232,6 +234,7 @@ START_TEST(test_text_all)
         }
 
         if (count == NUM_GROUP_TOXES) {
+            fprintf(stderr, "%zu peers successfully joined\n", count);
             break;
         }
 
@@ -251,6 +254,8 @@ START_TEST(test_text_all)
     set_group_state(toxes[0], groupnum, PEER_LIMIT_2, TOX_GROUP_PRIVACY_STATE_PRIVATE, nullptr, 0, (const uint8_t *)TOPIC2,
                     TOPIC2_LEN);
 
+    fprintf(stderr, "Changing state\n");
+
     while (1) {
         count = 0;
 
@@ -264,6 +269,7 @@ START_TEST(test_text_all)
         }
 
         if (count == NUM_GROUP_TOXES) {
+            fprintf(stderr, "%zu peers successfully received state changes\n", count);
             break;
         }
 
@@ -275,6 +281,8 @@ START_TEST(test_text_all)
         tox_group_leave(toxes[i], groupnum, nullptr, 0, &err_exit);
         ck_assert_msg(err_exit == TOX_ERR_GROUP_LEAVE_OK, "%d", err_exit);
     }
+
+    fprintf(stderr, "All tests passed!\n");
 
     for (size_t i = 0; i < NUM_GROUP_TOXES; ++i) {
         tox_kill(toxes[i]);
