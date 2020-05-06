@@ -1,4 +1,5 @@
-/* Tests that we can send messages to friends.
+/*
+ * Tests that we can connect to a public group chat through the DHT.
  */
 
 #ifdef HAVE_CONFIG_H
