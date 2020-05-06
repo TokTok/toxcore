@@ -205,7 +205,8 @@ static void group_mod_event_handler(Tox *tox, uint32_t group_number, uint32_t so
         }
 
         case TOX_GROUP_MOD_EVENT_KICK: {
-            ck_assert(memcmp(peer_name, state->mod_name, peer_name_len) == 0);  // we kick the same peer we previously promoted to mod
+            ck_assert(memcmp(peer_name, state->mod_name,
+                             peer_name_len) == 0);  // we kick the same peer we previously promoted to mod
             state->kick_check = true;
             break;
         }
