@@ -143,6 +143,15 @@ static void initialise_autotox(AutoTox *autotox, uint32_t index, uint32_t state_
     }
 }
 
+static void autotox_add_friend(AutoTox *autotoxes, uint32_t adding, uint32_t added)
+{
+    uint8_t public_key[TOX_PUBLIC_KEY_SIZE];
+    tox_self_get_public_key(autotoxes[added].tox, public_key);
+    Tox_Err_Friend_Add err;
+    tox_friend_add_norequest(autotoxes[adding].tox, public_key, &err);
+    ck_assert(err == TOX_ERR_FRIEND_ADD_OK);
+}
+
 void run_auto_test(uint32_t tox_count, void test(AutoTox *autotoxes),
                    uint32_t state_size, const Run_Auto_Options *options)
 {
@@ -165,11 +174,7 @@ void run_auto_test(uint32_t tox_count, void test(AutoTox *autotoxes),
                     continue;
                 }
 
-                uint8_t public_key[TOX_PUBLIC_KEY_SIZE];
-                tox_self_get_public_key(autotoxes[j].tox, public_key);
-                Tox_Err_Friend_Add err;
-                tox_friend_add_norequest(autotoxes[i].tox, public_key, &err);
-                ck_assert(err == TOX_ERR_FRIEND_ADD_OK);
+                autotox_add_friend(autotoxes, i, j);
             }
         }
     } else if (options->graph == GRAPH_COMPLETE) {
@@ -178,11 +183,7 @@ void run_auto_test(uint32_t tox_count, void test(AutoTox *autotoxes),
         for (uint32_t i = options->tcp_relays; i < tox_count; i++) {
             for (uint32_t j = options->tcp_relays; j < tox_count; j++) {
                 if (i != j) {
-                    uint8_t public_key[TOX_PUBLIC_KEY_SIZE];
-                    tox_self_get_public_key(autotoxes[j].tox, public_key);
-                    Tox_Err_Friend_Add err;
-                    tox_friend_add_norequest(autotoxes[i].tox, public_key, &err);
-                    ck_assert(err == TOX_ERR_FRIEND_ADD_OK);
+                    autotox_add_friend(autotoxes, i, j);
                 }
             }
         }
