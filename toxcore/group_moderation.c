@@ -712,7 +712,9 @@ int sanctions_list_add_entry(GC_Chat *chat, struct GC_Sanction *sanction, struct
         return -1;
     }
 
-    memcpy(sanctions_copy, chat->moderation.sanctions, old_size);
+    if (old_size > 0) {
+        memcpy(sanctions_copy, chat->moderation.sanctions, old_size);
+    }
 
     size_t index = chat->moderation.num_sanctions;
     struct GC_Sanction *new_list = (struct GC_Sanction *)realloc(sanctions_copy, sizeof(struct GC_Sanction) * (index + 1));
