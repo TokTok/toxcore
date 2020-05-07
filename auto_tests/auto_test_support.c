@@ -152,36 +152,25 @@ static void autotox_add_friend(AutoTox *autotoxes, uint32_t adding, uint32_t add
     ck_assert(err == TOX_ERR_FRIEND_ADD_OK);
 }
 
-void run_auto_test(uint32_t tox_count, void test(AutoTox *autotoxes),
-                   uint32_t state_size, const Run_Auto_Options *options)
+static void initialise_friend_graph(Graph_Type graph, uint32_t first, uint32_t last, AutoTox *autotoxes)
 {
-    printf("initialising %u toxes\n", tox_count);
+    if (graph == GRAPH_LINEAR) {
+        printf("toxes #%u-#%u each add adjacent toxes as friends\n", first, last);
 
-    AutoTox *autotoxes = (AutoTox *)calloc(tox_count, sizeof(AutoTox));
-
-    ck_assert(autotoxes != nullptr);
-
-    for (uint32_t i = 0; i < tox_count; i++) {
-        initialise_autotox(&autotoxes[i], i, state_size, options);
-    }
-
-    if (options->graph == GRAPH_LINEAR) {
-        printf("toxes #%u-#%u each add adjacent toxes as friends\n", options->tcp_relays, tox_count - 1);
-
-        for (uint32_t i = options->tcp_relays; i < tox_count; i++) {
+        for (uint32_t i = first; i <= last; i++) {
             for (uint32_t j = i - 1; j != i + 3; j += 2) {
-                if (j >= tox_count || j < options->tcp_relays) {
+                if (j < first || j > last) {
                     continue;
                 }
 
                 autotox_add_friend(autotoxes, i, j);
             }
         }
-    } else if (options->graph == GRAPH_COMPLETE) {
-        printf("toxes #%u-#%u add each other as friends\n", options->tcp_relays, tox_count - 1);
+    } else if (graph == GRAPH_COMPLETE) {
+        printf("toxes #%u-#%u add each other as friends\n", first, last);
 
-        for (uint32_t i = options->tcp_relays; i < tox_count; i++) {
-            for (uint32_t j = options->tcp_relays; j < tox_count; j++) {
+        for (uint32_t i = first; i <= last; i++) {
+            for (uint32_t j = first; j <= last; j++) {
                 if (i != j) {
                     autotox_add_friend(autotoxes, i, j);
                 }
@@ -190,7 +179,10 @@ void run_auto_test(uint32_t tox_count, void test(AutoTox *autotoxes),
     } else {
         ck_abort_msg("Unknown graph type");
     }
+}
 
+static void bootstrap_autotoxes(uint32_t tox_count, const Run_Auto_Options *options, AutoTox *autotoxes)
+{
     if (options->tcp_relays) {
         printf("adding tcp relays\n");
 
@@ -214,6 +206,24 @@ void run_auto_test(uint32_t tox_count, void test(AutoTox *autotoxes),
         tox_bootstrap(autotoxes[i].tox, "localhost", dht_port, dht_key, &err);
         ck_assert(err == TOX_ERR_BOOTSTRAP_OK);
     }
+}
+
+void run_auto_test(uint32_t tox_count, void test(AutoTox *autotoxes),
+                   uint32_t state_size, const Run_Auto_Options *options)
+{
+    printf("initialising %u toxes\n", tox_count);
+
+    AutoTox *autotoxes = (AutoTox *)calloc(tox_count, sizeof(AutoTox));
+
+    ck_assert(autotoxes != nullptr);
+
+    for (uint32_t i = 0; i < tox_count; i++) {
+        initialise_autotox(&autotoxes[i], i, state_size, options);
+    }
+
+    initialise_friend_graph(options->graph, options->tcp_relays, tox_count - 1, autotoxes);
+
+    bootstrap_autotoxes(tox_count, options, autotoxes);
 
     do {
         iterate_all_wait(tox_count, autotoxes, ITERATION_INTERVAL);
