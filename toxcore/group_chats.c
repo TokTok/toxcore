@@ -5152,7 +5152,12 @@ static void ping_group(const Messenger *m, GC_Chat *chat)
     net_pack_u32(data + HASH_ID_BYTES + (sizeof(uint32_t) * 2), chat->moderation.sanctions_creds.version);
     net_pack_u32(data + HASH_ID_BYTES + (sizeof(uint32_t) * 3), chat->topic_info.version);
 
-    ipport_self_copy(m->dht, &chat->self_ip_port);  // Our IP may change during a session so we keep updating it
+    int packed_ipp_len = 0;
+
+    // Our IP may change during a session so we keep updating it
+    if (ipport_self_copy(m->dht, &chat->self_ip_port) == 0) {
+        packed_ipp_len = pack_ip_port(data + buf_size - sizeof(IP_Port), sizeof(IP_Port), &chat->self_ip_port);
+    }
 
     for (uint32_t i = 1; i < chat->numpeers; ++i) {
         GC_Connection *gconn = &chat->gcc[i];
@@ -5161,19 +5166,12 @@ static void ping_group(const Messenger *m, GC_Chat *chat)
             continue;
         }
 
-        uint32_t real_length = buf_size;
-        int packed_ipp_len = 0;
+        uint32_t real_length = buf_size - sizeof(IP_Port);
 
-        if (!gcc_connection_is_direct(chat->mono_time, gconn) && ipport_isset(&chat->self_ip_port)
+        if (packed_ipp_len > 0 && !gcc_connection_is_direct(chat->mono_time, gconn)
                 && mono_time_is_timeout(chat->mono_time, gconn->last_sent_ip_time, GC_PING_INTERVAL * 4)) {
-            packed_ipp_len = pack_ip_port(data + real_length - sizeof(IP_Port), sizeof(IP_Port), &chat->self_ip_port);
             gconn->last_sent_ip_time = mono_time_get(chat->mono_time);
-        }
-
-        if (packed_ipp_len > 0) {
             real_length = HASH_ID_BYTES + GC_PING_PACKET_MIN_DATA_SIZE + packed_ipp_len;
-        } else {
-            real_length -= sizeof(IP_Port);
         }
 
         send_lossy_group_packet(chat, &chat->gcc[i], data, real_length, GP_PING);
