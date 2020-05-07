@@ -272,9 +272,9 @@ uint16_t sanctions_creds_pack(struct GC_Sanction_Creds *creds, uint8_t *data, ui
 int sanctions_list_pack(uint8_t *data, uint16_t length, struct GC_Sanction *sanctions,
                         struct GC_Sanction_Creds *creds, uint32_t num_sanctions)
 {
-    uint32_t i, packed_len = 0;
+    uint32_t packed_len = 0;
 
-    for (i = 0; i < num_sanctions && i < MAX_GC_SANCTIONS; ++i) {
+    for (uint32_t i = 0; i < num_sanctions && i < MAX_GC_SANCTIONS; ++i) {
         if (packed_len + sizeof(uint8_t) + SIG_PUBLIC_KEY + TIME_STAMP_SIZE > length) {
             return -1;
         }
@@ -812,9 +812,9 @@ int sanctions_list_make_entry(GC_Chat *chat, uint32_t peer_number, struct GC_San
  */
 uint32_t sanctions_list_replace_sig(GC_Chat *chat, const uint8_t *public_sig_key)
 {
-    uint32_t i, count = 0;
+    uint32_t count = 0;
 
-    for (i = 0; i < chat->moderation.num_sanctions; ++i) {
+    for (uint32_t i = 0; i < chat->moderation.num_sanctions; ++i) {
         if (memcmp(chat->moderation.sanctions[i].public_sig_key, public_sig_key, SIG_PUBLIC_KEY) != 0) {
             continue;
         }

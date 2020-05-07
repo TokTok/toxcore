@@ -309,9 +309,10 @@ void gcc_resend_packets(Messenger *m, GC_Chat *chat, uint32_t peer_number)
     }
 
     uint64_t tm = mono_time_get(m->mono_time);
-    uint16_t i, start = gconn->send_array_start, end = gconn->send_message_id % GCC_BUFFER_SIZE;
+    uint16_t start = gconn->send_array_start;
+    uint16_t end = gconn->send_message_id % GCC_BUFFER_SIZE;
 
-    for (i = start; i != end; i = (i + 1) % GCC_BUFFER_SIZE) {
+    for (uint16_t i = start; i != end; i = (i + 1) % GCC_BUFFER_SIZE) {
         struct GC_Message_Array_Entry *array_entry = &gconn->send_array[i];
 
         if (array_entry_is_empty(array_entry)) {

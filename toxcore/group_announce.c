@@ -109,9 +109,9 @@ int gca_get_announces(GC_Announces_List *gc_announces_list, GC_Announce *gc_anno
     }
 
     // TODO: add proper selection
-    int gc_announces_count = 0, i, j;
+    int gc_announces_count = 0;
 
-    for (i = 0; i < announces->index && i < GCA_MAX_SAVED_ANNOUNCES_PER_GC && gc_announces_count < max_nodes; ++i) {
+    for (int i = 0; i < announces->index && i < GCA_MAX_SAVED_ANNOUNCES_PER_GC && gc_announces_count < max_nodes; ++i) {
         int index = i % GCA_MAX_SAVED_ANNOUNCES_PER_GC;
 
         if (!memcmp(except_public_key, &announces->announces[index].base_announce.peer_public_key, ENC_PUBLIC_KEY)) {
@@ -120,7 +120,7 @@ int gca_get_announces(GC_Announces_List *gc_announces_list, GC_Announce *gc_anno
 
         bool already_added = false;
 
-        for (j = 0; j < gc_announces_count; ++j) {
+        for (int j = 0; j < gc_announces_count; ++j) {
             if (!memcmp(&gc_announces[j].peer_public_key,
                         &announces->announces[index].base_announce.peer_public_key,
                         ENC_PUBLIC_KEY)) {
@@ -283,9 +283,9 @@ int gca_unpack_announces_list(const Logger *logger, const uint8_t *data, uint16_
     }
 
     uint16_t offset = 0;
-    int i, announces_count = 0;
+    int announces_count = 0;
 
-    for (i = 0; i < max_announces_count && length > offset; ++i) {
+    for (int i = 0; i < max_announces_count && length > offset; ++i) {
         int unpacked_length = gca_unpack_announce(data + offset, length - offset, &announces[i]);
 
         if (unpacked_length == -1) {
