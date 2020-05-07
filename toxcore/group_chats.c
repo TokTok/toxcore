@@ -1610,7 +1610,8 @@ static void do_gc_peer_state_sync(GC_Chat *chat, GC_Connection *gconn, const uin
  * The packet contains sync information including peer's confirmed peer count,
  * shared state version and sanction credentials version.
  */
-static int handle_gc_ping(Messenger *m, int group_number, GC_Connection *gconn, const uint8_t *data, const uint32_t length)
+static int handle_gc_ping(Messenger *m, int group_number, GC_Connection *gconn, const uint8_t *data,
+                          const uint32_t length)
 {
     if (length < GC_PING_PACKET_MIN_DATA_SIZE) {
         return -1;
@@ -5164,7 +5165,7 @@ static void ping_group(const Messenger *m, GC_Chat *chat)
         int packed_ipp_len = 0;
 
         if (!gcc_connection_is_direct(chat->mono_time, gconn) && ipport_isset(&chat->self_ip_port)
-                                    && mono_time_is_timeout(chat->mono_time, gconn->last_sent_ip_time, GC_PING_INTERVAL * 4)) {
+                && mono_time_is_timeout(chat->mono_time, gconn->last_sent_ip_time, GC_PING_INTERVAL * 4)) {
             packed_ipp_len = pack_ip_port(data + real_length - sizeof(IP_Port), sizeof(IP_Port), &chat->self_ip_port);
             gconn->last_sent_ip_time = mono_time_get(chat->mono_time);
         }
