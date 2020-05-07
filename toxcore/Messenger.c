@@ -3444,9 +3444,9 @@ static State_Load_Status groups_load(Messenger *m, const uint8_t *data, uint32_t
         return STATE_LOAD_STATUS_ERROR; // TODO(endoffile78): error or continue?
     }
 
-    uint32_t i, num = length / sizeof(Saved_Group);
+    const uint32_t num = length / sizeof(Saved_Group);
 
-    for (i = 0; i < num; ++i) {
+    for (uint32_t i = 0; i < num; ++i) {
         Saved_Group temp;
         memcpy(&temp, data + i * sizeof(Saved_Group), sizeof(Saved_Group));
 
