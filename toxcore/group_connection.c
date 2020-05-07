@@ -119,7 +119,7 @@ int gcc_add_to_send_array(const Logger *logger, const Mono_Time *mono_time, GC_C
 {
     /* check if send_array is full */
     if ((gconn->send_message_id % GCC_BUFFER_SIZE) == (uint16_t)(gconn->send_array_start - 1)) {
-        LOGGER_ERROR(logger, "Send array is full.");
+        LOGGER_ERROR(logger, "Send array is full");
         return -1;
     }
 
