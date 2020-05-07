@@ -50,6 +50,7 @@ struct GC_Connection {
     int         tcp_connection_num;
     uint64_t    last_received_direct_time;   /* the last time we received a direct UDP packet from this connection */
     uint64_t    last_tcp_relays_shared;  /* the last time we tried to send this peer our tcp relays */
+    uint64_t    last_sent_ip_time;  /* the last time we sent our ip info to this peer in a ping packet */
 
     Node_format connected_tcp_relays[MAX_FRIEND_TCP_CONNECTIONS];
     int tcp_relays_index;

@@ -259,6 +259,7 @@ typedef struct GC_Chat {
     uint8_t confirmed_peers[MAX_GC_CONFIRMED_PEERS][ENC_PUBLIC_KEY];
     uint8_t confirmed_peers_index;
     Node_format announced_node;
+    IP_Port self_ip_port;
 
     Networking_Core *net;
     TCP_Connections *tcp_conn;

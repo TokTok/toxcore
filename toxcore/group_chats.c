@@ -70,8 +70,8 @@
 /* Maximum number of bytes to pad packets with */
 #define GC_MAX_PACKET_PADDING (8)
 
-/* Size of a ping packet, which contains the peer count, shared state version, sanctions list version and topic version */
-#define GC_PING_PACKET_DATA_SIZE (sizeof(uint32_t) * 4)
+/* Min size of a ping packet, which contains the peer count, shared state version, sanctions list version and topic version */
+#define GC_PING_PACKET_MIN_DATA_SIZE (sizeof(uint32_t) * 4)
 
 
 typedef enum Group_Handshake_Packet_Type {
@@ -1575,9 +1575,9 @@ static int send_gc_broadcast_message(GC_Chat *chat, const uint8_t *data, uint32_
  *
  * This function should only be called from handle_gc_ping().
  */
-static void do_gc_peer_state_sync(GC_Chat *chat, GC_Connection *gconn, const uint8_t *sync_data, uint32_t length)
+static void do_gc_peer_state_sync(GC_Chat *chat, GC_Connection *gconn, const uint8_t *sync_data, const uint32_t length)
 {
-    if (length != GC_PING_PACKET_DATA_SIZE) {
+    if (length < GC_PING_PACKET_MIN_DATA_SIZE) {
         return;
     }
 
@@ -1610,9 +1610,9 @@ static void do_gc_peer_state_sync(GC_Chat *chat, GC_Connection *gconn, const uin
  * The packet contains sync information including peer's confirmed peer count,
  * shared state version and sanction credentials version.
  */
-static int handle_gc_ping(Messenger *m, int group_number, GC_Connection *gconn, const uint8_t *data, uint32_t length)
+static int handle_gc_ping(Messenger *m, int group_number, GC_Connection *gconn, const uint8_t *data, const uint32_t length)
 {
-    if (length != GC_PING_PACKET_DATA_SIZE) {
+    if (length < GC_PING_PACKET_MIN_DATA_SIZE) {
         return -1;
     }
 
@@ -1628,6 +1628,15 @@ static int handle_gc_ping(Messenger *m, int group_number, GC_Connection *gconn, 
 
     do_gc_peer_state_sync(chat, gconn, data, length);
     gconn->last_received_ping_time = mono_time_get(m->mono_time);
+
+    if (length > GC_PING_PACKET_MIN_DATA_SIZE) {
+        IP_Port ip_port;
+        memset(&ip_port, 0, sizeof(IP_Port));
+
+        if (unpack_ip_port(&ip_port, data + GC_PING_PACKET_MIN_DATA_SIZE, length - GC_PING_PACKET_MIN_DATA_SIZE, false) > 0) {
+            gcc_set_ip_port(gconn, &ip_port);
+        }
+    }
 
     return 0;
 }
@@ -5120,17 +5129,20 @@ static void do_peer_connections(Messenger *m, int group_number)
     }
 }
 
-/* Ping packet includes your confirmed peer count, shared state version
- * and sanctions list version for syncing purposes
+/*
+ * Sends a ping packet to every confirmed peer.
+ *
+ * Packet includes your confirmed peer count, shared state version and sanctions list version for syncing purposes.
+ * We also occasionally try to send our own IP info to peers that we do not have a direct connection with.
  */
-static void ping_group(GC_Chat *chat)
+static void ping_group(const Messenger *m, GC_Chat *chat)
 {
     if (!mono_time_is_timeout(chat->mono_time, chat->last_sent_ping_time, GC_PING_INTERVAL)) {
         return;
     }
 
-    uint32_t length = HASH_ID_BYTES + GC_PING_PACKET_DATA_SIZE;
-    VLA(uint8_t, data, length);
+    uint32_t buf_size = HASH_ID_BYTES + GC_PING_PACKET_MIN_DATA_SIZE + sizeof(IP_Port);
+    VLA(uint8_t, data, buf_size);
 
     uint32_t num_confirmed_peers = get_gc_confirmed_numpeers(chat);
     net_pack_u32(data, chat->self_public_key_hash);
@@ -5139,12 +5151,31 @@ static void ping_group(GC_Chat *chat)
     net_pack_u32(data + HASH_ID_BYTES + (sizeof(uint32_t) * 2), chat->moderation.sanctions_creds.version);
     net_pack_u32(data + HASH_ID_BYTES + (sizeof(uint32_t) * 3), chat->topic_info.version);
 
-    uint32_t i;
+    ipport_self_copy(m->dht, &chat->self_ip_port);  // Our IP may change during a session so we keep updating it
 
-    for (i = 1; i < chat->numpeers; ++i) {
-        if (chat->gcc[i].confirmed) {
-            send_lossy_group_packet(chat, &chat->gcc[i], data, length, GP_PING);
+    for (uint32_t i = 1; i < chat->numpeers; ++i) {
+        GC_Connection *gconn = &chat->gcc[i];
+
+        if (!gconn->confirmed) {
+            continue;
         }
+
+        uint32_t real_length = buf_size;
+        int packed_ipp_len = 0;
+
+        if (!gcc_connection_is_direct(chat->mono_time, gconn) && ipport_isset(&chat->self_ip_port)
+                                    && mono_time_is_timeout(chat->mono_time, gconn->last_sent_ip_time, GC_PING_INTERVAL * 4)) {
+            packed_ipp_len = pack_ip_port(data + real_length - sizeof(IP_Port), sizeof(IP_Port), &chat->self_ip_port);
+            gconn->last_sent_ip_time = mono_time_get(chat->mono_time);
+        }
+
+        if (packed_ipp_len > 0) {
+            real_length = HASH_ID_BYTES + GC_PING_PACKET_MIN_DATA_SIZE + packed_ipp_len;
+        } else {
+            real_length -= sizeof(IP_Port);
+        }
+
+        send_lossy_group_packet(chat, &chat->gcc[i], data, real_length, GP_PING);
     }
 
     chat->last_sent_ping_time = mono_time_get(chat->mono_time);
@@ -5262,7 +5293,7 @@ void do_gc(GC_Session *c, void *userdata)
 
         switch (chat->connection_state) {
             case CS_CONNECTED: {
-                ping_group(chat);
+                ping_group(c->messenger, chat);
                 do_peer_connections(c->messenger, i);
                 do_new_connection_cooldown(chat);
                 break;
