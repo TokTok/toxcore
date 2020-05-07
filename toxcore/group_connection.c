@@ -26,7 +26,7 @@
 #ifndef VANILLA_NACL
 
 /* The time before the direct UDP connection is considered dead */
-#define GCC_UDP_DIRECT_TIMEOUT (GC_PING_INTERVAL * 2 + 2)
+#define GCC_UDP_DIRECT_TIMEOUT (GC_PING_INTERVAL + 2)
 
 
 /* Returns group connection object for peer_number.
@@ -206,10 +206,6 @@ int gcc_handle_received_message(GC_Chat *chat, uint32_t peer_number, const uint8
         return -1;
     }
 
-    if (direct_conn) {
-        gconn->last_received_direct_time = mono_time_get(chat->mono_time);
-    }
-
     /* Appears to be a duplicate packet so we discard it */
     if (message_id < gconn->received_message_id + 1) {
         return 0;
@@ -229,6 +225,10 @@ int gcc_handle_received_message(GC_Chat *chat, uint32_t peer_number, const uint8
         }
 
         return 1;
+    }
+
+    if (direct_conn) {
+        gconn->last_received_direct_time = mono_time_get(chat->mono_time);
     }
 
     ++gconn->received_message_id;
