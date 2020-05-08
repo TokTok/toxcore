@@ -26,7 +26,7 @@ cmake -B_build -H. -GNinja			\
 
 cd _build
 
-ninja install -j$(nproc)
+ninja install -j"$(nproc)"
 
 export TSAN_OPTIONS="halt_on_error=1"
 export TSAN_OPTIONS="$TSAN_OPTIONS,second_deadlock_stack=1"
