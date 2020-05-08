@@ -893,7 +893,6 @@ static int send_lossless_group_packet(GC_Chat *chat, GC_Connection *gconn, const
 static int send_gc_sync_request(GC_Chat *chat, GC_Connection *gconn, uint32_t num_peers)
 {
     if (gconn->pending_sync_request) {
-        LOGGER_ERROR(chat->logger, "error: pending sync");
         return -1;
     }
 
@@ -1306,13 +1305,8 @@ static int handle_gc_tcp_relays(Messenger *m, int group_number, GC_Connection *g
         return -1;
     }
 
-    if (chat->connection_state != CS_CONNECTED) {
+    if (chat->connection_state <= CS_MANUALLY_DISCONNECTED) {
         LOGGER_ERROR(m->log, "Invalid connetion state %d", chat->connection_state);
-        return -1;
-    }
-
-    if (!gconn->confirmed) {
-        LOGGER_ERROR(m->log, "Peer not confirmed");
         return -1;
     }
 
@@ -4230,7 +4224,7 @@ static int handle_gc_handshake_response(Messenger *m, int group_number, const ui
             break;
 
         default:
-            LOGGER_ERROR(m->log, "Received invalid request type in handle_gc_handshake_response");
+            LOGGER_ERROR(m->log, "Received invalid request type in handle_gc_handshake_response: %d", request_type);
             return -1;
     }
 
@@ -5107,11 +5101,14 @@ static int peer_add(Messenger *m, int group_number, const IP_Port *ipp, const ui
     crypto_box_keypair(gconn->session_public_key, gconn->session_secret_key);
     memcpy(gconn->addr.public_key, public_key, ENC_PUBLIC_KEY);  /* we get the sig key in the handshake */
 
+    uint64_t tm = mono_time_get(chat->mono_time);
+
     gcc_set_send_message_id(gconn, 1);
     gconn->public_key_hash = get_peer_key_hash(public_key);
-    gconn->last_received_ping_time = mono_time_get(chat->mono_time) + (rand() % GC_PING_INTERVAL);
+    gconn->last_received_ping_time = tm;
     gconn->received_message_id = 0;
     gconn->tcp_connection_num = tcp_connection_num;
+    gconn->last_sent_ip_time = tm;
 
     return peer_number;
 }
