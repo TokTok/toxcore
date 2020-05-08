@@ -173,19 +173,19 @@ int gcc_handle_ack(GC_Connection *gconn, uint64_t message_id)
 }
 
 /*
- * Returns true if the IP is set for gconn.
+ * Returns true if the ip_port is set for gconn.
  */
-bool gcc_is_ip_set(GC_Connection *gconn)
+bool gcc_ip_port_is_set(GC_Connection *gconn)
 {
-    return gconn->addr.ip_port.ip.family.value != 0;
+    return ipport_isset(&gconn->addr.ip_port);
 }
 
 /*
- * Sets the ip for gconn to ipp. If ipp is null this function has no effect.
+ * Sets the ip_port for gconn to ipp. If ipp is not set this function has no effect.
  */
 void gcc_set_ip_port(GC_Connection *gconn, const IP_Port *ipp)
 {
-    if (ipp) {
+    if (ipport_isset(ipp)) {
         memcpy(&gconn->addr.ip_port, ipp, sizeof(IP_Port));
     }
 }
@@ -375,7 +375,7 @@ int gcc_send_group_packet(const GC_Chat *chat, GC_Connection *gconn, const uint8
     return -1;
 }
 
-/* Returns true if we have a direct connection with this group connection */
+/* Returns true if we have a direct connection with this peer. */
 bool gcc_connection_is_direct(const Mono_Time *mono_time, const GC_Connection *gconn)
 {
     return ((GCC_UDP_DIRECT_TIMEOUT + gconn->last_received_direct_time) > mono_time_get(mono_time));

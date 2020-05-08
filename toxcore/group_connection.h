@@ -111,12 +111,12 @@ int gcc_handle_ack(GC_Connection *gconn, uint64_t message_id);
 void gcc_set_send_message_id(GC_Connection *gconn, uint16_t id);
 
 /*
- * Returns true if the IP is set for gconn.
+ * Returns true if the ip_port is set for gconn.
  */
-bool gcc_is_ip_set(GC_Connection *gconn);
+bool gcc_ip_port_is_set(GC_Connection *gconn);
 
 /*
- * Sets the ip for gconn to ipp. If ipp is null this function has no effect.
+ * Sets the ip_port for gconn to ipp. If ipp is not set this function has no effect.
  */
 void gcc_set_ip_port(GC_Connection *gconn, const IP_Port *ipp);
 
@@ -130,7 +130,7 @@ int gcc_check_received_array(struct Messenger *m, int group_number, uint32_t pee
 
 void gcc_resend_packets(struct Messenger *m, GC_Chat *chat, uint32_t peer_number);
 
-/* Return true if we have a direct connection with this group connection */
+/* Return true if we have a direct connection with this peer. */
 bool gcc_connection_is_direct(const Mono_Time *mono_time, const GC_Connection *gconn);
 
 /* Sends a packet to the peer associated with gconn.

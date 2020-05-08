@@ -3007,12 +3007,13 @@ bool dht_non_lan_connected(const DHT *dht)
     return false;
 }
 
-/* Copies your own ip_port structure to dest.
+/* Copies your own ip_port structure to dest. If allow_LAN is false an error will be returned
+ * if the result is a LAN address.
  *
  * Return 0 on success.
  * Return -1 on failure.
  */
-int ipport_self_copy(const DHT *dht, IP_Port *dest)
+int ipport_self_copy(const DHT *dht, IP_Port *dest, bool allow_LAN)
 {
     for (size_t i = 0; i < LCLIENT_LIST; ++i) {
         const Client_data *client = dht_get_close_client(dht, i);
@@ -3032,6 +3033,10 @@ int ipport_self_copy(const DHT *dht, IP_Port *dest)
     }
 
     if (!ipport_isset(dest)) {
+        return -1;
+    }
+
+    if (!allow_LAN && ip_is_lan(dest->ip)) {
         return -1;
     }
 
