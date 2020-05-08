@@ -120,9 +120,11 @@ typedef struct IPPTsPng {
     uint64_t    last_pinged;
 
     Hardening hardening;
-    /* Returned by this node. Either our friend or us. */
+    /* Returned by this node */
     IP_Port     ret_ip_port;
     uint64_t    ret_timestamp;
+    /* true if this ip_port is ours */
+    bool        ret_ip_self;
 } IPPTsPng;
 
 typedef struct Client_data {

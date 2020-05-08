@@ -999,6 +999,7 @@ static void update_client_with_reset(const Mono_Time *mono_time, Client_data *cl
     ip_reset(&ipptp_write->ret_ip_port.ip);
     ipptp_write->ret_ip_port.port = 0;
     ipptp_write->ret_timestamp = 0;
+    ipptp_write->ret_ip_self = false;
 
     /* zero out other address */
     memset(ipptp_clear, 0, sizeof(*ipptp_clear));
@@ -1241,7 +1242,7 @@ uint32_t addto_lists(DHT *dht, IP_Port ip_port, const uint8_t *public_key)
 }
 
 static bool update_client_data(const Mono_Time *mono_time, Client_data *array, size_t size, IP_Port ip_port,
-                               const uint8_t *pk)
+                               const uint8_t *pk, bool node_is_self)
 {
     const uint64_t temp_time = mono_time_get(mono_time);
     const uint32_t index = index_of_client_pk(array, size, pk);
@@ -1263,6 +1264,8 @@ static bool update_client_data(const Mono_Time *mono_time, Client_data *array, s
 
     assoc->ret_ip_port = ip_port;
     assoc->ret_timestamp = temp_time;
+    assoc->ret_ip_self = node_is_self;
+
     return true;
 }
 
@@ -1278,7 +1281,7 @@ static void returnedip_ports(DHT *dht, IP_Port ip_port, const uint8_t *public_ke
     }
 
     if (id_equal(public_key, dht->self_public_key)) {
-        update_client_data(dht->mono_time, dht->close_clientlist, LCLIENT_LIST, ip_port, nodepublic_key);
+        update_client_data(dht->mono_time, dht->close_clientlist, LCLIENT_LIST, ip_port, nodepublic_key, true);
         return;
     }
 
@@ -1286,7 +1289,7 @@ static void returnedip_ports(DHT *dht, IP_Port ip_port, const uint8_t *public_ke
         if (id_equal(public_key, dht->friends_list[i].public_key)) {
             Client_data *const client_list = dht->friends_list[i].client_list;
 
-            if (update_client_data(dht->mono_time, client_list, MAX_FRIEND_CLIENTS, ip_port, nodepublic_key)) {
+            if (update_client_data(dht->mono_time, client_list, MAX_FRIEND_CLIENTS, ip_port, nodepublic_key, false)) {
                 return;
             }
         }
@@ -3019,14 +3022,14 @@ int ipport_self_copy(const DHT *dht, IP_Port *dest, bool allow_LAN)
         const Client_data *client = dht_get_close_client(dht, i);
         const IP_Port *ip_port4 = &client->assoc4.ret_ip_port;
 
-        if (ipport_isset(ip_port4)) {
+        if (client->assoc4.ret_ip_self && ipport_isset(ip_port4)) {
             ipport_copy(dest, ip_port4);
             break;
         }
 
         const IP_Port *ip_port6 = &client->assoc6.ret_ip_port;
 
-        if (ipport_isset(ip_port6)) {
+        if (client->assoc6.ret_ip_self && ipport_isset(ip_port6)) {
             ipport_copy(dest, ip_port6);
             break;
         }
