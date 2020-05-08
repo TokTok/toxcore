@@ -2833,7 +2833,7 @@ static void try_pack_gc_data(const Messenger *m, GC_Chat *chat, Onion_Friend *on
     int tcp_num = tcp_copy_connected_relays(chat->tcp_conn, announce.base_announce.tcp_relays,
                                             GCA_MAX_ANNOUNCED_TCP_RELAYS);
     IP_Port self_ip_port = {{{0}}};
-    int copy_ip_port_result = ipport_self_copy(m->dht, &self_ip_port);
+    int copy_ip_port_result = ipport_self_copy(m->dht, &self_ip_port, true);
     bool ip_port_is_set = copy_ip_port_result == 0;
     bool can_publish_announce = tcp_num > 0 || ip_port_is_set;
 

@@ -425,7 +425,12 @@ bool dht_non_lan_connected(const DHT *dht);
 
 uint32_t addto_lists(DHT *dht, IP_Port ip_port, const uint8_t *public_key);
 
-/* Copies your own ip_port structure to dest. */
-int ipport_self_copy(const DHT *dht, IP_Port *dest);
+/* Copies your own ip_port structure to dest. If allow_LAN is false an error will be returned
+ * if the result is a LAN address.
+ *
+ * Return 0 on success.
+ * Return -1 on failure.
+ */
+int ipport_self_copy(const DHT *dht, IP_Port *dest, bool allow_LAN);
 
 #endif
