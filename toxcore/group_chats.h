@@ -259,7 +259,7 @@ typedef struct GC_Chat {
     const Logger *logger;
     uint8_t confirmed_peers[MAX_GC_CONFIRMED_PEERS][ENC_PUBLIC_KEY];
     uint8_t confirmed_peers_index;
-    Node_format announced_node;
+
     IP_Port self_ip_port;
 
     Networking_Core *net;
@@ -287,6 +287,7 @@ typedef struct GC_Chat {
     uint32_t    self_public_key_hash;
 
     uint8_t     connection_state;
+    uint64_t    time_connected;
     uint64_t    last_join_attempt;
     uint64_t    last_ping_interval;
     uint8_t     join_type;   /* How we joined the group (invite or DHT) */

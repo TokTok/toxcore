@@ -1015,8 +1015,7 @@ static int handle_gc_sync_response(Messenger *m, int group_number, int peer_numb
             }
 
             if (curr_announce->ip_port_is_set && !curr_announce->tcp_relays_count) {
-                send_gc_handshake_packet(chat, (uint32_t)new_peer_number, GH_REQUEST, HS_PEER_INFO_EXCHANGE,
-                                         chat->join_type);
+                send_gc_handshake_packet(chat, (uint32_t)new_peer_number, GH_REQUEST, HS_PEER_INFO_EXCHANGE, chat->join_type);
                 gcc_set_send_message_id(peer_gconn, peer_gconn->send_message_id + 1);
             } else {
                 peer_gconn->pending_handshake_type = HS_PEER_INFO_EXCHANGE;
@@ -1041,8 +1040,9 @@ static int handle_gc_sync_response(Messenger *m, int group_number, int peer_numb
     chat->connection_state = CS_CONNECTED;
     send_gc_peer_exchange(c, chat, gconn);
 
-    if (c->self_join) {
+    if (c->self_join && chat->time_connected == 0) {
         (*c->self_join)(m, group_number, c->self_join_userdata);
+        chat->time_connected = mono_time_get(chat->mono_time);
     }
 
     return 0;
@@ -2096,8 +2096,8 @@ static int handle_gc_shared_state(Messenger *m, int group_number, uint32_t peer_
     uint32_t version;
     net_unpack_u32(data + length - sizeof(uint32_t), &version);
 
-    if (version < chat->shared_state.version) {
-        LOGGER_WARNING(m->log, "Shared state version is less than current version");
+    if (version == 0 || version < chat->shared_state.version) {
+        LOGGER_WARNING(m->log, "Invalid shared state version");
         return 0;
     }
 
@@ -5112,7 +5112,7 @@ static int peer_add(Messenger *m, int group_number, const IP_Port *ipp, const ui
     gconn->received_message_id = 0;
     gconn->tcp_connection_num = tcp_connection_num;
     gconn->last_sent_ip_time = tm;
-    gconn->last_sent_ping_time = tm + (rand() % 6);
+    gconn->last_sent_ping_time = tm + (peer_number % (GC_PING_TIMEOUT / 2));
 
     return peer_number;
 }
@@ -5199,7 +5199,7 @@ static int ping_peer(const GC_Chat *chat, GC_Connection *gconn, bool self_ip_por
  * Packet always includes your confirmed peer count, shared state version and sanctions list version for syncing purposes.
  * We also occasionally try to send our own IP info to peers that we do not have a direct connection with.
  */
-static void ping_group(const Messenger *m, GC_Chat *chat)
+static void do_gc_pings(const Messenger *m, GC_Chat *chat)
 {
     if (!mono_time_is_timeout(chat->mono_time, chat->last_ping_interval, GC_DO_PINGS_INTERVAL)) {
         return;
@@ -5341,7 +5341,7 @@ void do_gc(GC_Session *c, void *userdata)
 
         switch (chat->connection_state) {
             case CS_CONNECTED: {
-                ping_group(c->messenger, chat);
+                do_gc_pings(c->messenger, chat);
                 do_peer_connections(c->messenger, i);
                 do_new_connection_cooldown(chat);
                 break;
@@ -5942,6 +5942,8 @@ bool gc_rejoin_group(GC_Session *c, GC_Chat *chat)
     if (!c || !chat) {
         return false;
     }
+
+    chat->time_connected = 0;
 
     if (chat->connection_state == CS_MANUALLY_DISCONNECTED) {
         return gc_rejoin_disconnected_group(c, chat);

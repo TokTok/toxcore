@@ -2862,11 +2862,6 @@ static void try_pack_gc_data(const Messenger *m, GC_Chat *chat, Onion_Friend *on
         }
 
         onion_friend_set_gc_data(onion_friend, gc_data, (int16_t)length);
-
-        if (tcp_num > 0) {
-            memcpy((void *)&chat->announced_node, &announce.base_announce.tcp_relays[0], sizeof(Node_format));
-        }
-
         gca_add_announce(m->mono_time, m->group_announce, &announce);
     } else {
         // new gc - no connected relays yet and no ip/port
