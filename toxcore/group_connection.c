@@ -26,7 +26,7 @@
 #ifndef VANILLA_NACL
 
 /* The time before the direct UDP connection is considered dead */
-#define GCC_UDP_DIRECT_TIMEOUT (GC_PING_INTERVAL + 2)
+#define GCC_UDP_DIRECT_TIMEOUT (GC_PING_TIMEOUT + 4)
 
 
 /* Returns group connection object for peer_number.
@@ -100,11 +100,13 @@ static int create_array_entry(const Logger *logger, const Mono_Time *mono_time,
         memcpy(array_entry->data, data, length);
     }
 
+    uint64_t tm = mono_time_get(mono_time);
+
     array_entry->data_length = length;
     array_entry->packet_type = packet_type;
     array_entry->message_id = message_id;
-    array_entry->time_added = mono_time_get(mono_time);
-    array_entry->last_send_try = mono_time_get(mono_time);
+    array_entry->time_added = tm;
+    array_entry->last_send_try = tm;
 
     return 0;
 }

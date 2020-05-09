@@ -29,10 +29,10 @@
 
 #define GC_MOD_LIST_ENTRY_SIZE SIG_PUBLIC_KEY
 #define GC_MODERATION_HASH_SIZE CRYPTO_SHA256_SIZE
-#define GC_PING_INTERVAL 12
-#define GC_SEND_IP_PORT_INTERVAL (GC_PING_INTERVAL * 5)
-#define GC_CONFIRMED_PEER_TIMEOUT (GC_PING_INTERVAL * 4 + 10)
-#define GC_UNCONFIRMED_PEER_TIMEOUT (GC_PING_INTERVAL * 2)
+#define GC_PING_TIMEOUT 12
+#define GC_SEND_IP_PORT_INTERVAL (GC_PING_TIMEOUT * 5)
+#define GC_CONFIRMED_PEER_TIMEOUT (GC_PING_TIMEOUT * 4 + 10)
+#define GC_UNCONFIRMED_PEER_TIMEOUT (GC_PING_TIMEOUT * 2)
 #define MAX_GC_CONFIRMED_PEERS 20
 
 #define GC_JOIN_DATA_LENGTH (ENC_PUBLIC_KEY + CHAT_ID_SIZE)
@@ -288,7 +288,7 @@ typedef struct GC_Chat {
 
     uint8_t     connection_state;
     uint64_t    last_join_attempt;
-    uint64_t    last_sent_ping_time;
+    uint64_t    last_ping_interval;
     uint8_t     join_type;   /* How we joined the group (invite or DHT) */
 
     /* keeps track of frequency of new inbound connections */
