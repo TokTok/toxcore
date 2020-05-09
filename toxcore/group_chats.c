@@ -5181,7 +5181,7 @@ static int ping_peer(const GC_Chat *chat, GC_Connection *gconn, bool self_ip_por
     uint32_t real_length = HASH_ID_BYTES + GC_PING_PACKET_MIN_DATA_SIZE;
 
     if (self_ip_port_set && !gcc_connection_is_direct(chat->mono_time, gconn)
-                && mono_time_is_timeout(chat->mono_time, gconn->last_sent_ip_time, GC_SEND_IP_PORT_INTERVAL)) {
+            && mono_time_is_timeout(chat->mono_time, gconn->last_sent_ip_time, GC_SEND_IP_PORT_INTERVAL)) {
 
         int packed_ipp_len = pack_ip_port(data + buf_size - sizeof(IP_Port), sizeof(IP_Port), &chat->self_ip_port);
 
