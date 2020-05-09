@@ -1,6 +1,9 @@
 #!/usr/bin/env sh
 
-set -e -x
+# disable on Cygwin otherwise some builds fail
+if [ "${CROSS_COMPILE}" = "true" ]; then
+    set -e -x
+fi
 
 #=== Cross-Compile Dependencies ===
 
@@ -15,14 +18,14 @@ build()
 
     # prefix that we will copy to the user
     PREFIX_DIR="/root/prefix/${ARCH}"
-    # prefix for things that shouldn't be copied to the user
-    EXTRA_PREFIX_DIR="/root/extra-prefix/${ARCH}"
-    mkdir -p "${PREFIX_DIR}" "${EXTRA_PREFIX_DIR}"
+    rm -rf "${PREFIX_DIR}"
+    mkdir -p "${PREFIX_DIR}"
 
     export MAKEFLAGS=j$(nproc)
     export CFLAGS=-O3
 
     cd /tmp
+    rm -rf /tmp/*
 
     echo
     echo "=== Building Sodium ${VERSION_SODIUM} ${ARCH} ==="
@@ -36,9 +39,17 @@ build()
 
     echo
     echo "=== Building Opus ${VERSION_OPUS} ${ARCH} ==="
-    git clone --depth=1 --branch="${VERSION_OPUS}" https://github.com/xiph/opus
-    cd opus
-    ./autogen.sh
+    if [ "${CROSS_COMPILE}" = "true" ]; then
+        git clone --depth=1 --branch="${VERSION_OPUS}" https://github.com/xiph/opus
+        cd opus
+        ./autogen.sh
+    else
+        # autogen.sh failed on Cygwin due to ltmain.sh symlink
+        VERSION_OPUS="${VERSION_OPUS#?}" # remove first 'v'
+        curl "https://archive.mozilla.org/pub/opus/opus-${VERSION_OPUS}.tar.gz" -o opus.tar.gz
+        tar xzf opus.tar.gz
+        cd "opus-${VERSION_OPUS}"
+    fi
     ./configure --host="${WINDOWS_TOOLCHAIN}" --prefix="${PREFIX_DIR}" --disable-extra-programs --disable-doc --disable-shared --enable-static
     make
     make install
