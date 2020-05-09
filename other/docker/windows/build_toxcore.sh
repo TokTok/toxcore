@@ -23,7 +23,10 @@ build()
 
     # where to put the result of this particular build
     RESULT_PREFIX_DIR="/prefix/${ARCH}"
+    rm -rf "${RESULT_PREFIX_DIR}"
     mkdir -p "${RESULT_PREFIX_DIR}"
+
+    rm -rf /tmp/*
 
     # where to install static/shared toxcores before deciding whether they should be copied over to the user
     STATIC_TOXCORE_PREFIX_DIR="/tmp/static_prefix"
@@ -37,8 +40,18 @@ build()
     echo "=== Building toxcore ${ARCH} ==="
     export PKG_CONFIG_PATH="${DEP_PREFIX_DIR}/lib/pkgconfig:${EXTRA_DEP_PREFIX_DIR}/lib/pkgconfig"
 
-    cp /toxcore /tmp/toxcore -R
+    if [ "${CROSS_COMPILE}" = "true" ]; then
+        TOXCORE_DIR="/toxcore"
+    else
+        # get Toxcore root
+        cd "$( cd "$( dirname -- "$0" )" >/dev/null 2>&1 && pwd )"
+        cd ../../../
+        TOXCORE_DIR="$(pwd)"
+    fi
+
+    cp "${TOXCORE_DIR}" /tmp/toxcore -R
     cd /tmp/toxcore/build
+
     echo "
         SET(CMAKE_SYSTEM_NAME Windows)
 
@@ -59,7 +72,7 @@ build()
         -DENABLE_STATIC=ON \
         -DCMAKE_C_FLAGS="${CMAKE_C_FLAGS}" \
         -DCMAKE_CXX_FLAGS="${CMAKE_CXX_FLAGS}" \
-        -DCMAKE_EXE_LINKER_FLAGS="${CMAKE_EXE_LINKER_FLAGS}" \
+        -DCMAKE_EXE_LINKER_FLAGS="${CMAKE_EXE_LINKER_FLAGS} -fstack-protector" \
         -DCMAKE_SHARED_LINKER_FLAGS="${CMAKE_SHARED_LINKER_FLAGS}" \
         ${EXTRA_CMAKE_FLAGS} \
         ..
@@ -99,6 +112,13 @@ build()
     do
         ${WINDOWS_TOOLCHAIN}-ar xv ${archive}
     done
+
+    if [ "${CROSS_COMPILE}" = "true" ]; then
+        LIBWINPTHREAD="/usr/${WINDOWS_TOOLCHAIN}/sys-root/mingw/lib/libwinpthread.a"
+    else
+        LIBWINPTHREAD="/usr/${WINDOWS_TOOLCHAIN}/lib/libwinpthread.a"
+    fi
+
     ${WINDOWS_TOOLCHAIN}-gcc -Wl,--export-all-symbols \
                              -Wl,--out-implib=libtox.dll.a \
                              -shared \
@@ -106,10 +126,11 @@ build()
                              *.obj \
                              ${STATIC_TOXCORE_PREFIX_DIR}/lib/*.a \
                              ${DEP_PREFIX_DIR}/lib/*.a \
-                             /usr/${WINDOWS_TOOLCHAIN}/lib/libwinpthread.a \
+                             "${LIBWINPTHREAD}" \
                              -liphlpapi \
                              -lws2_32 \
-                             -static-libgcc
+                             -static-libgcc \
+                             -lssp
     cp libtox.dll.a ${RESULT_PREFIX_DIR}/lib
     mkdir -p ${RESULT_PREFIX_DIR}/bin
     cp libtox.dll ${RESULT_PREFIX_DIR}/bin
@@ -165,4 +186,6 @@ echo "Built toxcore successfully!"
 echo
 
 # since we are building as root
-chmod 777 /prefix -R
+if [ "${CROSS_COMPILE}" = "true" ]; then
+    chmod 777 /prefix -R
+fi
