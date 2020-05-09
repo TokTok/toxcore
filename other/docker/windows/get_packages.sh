@@ -12,6 +12,7 @@ apt-get install -y \
     automake \
     ca-certificates \
     cmake \
+    curl \
     git \
     libtool \
     libc-dev \
