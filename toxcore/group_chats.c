@@ -73,6 +73,9 @@
 /* Min size of a ping packet, which contains the peer count, shared state version, sanctions list version and topic version */
 #define GC_PING_PACKET_MIN_DATA_SIZE (sizeof(uint32_t) * 4)
 
+/* How often we check which peers needs to be pinged */
+#define GC_DO_PINGS_INTERVAL (2)
+
 
 typedef enum Group_Handshake_Packet_Type {
     GH_REQUEST,
@@ -5109,6 +5112,7 @@ static int peer_add(Messenger *m, int group_number, const IP_Port *ipp, const ui
     gconn->received_message_id = 0;
     gconn->tcp_connection_num = tcp_connection_num;
     gconn->last_sent_ip_time = tm;
+    gconn->last_sent_ping_time = tm + (rand() % 6);
 
     return peer_number;
 }
@@ -5162,18 +5166,8 @@ static void do_peer_connections(Messenger *m, int group_number)
     }
 }
 
-/*
- * Sends a ping packet to every confirmed peer.
- *
- * Packet always includes your confirmed peer count, shared state version and sanctions list version for syncing purposes.
- * We also occasionally try to send our own IP info to peers that we do not have a direct connection with.
- */
-static void ping_group(const Messenger *m, GC_Chat *chat)
+static int ping_peer(const GC_Chat *chat, GC_Connection *gconn, bool self_ip_port_set)
 {
-    if (!mono_time_is_timeout(chat->mono_time, chat->last_sent_ping_time, GC_PING_INTERVAL)) {
-        return;
-    }
-
     uint32_t buf_size = HASH_ID_BYTES + GC_PING_PACKET_MIN_DATA_SIZE + sizeof(IP_Port);
     VLA(uint8_t, data, buf_size);
 
@@ -5184,12 +5178,37 @@ static void ping_group(const Messenger *m, GC_Chat *chat)
     net_pack_u32(data + HASH_ID_BYTES + (sizeof(uint32_t) * 2), chat->moderation.sanctions_creds.version);
     net_pack_u32(data + HASH_ID_BYTES + (sizeof(uint32_t) * 3), chat->topic_info.version);
 
-    int packed_ipp_len = 0;
+    uint32_t real_length = HASH_ID_BYTES + GC_PING_PACKET_MIN_DATA_SIZE;
+
+    if (self_ip_port_set && !gcc_connection_is_direct(chat->mono_time, gconn)
+                && mono_time_is_timeout(chat->mono_time, gconn->last_sent_ip_time, GC_SEND_IP_PORT_INTERVAL)) {
+
+        int packed_ipp_len = pack_ip_port(data + buf_size - sizeof(IP_Port), sizeof(IP_Port), &chat->self_ip_port);
+
+        if (packed_ipp_len > 0) {
+            real_length += packed_ipp_len;
+        }
+    }
+
+    return send_lossy_group_packet(chat, gconn, data, real_length, GP_PING);
+}
+
+/*
+ * Sends a ping packet to peers that haven't been pinged in at least GC_PING_TIMEOUT seconds.
+ *
+ * Packet always includes your confirmed peer count, shared state version and sanctions list version for syncing purposes.
+ * We also occasionally try to send our own IP info to peers that we do not have a direct connection with.
+ */
+static void ping_group(const Messenger *m, GC_Chat *chat)
+{
+    if (!mono_time_is_timeout(chat->mono_time, chat->last_ping_interval, GC_DO_PINGS_INTERVAL)) {
+        return;
+    }
 
     // Our IP may change during a session so we keep updating it
-    if (ipport_self_copy(m->dht, &chat->self_ip_port, false) == 0) {
-        packed_ipp_len = pack_ip_port(data + buf_size - sizeof(IP_Port), sizeof(IP_Port), &chat->self_ip_port);
-    }
+    bool self_ip_port_set = ipport_self_copy(m->dht, &chat->self_ip_port, false) == 0;
+
+    uint64_t tm = mono_time_get(chat->mono_time);
 
     for (uint32_t i = 1; i < chat->numpeers; ++i) {
         GC_Connection *gconn = &chat->gcc[i];
@@ -5198,18 +5217,16 @@ static void ping_group(const Messenger *m, GC_Chat *chat)
             continue;
         }
 
-        uint32_t real_length = buf_size - sizeof(IP_Port);
-
-        if (packed_ipp_len > 0 && !gcc_connection_is_direct(chat->mono_time, gconn)
-                && mono_time_is_timeout(chat->mono_time, gconn->last_sent_ip_time, GC_SEND_IP_PORT_INTERVAL)) {
-            gconn->last_sent_ip_time = mono_time_get(chat->mono_time);
-            real_length = HASH_ID_BYTES + GC_PING_PACKET_MIN_DATA_SIZE + packed_ipp_len;
+        if (!mono_time_is_timeout(chat->mono_time, gconn->last_sent_ping_time, GC_PING_TIMEOUT)) {
+            continue;
         }
 
-        send_lossy_group_packet(chat, gconn, data, real_length, GP_PING);
+        if (ping_peer(chat, gconn, self_ip_port_set) >= 0) {
+            gconn->last_sent_ping_time = tm;
+        }
     }
 
-    chat->last_sent_ping_time = mono_time_get(chat->mono_time);
+    chat->last_ping_interval = mono_time_get(chat->mono_time);
 }
 
 static void do_new_connection_cooldown(GC_Chat *chat)
@@ -5522,7 +5539,7 @@ static int create_new_group(GC_Session *c, const uint8_t *nick, size_t nick_leng
     chat->net = m->net;
     chat->mono_time = m->mono_time;
     chat->logger = m->log;
-    chat->last_sent_ping_time = mono_time_get(m->mono_time);
+    chat->last_ping_interval = mono_time_get(m->mono_time);
 
     if (peer_add(m, group_number, nullptr, chat->self_public_key) != 0) {    /* you are always peer_number/index 0 */
         group_delete(c, chat);
@@ -5643,7 +5660,7 @@ int gc_group_load(GC_Session *c, Saved_Group *save, int group_number)
     chat->net = m->net;
     chat->mono_time = m->mono_time;
     chat->logger = m->log;
-    chat->last_sent_ping_time = tm;
+    chat->last_ping_interval = tm;
 
     memcpy(chat->shared_state.founder_public_key, save->founder_public_key, EXT_PUBLIC_KEY);
     chat->shared_state.group_name_len = net_ntohs(save->group_name_length);
