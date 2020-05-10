@@ -119,6 +119,14 @@ bool gcc_ip_port_is_set(GC_Connection *gconn);
  */
 void gcc_set_ip_port(GC_Connection *gconn, const IP_Port *ipp);
 
+/*
+ * Copies a TCP relay node from gconn to node.
+ *
+ * Return 0 on success.
+ * Return -1 on failure.
+ */
+int gcc_copy_tcp_relay(GC_Connection *gconn, Node_format *node);
+
 /* Checks for and handles messages that are in proper sequence in gconn's received_array.
  * This should always be called after a new packet is successfully handled.
  *
