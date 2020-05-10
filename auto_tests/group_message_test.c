@@ -93,7 +93,7 @@ static void group_message_handler(Tox *tox, uint32_t groupnumber, uint32_t peer_
     ck_assert(s_err == TOX_ERR_GROUP_SELF_QUERY_OK);
     ck_assert(memcmp(self_name, PEER1_NICK, self_name_len) == 0);
 
-    printf("%s sent message to %s: %s\n\n", peer_name, self_name, message_buf);
+    printf("%s sent message to %s: %s\n", peer_name, self_name, message_buf);
     ck_assert(memcmp(message_buf, TEST_MESSAGE, length) == 0);
 
     State *state = (State *)user_data;

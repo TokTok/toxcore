@@ -59,8 +59,6 @@ struct GC_Connection {
 
     uint64_t    last_received_ping_time;
     uint64_t    last_sent_ping_time;
-    bool        pending_sync_request;   /* true if we have sent this peer a sync request and have not received a reply*/
-    bool        pending_state_sync;    /* used for group state syncing */
     bool        handshaked; /* true if we've successfully handshaked with this peer */
     uint64_t    pending_handshake;
     uint8_t     pending_handshake_type;
