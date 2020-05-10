@@ -192,6 +192,24 @@ void gcc_set_ip_port(GC_Connection *gconn, const IP_Port *ipp)
     }
 }
 
+/*
+ * Copies a TCP relay node from gconn to node.
+ *
+ * Return 0 on success.
+ * Return -1 on failure.
+ */
+int gcc_copy_tcp_relay(GC_Connection *gconn, Node_format *node)
+{
+    if (gconn == nullptr || node == nullptr) {
+        return -1;
+    }
+
+    int index = (gconn->tcp_relays_index - 1 + MAX_FRIEND_TCP_CONNECTIONS) % MAX_FRIEND_TCP_CONNECTIONS;
+    memcpy(node, &gconn->connected_tcp_relays[index], sizeof(Node_format));
+
+    return 0;
+}
+
 /* Decides if message need to be put in received_array or immediately handled.
  *
  * Return 2 if message is in correct sequence and may be handled immediately.
