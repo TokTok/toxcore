@@ -1818,7 +1818,7 @@ static int handle_gc_peer_announcement(Messenger *m, int group_number, const uin
     int unpack_result = gca_unpack_announce((const uint8_t *)data, length, &new_peer_announce);
 
     if (unpack_result == -1) {
-        LOGGER_ERROR(m->log, "Unpack error");
+        LOGGER_ERROR(m->log, "Failed to unpack announce");
         return -1;
     }
 
@@ -4122,6 +4122,10 @@ static int send_gc_handshake_packet(GC_Chat *chat, uint32_t peer_number, uint8_t
         return -1;
     }
 
+    if (request_type == HS_PEER_INFO_EXCHANGE) {
+        gconn->handshaked = true;
+    }
+
     return 0;
 }
 
@@ -4540,11 +4544,11 @@ static int handle_gc_lossless_message(Messenger *m, GC_Chat *chat, const uint8_t
     int len = unwrap_group_packet(m->log, gconn->shared_key, data, &message_id, &packet_type, packet, length);
 
     if (len <= 0) {
-        LOGGER_ERROR(m->log, "Failed to unwrap lossless packet type %d", packet_type);
+        LOGGER_ERROR(m->log, "Failed to unwrap lossless packet");
         return -1;
     }
 
-    if (packet_type != GP_HS_RESPONSE_ACK && packet_type != GP_INVITE_REQUEST && !gconn->handshaked) {
+    if (!gconn->handshaked && (packet_type != GP_HS_RESPONSE_ACK && packet_type != GP_INVITE_REQUEST)) {
         LOGGER_ERROR(m->log, "Got lossless packet type %d from unconfirmed peer", packet_type);
         return -1;
     }
@@ -4583,13 +4587,14 @@ static int handle_gc_lossless_message(Messenger *m, GC_Chat *chat, const uint8_t
 
     /* Duplicate packet */
     if (lossless_ret == 0) {
-        LOGGER_DEBUG(m->log, "got duplicate packet %lu (type %u)", message_id, packet_type);
+        LOGGER_DEBUG(m->log, "got duplicate packet from peer %u. ID: %lu, type: %u)", peer_number, message_id, packet_type);
         return gc_send_message_ack(chat, gconn, message_id, 0);
     }
 
     /* request missing packet */
     if (lossless_ret == 1) {
-        LOGGER_ERROR(m->log, "received out of order packet. expected %lu, got %lu", gconn->received_message_id + 1, message_id);
+        LOGGER_ERROR(m->log, "received out of order packet from peer %u. expected %lu, got %lu", peer_number,
+                              gconn->received_message_id + 1, message_id);
         return gc_send_message_ack(chat, gconn, 0, gconn->received_message_id + 1);
     }
 
@@ -5527,8 +5532,6 @@ static int create_new_group(GC_Session *c, const uint8_t *nick, size_t nick_leng
     chat->self_public_key_hash = chat->gcc[0].public_key_hash;
     memcpy(chat->gcc[0].addr.public_key, chat->self_public_key, EXT_PUBLIC_KEY);
 
-    set_peers_checksum(chat);
-
     return group_number;
 }
 
@@ -5676,8 +5679,6 @@ int gc_group_load(GC_Session *c, Saved_Group *save, int group_number)
     chat->group[0].role = save->self_role;
     chat->group[0].status = save->self_status;
     chat->gcc[0].confirmed = true;
-
-    set_peers_checksum(chat);
 
     if (save->self_role == GR_FOUNDER) {
         if (init_gc_sanctions_creds(chat) == -1) {
