@@ -149,17 +149,6 @@ void pack_group_info(const GC_Chat *chat, Saved_Group *temp, bool can_use_cached
     temp->self_status = chat->group[0].status;
 }
 
-static bool is_peer_confirmed(const GC_Chat *chat, const uint8_t *peer_pk)
-{
-    for (size_t i = 0; i < MAX_GC_CONFIRMED_PEERS; ++i) {
-        if (!memcmp(chat->confirmed_peers[i], peer_pk, ENC_PUBLIC_KEY)) { // peer in our list
-            return true;
-        }
-    }
-
-    return false;
-}
-
 bool is_public_chat(const GC_Chat *chat)
 {
     return chat->shared_state.privacy_state == GI_PUBLIC;
@@ -4038,7 +4027,7 @@ static int make_gc_handshake_packet(GC_Chat *chat, GC_Connection *gconn, uint8_t
         return -1;
     }
 
-    if (!chat || !gconn || !node) {
+    if (chat == nullptr || gconn == nullptr || node == nullptr) {
         return -1;
     }
 
@@ -4287,11 +4276,6 @@ static int handle_gc_handshake_request(Messenger *m, int group_number, const IP_
     bool is_new_peer = false;
 
     if (peer_number < 0) {
-        if (!is_public_chat(chat) && !is_peer_confirmed(chat, sender_pk)) {
-            LOGGER_WARNING(m->log, "Unconfirmed peer made handshake attempt in private group");
-            return -1; // peer is not allowed to join this chat
-        }
-
         peer_number = peer_add(m, chat->group_number, ipp, sender_pk);
 
         if (peer_number < 0) {
@@ -4940,11 +4924,6 @@ int gc_peer_delete(Messenger *m, int group_number, uint32_t peer_number, const u
         return -1;
     }
 
-    if (gconn->handshaked && !is_peer_confirmed(chat, gconn->addr.public_key)) {
-        memcpy(chat->confirmed_peers[chat->confirmed_peers_index], gconn->addr.public_key, ENC_PUBLIC_KEY);
-        chat->confirmed_peers_index = (chat->confirmed_peers_index + 1) % MAX_GC_CONFIRMED_PEERS;
-    }
-
     /* Needs to occur before peer is removed*/
     if (!no_callback && c->peer_exit && gconn->confirmed) {
         (*c->peer_exit)(m, group_number, chat->group[peer_number].peer_id, chat->group[peer_number].nick,
@@ -5267,11 +5246,11 @@ static int send_pending_handshake(GC_Chat *chat, GC_Connection *gconn, uint32_t 
                                           gconn->pending_handshake_type, chat->join_type);
     }
 
-    if (!result || time > gconn->pending_handshake + PENDING_HANDSHAKE_SENDING_MAX_INTERVAL) {
+    if (result == 0 || time > gconn->pending_handshake + PENDING_HANDSHAKE_SENDING_MAX_INTERVAL) {
         gconn->pending_handshake = 0;
     }
 
-    if (!result) {
+    if (result == 0) {
         if (!gconn->is_pending_handshake_response) {
             gcc_set_send_message_id(gconn, 2);
         } else {
@@ -5291,9 +5270,7 @@ static void do_group_tcp(GC_Chat *chat, void *userdata)
 
     do_tcp_connections(chat->logger, chat->tcp_conn, userdata);
 
-    uint32_t i;
-
-    for (i = 1; i < chat->numpeers; ++i) {
+    for (uint32_t i = 1; i < chat->numpeers; ++i) {
         GC_Connection *gconn = &chat->gcc[i];
         bool tcp_set = !gcc_connection_is_direct(chat->mono_time, gconn);
         set_tcp_connection_to_status(chat->tcp_conn, gconn->tcp_connection_num, tcp_set);
@@ -5427,9 +5404,7 @@ static int get_new_group_index(GC_Session *c)
 
 static GC_Chat *get_chat_by_tcp_connections(GC_Session *group_handler, TCP_Connections *tcp_c)
 {
-    uint32_t i;
-
-    for (i = 0; i < group_handler->num_chats; ++i) {
+    for (uint32_t i = 0; i < group_handler->num_chats; ++i) {
         GC_Chat *chat = &group_handler->chats[i];
 
         if (chat->tcp_conn == tcp_c) {
@@ -5577,9 +5552,7 @@ static int init_gc_sanctions_creds(GC_Chat *chat)
 
 static void gc_load_peers(Messenger *m, GC_Chat *chat, GC_SavedPeerInfo *addrs, uint16_t num_addrs)
 {
-    int i;
-
-    for (i = 0; i < num_addrs && i < MAX_GC_PEER_ADDRS; ++i) {
+    for (size_t i = 0; i < num_addrs && i < MAX_GC_PEER_ADDRS; ++i) {
         bool ip_port_is_set = ipport_isset(&addrs[i].ip_port);
         IP_Port *ip_port = ip_port_is_set ? &addrs[i].ip_port : nullptr;
         int peer_number = peer_add(m, chat->group_number, ip_port, addrs[i].public_key);

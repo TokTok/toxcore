@@ -33,7 +33,6 @@
 #define GC_SEND_IP_PORT_INTERVAL (GC_PING_TIMEOUT * 5)
 #define GC_CONFIRMED_PEER_TIMEOUT (GC_PING_TIMEOUT * 4 + 10)
 #define GC_UNCONFIRMED_PEER_TIMEOUT (GC_PING_TIMEOUT * 2)
-#define MAX_GC_CONFIRMED_PEERS 100  // todo: what is this for?
 
 #define GC_JOIN_DATA_LENGTH (ENC_PUBLIC_KEY + CHAT_ID_SIZE)
 
@@ -256,12 +255,9 @@ typedef struct Saved_Group Saved_Group;
 
 typedef struct GC_Chat {
     const Mono_Time *mono_time;
-    const Logger *logger;
-    uint8_t confirmed_peers[MAX_GC_CONFIRMED_PEERS][ENC_PUBLIC_KEY];
-    uint8_t confirmed_peers_index;
+    const Logger    *logger;
 
-    IP_Port self_ip_port;
-
+    IP_Port         self_ip_port;
     Networking_Core *net;
     TCP_Connections *tcp_conn;
 
