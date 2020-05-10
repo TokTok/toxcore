@@ -33,7 +33,7 @@
 #define GC_SEND_IP_PORT_INTERVAL (GC_PING_TIMEOUT * 5)
 #define GC_CONFIRMED_PEER_TIMEOUT (GC_PING_TIMEOUT * 4 + 10)
 #define GC_UNCONFIRMED_PEER_TIMEOUT (GC_PING_TIMEOUT * 2)
-#define MAX_GC_CONFIRMED_PEERS 20
+#define MAX_GC_CONFIRMED_PEERS 100  // todo: what is this for?
 
 #define GC_JOIN_DATA_LENGTH (ENC_PUBLIC_KEY + CHAT_ID_SIZE)
 
@@ -275,6 +275,7 @@ typedef struct GC_Chat {
     GC_TopicInfo    topic_info;
     uint8_t         topic_sig[SIGNATURE_SIZE];    /* Signed by a moderator or the founder */
 
+    uint32_t    peers_checksum;   /* A sum of the public key hash of every confirmed peer in the group */
     uint32_t    numpeers;
     int         group_number;
 

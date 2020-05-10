@@ -261,14 +261,14 @@ int gca_pack_announces_list(uint8_t *data, uint16_t length, GC_Announce *announc
     for (i = 0; i < announces_count; ++i) {
         int packed_length = gca_pack_announce(data + offset, length - offset, &announces[i]);
 
-        if (packed_length == -1) {
+        if (packed_length < 0) {
             return -1;
         }
 
         offset += packed_length;
     }
 
-    if (processed) {
+    if (processed != nullptr) {
         *processed = offset;
     }
 
