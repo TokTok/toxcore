@@ -4594,7 +4594,7 @@ static int handle_gc_lossless_message(Messenger *m, GC_Chat *chat, const uint8_t
     /* request missing packet */
     if (lossless_ret == 1) {
         LOGGER_ERROR(m->log, "received out of order packet from peer %u. expected %lu, got %lu", peer_number,
-                              gconn->received_message_id + 1, message_id);
+                     gconn->received_message_id + 1, message_id);
         return gc_send_message_ack(chat, gconn, 0, gconn->received_message_id + 1);
     }
 
