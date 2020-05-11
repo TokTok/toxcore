@@ -23,23 +23,23 @@
 
 #define HANDSHAKE_SENDING_TIMEOUT 3
 
-struct GC_Message_Array_Entry {
+typedef struct GC_Message_Array_Entry {
     uint8_t *data;
     uint32_t data_length;
     uint8_t  packet_type;
     uint64_t message_id;
     uint64_t time_added;
     uint64_t last_send_try;
-};
+} GC_Message_Array_Entry;
 
 struct GC_Connection {
     uint64_t send_message_id;   /* message_id of the next message we send to peer */
 
     uint16_t send_array_start;   /* send_array index of oldest item */
-    struct GC_Message_Array_Entry send_array[GCC_BUFFER_SIZE];
+    GC_Message_Array_Entry send_array[GCC_BUFFER_SIZE];
 
     uint64_t received_message_id;   /* message_id of peer's last message to us */
-    struct GC_Message_Array_Entry received_array[GCC_BUFFER_SIZE];
+    GC_Message_Array_Entry received_array[GCC_BUFFER_SIZE];
 
     GC_PeerAddress   addr;   /* holds peer's extended real public key and ip_port */
     uint32_t    public_key_hash;   /* hash of peer's real encryption public key */

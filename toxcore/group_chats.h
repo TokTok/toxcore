@@ -210,7 +210,6 @@ typedef struct GC_TopicInfo {
 
 typedef struct GC_Connection GC_Connection;
 
-
 #define GROUP_SAVE_MAX_PEERS MAX_GC_PEER_ADDRS
 
 struct Saved_Group {

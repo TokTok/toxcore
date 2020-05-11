@@ -313,7 +313,7 @@ GC_Peer_Announce *gca_add_announce(const Mono_Time *mono_time, GC_Announces_List
 
     GC_Announces *announces = get_announces_by_chat_id(gc_announces_list, announce->chat_public_key);
 
-    if (!announces) {
+    if (announces == nullptr) {
         announces = (GC_Announces *)malloc(sizeof(GC_Announces));
 
         if (announces == nullptr) {

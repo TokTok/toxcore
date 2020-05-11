@@ -50,9 +50,8 @@ int mod_list_unpack(GC_Chat *chat, const uint8_t *data, uint32_t length, uint32_
     }
 
     uint32_t unpacked_len = 0;
-    uint16_t i;
 
-    for (i = 0; i < num_mods; ++i) {
+    for (uint16_t i = 0; i < num_mods; ++i) {
         tmp_list[i] = (uint8_t *)malloc(sizeof(uint8_t) * GC_MOD_LIST_ENTRY_SIZE);
 
         if (tmp_list[i] == nullptr) {
@@ -75,9 +74,7 @@ int mod_list_unpack(GC_Chat *chat, const uint8_t *data, uint32_t length, uint32_
  */
 void mod_list_pack(const GC_Chat *chat, uint8_t *data)
 {
-    uint16_t i;
-
-    for (i = 0; i < chat->moderation.num_mods && i < MAX_GC_MODERATORS; ++i) {
+    for (uint16_t i = 0; i < chat->moderation.num_mods && i < MAX_GC_MODERATORS; ++i) {
         memcpy(&data[i * GC_MOD_LIST_ENTRY_SIZE], chat->moderation.mod_list[i], GC_MOD_LIST_ENTRY_SIZE);
     }
 }
@@ -104,9 +101,7 @@ void mod_list_make_hash(GC_Chat *chat, uint8_t *hash)
  */
 int mod_list_index_of_sig_pk(const GC_Chat *chat, const uint8_t *public_sig_key)
 {
-    uint16_t i;
-
-    for (i = 0; i < chat->moderation.num_mods; ++i) {
+    for (uint16_t i = 0; i < chat->moderation.num_mods; ++i) {
         if (memcmp(chat->moderation.mod_list[i], public_sig_key, SIG_PUBLIC_KEY) == 0) {
             return i;
         }
@@ -122,9 +117,7 @@ bool mod_list_verify_sig_pk(const GC_Chat *chat, const uint8_t *sig_pk)
         return true;
     }
 
-    uint16_t i;
-
-    for (i = 0; i < chat->moderation.num_mods; ++i) {
+    for (uint16_t i = 0; i < chat->moderation.num_mods; ++i) {
         if (memcmp(chat->moderation.mod_list[i], sig_pk, SIG_PUBLIC_KEY) == 0) {
             return true;
         }
@@ -422,9 +415,8 @@ void sanctions_list_make_hash(struct GC_Sanction *sanctions, uint32_t new_versio
 
     uint32_t sig_data_size = num_sanctions * SIGNATURE_SIZE;
     VLA(uint8_t, data, sig_data_size + sizeof(uint32_t));
-    uint32_t i;
 
-    for (i = 0; i < num_sanctions; ++i) {
+    for (uint32_t i = 0; i < num_sanctions; ++i) {
         memcpy(&data[i * SIGNATURE_SIZE], sanctions[i].signature, SIGNATURE_SIZE);
     }
 
@@ -539,9 +531,7 @@ static int sanctions_creds_validate(const GC_Chat *chat, struct GC_Sanction *san
 int sanctions_list_check_integrity(const GC_Chat *chat, struct GC_Sanction_Creds *creds,
                                    struct GC_Sanction *sanctions, uint32_t num_sanctions)
 {
-    uint32_t i;
-
-    for (i = 0; i < num_sanctions; ++i) {
+    for (uint32_t i = 0; i < num_sanctions; ++i) {
         if (sanctions_list_validate_entry(chat, &sanctions[i]) != 0) {
             LOGGER_ERROR(chat->logger, "Invalid entry");
             return -1;
@@ -626,9 +616,7 @@ static int sanctions_list_remove_index(GC_Chat *chat, uint32_t index, struct GC_
  */
 int sanctions_list_remove_observer(GC_Chat *chat, const uint8_t *public_key, struct GC_Sanction_Creds *creds)
 {
-    uint32_t i;
-
-    for (i = 0; i < chat->moderation.num_sanctions; ++i) {
+    for (uint32_t i = 0; i < chat->moderation.num_sanctions; ++i) {
         struct GC_Sanction *curr_sanction = &chat->moderation.sanctions[i];
 
         if (curr_sanction->type != SA_OBSERVER) {
@@ -656,9 +644,7 @@ int sanctions_list_remove_observer(GC_Chat *chat, const uint8_t *public_key, str
  */
 bool sanctions_list_is_observer(const GC_Chat *chat, const uint8_t *public_key)
 {
-    uint32_t i;
-
-    for (i = 0; i < chat->moderation.num_sanctions; ++i) {
+    for (uint32_t i = 0; i < chat->moderation.num_sanctions; ++i) {
         struct GC_Sanction *curr_sanction = &chat->moderation.sanctions[i];
 
         if (curr_sanction->type != SA_OBSERVER) {
