@@ -3468,7 +3468,8 @@ namespace group {
   event topic const {
     /**
      * @param group_number The group number of the group the topic change is intended for.
-     * @param peer_id The ID of the peer who changed the topic.
+     * @param peer_id The ID of the peer who changed the topic. If the peer who set the topic
+     *   is not present in our peer list this value will be set to 0.
      * @param topic The topic data.
      * @param length The topic length.
      */
