@@ -306,13 +306,11 @@ bool gc_peer_number_is_valid(const GC_Chat *chat, int peer_number)
 }
 
 
-/* Returns the peer_number of the peer with peer_id.
+/* Returns the peer_number associated with peer_id.
  * Returns -1 if peer_id is invalid. */
 static int get_peer_number_of_peer_id(const GC_Chat *chat, uint32_t peer_id)
 {
-    uint32_t i;
-
-    for (i = 0; i < chat->numpeers; ++i) {
+    for (uint32_t i = 0; i < chat->numpeers; ++i) {
         if (chat->group[i].peer_id == peer_id) {
             return i;
         }
@@ -330,7 +328,7 @@ static uint32_t get_new_peer_id(const GC_Chat *chat)
 {
     uint32_t new_id = random_u32();
 
-    while (get_peer_number_of_peer_id(chat, new_id) != -1) {
+    while (new_id == 0 || get_peer_number_of_peer_id(chat, new_id) != -1) {
         new_id = random_u32();
     }
 
@@ -2536,7 +2534,7 @@ int gc_get_peer_nick(const GC_Chat *chat, uint32_t peer_id, uint8_t *name)
         return -1;
     }
 
-    if (name) {
+    if (name != nullptr) {
         memcpy(name, chat->group[peer_number].nick, chat->group[peer_number].nick_length);
     }
 
@@ -2826,16 +2824,17 @@ static int handle_gc_topic(Messenger *m, int group_number, uint32_t peer_number,
         return 0;
     }
 
+    memcpy(&chat->topic_info, &topic_info, sizeof(GC_TopicInfo));
+    memcpy(chat->topic_sig, signature, SIGNATURE_SIZE);
+
     /* Prevents sync issues from triggering the callback needlessly. */
     bool skip_callback = chat->topic_info.length == topic_info.length
                          && memcmp(chat->topic_info.topic, topic_info.topic, topic_info.length) == 0;
 
-    memcpy(&chat->topic_info, &topic_info, sizeof(GC_TopicInfo));
-    memcpy(chat->topic_sig, signature, SIGNATURE_SIZE);
-
     if (!skip_callback && chat->connection_state == CS_CONNECTED && c->topic_change) {
-        (*c->topic_change)(m, group_number, chat->group[peer_number].peer_id, topic_info.topic, topic_info.length,
-                           c->topic_change_userdata);
+        int setter_peer_number = get_peernum_of_sig_pk(chat, topic_info.public_sig_key);
+        uint32_t peer_id = setter_peer_number >= 0 ? chat->group[setter_peer_number].peer_id : 0;
+        (*c->topic_change)(m, group_number, peer_id, topic_info.topic, topic_info.length, c->topic_change_userdata);
     }
 
     return 0;
