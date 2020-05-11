@@ -322,17 +322,12 @@ static int get_peer_number_of_peer_id(const GC_Chat *chat, uint32_t peer_id)
 /* Returns a new peer ID.
  *
  * These ID's are permanently assigned to a peer when they join the group and should be
- * considered arbitrary values. TODO: This could probably be done a better way.
+ * considered arbitrary values.
  */
-static uint32_t get_new_peer_id(const GC_Chat *chat)
+static uint32_t get_new_peer_id(GC_Chat *chat)
 {
-    uint32_t new_id = random_u32();
-
-    while (new_id == 0 || get_peer_number_of_peer_id(chat, new_id) != -1) {
-        new_id = random_u32();
-    }
-
-    return new_id;
+    ++chat->base_peer_id;
+    return chat->base_peer_id;
 }
 
 /* Returns true if sender_pk_hash is equal to peers's public key hash */
@@ -1375,7 +1370,7 @@ static int handle_gc_invite_response(const Messenger *m, int group_number, GC_Co
         return -1;
     }
 
-    uint16_t sync_flags = 0xffff;
+    uint16_t sync_flags = 0xffff; // TODO: do we really need to sync the entire group for every response?
 
     return send_gc_sync_request(chat, gconn, sync_flags);
 }
@@ -2824,12 +2819,12 @@ static int handle_gc_topic(Messenger *m, int group_number, uint32_t peer_number,
         return 0;
     }
 
-    memcpy(&chat->topic_info, &topic_info, sizeof(GC_TopicInfo));
-    memcpy(chat->topic_sig, signature, SIGNATURE_SIZE);
-
     /* Prevents sync issues from triggering the callback needlessly. */
     bool skip_callback = chat->topic_info.length == topic_info.length
                          && memcmp(chat->topic_info.topic, topic_info.topic, topic_info.length) == 0;
+
+    memcpy(&chat->topic_info, &topic_info, sizeof(GC_TopicInfo));
+    memcpy(chat->topic_sig, signature, SIGNATURE_SIZE);
 
     if (!skip_callback && chat->connection_state == CS_CONNECTED && c->topic_change) {
         int setter_peer_number = get_peernum_of_sig_pk(chat, topic_info.public_sig_key);
