@@ -58,6 +58,7 @@ struct GC_Connection {
 
 
     uint64_t    last_received_ping_time;
+    uint64_t    last_requested_packet_time;  /* The last time we requested a missing packet from this peer */
     uint64_t    last_sent_ping_time;
     bool        handshaked; /* true if we've successfully handshaked with this peer */
     uint64_t    pending_handshake;

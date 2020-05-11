@@ -3768,18 +3768,36 @@ int gc_kick_peer(Messenger *m, int group_number, uint32_t peer_id)
     return 0;
 }
 
-static bool valid_gc_message_ack(uint64_t a, uint64_t b)
+/*
+ * Returns true if the ack contained either a read_id or a request_id but not both.
+ */
+static bool valid_gc_message_ack(uint64_t read_id, uint64_t request_id)
 {
-    return a == 0 || b == 0;
+    return (read_id || request_id) && (read_id == 0 || request_id == 0);
 }
 
-/* If read_id is non-zero sends a read-receipt for read_id's packet.
- * If request_id is non-zero sends a request for the respective id's packet.
+/* If read_id is non-zero we send a read-receipt for read_id's packet.
+ *
+ * If request_id is non-zero we send a request for the respective id's packet.
+ * requests are limited to one per second per peer.
+ *
+ * Return 0 on success.
+ * Return -1 on failure.
  */
 int gc_send_message_ack(const GC_Chat *chat, GC_Connection *gconn, uint64_t read_id, uint64_t request_id)
 {
     if (!valid_gc_message_ack(read_id, request_id)) {
         return -1;
+    }
+
+    if (request_id > 0) {
+        uint64_t tm = mono_time_get(chat->mono_time);
+
+        if (gconn->last_requested_packet_time == tm) {
+            return 0;
+        }
+
+        gconn->last_requested_packet_time = tm;
     }
 
     uint32_t length = HASH_ID_BYTES + (GC_MESSAGE_ID_BYTES * 2);
