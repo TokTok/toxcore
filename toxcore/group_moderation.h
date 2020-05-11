@@ -18,8 +18,8 @@ typedef enum Group_Sanction_Type {
     SA_INVALID,
 } Group_Sanction_Type;
 
-typedef union GC_Sanction_Info {
-    uint8_t     target_pk[ENC_PUBLIC_KEY];    /* Used if type is SA_OBSERVER */
+typedef struct GC_Sanction_Info {
+    uint8_t     target_pk[ENC_PUBLIC_KEY];
 } GC_Sanction_Info;
 
 /* Holds data pertaining to a peer who has sanctioned. */
