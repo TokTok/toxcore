@@ -90,7 +90,7 @@ int gcc_add_to_send_array(const Logger *logger, const Mono_Time *mono_time, GC_C
  * Return 0 if message is a duplicate.
  * Return -1 on failure
  */
-int gcc_handle_received_message(GC_Chat *chat, uint32_t peer_number, const uint8_t *data, uint32_t length,
+int gcc_handle_received_message(const GC_Chat *chat, uint32_t peer_number, const uint8_t *data, uint32_t length,
                                 uint8_t packet_type, uint64_t message_id, bool direct_conn);
 
 /* Return array index for message_id */
@@ -112,7 +112,7 @@ void gcc_set_send_message_id(GC_Connection *gconn, uint16_t id);
 /*
  * Returns true if the ip_port is set for gconn.
  */
-bool gcc_ip_port_is_set(GC_Connection *gconn);
+bool gcc_ip_port_is_set(const GC_Connection *gconn);
 
 /*
  * Sets the ip_port for gconn to ipp. If ipp is not set this function has no effect.
@@ -125,7 +125,7 @@ void gcc_set_ip_port(GC_Connection *gconn, const IP_Port *ipp);
  * Return 0 on success.
  * Return -1 on failure.
  */
-int gcc_copy_tcp_relay(GC_Connection *gconn, Node_format *node);
+int gcc_copy_tcp_relay(const GC_Connection *gconn, Node_format *node);
 
 /* Checks for and handles messages that are in proper sequence in gconn's received_array.
  * This should always be called after a new packet is successfully handled.
@@ -133,9 +133,9 @@ int gcc_copy_tcp_relay(GC_Connection *gconn, Node_format *node);
  * Return 0 on success.
  * Return -1 on failure.
  */
-int gcc_check_received_array(struct Messenger *m, int group_number, uint32_t peer_number);
+int gcc_check_received_array(Messenger *m, int group_number, uint32_t peer_number);
 
-void gcc_resend_packets(struct Messenger *m, GC_Chat *chat, uint32_t peer_number);
+void gcc_resend_packets(Messenger *m, const GC_Chat *chat, uint32_t peer_number);
 
 /* Return true if we have a direct connection with this peer. */
 bool gcc_connection_is_direct(const Mono_Time *mono_time, const GC_Connection *gconn);
@@ -145,7 +145,7 @@ bool gcc_connection_is_direct(const Mono_Time *mono_time, const GC_Connection *g
  * Return 0 on success.
  * Return -1 on failure.
  */
-int gcc_send_group_packet(const GC_Chat *chat, GC_Connection *gconn, const uint8_t *packet, uint16_t length);
+int gcc_send_group_packet(const GC_Chat *chat, const GC_Connection *gconn, const uint8_t *packet, uint16_t length);
 
 /* called when a peer leaves the group */
 void gcc_peer_cleanup(GC_Connection *gconn);

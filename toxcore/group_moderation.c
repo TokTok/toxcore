@@ -243,7 +243,7 @@ void mod_list_cleanup(GC_Chat *chat)
  *
  * Returns length of packed data.
  */
-uint16_t sanctions_creds_pack(struct GC_Sanction_Creds *creds, uint8_t *data, uint16_t length)
+uint16_t sanctions_creds_pack(const struct GC_Sanction_Creds *creds, uint8_t *data, uint16_t length)
 {
     if (GC_SANCTIONS_CREDENTIALS_SIZE > length) {
         return 0;
@@ -270,7 +270,7 @@ uint16_t sanctions_creds_pack(struct GC_Sanction_Creds *creds, uint8_t *data, ui
  * Returns -1 on failure.
  */
 int sanctions_list_pack(uint8_t *data, uint16_t length, struct GC_Sanction *sanctions,
-                        struct GC_Sanction_Creds *creds, uint32_t num_sanctions)
+                        const struct GC_Sanction_Creds *creds, uint32_t num_sanctions)
 {
     uint32_t packed_len = 0;
 

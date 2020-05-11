@@ -382,7 +382,7 @@ bool is_public_chat(const GC_Chat *chat);
  * Returns -4 if the sender has the observer role.
  * Returns -5 if the packet fails to send.
  */
-int gc_send_message(GC_Chat *chat, const uint8_t *message, uint16_t length, uint8_t type);
+int gc_send_message(const GC_Chat *chat, const uint8_t *message, uint16_t length, uint8_t type);
 
 /* Sends a private message to peer_id.
  *
@@ -393,7 +393,8 @@ int gc_send_message(GC_Chat *chat, const uint8_t *message, uint16_t length, uint
  * Returns -4 if the sender has the observer role.
  * Returns -5 if the packet fails to send.
  */
-int gc_send_private_message(GC_Chat *chat, uint32_t peer_id, uint8_t type, const uint8_t *message, uint16_t length);
+int gc_send_private_message(const GC_Chat *chat, uint32_t peer_id, uint8_t type, const uint8_t *message,
+                            uint16_t length);
 
 /* Sends a custom packet to the group. If lossless is true, the packet will be lossless.
  *
@@ -402,7 +403,7 @@ int gc_send_private_message(GC_Chat *chat, uint32_t peer_id, uint8_t type, const
  * Returns -2 if the message pointer is NULL or length is zero.
  * Returns -3 if the sender has the observer role.
  */
-int gc_send_custom_packet(GC_Chat *chat, bool lossless, const uint8_t *data, uint32_t length);
+int gc_send_custom_packet(const GC_Chat *chat, bool lossless, const uint8_t *data, uint32_t length);
 
 /* Toggles ignore for peer_id.
  *
@@ -422,19 +423,19 @@ int gc_toggle_ignore(GC_Chat *chat, uint32_t peer_id, bool ignore);
  */
 int gc_set_topic(GC_Chat *chat, const uint8_t *topic, uint16_t length);
 
-/* Copies the group topic to topic. */
+/* Copies the group topic to topic. If topic is null this function has no effect.*/
 void gc_get_topic(const GC_Chat *chat, uint8_t *topic);
 
 /* Returns topic length. */
 uint16_t gc_get_topic_size(const GC_Chat *chat);
 
-/* Copies group name to groupname. */
+/* Copies group name to groupname. If group_name is null this function has no effect. */
 void gc_get_group_name(const GC_Chat *chat, uint8_t *group_name);
 
 /* Returns group name length */
 uint16_t gc_get_group_name_size(const GC_Chat *chat);
 
-/* Copies the group password to password */
+/* Copies the group password to password. If password is null this function has no effect. */
 void gc_get_password(const GC_Chat *chat, uint8_t *password);
 
 /* Returns the group password length */
@@ -456,9 +457,9 @@ uint32_t gc_get_max_peers(const GC_Chat *chat);
  * Returns -4 if the nick is already taken.
  * Returns -5 if the packet fails to send.
  */
-int gc_set_self_nick(Messenger *m, int group_number, const uint8_t *nick, uint16_t length);
+int gc_set_self_nick(const Messenger *m, int group_number, const uint8_t *nick, uint16_t length);
 
-/* Copies your own nick to nick */
+/* Copies your own nick to nick. If nick is null this function has no effect. */
 void gc_get_self_nick(const GC_Chat *chat, uint8_t *nick);
 
 /* Return your own nick length */
@@ -473,7 +474,7 @@ uint8_t gc_get_self_status(const GC_Chat *chat);
 /* Returns your own peer id */
 uint32_t gc_get_self_peer_id(const GC_Chat *chat);
 
-/* Copies your own public key to public_key */
+/* Copies your own public key to public_key. If public_key is null this function has no effect. */
 void gc_get_self_public_key(const GC_Chat *chat, uint8_t *public_key);
 
 /* Copies peer_id's nick to name.
@@ -504,7 +505,7 @@ int gc_get_peer_public_key_by_peer_id(const GC_Chat *chat, uint32_t peer_id, uin
  * Returns -2 if the status type is invalid.
  * Returns -3 if the packet failed to send.
  */
-int gc_set_self_status(Messenger *m, int group_number, uint8_t status);
+int gc_set_self_status(const Messenger *m, int group_number, uint8_t status);
 
 /* Returns peer_id's status.
  * Returns (uint8_t) -1 on failure.
@@ -526,7 +527,7 @@ uint8_t gc_get_role(const GC_Chat *chat, uint32_t peer_id);
  * Returns -5 if the role failed to be set.
  * Returns -6 if the caller attempted to kick himself.
  */
-int gc_set_peer_role(Messenger *m, int group_number, uint32_t peer_id, uint8_t role);
+int gc_set_peer_role(const Messenger *m, int group_number, uint32_t peer_id, uint8_t role);
 
 /* Sets the group password and distributes the new shared state to the group.
  *
@@ -575,7 +576,7 @@ int gc_founder_set_max_peers(GC_Chat *chat, uint32_t max_peers);
  */
 int gc_kick_peer(Messenger *m, int group_number, uint32_t peer_id);
 
-/* Copies the chat_id to dest */
+/* Copies the chat_id to dest. If dest is null this function has no effect. */
 void gc_get_chat_id(const GC_Chat *chat, uint8_t *dest);
 
 
@@ -611,7 +612,7 @@ void kill_dht_groupchats(GC_Session *c);
  * Returns group_number on success.
  * Returns -1 on failure.
  */
-int gc_group_load(GC_Session *c, Saved_Group *save, int group_number);
+int gc_group_load(GC_Session *c, const Saved_Group *save, int group_number);
 
 /* Creates a new group.
  *
@@ -669,7 +670,7 @@ typedef int gc_send_group_invite_packet_cb(const Messenger *m, uint32_t friendnu
  * Return -2 on failure to create the invite data.
  * Return -3 if the packet fails to send.
  */
-int gc_invite_friend(GC_Session *c, GC_Chat *chat, int32_t friendnum,
+int gc_invite_friend(const GC_Session *c, GC_Chat *chat, int32_t friendnum,
                      gc_send_group_invite_packet_cb *send_group_invite_packet);
 
 /* Sends parting message to group and deletes group.
@@ -720,13 +721,11 @@ int gc_send_message_ack(const GC_Chat *chat, GC_Connection *gconn, uint64_t read
 int handle_gc_lossless_helper(Messenger *m, int group_number, uint32_t peer_number, const uint8_t *data,
                               uint16_t length, uint64_t message_id, uint8_t packet_type);
 
-int handle_gc_invite_accepted_packet(GC_Session *c, int friend_number, const uint8_t *data,
-                                     uint32_t length);
+int handle_gc_invite_accepted_packet(GC_Session *c, int friend_number, const uint8_t *data, uint32_t length);
 
-bool check_group_invite(GC_Session *c, const uint8_t *data, uint32_t length);
+bool check_group_invite(const GC_Session *c, const uint8_t *data, uint32_t length);
 
-int handle_gc_invite_confirmed_packet(GC_Session *c, int friend_number, const uint8_t *data,
-                                      uint32_t length);
+int handle_gc_invite_confirmed_packet(const GC_Session *c, int friend_number, const uint8_t *data, uint32_t length);
 
 GC_Chat *gc_get_group_by_public_key(const GC_Session *c, const uint8_t *public_key);
 

@@ -44,7 +44,7 @@ void kill_gca(GC_Announces_List *announces_list)
 
 void do_gca(const Mono_Time *mono_time, GC_Announces_List *gc_announces_list)
 {
-    if (!gc_announces_list) {
+    if (gc_announces_list == nullptr) {
         return;
     }
 
@@ -68,7 +68,7 @@ static GC_Announces *get_announces_by_chat_id(const GC_Announces_List *gc_announ
     GC_Announces *announces = gc_announces_list->announces;
 
     while (announces) {
-        if (!memcmp(announces->chat_id, chat_id, CHAT_ID_SIZE)) {
+        if (memcmp(announces->chat_id, chat_id, CHAT_ID_SIZE) == 0) {
             return announces;
         }
 
@@ -80,7 +80,7 @@ static GC_Announces *get_announces_by_chat_id(const GC_Announces_List *gc_announ
 
 bool cleanup_gca(GC_Announces_List *gc_announces_list, const uint8_t *chat_id)
 {
-    if (!gc_announces_list || !chat_id) {
+    if (gc_announces_list == nullptr || chat_id == nullptr) {
         return false;
     }
 
@@ -98,13 +98,14 @@ bool cleanup_gca(GC_Announces_List *gc_announces_list, const uint8_t *chat_id)
 int gca_get_announces(GC_Announces_List *gc_announces_list, GC_Announce *gc_announces, uint8_t max_nodes,
                       const uint8_t *chat_id, const uint8_t *except_public_key)
 {
-    if (!gc_announces || !gc_announces_list || !chat_id || !max_nodes || !except_public_key) {
+    if (gc_announces == nullptr || gc_announces_list == nullptr || chat_id == nullptr || max_nodes == 0
+            || except_public_key == nullptr) {
         return -1;
     }
 
     GC_Announces *announces = get_announces_by_chat_id(gc_announces_list, chat_id);
 
-    if (!announces) {
+    if (announces == nullptr) {
         return 0;
     }
 
@@ -114,16 +115,16 @@ int gca_get_announces(GC_Announces_List *gc_announces_list, GC_Announce *gc_anno
     for (int i = 0; i < announces->index && i < GCA_MAX_SAVED_ANNOUNCES_PER_GC && gc_announces_count < max_nodes; ++i) {
         int index = i % GCA_MAX_SAVED_ANNOUNCES_PER_GC;
 
-        if (!memcmp(except_public_key, &announces->announces[index].base_announce.peer_public_key, ENC_PUBLIC_KEY)) {
+        if (memcmp(except_public_key, &announces->announces[index].base_announce.peer_public_key, ENC_PUBLIC_KEY) == 0) {
             continue;
         }
 
         bool already_added = false;
 
         for (int j = 0; j < gc_announces_count; ++j) {
-            if (!memcmp(&gc_announces[j].peer_public_key,
-                        &announces->announces[index].base_announce.peer_public_key,
-                        ENC_PUBLIC_KEY)) {
+            if (memcmp(&gc_announces[j].peer_public_key,
+                       &announces->announces[index].base_announce.peer_public_key,
+                       ENC_PUBLIC_KEY) == 0) {
                 already_added = true;
                 break;
             }
@@ -140,7 +141,7 @@ int gca_get_announces(GC_Announces_List *gc_announces_list, GC_Announce *gc_anno
 
 int gca_pack_announce(uint8_t *data, uint16_t length, GC_Announce *announce)
 {
-    if (!data || !announce || length < GCA_ANNOUNCE_MAX_SIZE) {
+    if (data == nullptr || announce == nullptr || length < GCA_ANNOUNCE_MAX_SIZE) {
         return -1;
     }
 
@@ -175,7 +176,7 @@ int gca_pack_announce(uint8_t *data, uint16_t length, GC_Announce *announce)
 
 int gca_unpack_announce(const uint8_t *data, uint16_t length, GC_Announce *announce)
 {
-    if (!data || !announce || length < GCA_ANNOUNCE_MIN_SIZE) {
+    if (data == nullptr || announce == nullptr || length < GCA_ANNOUNCE_MIN_SIZE) {
         return -1;
     }
 
@@ -216,7 +217,7 @@ int gca_unpack_announce(const uint8_t *data, uint16_t length, GC_Announce *annou
 
 int gca_pack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce *announce)
 {
-    if (!announce || !data || length < CHAT_ID_SIZE) {
+    if (announce == nullptr || data == nullptr || length < CHAT_ID_SIZE) {
         return -1;
     }
 
@@ -233,7 +234,7 @@ int gca_pack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce 
 
 int gca_unpack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce *announce)
 {
-    if (length < CHAT_ID_SIZE || !announce || !data) {
+    if (length < CHAT_ID_SIZE || announce == nullptr || data == nullptr) {
         return -1;
     }
 
@@ -251,14 +252,13 @@ int gca_unpack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announc
 int gca_pack_announces_list(uint8_t *data, uint16_t length, GC_Announce *announces, uint8_t announces_count,
                             size_t *processed)
 {
-    if (!data || !announces) {
+    if (data == nullptr || announces == nullptr) {
         return -1;
     }
 
     uint16_t offset = 0;
-    int i;
 
-    for (i = 0; i < announces_count; ++i) {
+    for (uint8_t i = 0; i < announces_count; ++i) {
         int packed_length = gca_pack_announce(data + offset, length - offset, &announces[i]);
 
         if (packed_length < 0) {
@@ -278,14 +278,14 @@ int gca_pack_announces_list(uint8_t *data, uint16_t length, GC_Announce *announc
 int gca_unpack_announces_list(const Logger *logger, const uint8_t *data, uint16_t length, GC_Announce *announces,
                               uint8_t max_announces_count, size_t *processed)
 {
-    if (!data || !announces) {
+    if (data == nullptr || announces == nullptr) {
         return -1;
     }
 
     uint16_t offset = 0;
     int announces_count = 0;
 
-    for (int i = 0; i < max_announces_count && length > offset; ++i) {
+    for (uint8_t i = 0; i < max_announces_count && length > offset; ++i) {
         int unpacked_length = gca_unpack_announce(data + offset, length - offset, &announces[i]);
 
         if (unpacked_length == -1) {
@@ -307,7 +307,7 @@ int gca_unpack_announces_list(const Logger *logger, const uint8_t *data, uint16_
 GC_Peer_Announce *gca_add_announce(const Mono_Time *mono_time, GC_Announces_List *gc_announces_list,
                                    const GC_Public_Announce *announce)
 {
-    if (!gc_announces_list || !announce) {
+    if (gc_announces_list == nullptr || announce == nullptr) {
         return nullptr;
     }
 
@@ -346,7 +346,7 @@ GC_Peer_Announce *gca_add_announce(const Mono_Time *mono_time, GC_Announces_List
 
 bool gca_is_valid_announce(const GC_Announce *announce)
 {
-    if (!announce) {
+    if (announce == nullptr) {
         return false;
     }
 
