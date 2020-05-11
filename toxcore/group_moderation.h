@@ -95,7 +95,7 @@ void mod_list_cleanup(GC_Chat *chat);
  * Returns -1 on failure.
  */
 int sanctions_list_pack(uint8_t *data, uint16_t length, struct GC_Sanction *sanctions,
-                        struct GC_Sanction_Creds *creds, uint32_t num_sanctions);
+                        const struct GC_Sanction_Creds *creds, uint32_t num_sanctions);
 
 /* Unpack max_sanctions sanctions from data into sanctions, and unpacks credentials into creds.
  * Put the length of the data processed in processed_data_len.
@@ -111,7 +111,7 @@ int sanctions_list_unpack(struct GC_Sanction *sanctions, struct GC_Sanction_Cred
  *
  * Returns length of packed data.
  */
-uint16_t sanctions_creds_pack(struct GC_Sanction_Creds *creds, uint8_t *data, uint16_t length);
+uint16_t sanctions_creds_pack(const struct GC_Sanction_Creds *creds, uint8_t *data, uint16_t length);
 
 /* Unpacks sanctions credentials into creds from data.
  * data must have room for GC_SANCTIONS_CREDENTIALS_SIZE bytes.

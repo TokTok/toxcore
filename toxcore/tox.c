@@ -3301,7 +3301,7 @@ bool tox_group_get_password(const Tox *tox, uint32_t group_number, uint8_t *pass
 bool tox_group_send_message(Tox *tox, uint32_t group_number, Tox_Message_Type type, const uint8_t *message,
                             size_t length, Tox_Err_Group_Send_Message *error)
 {
-    GC_Chat *chat = gc_get_group(tox->m->group_handler, group_number);
+    const GC_Chat *chat = gc_get_group(tox->m->group_handler, group_number);
 
     if (chat == nullptr) {
         SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_SEND_MESSAGE_GROUP_NOT_FOUND);
@@ -3348,7 +3348,7 @@ bool tox_group_send_message(Tox *tox, uint32_t group_number, Tox_Message_Type ty
 bool tox_group_send_private_message(Tox *tox, uint32_t group_number, uint32_t peer_id, Tox_Message_Type type,
                                     const uint8_t *message, size_t length, Tox_Err_Group_Send_Private_Message *error)
 {
-    GC_Chat *chat = gc_get_group(tox->m->group_handler, group_number);
+    const GC_Chat *chat = gc_get_group(tox->m->group_handler, group_number);
 
     if (chat == nullptr) {
         SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_SEND_PRIVATE_MESSAGE_GROUP_NOT_FOUND);
@@ -3399,7 +3399,7 @@ bool tox_group_send_private_message(Tox *tox, uint32_t group_number, uint32_t pe
 bool tox_group_send_custom_packet(Tox *tox, uint32_t group_number, bool lossless, const uint8_t *data,
                                   size_t length, Tox_Err_Group_Send_Custom_Packet *error)
 {
-    GC_Chat *chat = gc_get_group(tox->m->group_handler, group_number);
+    const GC_Chat *chat = gc_get_group(tox->m->group_handler, group_number);
 
     if (chat == nullptr) {
         SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_SEND_CUSTOM_PACKET_GROUP_NOT_FOUND);

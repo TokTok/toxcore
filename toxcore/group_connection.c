@@ -42,7 +42,7 @@ GC_Connection *gcc_get_connection(const GC_Chat *chat, int peer_number)
 }
 
 /* Returns true if ary entry does not contain an active packet. */
-static bool array_entry_is_empty(struct GC_Message_Array_Entry *array_entry)
+static bool array_entry_is_empty(const struct GC_Message_Array_Entry *array_entry)
 {
     return array_entry->time_added == 0;
 }
@@ -177,7 +177,7 @@ int gcc_handle_ack(GC_Connection *gconn, uint64_t message_id)
 /*
  * Returns true if the ip_port is set for gconn.
  */
-bool gcc_ip_port_is_set(GC_Connection *gconn)
+bool gcc_ip_port_is_set(const GC_Connection *gconn)
 {
     return ipport_isset(&gconn->addr.ip_port);
 }
@@ -198,7 +198,7 @@ void gcc_set_ip_port(GC_Connection *gconn, const IP_Port *ipp)
  * Return 0 on success.
  * Return -1 on failure.
  */
-int gcc_copy_tcp_relay(GC_Connection *gconn, Node_format *node)
+int gcc_copy_tcp_relay(const GC_Connection *gconn, Node_format *node)
 {
     if (gconn == nullptr || node == nullptr) {
         return -1;
@@ -217,7 +217,7 @@ int gcc_copy_tcp_relay(GC_Connection *gconn, Node_format *node)
  * Return 0 if message is a duplicate.
  * Return -1 on failure
  */
-int gcc_handle_received_message(GC_Chat *chat, uint32_t peer_number, const uint8_t *data, uint32_t length,
+int gcc_handle_received_message(const GC_Chat *chat, uint32_t peer_number, const uint8_t *data, uint32_t length,
                                 uint8_t packet_type, uint64_t message_id, bool direct_conn)
 {
     GC_Connection *gconn = gcc_get_connection(chat, peer_number);
@@ -261,7 +261,7 @@ int gcc_handle_received_message(GC_Chat *chat, uint32_t peer_number, const uint8
  * Return 0 on success.
  * Return -1 on failure.
  */
-static int process_received_array_entry(GC_Chat *chat, Messenger *m, int group_number, uint32_t peer_number,
+static int process_received_array_entry(const GC_Chat *chat, Messenger *m, int group_number, uint32_t peer_number,
                                         struct GC_Message_Array_Entry *array_entry)
 {
     GC_Connection *gconn = gcc_get_connection(chat, peer_number);
@@ -320,7 +320,7 @@ int gcc_check_received_array(Messenger *m, int group_number, uint32_t peer_numbe
     return 0;
 }
 
-void gcc_resend_packets(Messenger *m, GC_Chat *chat, uint32_t peer_number)
+void gcc_resend_packets(Messenger *m, const GC_Chat *chat, uint32_t peer_number)
 {
     GC_Connection *gconn = gcc_get_connection(chat, peer_number);
 
@@ -364,7 +364,7 @@ void gcc_resend_packets(Messenger *m, GC_Chat *chat, uint32_t peer_number)
  * Returns 0 on success.
  * Returns -1 on failure.
  */
-int gcc_send_group_packet(const GC_Chat *chat, GC_Connection *gconn, const uint8_t *packet, uint16_t length)
+int gcc_send_group_packet(const GC_Chat *chat, const GC_Connection *gconn, const uint8_t *packet, uint16_t length)
 {
     if (packet == nullptr || length == 0) {
         return -1;
