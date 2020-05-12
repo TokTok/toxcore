@@ -61,9 +61,6 @@
 /* Smallest possible size of a lossy group packet */
 #define GC_MIN_LOSSY_PACKET_SIZE (GC_MIN_LOSSLESS_PACKET_SIZE - GC_MESSAGE_ID_BYTES)
 
-/* Maximum size of a group packet */
-#define GC_MAX_PACKET_SIZE 1450
-
 /* Maximum number of bytes to pad packets with */
 #define GC_MAX_PACKET_PADDING 8
 
@@ -108,7 +105,7 @@ static void add_tcp_relays_to_chat(Messenger *m, GC_Chat *chat);
 
 static uint16_t gc_packet_padding_length(uint16_t length)
 {
-    return (GC_MAX_PACKET_SIZE - length) % GC_MAX_PACKET_PADDING;
+    return (MAX_GC_PACKET_SIZE - length) % GC_MAX_PACKET_PADDING;
 }
 
 void pack_group_info(const GC_Chat *chat, Saved_Group *temp, bool can_use_cached_value)
@@ -721,7 +718,7 @@ static int sign_gc_shared_state(GC_Chat *chat)
 static int unwrap_group_packet(const Logger *logger, const uint8_t *shared_key, uint8_t *data, uint64_t *message_id,
                                uint8_t *packet_type, const uint8_t *packet, uint16_t length)
 {
-    uint8_t plain[GC_MAX_PACKET_SIZE];
+    uint8_t plain[MAX_GC_PACKET_SIZE];
     uint8_t nonce[CRYPTO_NONCE_SIZE];
     memcpy(nonce, packet + sizeof(uint8_t) + HASH_ID_BYTES + ENC_PUBLIC_KEY, CRYPTO_NONCE_SIZE);
 
@@ -781,7 +778,7 @@ static int wrap_group_packet(const Logger *logger, const uint8_t *self_pk, const
         return -1;
     }
 
-    uint8_t plain[GC_MAX_PACKET_SIZE];
+    uint8_t plain[MAX_GC_PACKET_SIZE];
     memset(plain, 0, padding_len);
 
     uint32_t enc_header_len = sizeof(uint8_t);
@@ -833,7 +830,7 @@ static int send_lossy_group_packet(const GC_Chat *chat, const GC_Connection *gco
         return -1;
     }
 
-    uint8_t packet[GC_MAX_PACKET_SIZE];
+    uint8_t packet[MAX_GC_PACKET_SIZE];
     int len = wrap_group_packet(chat->logger, chat->self_public_key, gconn->shared_key, packet, sizeof(packet), data,
                                 length, 0, packet_type, chat->chat_id_hash, NET_PACKET_GC_LOSSY);
 
@@ -866,7 +863,7 @@ static int send_lossless_group_packet(const GC_Chat *chat, GC_Connection *gconn,
     }
 
     uint64_t message_id = gconn->send_message_id;
-    uint8_t packet[GC_MAX_PACKET_SIZE];
+    uint8_t packet[MAX_GC_PACKET_SIZE];
     int len = wrap_group_packet(chat->logger, chat->self_public_key, gconn->shared_key, packet, sizeof(packet), data,
                                 length, message_id, packet_type, chat->chat_id_hash, NET_PACKET_GC_LOSSLESS);
 
@@ -1139,7 +1136,7 @@ static int handle_gc_sync_request(const Messenger *m, int group_number, int peer
         return -1;
     }
 
-    uint8_t sender_relay_data[GC_MAX_PACKET_SIZE];
+    uint8_t sender_relay_data[MAX_GC_PACKET_SIZE];
     net_pack_u32(sender_relay_data, chat->self_public_key_hash);
     int announce_length = gca_pack_announce(sender_relay_data + HASH_ID_BYTES, sizeof(sender_relay_data) - HASH_ID_BYTES,
                                             &new_peer_announce);
@@ -1183,7 +1180,7 @@ static int handle_gc_sync_request(const Messenger *m, int group_number, int peer
         }
     }
 
-    uint8_t response[GC_MAX_PACKET_SIZE];
+    uint8_t response[MAX_GC_PACKET_SIZE];
     memset(response, 0, sizeof(response));
     net_pack_u32(response, chat->self_public_key_hash);
     net_pack_u32(response + HASH_ID_BYTES, num);
@@ -1329,7 +1326,7 @@ static int handle_gc_tcp_relays(const Messenger *m, int group_number, GC_Connect
  */
 static int send_gc_invite_request(const GC_Chat *chat, GC_Connection *gconn)
 {
-    uint8_t data[GC_MAX_PACKET_SIZE];
+    uint8_t data[MAX_GC_PACKET_SIZE];
     uint32_t length = HASH_ID_BYTES;
 
     net_pack_u32(data, chat->self_public_key_hash);
@@ -1555,7 +1552,7 @@ static uint32_t make_gc_broadcast_header(const GC_Chat *chat, const uint8_t *dat
  */
 static int send_gc_broadcast_message(const GC_Chat *chat, const uint8_t *data, uint32_t length, uint8_t bc_type)
 {
-    if (length + GC_BROADCAST_ENC_HEADER_SIZE > GC_MAX_PACKET_SIZE) {
+    if (length + GC_BROADCAST_ENC_HEADER_SIZE > MAX_GC_PACKET_SIZE) {
         return -1;
     }
 
@@ -1764,7 +1761,7 @@ static int send_self_to_peer(const GC_Session *c, const GC_Chat *chat, GC_Connec
     GC_GroupPeer self;
     copy_self_to_peer(chat, &self);
 
-    uint8_t data[GC_MAX_PACKET_SIZE];
+    uint8_t data[MAX_GC_PACKET_SIZE];
     net_pack_u32(data, chat->self_public_key_hash);
     memcpy(data + HASH_ID_BYTES, chat->shared_state.password, MAX_GC_PASSWORD_SIZE);
     uint32_t length = HASH_ID_BYTES + MAX_GC_PASSWORD_SIZE;
@@ -2352,7 +2349,7 @@ static int send_peer_sanctions_list(const GC_Chat *chat, GC_Connection *gconn)
         return 0;
     }
 
-    uint8_t packet[GC_MAX_PACKET_SIZE];
+    uint8_t packet[MAX_GC_PACKET_SIZE];
     int packet_len = make_gc_sanctions_list_packet(chat, packet, sizeof(packet));
 
     if (packet_len == -1) {
@@ -2369,7 +2366,7 @@ static int send_peer_sanctions_list(const GC_Chat *chat, GC_Connection *gconn)
  */
 static int broadcast_gc_sanctions_list(const GC_Chat *chat)
 {
-    uint8_t packet[GC_MAX_PACKET_SIZE];
+    uint8_t packet[MAX_GC_PACKET_SIZE];
     int packet_len = make_gc_sanctions_list_packet(chat, packet, sizeof(packet));
 
     if (packet_len == -1) {
@@ -3610,7 +3607,7 @@ int gc_send_custom_packet(const GC_Chat *chat, bool lossless, const uint8_t *dat
 static int handle_gc_custom_packet(Messenger *m, int group_number, uint32_t peer_number, const uint8_t *data,
                                    uint32_t length)
 {
-    if (data == nullptr || length == 0 || length > GC_MAX_PACKET_SIZE) {
+    if (data == nullptr || length == 0 || length > MAX_GC_PACKET_SIZE) {
         return -1;
     }
 
@@ -3706,7 +3703,7 @@ static int handle_gc_kick_peer(Messenger *m, int group_number, uint32_t peer_num
 static int send_gc_kick_peer(const GC_Chat *chat, GC_Connection *gconn)
 {
     uint32_t length = 1 + ENC_PUBLIC_KEY;
-    uint8_t packet[GC_MAX_PACKET_SIZE];
+    uint8_t packet[MAX_GC_PACKET_SIZE];
     packet[0] = MV_KICK;
     memcpy(packet + 1, gconn->addr.public_key, ENC_PUBLIC_KEY);
 
@@ -4563,7 +4560,7 @@ int handle_gc_lossless_helper(Messenger *m, int group_number, uint32_t peer_numb
 static int handle_gc_lossless_message(Messenger *m, const GC_Chat *chat, const uint8_t *packet, uint16_t length,
                                       bool direct_conn)
 {
-    if (length < GC_MIN_LOSSLESS_PACKET_SIZE || length > GC_MAX_PACKET_SIZE) {
+    if (length < GC_MIN_LOSSLESS_PACKET_SIZE || length > MAX_GC_PACKET_SIZE) {
         return -1;
     }
 
@@ -4578,7 +4575,7 @@ static int handle_gc_lossless_message(Messenger *m, const GC_Chat *chat, const u
         return -1;
     }
 
-    uint8_t data[GC_MAX_PACKET_SIZE];
+    uint8_t data[MAX_GC_PACKET_SIZE];
     uint8_t packet_type;
     uint64_t message_id;
 
@@ -4666,7 +4663,7 @@ static int handle_gc_lossless_message(Messenger *m, const GC_Chat *chat, const u
 static int handle_gc_lossy_message(Messenger *m, const GC_Chat *chat, const uint8_t *packet, uint16_t length,
                                    bool direct_conn)
 {
-    if (length < GC_MIN_LOSSY_PACKET_SIZE || length > GC_MAX_PACKET_SIZE) {
+    if (length < GC_MIN_LOSSY_PACKET_SIZE || length > MAX_GC_PACKET_SIZE) {
         return -1;
     }
 
@@ -4686,7 +4683,7 @@ static int handle_gc_lossy_message(Messenger *m, const GC_Chat *chat, const uint
         return -1;
     }
 
-    uint8_t data[GC_MAX_PACKET_SIZE];
+    uint8_t data[MAX_GC_PACKET_SIZE];
     uint8_t packet_type;
 
     int len = unwrap_group_packet(m->log, gconn->shared_key, data, nullptr, &packet_type, packet, length);
@@ -5983,7 +5980,7 @@ int gc_invite_friend(const GC_Session *c, GC_Chat *chat, int32_t friend_number,
         return -1;
     }
 
-    uint8_t packet[GC_MAX_PACKET_SIZE];
+    uint8_t packet[MAX_GC_PACKET_SIZE];
     packet[0] = GP_FRIEND_INVITE;
     packet[1] = GROUP_INVITE;
 
@@ -6018,7 +6015,7 @@ static int send_gc_invite_accepted_packet(Messenger *m, const GC_Chat *chat, uin
         return -2;
     }
 
-    uint8_t packet[GC_MAX_PACKET_SIZE];
+    uint8_t packet[MAX_GC_PACKET_SIZE];
     packet[0] = GP_FRIEND_INVITE;
     packet[1] = GROUP_INVITE_ACCEPTED;
 
@@ -6049,7 +6046,7 @@ static int send_gc_invite_confirmed_packet(Messenger *m, const GC_Chat *chat, ui
         return -2;
     }
 
-    uint8_t packet[GC_MAX_PACKET_SIZE];
+    uint8_t packet[MAX_GC_PACKET_SIZE];
     packet[0] = GP_FRIEND_INVITE;
     packet[1] = GROUP_INVITE_CONFIRMATION;
 
@@ -6196,7 +6193,7 @@ int handle_gc_invite_accepted_packet(GC_Session *c, int friend_number, const uin
     }
 
     uint32_t len = GC_JOIN_DATA_LENGTH;
-    uint8_t send_data[GC_MAX_PACKET_SIZE];
+    uint8_t send_data[MAX_GC_PACKET_SIZE];
     memcpy(send_data, chat_id, CHAT_ID_SIZE);
     memcpy(send_data + CHAT_ID_SIZE, chat->self_public_key, ENC_PUBLIC_KEY);
 
