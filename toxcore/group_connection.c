@@ -119,9 +119,13 @@ static int create_array_entry(const Logger *logger, const Mono_Time *mono_time,
 int gcc_add_to_send_array(const Logger *logger, const Mono_Time *mono_time, GC_Connection *gconn, const uint8_t *data,
                           uint32_t length, uint8_t packet_type)
 {
+    if (length == 0 || data == nullptr) {
+        return -1;
+    }
+
     /* check if send_array is full */
     if ((gconn->send_message_id % GCC_BUFFER_SIZE) == (uint16_t)(gconn->send_array_start - 1)) {
-        LOGGER_ERROR(logger, "Send array is full");
+        LOGGER_DEBUG(logger, "Send array is full");
         return -1;
     }
 
