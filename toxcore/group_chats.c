@@ -62,16 +62,19 @@
 #define GC_MIN_LOSSY_PACKET_SIZE (GC_MIN_LOSSLESS_PACKET_SIZE - GC_MESSAGE_ID_BYTES)
 
 /* Maximum size of a group packet */
-#define GC_MAX_PACKET_SIZE (1450)
+#define GC_MAX_PACKET_SIZE 1450
 
 /* Maximum number of bytes to pad packets with */
-#define GC_MAX_PACKET_PADDING (8)
+#define GC_MAX_PACKET_PADDING 8
 
 /* Min size of a ping packet, which contains the peer count, shared state version, sanctions list version and topic version */
 #define GC_PING_PACKET_MIN_DATA_SIZE (sizeof(uint32_t) * 4)
 
 /* How often we check which peers needs to be pinged */
-#define GC_DO_PINGS_INTERVAL (2)
+#define GC_DO_PINGS_INTERVAL 2
+
+/* How often we can send a group sync request packet */
+#define GC_SYNC_REQUEST_LIMIT 6
 
 
 typedef enum Group_Handshake_Packet_Type {
@@ -1361,13 +1364,18 @@ static int handle_gc_invite_response(const Messenger *m, int group_number, GC_Co
                                      uint32_t length)
 {
     const GC_Session *c = m->group_handler;
-    const GC_Chat *chat = gc_get_group(c, group_number);
+    GC_Chat *chat = gc_get_group(c, group_number);
 
     if (chat == nullptr) {
         return -1;
     }
 
-    uint16_t sync_flags = 0xffff; // TODO: do we really need to sync the entire group for every response?
+    uint16_t sync_flags = GF_PEER_LIST;
+
+    if (mono_time_is_timeout(chat->mono_time, chat->last_sync_request, GC_SYNC_REQUEST_LIMIT)) {
+        chat->last_sync_request = mono_time_get(chat->mono_time);
+        sync_flags = 0xffff;
+    }
 
     return send_gc_sync_request(chat, gconn, sync_flags);
 }
@@ -1560,15 +1568,17 @@ static int send_gc_broadcast_message(const GC_Chat *chat, const uint8_t *data, u
 }
 
 /* Compares a peer's group sync info that we received in a ping packet to our own. If their info appears
- * to be more recent than ours we send then a sync request.
+ * to be more recent than ours we send them a sync request.
  *
  * This function should only be called from handle_gc_ping().
+ *
+ * Returns true if a sync request packet is successfully sent.
  */
-static void do_gc_peer_state_sync(const GC_Chat *chat, GC_Connection *gconn, const uint8_t *sync_data,
+static bool do_gc_peer_state_sync(GC_Chat *chat, GC_Connection *gconn, const uint8_t *sync_data,
                                   const uint32_t length)
 {
     if (length < GC_PING_PACKET_MIN_DATA_SIZE) {
-        return;
+        return false;
     }
 
     uint32_t peers_checksum;
@@ -1595,14 +1605,18 @@ static void do_gc_peer_state_sync(const GC_Chat *chat, GC_Connection *gconn, con
     }
 
     if (sync_flags > 0) {
-        send_gc_sync_request(chat, gconn, sync_flags);
+        if (send_gc_sync_request(chat, gconn, sync_flags) == 0) {
+            return true;
+        }
     }
+
+    return false;
 }
 
 /* Handles a ping packet.
  *
- * The packet contains sync information including peer's confirmed peer count,
- * shared state version and sanction credentials version.
+ * The packet contains sync information including peer's peer list checksum,
+ * shared state version, topic version, and sanction credentials version.
  */
 static int handle_gc_ping(const Messenger *m, int group_number, GC_Connection *gconn, const uint8_t *data,
                           const uint32_t length)
@@ -1611,7 +1625,7 @@ static int handle_gc_ping(const Messenger *m, int group_number, GC_Connection *g
         return -1;
     }
 
-    const GC_Chat *chat = gc_get_group(m->group_handler, group_number);
+    GC_Chat *chat = gc_get_group(m->group_handler, group_number);
 
     if (chat == nullptr) {
         return -1;
@@ -1621,8 +1635,15 @@ static int handle_gc_ping(const Messenger *m, int group_number, GC_Connection *g
         return -1;
     }
 
-    do_gc_peer_state_sync(chat, gconn, data, length);
-    gconn->last_received_ping_time = mono_time_get(m->mono_time);
+    uint64_t tm = mono_time_get(chat->mono_time);
+
+    gconn->last_received_ping_time = tm;
+
+    if (mono_time_is_timeout(chat->mono_time, chat->last_sync_request, GC_SYNC_REQUEST_LIMIT)) {
+        if (do_gc_peer_state_sync(chat, gconn, data, length)) {
+            chat->last_sync_request = tm;
+        }
+    }
 
     if (length > GC_PING_PACKET_MIN_DATA_SIZE) {
         IP_Port ip_port;
