@@ -287,6 +287,7 @@ typedef struct GC_Chat {
     uint64_t    time_connected;
     uint64_t    last_join_attempt;
     uint64_t    last_ping_interval;
+    uint64_t    last_sync_request;
     uint8_t     join_type;   /* How we joined the group (invite or DHT) */
 
     /* keeps track of frequency of new inbound connections */
