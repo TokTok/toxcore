@@ -208,13 +208,21 @@ static void set_peers_checksum(GC_Chat *chat)
 
 /* Check if peer with the public encryption key is in peer list.
  *
- * return peer_number if peer is in chat.
- * return -1 if peer is not in chat.
+ * Returns peer_number if peer is in the peer list. If confirmed is true peer_number will only
+ * be returned if the peer is confirmed.
+ *
+ * Returns -1 if peer is not in the peer list.
  */
-static int get_peernum_of_enc_pk(const GC_Chat *chat, const uint8_t *public_enc_key)
+static int get_peernum_of_enc_pk(const GC_Chat *chat, const uint8_t *public_enc_key, bool confirmed)
 {
     for (uint32_t i = 0; i < chat->numpeers; ++i) {
-        if (memcmp(chat->gcc[i].addr.public_key, public_enc_key, ENC_PUBLIC_KEY) == 0) {
+        const GC_Connection *gconn = &chat->gcc[i];
+
+        if (confirmed && !gconn->confirmed) {
+            continue;
+        }
+
+        if (memcmp(gconn->addr.public_key, public_enc_key, ENC_PUBLIC_KEY) == 0) {
             return i;
         }
     }
@@ -224,8 +232,8 @@ static int get_peernum_of_enc_pk(const GC_Chat *chat, const uint8_t *public_enc_
 
 /* Check if peer with the public signature key is in peer list.
  *
- * return peer_number if peer is in chat.
- * return -1 if peer is not in chat.
+ * Returns peer_number if peer is in the peer list.
+ * Returns -1 if peer is not in the peer list.
  */
 static int get_peernum_of_sig_pk(const GC_Chat *chat, const uint8_t *public_sig_key)
 {
@@ -408,10 +416,13 @@ static int broadcast_gc_mod_list(const GC_Chat *chat);
 static int broadcast_gc_shared_state(const GC_Chat *chat);
 static int update_gc_sanctions_list(GC_Chat *chat, const uint8_t *public_sig_key);
 static int update_gc_topic(GC_Chat *chat, const uint8_t *public_sig_key);
+static int send_gc_set_observer(const GC_Chat *chat, const uint8_t *target_pk, const uint8_t *sanction_data,
+                                uint32_t length, bool add_obs);
 
 /* Removes the first found offline mod from the mod list.
- * Re-broadcasts the shared state and moderator list on success, as well
- * as the updated sanctions list if necessary.
+ *
+ * Broadcasts the shared state and moderator list on success, as well as the updated
+ * sanctions list if necessary.
  *
  * TODO: Make this smarter in who to remove (e.g. the mod who hasn't been seen online in the longest time)
  *
@@ -462,6 +473,55 @@ static int prune_gc_mod_list(GC_Chat *chat)
     }
 
     if (update_gc_topic(chat, public_sig_key) == -1) {
+        return -1;
+    }
+
+    return 0;
+}
+
+/* Removes the first found offline sanctioned peer from the sanctions list and sends the
+ * event to the rest of the group.
+ *
+ * Returns 0 on success.
+ * Returns -1 on failure or if no sanctioned peers were offline.
+ */
+static int prune_gc_sanctions_list(GC_Chat *chat)
+{
+    if (chat->moderation.num_sanctions == 0) {
+        return 0;
+    }
+
+    const GC_Sanction *sanction = nullptr;
+    uint8_t target_pk[ENC_PUBLIC_KEY];
+
+    for (uint32_t i = 0; i < chat->moderation.num_sanctions; ++i) {
+        int peer_number = get_peernum_of_enc_pk(chat, chat->moderation.sanctions[i].info.target_pk, true);
+
+        if (peer_number == -1) {
+            sanction = &chat->moderation.sanctions[i];
+            memcpy(target_pk, sanction->info.target_pk, ENC_PUBLIC_KEY);
+            break;
+        }
+    }
+
+    if (sanction == nullptr) {
+        return -1;
+    }
+
+    if (sanctions_list_remove_observer(chat, sanction->info.target_pk, nullptr) == -1) {
+        return -1;
+    }
+
+    sanction = nullptr;
+
+    uint8_t data[GC_SANCTIONS_CREDENTIALS_SIZE];
+    uint16_t length = sanctions_creds_pack(&chat->moderation.sanctions_creds, data, sizeof(data));
+
+    if (length != GC_SANCTIONS_CREDENTIALS_SIZE) {
+        return -1;
+    }
+
+    if (send_gc_set_observer(chat, target_pk, data, length, false) == -1) {
         return -1;
     }
 
@@ -2189,8 +2249,7 @@ ON_ERROR:
     return send_gc_sync_request(chat, &chat->gcc[1], GF_STATE);
 }
 
-static int handle_gc_sanctions_list_error(Messenger *m, int group_number,
-        uint32_t peer_number, GC_Chat *chat)
+static int handle_gc_sanctions_list_error(Messenger *m, int group_number, uint32_t peer_number, GC_Chat *chat)
 {
     if (chat->moderation.sanctions_creds.version > 0) {
         return 0;
@@ -3007,7 +3066,9 @@ static int founder_gc_set_moderator(GC_Chat *chat, GC_Connection *gconn, bool ad
 
     if (add_mod) {
         if (chat->moderation.num_mods >= MAX_GC_MODERATORS) {
-            prune_gc_mod_list(chat);
+            if (prune_gc_mod_list(chat) != 0) {
+                return -1;
+            }
         }
 
         if (mod_list_add_entry(chat, get_sig_pk(gconn->addr.public_key)) == -1) {
@@ -3076,13 +3137,11 @@ static int handle_gc_set_observer(Messenger *m, int group_number, uint32_t peer_
         return -1;
     }
 
-    int target_peernum = get_peernum_of_enc_pk(chat, public_key);
+    int target_peernum = get_peernum_of_enc_pk(chat, public_key, false);
 
     if (target_peernum == peer_number) {
         return -1;
     }
-
-    GC_Connection *target_gconn = gcc_get_connection(chat, target_peernum);
 
     if (add_obs) {
         struct GC_Sanction sanction;
@@ -3108,6 +3167,8 @@ static int handle_gc_set_observer(Messenger *m, int group_number, uint32_t peer_
         }
     }
 
+    GC_Connection *target_gconn = gcc_get_connection(chat, target_peernum);
+
     if (target_gconn != nullptr) {
         chat->group[target_peernum].role = add_obs ? GR_OBSERVER : GR_USER;
 
@@ -3125,13 +3186,13 @@ static int handle_gc_set_observer(Messenger *m, int group_number, uint32_t peer_
  * Returns 0 on success.
  * Returns -1 on failure.
  */
-static int send_gc_set_observer(const GC_Chat *chat, GC_Connection *gconn, const uint8_t *sanction_data,
+static int send_gc_set_observer(const GC_Chat *chat, const uint8_t *target_pk, const uint8_t *sanction_data,
                                 uint32_t length, bool add_obs)
 {
     uint32_t packet_len = 1 + EXT_PUBLIC_KEY + length;
     VLA(uint8_t, packet, packet_len);
     packet[0] = add_obs ? 1 : 0;
-    memcpy(packet + 1, gconn->addr.public_key, EXT_PUBLIC_KEY);
+    memcpy(packet + 1, target_pk, EXT_PUBLIC_KEY);
     memcpy(packet + 1 + EXT_PUBLIC_KEY, sanction_data, length);
 
     if (send_gc_broadcast_message(chat, packet, packet_len, GM_SET_OBSERVER) == -1) {
@@ -3163,6 +3224,12 @@ static int mod_gc_set_observer(GC_Chat *chat, uint32_t peer_number, bool add_obs
     uint32_t length = 0;
 
     if (add_obs) {
+        if (chat->moderation.num_sanctions >= MAX_GC_SANCTIONS) {
+            if (prune_gc_sanctions_list(chat) != 0) {
+                return -1;
+            }
+        }
+
         struct GC_Sanction sanction;
 
         if (sanctions_list_make_entry(chat, peer_number, &sanction, SA_OBSERVER) == -1) {
@@ -3183,8 +3250,7 @@ static int mod_gc_set_observer(GC_Chat *chat, uint32_t peer_number, bool add_obs
             return -1;
         }
 
-        uint16_t packed_len = sanctions_creds_pack(&chat->moderation.sanctions_creds, sanction_data,
-                              sizeof(sanction_data));
+        uint16_t packed_len = sanctions_creds_pack(&chat->moderation.sanctions_creds, sanction_data, sizeof(sanction_data));
 
         if (packed_len != GC_SANCTIONS_CREDENTIALS_SIZE) {
             return -1;
@@ -3193,7 +3259,7 @@ static int mod_gc_set_observer(GC_Chat *chat, uint32_t peer_number, bool add_obs
         length += packed_len;
     }
 
-    if (send_gc_set_observer(chat, gconn, sanction_data, length, add_obs) == -1) {
+    if (send_gc_set_observer(chat, gconn->addr.public_key, sanction_data, length, add_obs) == -1) {
         return -1;
     }
 
@@ -3656,7 +3722,7 @@ static int handle_gc_kick_peer(Messenger *m, int group_number, uint32_t peer_num
     uint8_t target_pk[ENC_PUBLIC_KEY];
     memcpy(target_pk, data + 1, ENC_PUBLIC_KEY);
 
-    int target_peer_number = get_peernum_of_enc_pk(chat, target_pk);
+    int target_peer_number = get_peernum_of_enc_pk(chat, target_pk, false);
 
     if (gc_peer_number_is_valid(chat, target_peer_number)) {
         if (chat->group[target_peer_number].role != GR_USER) {
@@ -4209,7 +4275,7 @@ static int handle_gc_handshake_response(const Messenger *m, int group_number, co
         return -1;
     }
 
-    int peer_number = get_peernum_of_enc_pk(chat, sender_pk);
+    int peer_number = get_peernum_of_enc_pk(chat, sender_pk, false);
 
     if (peer_number == -1) {
         return -1;
@@ -4279,7 +4345,7 @@ static int send_gc_handshake_response(const GC_Chat *chat, uint32_t peer_number,
 
 static int peer_reconnect(Messenger *m, const GC_Chat *chat, const uint8_t *peer_pk)
 {
-    int peer_number = get_peernum_of_enc_pk(chat, peer_pk);
+    int peer_number = get_peernum_of_enc_pk(chat, peer_pk, false);
 
     if (peer_number < 0) {
         return -1;
@@ -4328,7 +4394,7 @@ static int handle_gc_handshake_request(Messenger *m, int group_number, const IP_
 
     ++chat->connection_O_metre;
 
-    int peer_number = get_peernum_of_enc_pk(chat, sender_pk);
+    int peer_number = get_peernum_of_enc_pk(chat, sender_pk, false);
     bool is_new_peer = false;
 
     if (peer_number < 0) {
@@ -4567,7 +4633,7 @@ static int handle_gc_lossless_message(Messenger *m, const GC_Chat *chat, const u
     uint8_t sender_pk[ENC_PUBLIC_KEY];
     memcpy(sender_pk, packet + 1 + HASH_ID_BYTES, ENC_PUBLIC_KEY);
 
-    int peer_number = get_peernum_of_enc_pk(chat, sender_pk);
+    int peer_number = get_peernum_of_enc_pk(chat, sender_pk, false);
 
     GC_Connection *gconn = gcc_get_connection(chat, peer_number);
 
@@ -4644,7 +4710,7 @@ static int handle_gc_lossless_message(Messenger *m, const GC_Chat *chat, const u
     }
 
     /* we need to get the peer_number and gconn again because it may have changed */
-    peer_number = get_peernum_of_enc_pk(chat, sender_pk);
+    peer_number = get_peernum_of_enc_pk(chat, sender_pk, false);
     gconn = gcc_get_connection(chat, peer_number);
 
     if (lossless_ret == 2 && peer_number != -1) {
@@ -4670,7 +4736,7 @@ static int handle_gc_lossy_message(Messenger *m, const GC_Chat *chat, const uint
     uint8_t sender_pk[ENC_PUBLIC_KEY];
     memcpy(sender_pk, packet + 1 + HASH_ID_BYTES, ENC_PUBLIC_KEY);
 
-    int peer_number = get_peernum_of_enc_pk(chat, sender_pk);
+    int peer_number = get_peernum_of_enc_pk(chat, sender_pk, false);
 
     GC_Connection *gconn = gcc_get_connection(chat, peer_number);
 
@@ -5072,7 +5138,7 @@ static int peer_add(const Messenger *m, int group_number, const IP_Port *ipp, co
         return -1;
     }
 
-    if (get_peernum_of_enc_pk(chat, public_key) != -1) {
+    if (get_peernum_of_enc_pk(chat, public_key, false) != -1) {
         return -2;
     }
 
@@ -6097,7 +6163,7 @@ int handle_gc_invite_confirmed_packet(const GC_Session *c, int friend_number, co
         return -2;
     }
 
-    int peer_number = get_peernum_of_enc_pk(chat, invite_chat_pk);
+    int peer_number = get_peernum_of_enc_pk(chat, invite_chat_pk, false);
 
     if (peer_number < 0) {
         return -3;

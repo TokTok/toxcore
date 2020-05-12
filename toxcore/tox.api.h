@@ -4164,8 +4164,8 @@ namespace group {
        */
       ASSIGNMENT,
       /**
-       * The role was not successfully set. This may occur if something goes wrong with role setting,
-       * or if the packet fails to send.
+       * The role was not successfully set. This may occur if the packet failed to send, or
+       * if the role limit has been reached.
        */
       FAIL_ACTION,
       /**

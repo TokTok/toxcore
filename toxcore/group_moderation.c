@@ -682,7 +682,8 @@ static int sanctions_list_sign_entry(const GC_Chat *chat, struct GC_Sanction *sa
 int sanctions_list_add_entry(GC_Chat *chat, struct GC_Sanction *sanction, struct GC_Sanction_Creds *creds)
 {
     if (chat->moderation.num_sanctions >= MAX_GC_SANCTIONS) {
-        return -1;   // TODO(JFreegman): remove oldest entry and continue
+        LOGGER_ERROR(chat->logger, "num_sanctions %d exceeds maximum", chat->moderation.num_sanctions);
+        return -1;
     }
 
     if (sanctions_list_validate_entry(chat, sanction) < 0) {
