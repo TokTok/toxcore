@@ -19,7 +19,7 @@
 #define GCC_MAX_TCP_SHARED_RELAYS 3
 
 /* The time between attempts to share our TCP relays with a peer */
-#define GCC_TCP_SHARED_RELAYS_TIMEOUT 300
+#define GCC_TCP_SHARED_RELAYS_TIMEOUT 120
 
 #define HANDSHAKE_SENDING_TIMEOUT 3
 
@@ -31,6 +31,12 @@ typedef struct GC_Message_Array_Entry {
     uint64_t time_added;
     uint64_t last_send_try;
 } GC_Message_Array_Entry;
+
+struct GC_Exit_Info {
+    uint8_t part_message[MAX_GC_PART_MESSAGE_SIZE];
+    size_t  length;
+    Group_Exit_Type exit_type;
+};
 
 struct GC_Connection {
     uint64_t send_message_id;   /* message_id of the next message we send to peer */
@@ -56,7 +62,6 @@ struct GC_Connection {
     int tcp_relays_index;
     bool any_tcp_connections;
 
-
     uint64_t    last_received_ping_time;
     uint64_t    last_requested_packet_time;  /* The last time we requested a missing packet from this peer */
     uint64_t    last_sent_ping_time;
@@ -69,12 +74,18 @@ struct GC_Connection {
     bool        confirmed;  /* true if this peer has given us their info */
     uint32_t    friend_shared_state_version;
     uint32_t    self_sent_shared_state_version;
+
+    bool    pending_delete;
+    GC_Exit_Info exit_info;
 };
 
 /* Return connection object for peer_number.
  * Return NULL if peer_number is invalid.
  */
 GC_Connection *gcc_get_connection(const GC_Chat *chat, int peer_number);
+
+/* Marks a peer for deletion. If gconn is null this function has no effect. */
+void gcc_mark_for_deletion(GC_Connection *gconn, Group_Exit_Type type, const uint8_t *part_message, size_t length);
 
 /* Adds data of length to gconn's send_array.
  *

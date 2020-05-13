@@ -52,6 +52,16 @@ typedef enum Group_Moderation_Event {
     MV_INVALID,
 } Group_Moderation_Event;
 
+typedef enum Group_Exit_Type {
+    Exit_Type_Quit,
+    Exit_Type_Timeout,
+    Exit_Type_Disconnected,
+    Exit_Type_Kick,
+    Exit_Type_Sync_Error,
+    Exit_Type_No_Callback,
+    Exit_Type_Invalid,
+} Group_Exit_Type;
+
 typedef enum Group_Invite_Message_Type {
     GROUP_INVITE,
     GROUP_INVITE_ACCEPTED,
@@ -210,6 +220,7 @@ typedef struct GC_TopicInfo {
 } GC_TopicInfo;
 
 typedef struct GC_Connection GC_Connection;
+typedef struct GC_Exit_Info GC_Exit_Info;
 
 #define GROUP_SAVE_MAX_PEERS MAX_GC_PEER_ADDRS
 #define GROUP_SAVE_MAX_MODERATORS 128  // must be <= MAX_GC_MODERATORS (temporary fix to prevent save format breakage)
@@ -330,8 +341,8 @@ typedef void gc_peer_limit_cb(Messenger *m, uint32_t group_number, uint32_t max_
 typedef void gc_privacy_state_cb(Messenger *m, uint32_t group_number, unsigned int state, void *user_data);
 typedef void gc_password_cb(Messenger *m, uint32_t group_number, const uint8_t *data, size_t length, void *user_data);
 typedef void gc_peer_join_cb(Messenger *m, uint32_t group_number, uint32_t peer_id, void *user_data);
-typedef void gc_peer_exit_cb(Messenger *m, uint32_t group_number, uint32_t peer_id, const uint8_t *nick,
-                             size_t nick_len, const uint8_t *data, size_t length, void *user_data);
+typedef void gc_peer_exit_cb(Messenger *m, uint32_t group_number, uint32_t peer_id, unsigned int exit_type,
+                             const uint8_t *nick, size_t nick_len, const uint8_t *data, size_t length, void *user_data);
 typedef void gc_self_join_cb(Messenger *m, uint32_t group_number, void *user_data);
 typedef void gc_rejected_cb(Messenger *m, uint32_t group_number, unsigned int type, void *user_data);
 
@@ -700,15 +711,6 @@ bool gc_peer_number_is_valid(const GC_Chat *chat, int peer_number);
  * Return NULL on failure
  */
 GC_Chat *gc_get_group(const GC_Session *c, int group_number);
-
-/*
- * Deletes peer_number from group. `no_callback` should be set to true if the `peer_exit` callback should not be triggered.
- *
- * Return 0 on success.
- * Return -1 on failure.
- */
-int gc_peer_delete(Messenger *m, int group_number, uint32_t peer_number, const uint8_t *data, uint16_t length,
-                   bool no_callback);
 
 /* Copies up to max_addrs peer addresses from chat into addrs.
  *
