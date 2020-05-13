@@ -2114,6 +2114,12 @@ static int validate_gc_shared_state(const GC_SharedState *state)
 
 static int handle_gc_shared_state_error(Messenger *m, int group_number, uint32_t peer_number, GC_Chat *chat)
 {
+    GC_Connection *gconn = gcc_get_connection(chat, peer_number);
+
+    if (gconn != nullptr) {
+        gcc_mark_for_deletion(gconn, Exit_Type_Sync_Error, nullptr, 0);
+    }
+
     if (chat->shared_state.version == 0) {
         chat->connection_state = CS_DISCONNECTED;
         return -1;
@@ -2206,6 +2212,8 @@ static int handle_gc_mod_list(Messenger *m, int group_number, uint32_t peer_numb
         return -1;
     }
 
+    GC_Connection *gconn = gcc_get_connection(chat, peer_number);
+
     if (chat->group[0].role == GR_FOUNDER) {
         return 0;
     }
@@ -2218,6 +2226,7 @@ static int handle_gc_mod_list(Messenger *m, int group_number, uint32_t peer_numb
     }
 
     if (mod_list_unpack(chat, data + sizeof(uint16_t), length - sizeof(uint16_t), num_mods) == -1) {
+        LOGGER_ERROR(chat->logger, "failed to unpack mod list");
         goto ON_ERROR;
     }
 
@@ -2225,6 +2234,7 @@ static int handle_gc_mod_list(Messenger *m, int group_number, uint32_t peer_numb
     mod_list_make_hash(chat, mod_list_hash);
 
     if (memcmp(mod_list_hash, chat->shared_state.mod_list_hash, GC_MODERATION_HASH_SIZE) != 0) {
+        LOGGER_ERROR(chat->logger, "failed to validate mod list hash");
         goto ON_ERROR;
     }
 
@@ -2236,7 +2246,10 @@ static int handle_gc_mod_list(Messenger *m, int group_number, uint32_t peer_numb
     return 0;
 
 ON_ERROR:
-    LOGGER_ERROR(chat->logger, "failed to validate mod list");
+
+    if (gconn != nullptr) {
+        gcc_mark_for_deletion(gconn, Exit_Type_Sync_Error, nullptr, 0);
+    }
 
     if (chat->shared_state.version == 0) {
         chat->connection_state = CS_DISCONNECTED;
@@ -4373,6 +4386,7 @@ static int peer_reconnect(Messenger *m, const GC_Chat *chat, const uint8_t *peer
         return -1;
     }
 
+    kill_tcp_connection_to(chat->tcp_conn, gconn->tcp_connection_num);
     gcc_mark_for_deletion(gconn, Exit_Type_Disconnected, nullptr, 0);
 
     return peer_add(m, chat->group_number, nullptr, peer_pk);
@@ -6033,10 +6047,11 @@ static bool gc_rejoin_connected_group(GC_Session *c, GC_Chat *chat)
 {
     GC_SavedPeerInfo peers[GROUP_SAVE_MAX_PEERS];
     uint16_t num_addrs = gc_copy_peer_addrs(chat, peers, GROUP_SAVE_MAX_PEERS);
-    chat->connection_state = CS_CONNECTED;
 
     for (uint32_t i = 1; i < chat->numpeers; ++i) {
-        gcc_mark_for_deletion(&chat->gcc[i], Exit_Type_Disconnected, nullptr, 0);
+        GC_Connection *gconn = &chat->gcc[i];
+        kill_tcp_connection_to(chat->tcp_conn, gconn->tcp_connection_num);
+        gcc_mark_for_deletion(gconn, Exit_Type_Disconnected, nullptr, 0);
     }
 
     if (is_public_chat(chat)) {
