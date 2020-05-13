@@ -115,6 +115,13 @@ option(NON_HERMETIC_TESTS "Whether to build and run tests that depend on an inte
 option(BUILD_TOXAV "Whether to build the tox AV library" ON)
 option(MUST_BUILD_TOXAV "Fail the build if toxav cannot be built" OFF)
 
+if(MSVC)
+  option(MSVC_STATIC_SODIUM "Whether to link libsodium statically for MSVC" OFF)
+  if(MSVC_STATIC_SODIUM)
+    add_definitions(-DSODIUM_STATIC=1 -DSODIUM_EXPORT)
+  endif()
+endif()
+
 include(Dependencies)
 
 if(MUST_BUILD_TOXAV)
