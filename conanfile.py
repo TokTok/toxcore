@@ -1,4 +1,5 @@
-from conans import ConanFile, CMake
+from conans import CMake
+from conans import ConanFile
 
 
 class ToxConan(ConanFile):
