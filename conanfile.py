@@ -1,5 +1,4 @@
 # pylint: disable=not-callable
-
 from conans import CMake
 from conans import ConanFile
 
