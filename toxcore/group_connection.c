@@ -357,7 +357,7 @@ void gcc_resend_packets(Messenger *m, const GC_Chat *chat, uint32_t peer_number)
         }
 
         if (mono_time_is_timeout(m->mono_time, array_entry->time_added, GC_CONFIRMED_PEER_TIMEOUT)) {
-            gc_peer_delete(m, chat->group_number, peer_number, (const uint8_t *)"Peer timed out", 14, false);
+            gcc_mark_for_deletion(gconn, Exit_Type_Timeout, nullptr, 0);
             return;
         }
     }
@@ -403,6 +403,26 @@ int gcc_send_group_packet(const GC_Chat *chat, const GC_Connection *gconn, const
 bool gcc_connection_is_direct(const Mono_Time *mono_time, const GC_Connection *gconn)
 {
     return ((GCC_UDP_DIRECT_TIMEOUT + gconn->last_received_direct_time) > mono_time_get(mono_time));
+}
+
+/* Marks a peer for deletion. If gconn is null this function has no effect. */
+void gcc_mark_for_deletion(GC_Connection *gconn, Group_Exit_Type type, const uint8_t *part_message, size_t length)
+{
+    if (gconn == nullptr) {
+        return;
+    }
+
+    if (type >= Exit_Type_Invalid) {
+        type = Exit_Type_Quit;
+    }
+
+    gconn->pending_delete = true;
+    gconn->exit_info.exit_type = type;
+
+    if (length > 0 && length <= MAX_GC_PART_MESSAGE_SIZE  && part_message != nullptr) {
+        memcpy(gconn->exit_info.part_message, part_message, length);
+        gconn->exit_info.length = length;
+    }
 }
 
 /* called when a peer leaves the group */
