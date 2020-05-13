@@ -212,6 +212,7 @@ typedef struct GC_TopicInfo {
 typedef struct GC_Connection GC_Connection;
 
 #define GROUP_SAVE_MAX_PEERS MAX_GC_PEER_ADDRS
+#define GROUP_SAVE_MAX_MODERATORS 128  // must be <= MAX_GC_MODERATORS (temporary fix to prevent save format breakage)
 
 struct Saved_Group {
     /* Group shared state */
@@ -239,7 +240,7 @@ struct Saved_Group {
     uint16_t  num_addrs;
     GC_SavedPeerInfo addrs[GROUP_SAVE_MAX_PEERS];
     uint16_t  num_mods;
-    uint8_t   mod_list[GC_MOD_LIST_ENTRY_SIZE * MAX_GC_MODERATORS];
+    uint8_t   mod_list[GC_MOD_LIST_ENTRY_SIZE * GROUP_SAVE_MAX_MODERATORS];
     uint8_t   group_connection_state;
 
     /* self info */
