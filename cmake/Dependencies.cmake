@@ -16,16 +16,8 @@ find_library(SOCKET_LIBRARIES       socket       )
 pkg_use_module(LIBSODIUM            libsodium    )
 
 # For toxav.
-pkg_use_module(OPUS                 opus         )
-pkg_use_module(VPX                  vpx          )
-
-if(NOT OPUS_FOUND)
-  pkg_use_module(OPUS                 Opus         )
-endif()
-
-if(NOT VPX_FOUND)
-  pkg_use_module(VPX                  libvpx          )
-endif()
+pkg_use_module(OPUS                 "opus;Opus"    )
+pkg_use_module(VPX                  "vpx;libvpx"   )
 
 # For tox-bootstrapd.
 pkg_use_module(LIBCONFIG            libconfig    )
