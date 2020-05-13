@@ -1,5 +1,6 @@
 from conans import ConanFile, CMake
 
+
 class ToxConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     requires = "libsodium/1.0.18", "opus/1.3.1", "libvpx/1.8.0@bincrafters/stable"
