@@ -19,6 +19,14 @@ pkg_use_module(LIBSODIUM            libsodium    )
 pkg_use_module(OPUS                 opus         )
 pkg_use_module(VPX                  vpx          )
 
+if(NOT OPUS_FOUND)
+  pkg_use_module(OPUS                 Opus         )
+endif()
+
+if(NOT VPX_FOUND)
+  pkg_use_module(VPX                  libvpx          )
+endif()
+
 # For tox-bootstrapd.
 pkg_use_module(LIBCONFIG            libconfig    )
 
