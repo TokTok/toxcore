@@ -2246,6 +2246,7 @@ static int handle_gc_mod_list(Messenger *m, int group_number, uint32_t peer_numb
     return 0;
 
 ON_ERROR:
+
     if (gconn != nullptr) {
         gcc_mark_for_deletion(gconn, Exit_Type_Sync_Error, nullptr, 0);
     }
