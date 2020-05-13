@@ -38,18 +38,20 @@ pkg_use_module(MSGPACK              msgpack      )
 if(MSVC)
   # libsodium
   # ---------
-  find_library(LIBSODIUM_LIBRARIES
-    NAMES sodium libsodium
-    PATHS
-      "third_party/libsodium/Win32/Release/v140/dynamic"
-      "third_party/libsodium/x64/Release/v140/dynamic"
-  )
-  if(LIBSODIUM_LIBRARIES)
-    include_directories("third_party/libsodium/include")
-    set(LIBSODIUM_FOUND TRUE)
-    message("libsodium: ${LIBSODIUM_LIBRARIES}")
-  else()
-    message(FATAL_ERROR "libsodium libraries not found")
+  if(NOT LIBSODIUM_FOUND)
+    find_library(LIBSODIUM_LIBRARIES
+      NAMES sodium libsodium
+      PATHS
+        "third_party/libsodium/Win32/Release/v140/dynamic"
+        "third_party/libsodium/x64/Release/v140/dynamic"
+    )
+    if(LIBSODIUM_LIBRARIES)
+      include_directories("third_party/libsodium/include")
+      set(LIBSODIUM_FOUND TRUE)
+      message("libsodium: ${LIBSODIUM_LIBRARIES}")
+    else()
+      message(FATAL_ERROR "libsodium libraries not found")
+    endif()
   endif()
 
   # pthreads
