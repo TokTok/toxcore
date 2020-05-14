@@ -312,13 +312,8 @@ int gcc_check_received_array(Messenger *m, int group_number, uint32_t peer_numbe
     uint16_t idx = (gconn->received_message_id + 1) % GCC_BUFFER_SIZE;
     GC_Message_Array_Entry *array_entry = &gconn->received_array[idx];
 
-    while (!array_entry_is_empty(array_entry)) {
-        if (process_received_array_entry(chat, m, group_number, peer_number, array_entry) == -1) {
-            return -1;
-        }
-
-        idx = (gconn->received_message_id + 1) % GCC_BUFFER_SIZE;
-        array_entry = &gconn->received_array[idx];
+    if (!array_entry_is_empty(array_entry)) {
+        return process_received_array_entry(chat, m, group_number, peer_number, array_entry);
     }
 
     return 0;
