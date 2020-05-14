@@ -14,6 +14,8 @@
 #include "TCP_connection.h"
 #include "logger.h"
 
+#include <noise/protocol.h>
+
 #include <pthread.h>
 
 /** Crypto payloads. */
@@ -65,6 +67,9 @@
 #define PACKET_ID_MESSAGE_CONFERENCE 99
 #define PACKET_ID_REJOIN_CONFERENCE 100
 #define PACKET_ID_LOSSY_CONFERENCE 199
+
+//AKE NEW CRYPTO_NOISE_PROTOCOL_NAME
+#define CRYPTO_NOISE_PROTOCOL_NAME "Noise_IK_25519_ChaChaPoly_SHA512"
 
 /* Maximum size of receiving and sending packet buffers. */
 #define CRYPTO_PACKET_BUFFER_SIZE 32768 // Must be a power of 2
@@ -119,10 +124,13 @@ typedef struct New_Connection {
     IP_Port source;
     uint8_t public_key[CRYPTO_PUBLIC_KEY_SIZE]; /* The real public key of the peer. */
     uint8_t dht_public_key[CRYPTO_PUBLIC_KEY_SIZE]; /* The dht public key of the peer. */
-    uint8_t recv_nonce[CRYPTO_NONCE_SIZE]; /* Nonce of received packets. */
-    uint8_t peersessionpublic_key[CRYPTO_PUBLIC_KEY_SIZE]; /* The public key of the peer. */
+    //AKE NEW: base nonce and peer session pk handled by Noise
+//    uint8_t recv_nonce[CRYPTO_NONCE_SIZE]; /* Nonce of received packets. */
+//    uint8_t peersessionpublic_key[CRYPTO_PUBLIC_KEY_SIZE]; /* The public key of the peer. */
     uint8_t *cookie;
     uint8_t cookie_length;
+    //AKE NEW: temporary handshake in New_connection
+    NoiseHandshakeState *handshake_temp;
 } New_Connection;
 
 typedef int connection_status_cb(void *object, int id, uint8_t status, void *userdata);

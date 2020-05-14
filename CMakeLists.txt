@@ -163,7 +163,8 @@ set(toxcore_SOURCES ${toxcore_SOURCES}
 include(CheckFunctionExists)
 check_function_exists(explicit_bzero HAVE_EXPLICIT_BZERO)
 check_function_exists(memset_s HAVE_MEMSET_S)
-set(toxcore_LINK_MODULES ${toxcore_LINK_MODULES} ${LIBSODIUM_LIBRARIES})
+set(toxcore_LINK_MODULES ${toxcore_LINK_MODULES} ${LIBSODIUM_LIBRARIES} "/usr/local/lib/libnoiseprotocol.a")
+include_directories("/usr/local/include")
 set(toxcore_PKGCONFIG_REQUIRES ${toxcore_PKGCONFIG_REQUIRES} libsodium)
 
 # LAYER 2: Basic networking
