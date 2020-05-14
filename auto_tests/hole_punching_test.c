@@ -44,7 +44,7 @@ int main(void)
     printf("Waiting for connection");
 
     while (tox_self_get_connection_status(tox1) == TOX_CONNECTION_NONE ||
-           tox_self_get_connection_status(tox2) == TOX_CONNECTION_NONE) {
+            tox_self_get_connection_status(tox2) == TOX_CONNECTION_NONE) {
         printf(".");
         fflush(stdout);
 
@@ -76,7 +76,7 @@ int main(void)
     ck_assert(friend_add_err == TOX_ERR_FRIEND_ADD_OK);
 
     while (tox_friend_get_connection_status(tox1, 0, nullptr) == TOX_CONNECTION_NONE ||
-           tox_friend_get_connection_status(tox2, 0, nullptr) == TOX_CONNECTION_NONE) {
+            tox_friend_get_connection_status(tox2, 0, nullptr) == TOX_CONNECTION_NONE) {
         printf(".");
         fflush(stdout);
 
