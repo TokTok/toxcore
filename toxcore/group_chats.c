@@ -1145,6 +1145,11 @@ static int handle_gc_sync_request(const Messenger *m, int group_number, int peer
         return -1;
     }
 
+    if (chat->numpeers <= 1) {
+        LOGGER_WARNING(m->log, "Got sync request with empty peer list?");
+        return -1;
+    }
+
     if (chat->connection_state <= CS_MANUALLY_DISCONNECTED || chat->shared_state.version == 0) {
         LOGGER_ERROR(m->log, "Invalid state or version number");
         return -1;
@@ -1207,13 +1212,7 @@ static int handle_gc_sync_request(const Messenger *m, int group_number, int peer
                                             &new_peer_announce);
 
     if (announce_length == -1) {
-        LOGGER_ERROR(m->log, "Failed to pack announce");
-        return -1;
-    }
-
-    if (chat->numpeers <= 1) {
-        LOGGER_WARNING(m->log, "Got sync request with empty peer list?");
-        return -1;
+        LOGGER_WARNING(m->log, "Failed to pack announce");
     }
 
     GC_Announce *existing_peers_announces = (GC_Announce *)calloc(1, sizeof(GC_Announce) * (chat->numpeers - 1));
@@ -1222,26 +1221,29 @@ static int handle_gc_sync_request(const Messenger *m, int group_number, int peer
         return -1;
     }
 
-    uint32_t sender_data_length = announce_length + HASH_ID_BYTES;
     uint32_t num = 0;
 
-    /* Send new peer's announcement to the rest of the group */
-    for (uint32_t i = 1; i < chat->numpeers; ++i) {
-        GC_Connection *peer_gconn = gcc_get_connection(chat, i);
+    if (announce_length > 0) {
+        uint32_t sender_data_length = announce_length + HASH_ID_BYTES;
 
-        if (peer_gconn == nullptr || !peer_gconn->confirmed) {
-            continue;
-        }
+        /* Send new peer's announcement to the rest of the group */
+        for (uint32_t i = 1; i < chat->numpeers; ++i) {
+            GC_Connection *peer_gconn = gcc_get_connection(chat, i);
 
-        if (peer_gconn->public_key_hash != gconn->public_key_hash && i != peer_number) {
-            // creates existing peer announce. we will send it to new node later
-            if (!create_announce_for_peer(chat, peer_gconn, i, &existing_peers_announces[num])) {
+            if (peer_gconn == nullptr || !peer_gconn->confirmed) {
                 continue;
             }
 
-            // sends new peer announce to selected existing peer
-            send_new_peer_announcement(chat, peer_gconn, sender_relay_data, sender_data_length);
-            ++num;
+            if (peer_gconn->public_key_hash != gconn->public_key_hash && i != peer_number) {
+                // creates existing peer announce. we will send it to new node later
+                if (!create_announce_for_peer(chat, peer_gconn, i, &existing_peers_announces[num])) {
+                    continue;
+                }
+
+                // sends new peer announce to selected existing peer
+                send_new_peer_announcement(chat, peer_gconn, sender_relay_data, sender_data_length);
+                ++num;
+            }
         }
     }
 
@@ -1835,7 +1837,7 @@ static int send_self_to_peer(const GC_Session *c, const GC_Chat *chat, GC_Connec
     length += packed_len;
 
     if (packed_len <= 0) {
-        LOGGER_ERROR(chat->logger, "pack_gc_peer failed in handle_gc_peer_info_request_request %d", packed_len);
+        LOGGER_DEBUG(chat->logger, "pack_gc_peer failed in handle_gc_peer_info_request_request %d", packed_len);
         return -1;
     }
 
@@ -1961,7 +1963,7 @@ static int handle_gc_peer_info_response(Messenger *m, int group_number, uint32_t
         return -1;
     }
 
-    if (chat->connection_state != CS_CONNECTED) {
+    if (chat->connection_state <= CS_MANUALLY_DISCONNECTED) {
         LOGGER_ERROR(m->log, "handle_gc_peer_info_response() failed: state %d", chat->connection_state);
         return -1;
     }
@@ -3942,19 +3944,20 @@ static int handle_gc_message_ack(const GC_Chat *chat, GC_Connection *gconn, cons
 
     uint64_t tm = mono_time_get(chat->mono_time);
     uint16_t idx = gcc_get_array_index(request_id);
-    int ret = -1;
 
     /* re-send requested packet */
     if (gconn->send_array[idx].message_id == request_id) {
-        ret = gcc_send_group_packet(chat, gconn, gconn->send_array[idx].data, gconn->send_array[idx].data_length);
+        int ret = gcc_send_group_packet(chat, gconn, gconn->send_array[idx].data, gconn->send_array[idx].data_length);
 
         if (ret == 0) {
             gconn->send_array[idx].last_send_try = tm;
-            LOGGER_ERROR(chat->logger, "Resent requested packet %lu", request_id);
+            LOGGER_ERROR(chat->logger, "Re-sent requested packet %lu", request_id);
         }
+
+        return ret;
     }
 
-    return ret;
+    return 0;
 }
 
 /* Sends a handshake response ack to peer.
@@ -3987,15 +3990,8 @@ static int handle_gc_hs_response_ack(Messenger *m, int group_number, GC_Connecti
     gconn->handshaked = true;
     gconn->pending_handshake = 0;
 
-    if (gconn->friend_shared_state_version > gconn->self_sent_shared_state_version
-            || (gconn->friend_shared_state_version == gconn->self_sent_shared_state_version
-                && id_cmp(chat->self_public_key, gconn->addr.public_key) > 0)) {
-
-        int ret = send_gc_invite_request(chat, gconn);
-
-        if (ret == -1) {
-            return -1;
-        }
+    if (send_gc_invite_request(chat, gconn) == -1) {
+        return -1;
     }
 
     return 0;
@@ -4049,7 +4045,7 @@ static int handle_gc_broadcast(Messenger *m, int group_number, uint32_t peer_num
         return -1;
     }
 
-    if (chat->connection_state != CS_CONNECTED) {
+    if (chat->connection_state <= CS_MANUALLY_DISCONNECTED) {
         LOGGER_ERROR(m->log, "handle_gc_broadcast() failed. State: %d", chat->connection_state);
         return -1;
     }
@@ -4338,16 +4334,6 @@ static int handle_gc_handshake_response(const Messenger *m, int group_number, co
 
     switch (request_type) {
         case HS_INVITE_REQUEST:
-            net_unpack_u32(data + ENC_PUBLIC_KEY + SIG_PUBLIC_KEY + 2, &gconn->friend_shared_state_version);
-
-            // client with shared version < than friend has will send invite request
-            // if shared versions are the same compare public keys of peers
-            if (gconn->friend_shared_state_version < gconn->self_sent_shared_state_version
-                    || (gconn->friend_shared_state_version == gconn->self_sent_shared_state_version
-                        && id_cmp(chat->self_public_key, gconn->addr.public_key) > 0)) {
-                return peer_number;
-            }
-
             ret = send_gc_invite_request(chat, gconn);
             break;
 
@@ -4551,6 +4537,7 @@ static int handle_gc_handshake_packet(Messenger *m, const GC_Chat *chat, const I
                     length);
 
     if (plain_len != SIZEOF_VLA(data)) {
+        LOGGER_ERROR(m->log, "Failed to unwrap handshake packet");
         return -1;
     }
 
@@ -4807,6 +4794,7 @@ static int handle_gc_lossy_message(Messenger *m, const GC_Chat *chat, const uint
     len -= HASH_ID_BYTES;
 
     if (!peer_pk_hash_match(gconn, sender_pk_hash)) {
+        LOGGER_ERROR(m->log, "Invalid pk hash");
         return -1;
     }
 
@@ -4842,7 +4830,7 @@ static int handle_gc_lossy_message(Messenger *m, const GC_Chat *chat, const uint
         gconn->last_received_direct_time = mono_time_get(m->mono_time);
     }
 
-    if (ret < 0 && packet_type != GP_MESSAGE_ACK) {
+    if (ret < 0) {
         LOGGER_ERROR(m->log, "Failed to handle lossy packet type %d", packet_type);
     }
 
@@ -4880,15 +4868,17 @@ static int handle_gc_tcp_packet(void *object, int id, const uint8_t *packet, uin
         return -1;
     }
 
+    int ret = -1;
+
     if (packet[0] == NET_PACKET_GC_LOSSLESS) {
-        return handle_gc_lossless_message(m, chat, packet, length, false);
+        ret = handle_gc_lossless_message(m, chat, packet, length, false);
     } else if (packet[0] == NET_PACKET_GC_LOSSY) {
-        return handle_gc_lossy_message(m, chat, packet, length, false);
+        ret = handle_gc_lossy_message(m, chat, packet, length, false);
     } else if (packet[0] == NET_PACKET_GC_HANDSHAKE) {
-        return handle_gc_handshake_packet(m, chat, nullptr, packet, length, false);
+        ret = handle_gc_handshake_packet(m, chat, nullptr, packet, length, false);
     }
 
-    return -1;
+    return ret;
 }
 
 static int handle_gc_tcp_oob_packet(void *object, const uint8_t *public_key, unsigned int tcp_connections_number,
@@ -4945,15 +4935,17 @@ static int handle_gc_udp_packet(void *object, IP_Port ipp, const uint8_t *packet
         return -1;
     }
 
+    int ret = -1;
+
     if (packet[0] == NET_PACKET_GC_LOSSLESS) {
-        return handle_gc_lossless_message(m, chat, packet, length, true);
+        ret = handle_gc_lossless_message(m, chat, packet, length, true);
     } else if (packet[0] == NET_PACKET_GC_LOSSY) {
-        return handle_gc_lossy_message(m, chat, packet, length, true);
+        ret = handle_gc_lossy_message(m, chat, packet, length, true);
     } else if (packet[0] == NET_PACKET_GC_HANDSHAKE) {
-        return handle_gc_handshake_packet(m, chat, &ipp, packet, length, true);
+        ret = handle_gc_handshake_packet(m, chat, &ipp, packet, length, true);
     }
 
-    return -1;
+    return ret;
 }
 
 void gc_callback_message(Messenger *m, gc_message_cb *function, void *userdata)
@@ -5468,6 +5460,7 @@ static void do_group_tcp(GC_Chat *chat, void *userdata)
 /* CS_CONNECTED: Peers are pinged, unsent packets are resent, and timeouts are checked.
  * CS_CONNECTING: Look for new DHT nodes after an interval.
  * CS_DISCONNECTED: Send an invite request using a random node if our timeout GROUP_JOIN_ATTEMPT_INTERVAL has expired.
+ * CS_MANUALLY_DISCONNECTED: Do nothing. We manually disconnected from the group.
  * CS_FAILED: Do nothing. This occurs if we cannot connect to a group or our invite request is rejected.
  */
 void do_gc(GC_Session *c, void *userdata)
