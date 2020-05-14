@@ -8,6 +8,7 @@ Icon?
 ethumbs.db
 Thumbs.db
 *.tmp
+.clangd
 
 # Make
 /_build
