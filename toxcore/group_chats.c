@@ -888,7 +888,7 @@ static int send_lossy_group_packet(const GC_Chat *chat, const GC_Connection *gco
                                    uint32_t length,
                                    uint8_t packet_type)
 {
-    if (!gconn->handshaked) {
+    if (!gconn->handshaked || gconn->pending_delete) {
         return -1;
     }
 
@@ -920,7 +920,7 @@ static int send_lossy_group_packet(const GC_Chat *chat, const GC_Connection *gco
 static int send_lossless_group_packet(const GC_Chat *chat, GC_Connection *gconn, const uint8_t *data, uint32_t length,
                                       uint8_t packet_type)
 {
-    if (!gconn->handshaked) {
+    if (!gconn->handshaked || gconn->pending_delete) {
         return -1;
     }
 
@@ -3888,6 +3888,10 @@ static bool valid_gc_message_ack(uint64_t read_id, uint64_t request_id)
  */
 int gc_send_message_ack(const GC_Chat *chat, GC_Connection *gconn, uint64_t read_id, uint64_t request_id)
 {
+    if (gconn->pending_delete) {
+        return 0;
+    }
+
     if (!valid_gc_message_ack(read_id, request_id)) {
         return -1;
     }
@@ -4252,7 +4256,7 @@ static int send_gc_handshake_packet(const GC_Chat *chat, uint32_t peer_number, u
     int ret2 = send_packet_tcp_connection(chat->tcp_conn, gconn->tcp_connection_num, packet, length);
 
     if (ret1 == -1 && ret2 == -1) {
-        LOGGER_ERROR(chat->logger, "Send handshake packet failed");
+        LOGGER_ERROR(chat->logger, "Send handshake packet failed. Type %u", request_type);
         return -1;
     }
 
@@ -4711,6 +4715,7 @@ static int handle_gc_lossless_message(Messenger *m, const GC_Chat *chat, const u
         // probably we missed initial handshake packet. update received packets index
         // TODO: FIXME
         ++gconn->received_message_id;
+        LOGGER_WARNING(m->log, "Missed handshake packet, type: %d", packet_type);
     }
 
     int lossless_ret = gcc_handle_received_message(chat, peer_number, real_data, real_len, packet_type, message_id,
@@ -4752,7 +4757,6 @@ static int handle_gc_lossless_message(Messenger *m, const GC_Chat *chat, const u
 
     if (gconn != nullptr && lossless_ret == 2) {
         gc_send_message_ack(chat, gconn, message_id, 0);
-        gcc_check_received_array(m, chat->group_number, peer_number);
     }
 
     return ret;
@@ -5134,7 +5138,7 @@ static int peer_update(Messenger *m, int group_number, GC_GroupPeer *peer, uint3
 
     int nick_num = get_nick_peer_number(chat, peer->nick, peer->nick_length);
 
-    if ((nick_num != -1 && nick_num != peer_number)) {   /* duplicate nick */
+    if (nick_num != -1 && nick_num != peer_number) {   /* duplicate nick */
         gcc_mark_for_deletion(&chat->gcc[peer_number], Exit_Type_Sync_Error, nullptr, 0);
         return -1;
     }
@@ -5279,6 +5283,8 @@ static void do_peer_connections(Messenger *m, int group_number)
                 send_gc_tcp_relays(m->mono_time, chat, gconn);
             }
         }
+
+        gcc_check_received_array(m, group_number, i);   // may change peer numbers
     }
 }
 
@@ -5299,10 +5305,10 @@ static void do_peer_delete(Messenger *m, int group_number)
             if (gc_peer_delete(m, group_number, i, exit_info->exit_type, exit_info->part_message, exit_info->length) == -1) {
                 LOGGER_ERROR(m->log, "Failed to delete peer %u", i);
             }
-        }
 
-        if (i >= chat->numpeers) {
-            break;
+            if (i >= chat->numpeers) {
+                break;
+            }
         }
     }
 }
