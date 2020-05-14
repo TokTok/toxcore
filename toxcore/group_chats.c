@@ -32,7 +32,7 @@
 
 /* The minimum size of a plaintext group handshake packet */
 #define GC_MIN_PLAIN_HS_PACKET_SIZE (sizeof(uint8_t) + HASH_ID_BYTES + ENC_PUBLIC_KEY + SIG_PUBLIC_KEY\
-                                     + sizeof(uint8_t) + sizeof(uint8_t) + sizeof(uint32_t))
+                                     + sizeof(uint8_t) + sizeof(uint8_t))
 
 /* The minimum size of an encrypted group handshake packet */
 #define GC_MIN_ENCRYPTED_HS_PACKET_SIZE (sizeof(uint8_t) + HASH_ID_BYTES + ENC_PUBLIC_KEY + CRYPTO_NONCE_SIZE\
@@ -4114,7 +4114,7 @@ static int uwrap_group_handshake_packet(const Logger *logger, const uint8_t *sel
                                  length - (1 + HASH_ID_BYTES + ENC_PUBLIC_KEY + CRYPTO_NONCE_SIZE), plain);
 
     if (plain_len != plain_size) {
-        LOGGER_ERROR(logger, "decrypt handshake request failed");
+        LOGGER_ERROR(logger, "decrypt handshake request failed: len: %d, size: %zu", plain_len, plain_size);
         return -1;
     }
 
@@ -4192,13 +4192,6 @@ static int make_gc_handshake_packet(const GC_Chat *chat, GC_Connection *gconn, u
     length += sizeof(uint8_t);
     memcpy(data + length, &join_type, sizeof(uint8_t));
     length += sizeof(uint8_t);
-
-    uint32_t state =
-        gconn->self_sent_shared_state_version != UINT32_MAX ? gconn->self_sent_shared_state_version :
-        chat->connection_state == CS_CONNECTED ? chat->shared_state.version : 0;
-    gconn->self_sent_shared_state_version = state;
-    net_pack_u32(data + length, state);
-    length += sizeof(uint32_t);
 
     int nodes_size = pack_nodes(data + length, sizeof(Node_format), node, MAX_SENT_GC_NODES);
 
@@ -4392,7 +4385,7 @@ static int peer_reconnect(Messenger *m, const GC_Chat *chat, const uint8_t *peer
 static int handle_gc_handshake_request(Messenger *m, int group_number, const IP_Port *ipp, const uint8_t *sender_pk,
                                        const uint8_t *data, uint32_t length)
 {
-    if (length < ENC_PUBLIC_KEY + SIG_PUBLIC_KEY + 6) {
+    if (length < ENC_PUBLIC_KEY + SIG_PUBLIC_KEY + sizeof(uint8_t) + sizeof(uint8_t)) {
         return -1;
     }
 
@@ -4456,7 +4449,7 @@ static int handle_gc_handshake_request(Messenger *m, int group_number, const IP_
     gcc_set_ip_port(gconn, ipp);
 
     Node_format node[GCA_MAX_ANNOUNCED_TCP_RELAYS];
-    int processed = ENC_PUBLIC_KEY + SIG_PUBLIC_KEY + 6;
+    int processed = ENC_PUBLIC_KEY + SIG_PUBLIC_KEY + sizeof(uint8_t) + sizeof(uint8_t);
     int nodes_count = unpack_nodes(node, GCA_MAX_ANNOUNCED_TCP_RELAYS, nullptr, data + processed, length - processed, 1);
 
     if (nodes_count <= 0 && ipp == nullptr) {
@@ -4492,8 +4485,6 @@ static int handle_gc_handshake_request(Messenger *m, int group_number, const IP_
 
     uint8_t request_type = data[ENC_PUBLIC_KEY + SIG_PUBLIC_KEY];
     uint8_t join_type = data[ENC_PUBLIC_KEY + SIG_PUBLIC_KEY + 1];
-
-    net_unpack_u32(data + ENC_PUBLIC_KEY + SIG_PUBLIC_KEY + 2, &gconn->friend_shared_state_version);
 
     if (join_type == HJ_PUBLIC && !is_public_chat(chat)) {
         gcc_mark_for_deletion(gconn, Exit_Type_Disconnected, nullptr, 0);
@@ -5199,11 +5190,8 @@ static int peer_add(const Messenger *m, int group_number, const IP_Port *ipp, co
     chat->group = tmp_group;
 
     GC_Connection *gconn = &chat->gcc[peer_number];
-    gconn->friend_shared_state_version = UINT32_MAX;
-    gconn->self_sent_shared_state_version = UINT32_MAX;
 
     gcc_set_ip_port(gconn, ipp);
-
     chat->group[peer_number].role = GR_INVALID;
     chat->group[peer_number].peer_id = get_new_peer_id(chat);
     chat->group[peer_number].ignore = false;
