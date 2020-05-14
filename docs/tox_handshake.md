@@ -839,7 +839,7 @@ The peer receiving a `NET_PACKET_COOKIE_REQUEST` packet, answers to a cookie
 request (pre handshake) by calling `create_cookie_response()`.
 
 - Threre are three possible calls to answer a cookie request (all called via
-  new_net_crypto and new_messenger()) on initialization/startup.  
+  new_net_crypto and new_messenger()) on initialization/startup.
    - ~~What's with during operation?~~ -> callbacks! - There are no direct calls
   afterwards. Therefore this is triggered through the callbacks if there are
   packets received.
