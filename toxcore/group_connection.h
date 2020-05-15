@@ -70,7 +70,7 @@ struct GC_Connection {
     uint8_t     pending_handshake_type;
     bool        is_pending_handshake_response;
     bool        is_oob_handshake;
-    uint8_t     oob_relay_pk[ENC_PUBLIC_KEY];
+    uint8_t     oob_relay_pk[CRYPTO_PUBLIC_KEY_SIZE];
     bool        confirmed;  /* true if this peer has given us their info */
 
     bool    pending_delete;

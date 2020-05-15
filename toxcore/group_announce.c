@@ -314,7 +314,7 @@ GC_Peer_Announce *gca_add_announce(const Mono_Time *mono_time, GC_Announces_List
     GC_Announces *announces = get_announces_by_chat_id(gc_announces_list, announce->chat_public_key);
 
     if (announces == nullptr) {
-        announces = (GC_Announces *)malloc(sizeof(GC_Announces));
+        announces = (GC_Announces *)calloc(1, sizeof(GC_Announces));
 
         if (announces == nullptr) {
             return nullptr;
@@ -350,13 +350,5 @@ bool gca_is_valid_announce(const GC_Announce *announce)
         return false;
     }
 
-    if (announce->tcp_relays_count) {
-        return true;
-    }
-
-    if (!announce->ip_port_is_set) {
-        return false;
-    }
-
-    return (bool)ip_is_lan(announce->ip_port.ip);
+    return announce->tcp_relays_count > 0 || announce->ip_port_is_set;
 }
