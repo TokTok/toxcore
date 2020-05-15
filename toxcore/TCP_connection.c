@@ -63,7 +63,6 @@ uint32_t tcp_connections_count(const TCP_Connections *tcp_c)
     return tcp_c->tcp_connections_length;
 }
 
-
 /* Set the size of the array to num.
  *
  *  return -1 if realloc fails.
@@ -272,6 +271,26 @@ static TCP_con *get_tcp_connection(const TCP_Connections *tcp_c, int tcp_connect
     }
 
     return &tcp_c->tcp_connections[tcp_connections_number];
+}
+
+/* Returns the number of connected TCP relays */
+uint32_t tcp_connected_relays_count(const TCP_Connections *tcp_c)
+{
+    uint32_t count = 0;
+
+    for (uint32_t i = 0; i < tcp_c->tcp_connections_length; ++i) {
+        TCP_con *tcp_con = get_tcp_connection(tcp_c, i);
+
+        if (!tcp_con) {
+            continue;
+        }
+
+        if (tcp_con->status == TCP_CONN_CONNECTED) {
+            ++count;
+        }
+    }
+
+    return count;
 }
 
 /* Send a packet to the TCP connection.
