@@ -272,6 +272,7 @@ typedef struct GC_Chat {
     IP_Port         self_ip_port;
     Networking_Core *net;
     TCP_Connections *tcp_conn;
+    uint64_t        last_checked_tcp_relays;
 
     GC_GroupPeer    *group;
     GC_Connection   *gcc;

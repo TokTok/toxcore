@@ -72,6 +72,8 @@ const uint8_t *tcp_connections_public_key(const TCP_Connections *tcp_c);
 
 uint32_t tcp_connections_count(const TCP_Connections *tcp_c);
 
+/* Returns the number of connected TCP relays */
+uint32_t tcp_connected_relays_count(const TCP_Connections *tcp_c);
 
 /* Send a packet to the TCP connection.
  *

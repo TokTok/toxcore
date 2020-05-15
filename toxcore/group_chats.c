@@ -5432,7 +5432,8 @@ static int send_pending_handshake(const GC_Chat *chat, GC_Connection *gconn, uin
     return 0;
 }
 
-static void do_group_tcp(GC_Chat *chat, void *userdata)
+#define TCP_RELAYS_CHECK_INTERVAL 10
+static void do_group_tcp(Messenger *m, GC_Chat *chat, void *userdata)
 {
     if (chat->tcp_conn == nullptr || chat->connection_state <= CS_MANUALLY_DISCONNECTED) {
         return;
@@ -5447,11 +5448,20 @@ static void do_group_tcp(GC_Chat *chat, void *userdata)
         send_pending_handshake(chat, gconn, i);
     }
 
+    if (mono_time_is_timeout(chat->mono_time, chat->last_checked_tcp_relays, TCP_RELAYS_CHECK_INTERVAL)) {
+        uint32_t tcp_num = tcp_connected_relays_count(chat->tcp_conn);
+
+        if (tcp_num == 0) {
+            add_tcp_relays_to_chat(m, chat);
+        }
+
+        chat->last_checked_tcp_relays = mono_time_get(chat->mono_time);
+    }
+
     chat->should_start_sending_handshakes = false;
 }
 
-#define GROUP_JOIN_ATTEMPT_INTERVAL 20
-#define TCP_RELAYS_TEST_COUNT 1
+#define GROUP_JOIN_ATTEMPT_INTERVAL 10
 
 /* CS_CONNECTED: Peers are pinged, unsent packets are resent, and timeouts are checked.
  * CS_CONNECTING: Look for new DHT nodes after an interval.
@@ -5468,7 +5478,7 @@ void do_gc(GC_Session *c, void *userdata)
     for (uint32_t i = 0; i < c->num_chats; ++i) {
         GC_Chat *chat = &c->chats[i];
         do_peer_delete(c->messenger, i);
-        do_group_tcp(chat, userdata);
+        do_group_tcp(c->messenger, chat, userdata);
 
         switch (chat->connection_state) {
             case CS_CONNECTED: {
@@ -5487,13 +5497,6 @@ void do_gc(GC_Session *c, void *userdata)
             }
 
             case CS_DISCONNECTED: {
-                Node_format tcp_relays[TCP_RELAYS_TEST_COUNT];
-                int tcp_num = tcp_copy_connected_relays(chat->tcp_conn, tcp_relays, TCP_RELAYS_TEST_COUNT);
-
-                if (tcp_num != TCP_RELAYS_TEST_COUNT) {
-                    add_tcp_relays_to_chat(c->messenger, chat);
-                }
-
                 if (chat->numpeers <= 1
                         || !mono_time_is_timeout(c->messenger->mono_time, chat->last_join_attempt, GROUP_JOIN_ATTEMPT_INTERVAL)) {
                     break;
