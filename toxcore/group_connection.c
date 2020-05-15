@@ -156,7 +156,7 @@ int gcc_handle_ack(GC_Connection *gconn, uint64_t message_id)
     GC_Message_Array_Entry *array_entry = &gconn->send_array[idx];
 
     if (array_entry_is_empty(array_entry)) {
-        return -1;
+        return 0;
     }
 
     if (array_entry->message_id != message_id) {  // wrap-around indicates a connection problem
