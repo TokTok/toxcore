@@ -395,7 +395,7 @@ int32_t m_addfriend_norequest(Messenger *m, const uint8_t *real_pk)
     return m_add_friend_contact_no_request(m, real_pk);
 }
 
-static void try_pack_gc_data(const Messenger *m, GC_Chat *chat, Onion_Friend *onion_friend);
+static int try_pack_gc_data(const Messenger *m, GC_Chat *chat, Onion_Friend *onion_friend);
 
 /*
  * Add a group chat to messenger.
@@ -420,7 +420,9 @@ int32_t m_add_group(Messenger *m, GC_Chat *chat)
     Onion_Friend *onion_friend = onion_get_friend(m->onion_c, onion_friend_number);
     onion_friend_set_gc_public_key(onion_friend, get_chat_id(chat->chat_public_key));
 
-    try_pack_gc_data(m, chat, onion_friend);
+    if (try_pack_gc_data(m, chat, onion_friend) == -1) {
+        LOGGER_DEBUG(m->log, "Failed to publish group announce to the DHT");
+    }
 
     return group_number;
 }
@@ -2827,46 +2829,48 @@ uint32_t messenger_run_interval(const Messenger *m)
     return crypto_interval;
 }
 
-static void try_pack_gc_data(const Messenger *m, GC_Chat *chat, Onion_Friend *onion_friend)
+static int try_pack_gc_data(const Messenger *m, GC_Chat *chat, Onion_Friend *onion_friend)
 {
     GC_Public_Announce announce;
-    int tcp_num = tcp_copy_connected_relays(chat->tcp_conn, announce.base_announce.tcp_relays,
-                                            GCA_MAX_ANNOUNCED_TCP_RELAYS);
-    IP_Port self_ip_port = {{{0}}};
+    IP_Port self_ip_port;
+    memset(&announce, 0, sizeof(GC_Public_Announce));
+    memset(&self_ip_port, 0, sizeof(IP_Port));
+
     int copy_ip_port_result = ipport_self_copy(m->dht, &self_ip_port, true);
     bool ip_port_is_set = copy_ip_port_result == 0;
-    bool can_publish_announce = tcp_num > 0 || ip_port_is_set;
 
-    if (!tcp_num && ip_port_is_set && !ip_is_lan(self_ip_port.ip)) {
-        // we have only udp connection to network for now
-        // wait until we will have connected tcp relays, otherwise announce will be broken
-        can_publish_announce = false;
-    }
+    int tcp_num = tcp_copy_connected_relays(chat->tcp_conn, announce.base_announce.tcp_relays,
+                                            GCA_MAX_ANNOUNCED_TCP_RELAYS);
 
-    if (can_publish_announce) {
-        announce.base_announce.tcp_relays_count = (uint8_t)tcp_num;
-        announce.base_announce.ip_port_is_set = (uint8_t)(ip_port_is_set ? 1 : 0);
-
-        if (ip_port_is_set) {
-            memcpy(&announce.base_announce.ip_port, &self_ip_port, sizeof(IP_Port));
-        }
-
-        memcpy(announce.base_announce.peer_public_key, chat->self_public_key, ENC_PUBLIC_KEY);
-        memcpy(announce.chat_public_key, get_chat_id(chat->chat_public_key), ENC_PUBLIC_KEY);
-
-        uint8_t gc_data[GCA_MAX_DATA_LENGTH];
-        int length = gca_pack_public_announce(gc_data, GCA_MAX_DATA_LENGTH, &announce);
-
-        if (length == -1) {
-            return;
-        }
-
-        onion_friend_set_gc_data(onion_friend, gc_data, (int16_t)length);
-        gca_add_announce(m->mono_time, m->group_announce, &announce);
-    } else {
-        // new gc - no connected relays yet and no ip/port
+    if (tcp_num == 0 && !ip_port_is_set) {
         onion_friend_set_gc_data(onion_friend, nullptr, -1);
+        return -1;
     }
+
+    announce.base_announce.tcp_relays_count = (uint8_t)tcp_num;
+    announce.base_announce.ip_port_is_set = (uint8_t)(ip_port_is_set ? 1 : 0);
+
+    if (ip_port_is_set) {
+        memcpy(&announce.base_announce.ip_port, &self_ip_port, sizeof(IP_Port));
+    }
+
+    memcpy(announce.base_announce.peer_public_key, chat->self_public_key, ENC_PUBLIC_KEY);
+    memcpy(announce.chat_public_key, get_chat_id(chat->chat_public_key), ENC_PUBLIC_KEY);
+
+    uint8_t gc_data[GCA_MAX_DATA_LENGTH];
+    int length = gca_pack_public_announce(gc_data, GCA_MAX_DATA_LENGTH, &announce);
+
+    if (length == -1) {
+        return -1;
+    }
+
+    if (gca_add_announce(m->mono_time, m->group_announce, &announce) == nullptr) {
+        return -1;
+    }
+
+    onion_friend_set_gc_data(onion_friend, gc_data, (int16_t)length);
+
+    return 0;
 }
 
 #ifndef VANILLA_NACL
@@ -2884,12 +2888,15 @@ static void update_gc_friends_data(const Messenger *m)
 
         GC_Chat *chat = gc_get_group_by_public_key(m->group_handler, onion_friend_get_gc_public_key(onion_friend));
 
-        if (!chat) {
+        if (chat == nullptr) {
             continue;
         }
 
         if (gc_data_length == -1 || chat->should_update_self_announces) {
-            try_pack_gc_data(m, chat, onion_friend);
+            if (try_pack_gc_data(m, chat, onion_friend) == -1) {
+                LOGGER_DEBUG(m->log, "Failed to publish group announce to the DHT");
+            }
+
             chat->should_update_self_announces = false;
         }
     }
