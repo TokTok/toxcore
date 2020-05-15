@@ -196,8 +196,7 @@ void gcc_set_ip_port(GC_Connection *gconn, const IP_Port *ipp)
     }
 }
 
-/*
- * Copies a TCP relay node from gconn to node.
+/* Copies a random TCP relay node from gconn to node.
  *
  * Return 0 on success.
  * Return -1 on failure.
@@ -208,8 +207,12 @@ int gcc_copy_tcp_relay(const GC_Connection *gconn, Node_format *node)
         return -1;
     }
 
-    int index = (gconn->tcp_relays_index - 1 + MAX_FRIEND_TCP_CONNECTIONS) % MAX_FRIEND_TCP_CONNECTIONS;
-    memcpy(node, &gconn->connected_tcp_relays[index], sizeof(Node_format));
+    if (gconn->tcp_relays_count == 0) {
+        return -1;
+    }
+
+    uint32_t rand_idx = random_u32() % gconn->tcp_relays_count;
+    memcpy(node, &gconn->connected_tcp_relays[rand_idx], sizeof(Node_format));
 
     return 0;
 }
