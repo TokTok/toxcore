@@ -2841,6 +2841,7 @@ static int try_pack_gc_data(const Messenger *m, GC_Chat *chat, Onion_Friend *oni
 
     int tcp_num = tcp_copy_connected_relays(chat->tcp_conn, announce.base_announce.tcp_relays,
                                             GCA_MAX_ANNOUNCED_TCP_RELAYS);
+
     if (tcp_num == 0 && !ip_port_is_set) {
         onion_friend_set_gc_data(onion_friend, nullptr, -1);
         return -1;
