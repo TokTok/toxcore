@@ -1120,7 +1120,7 @@ static bool create_announce_for_peer(const GC_Chat *chat, GC_Connection *gconn, 
     announce->tcp_relays_count = 0;
 
     // pack tcp relays
-    if (gconn->any_tcp_connections) {
+    if (gconn->tcp_relays_count > 0) {
         if (gcc_copy_tcp_relay(gconn, &announce->tcp_relays[0]) == 0) {
             announce->tcp_relays_count = 1;
         }
@@ -1306,8 +1306,11 @@ static int send_gc_peer_info_request(const GC_Chat *chat, GC_Connection *gconn);
 
 /* Saves tcp_node to gconn's list of connected tcp relays.
  *
+ * TODO: we never test these after they're set.
+ *
  * Return 0 on success.
  * Return -1 on failure.
+ * Return -2 if relays list is full.
  */
 static int save_tcp_relay(GC_Connection *gconn, const Node_format *tcp_node)
 {
@@ -1315,9 +1318,14 @@ static int save_tcp_relay(GC_Connection *gconn, const Node_format *tcp_node)
         return -1;
     }
 
-    memcpy(&gconn->connected_tcp_relays[gconn->tcp_relays_index], tcp_node, sizeof(Node_format));
-    gconn->tcp_relays_index = (gconn->tcp_relays_index + 1) % MAX_FRIEND_TCP_CONNECTIONS;
-    gconn->any_tcp_connections = true;
+    uint32_t idx = gconn->tcp_relays_count;
+
+    if (idx >= MAX_FRIEND_TCP_CONNECTIONS) {
+        return -2;
+    }
+
+    memcpy(&gconn->connected_tcp_relays[idx], tcp_node, sizeof(Node_format));
+    ++gconn->tcp_relays_count;
 
     return 0;
 }

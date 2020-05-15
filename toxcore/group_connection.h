@@ -59,8 +59,7 @@ struct GC_Connection {
     uint64_t    last_sent_ip_time;  /* the last time we sent our ip info to this peer in a ping packet */
 
     Node_format connected_tcp_relays[MAX_FRIEND_TCP_CONNECTIONS];
-    int tcp_relays_index;
-    bool any_tcp_connections;
+    uint16_t    tcp_relays_count;
 
     uint64_t    last_received_ping_time;
     uint64_t    last_requested_packet_time;  /* The last time we requested a missing packet from this peer */
@@ -129,8 +128,7 @@ bool gcc_ip_port_is_set(const GC_Connection *gconn);
  */
 void gcc_set_ip_port(GC_Connection *gconn, const IP_Port *ipp);
 
-/*
- * Copies a TCP relay node from gconn to node.
+/* Copies a random TCP relay node from gconn to node.
  *
  * Return 0 on success.
  * Return -1 on failure.
