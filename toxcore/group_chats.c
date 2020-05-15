@@ -4098,8 +4098,8 @@ static int handle_gc_broadcast(Messenger *m, int group_number, uint32_t peer_num
  * Returns length of plaintext data on success.
  * Returns -1 on failure.
  */
-static int uwrap_group_handshake_packet(const Logger *logger, const uint8_t *self_sk, uint8_t *sender_pk,
-                                        uint8_t *plain, size_t plain_size, const uint8_t *packet, uint16_t length)
+static int unwrap_group_handshake_packet(const Logger *logger, const uint8_t *self_sk, uint8_t *sender_pk,
+        uint8_t *plain, size_t plain_size, const uint8_t *packet, uint16_t length)
 {
     if (plain_size < length - 1 - HASH_ID_BYTES - ENC_PUBLIC_KEY - CRYPTO_NONCE_SIZE - CRYPTO_MAC_SIZE) {
         return -1;
@@ -4524,10 +4524,18 @@ static int handle_gc_handshake_packet(Messenger *m, const GC_Chat *chat, const I
     uint8_t sender_pk[ENC_PUBLIC_KEY];
     VLA(uint8_t, data, length - 1 - HASH_ID_BYTES - ENC_PUBLIC_KEY - CRYPTO_NONCE_SIZE - CRYPTO_MAC_SIZE);
 
-    int plain_len = uwrap_group_handshake_packet(m->log, chat->self_secret_key, sender_pk, data, SIZEOF_VLA(data), packet,
+    int plain_len = unwrap_group_handshake_packet(m->log, chat->self_secret_key, sender_pk, data, SIZEOF_VLA(data), packet,
                     length);
 
+    // probably got multiple announcements from the same peer with a differet session key
     if (plain_len != SIZEOF_VLA(data)) {
+        int peer_number = get_peernum_of_enc_pk(chat, sender_pk, false);
+        GC_Connection *gconn = gcc_get_connection(chat, peer_number);
+
+        if (gconn != nullptr) {
+            gcc_mark_for_deletion(gconn, Exit_Type_No_Callback, nullptr, 0);
+        }
+
         LOGGER_ERROR(m->log, "Failed to unwrap handshake packet");
         return -1;
     }
