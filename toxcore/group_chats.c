@@ -4533,7 +4533,7 @@ static int handle_gc_handshake_packet(Messenger *m, const GC_Chat *chat, const I
         GC_Connection *gconn = gcc_get_connection(chat, peer_number);
 
         if (gconn != nullptr) {
-            gcc_mark_for_deletion(gconn, Exit_Type_No_Callback, nullptr, 0);
+            gcc_mark_for_deletion(gconn, Exit_Type_Disconnected, nullptr, 0);
         }
 
         LOGGER_ERROR(m->log, "Failed to unwrap handshake packet");
