@@ -28,7 +28,6 @@
 /* The time before the direct UDP connection is considered dead */
 #define GCC_UDP_DIRECT_TIMEOUT (GC_PING_TIMEOUT + 4)
 
-
 /* Returns group connection object for peer_number.
  * Returns NULL if peer_number is invalid.
  */
@@ -213,6 +212,32 @@ int gcc_copy_tcp_relay(const GC_Connection *gconn, Node_format *node)
 
     uint32_t rand_idx = random_u32() % gconn->tcp_relays_count;
     memcpy(node, &gconn->connected_tcp_relays[rand_idx], sizeof(Node_format));
+
+    return 0;
+}
+
+/* Saves tcp_node to gconn's list of connected tcp relays.
+ *
+ * TODO: we never test these after they're set.
+ *
+ * Return 0 on success.
+ * Return -1 on failure.
+ * Return -2 if relays list is full.
+ */
+int gcc_save_tcp_relay(GC_Connection *gconn, const Node_format *tcp_node)
+{
+    if (gconn == nullptr || tcp_node == nullptr) {
+        return -1;
+    }
+
+    uint32_t idx = gconn->tcp_relays_count;
+
+    if (idx >= MAX_FRIEND_TCP_CONNECTIONS) {
+        return -2;
+    }
+
+    memcpy(&gconn->connected_tcp_relays[idx], tcp_node, sizeof(Node_format));
+    ++gconn->tcp_relays_count;
 
     return 0;
 }
