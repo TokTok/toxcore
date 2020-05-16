@@ -253,7 +253,9 @@ static void group_message_test(Tox **toxes, State *state)
     fprintf(stderr, "Peers attemping to join DHT group via the chat ID\n");
 
     for (size_t i = 1; i < MAX_NUM_PEERS; ++i) {
-        iterate_all_wait(MAX_NUM_PEERS, toxes, state, ITERATION_INTERVAL);
+        for (size_t j = 0; j < 40; ++j) {
+            iterate_all_wait(MAX_NUM_PEERS, toxes, state, ITERATION_INTERVAL);
+        }
 
         TOX_ERR_GROUP_JOIN join_err;
         state[i].group_number = tox_group_join(toxes[i], chat_id, (const uint8_t *)state[i].self_name,

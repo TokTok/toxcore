@@ -53,13 +53,13 @@ typedef enum Group_Moderation_Event {
 } Group_Moderation_Event;
 
 typedef enum Group_Exit_Type {
-    Exit_Type_Quit,
-    Exit_Type_Timeout,
-    Exit_Type_Disconnected,
-    Exit_Type_Kick,
-    Exit_Type_Sync_Error,
-    Exit_Type_No_Callback,
-    Exit_Type_Invalid,
+    GC_EXIT_TYPE_QUIT,
+    GC_EXIT_TYPE_TIMEOUT,
+    GC_EXIT_TYPE_DISCONNECTED,
+    GC_EXIT_TYPE_KICKED,
+    GC_EXIT_TYPE_SYNC_ERR,
+    GC_EXIT_TYPE_NO_CALLBACK,
+    GC_EXIT_TYPE_INVALID,
 } Group_Exit_Type;
 
 typedef enum Group_Invite_Message_Type {

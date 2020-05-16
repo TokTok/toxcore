@@ -28,6 +28,7 @@
 /* The time before the direct UDP connection is considered dead */
 #define GCC_UDP_DIRECT_TIMEOUT (GC_PING_TIMEOUT + 4)
 
+
 /* Returns group connection object for peer_number.
  * Returns NULL if peer_number is invalid.
  */
@@ -380,7 +381,7 @@ void gcc_resend_packets(Messenger *m, const GC_Chat *chat, uint32_t peer_number)
         }
 
         if (mono_time_is_timeout(m->mono_time, array_entry->time_added, GC_CONFIRMED_PEER_TIMEOUT)) {
-            gcc_mark_for_deletion(gconn, Exit_Type_Timeout, nullptr, 0);
+            gcc_mark_for_deletion(gconn, GC_EXIT_TYPE_TIMEOUT, nullptr, 0);
             return;
         }
     }
@@ -435,8 +436,8 @@ void gcc_mark_for_deletion(GC_Connection *gconn, Group_Exit_Type type, const uin
         return;
     }
 
-    if (type >= Exit_Type_Invalid) {
-        type = Exit_Type_Quit;
+    if (type >= GC_EXIT_TYPE_INVALID) {
+        type = GC_EXIT_TYPE_QUIT;
     }
 
     gconn->pending_delete = true;
