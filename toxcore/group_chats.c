@@ -4275,7 +4275,7 @@ static int send_gc_handshake_packet(const GC_Chat *chat, uint32_t peer_number, u
     int ret2 = send_packet_tcp_connection(chat->tcp_conn, gconn->tcp_connection_num, packet, length);
 
     if (ret1 == -1 && ret2 == -1) {
-       // LOGGER_ERROR(chat->logger, "Send handshake packet failed. Type %u", request_type);
+        // LOGGER_ERROR(chat->logger, "Send handshake packet failed. Type %u", request_type);
         return -1;
     }
 
