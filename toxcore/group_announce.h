@@ -79,19 +79,19 @@ int gca_get_announces(GC_Announces_List *gc_announces_list, GC_Announce *gc_anno
 GC_Peer_Announce *gca_add_announce(const Mono_Time *mono_time, GC_Announces_List *gc_announces_list,
                                    const GC_Public_Announce *announce);
 
-int gca_pack_announce(uint8_t *data, uint16_t length, GC_Announce *announce);
+int gca_pack_announce(uint8_t *data, uint16_t length, const GC_Announce *announce);
 
 int gca_unpack_announce(const uint8_t *data, uint16_t length, GC_Announce *announce);
 
-int gca_pack_announces_list(uint8_t *data, uint16_t length, GC_Announce *announces, uint8_t announces_count,
+int gca_pack_announces_list(uint8_t *data, uint16_t length, const GC_Announce *announces, uint8_t announces_count,
                             size_t *processed);
 
 int gca_unpack_announces_list(const Logger *logger, const uint8_t *data, uint16_t length, GC_Announce *announces,
                               uint8_t max_announces_count, size_t *processed);
 
-int gca_pack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce *announce);
+int gca_pack_public_announce(uint8_t *data, uint16_t length, const GC_Public_Announce *announce);
 
-int gca_unpack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce *announce);
+int gca_unpack_public_announce(const uint8_t *data, uint16_t length, GC_Public_Announce *announce);
 
 bool gca_is_valid_announce(const GC_Announce *announce);
 
