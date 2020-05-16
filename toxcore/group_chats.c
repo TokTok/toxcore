@@ -99,7 +99,6 @@ static int group_delete(GC_Session *c, GC_Chat *chat);
 static void group_cleanup(GC_Session *c, GC_Chat *chat);
 static int get_nick_peer_number(const GC_Chat *chat, const uint8_t *nick, uint16_t length);
 static bool group_exists(const GC_Session *c, const uint8_t *chat_id);
-static int save_tcp_relay(GC_Connection *gconn, const Node_format *tcp_node);
 static void add_tcp_relays_to_chat(Messenger *m, GC_Chat *chat);
 static int gc_peer_delete(Messenger *m, int group_number, uint32_t peer_number, Group_Exit_Type exit_type,
                           const uint8_t *data,
@@ -393,11 +392,7 @@ uint16_t gc_copy_peer_addrs(const GC_Chat *chat, GC_SavedPeerInfo *addrs, size_t
         GC_Connection *gconn = &chat->gcc[i];
 
         if (gconn->confirmed || chat->connection_state != CS_CONNECTED) {
-            if (gconn->tcp_relays_count > 0) {
-                uint32_t rand_idx = random_u32() % gconn->tcp_relays_count;
-                memcpy(&addrs[num].tcp_relay, &gconn->connected_tcp_relays[rand_idx], sizeof(Node_format));
-            }
-
+            gcc_copy_tcp_relay(gconn, &addrs[num].tcp_relay);
             memcpy(&addrs[num].ip_port, &gconn->addr.ip_port, sizeof(IP_Port));
             memcpy(addrs[num].public_key, gconn->addr.public_key, ENC_PUBLIC_KEY);
             ++num;
@@ -1034,7 +1029,7 @@ static int unpack_gc_sync_announce(const Messenger *m, const GC_Chat *chat, uint
                 continue;
             }
 
-            if (save_tcp_relay(new_gconn, &announce.tcp_relays[j]) == 0) {
+            if (gcc_save_tcp_relay(new_gconn, &announce.tcp_relays[j]) == 0) {
                 ++added_tcp_relays;
             }
         }
@@ -1308,33 +1303,6 @@ static void copy_self_to_peer(const GC_Chat *chat, GC_GroupPeer *peer);
 static int send_gc_peer_info_request(const GC_Chat *chat, GC_Connection *gconn);
 
 
-/* Saves tcp_node to gconn's list of connected tcp relays.
- *
- * TODO: we never test these after they're set.
- *
- * Return 0 on success.
- * Return -1 on failure.
- * Return -2 if relays list is full.
- */
-static int save_tcp_relay(GC_Connection *gconn, const Node_format *tcp_node)
-{
-    if (gconn == nullptr || tcp_node == nullptr) {
-        return -1;
-    }
-
-    uint32_t idx = gconn->tcp_relays_count;
-
-    if (idx >= MAX_FRIEND_TCP_CONNECTIONS) {
-        return -2;
-    }
-
-    memcpy(&gconn->connected_tcp_relays[idx], tcp_node, sizeof(Node_format));
-    ++gconn->tcp_relays_count;
-
-    return 0;
-}
-
-
 /* Shares our TCP relays with peer and adds shared relays to our connection with them.
  *
  * Returns 0 on success.
@@ -1408,8 +1376,7 @@ static int handle_gc_tcp_relays(const Messenger *m, int group_number, GC_Connect
     }
 
     for (size_t i = 0; i < num_nodes; ++i) {
-        add_tcp_relay_connection(chat->tcp_conn, gconn->tcp_connection_num, tcp_relays[i].ip_port,
-                                 tcp_relays[i].public_key);
+        add_tcp_relay_connection(chat->tcp_conn, gconn->tcp_connection_num, tcp_relays[i].ip_port, tcp_relays[i].public_key);
     }
 
     return 0;
@@ -1545,7 +1512,7 @@ static int handle_gc_invite_request(Messenger *m, int group_number, uint32_t pee
     }
 
     if (chat->connection_state <= CS_MANUALLY_DISCONNECTED || chat->shared_state.version == 0) {
-        LOGGER_ERROR(m->log, "not connected - state: %d", chat->connection_state);
+        LOGGER_WARNING(m->log, "not connected - state: %d", chat->connection_state);
         return -1;
     }
 
@@ -1958,10 +1925,13 @@ static int handle_gc_peer_announcement(const Messenger *m, int group_number, con
     }
 
     for (uint8_t i = 0; i < new_peer_announce.tcp_relays_count; ++i) {
-        add_tcp_relay_connection(chat->tcp_conn, gconn->tcp_connection_num,
-                                 new_peer_announce.tcp_relays[i].ip_port,
-                                 new_peer_announce.tcp_relays[i].public_key);
-        save_tcp_relay(gconn, &new_peer_announce.tcp_relays[i]);
+        int add_tcp_result = add_tcp_relay_connection(chat->tcp_conn, gconn->tcp_connection_num,
+                             new_peer_announce.tcp_relays[i].ip_port,
+                             new_peer_announce.tcp_relays[i].public_key);
+
+        if (add_tcp_result == 0) {
+            gcc_save_tcp_relay(gconn, &new_peer_announce.tcp_relays[i]);
+        }
     }
 
     return 0;
@@ -4502,7 +4472,7 @@ static int handle_gc_handshake_request(Messenger *m, int group_number, const IP_
         }
 
         if (add_tcp_result == 0) {
-            save_tcp_relay(gconn, node);
+            gcc_save_tcp_relay(gconn, node);
         }
     }
 
@@ -4763,7 +4733,7 @@ static int handle_gc_lossless_message(Messenger *m, const GC_Chat *chat, const u
     int ret = handle_gc_lossless_helper(m, chat->group_number, peer_number, real_data, real_len, message_id, packet_type);
 
     if (ret == -1) {
-        LOGGER_ERROR(m->log, "lossless handler failed (type %u)", packet_type);
+        LOGGER_DEBUG(m->log, "lossless handler failed (type %u)", packet_type);
         return -1;
     }
 
@@ -5774,11 +5744,11 @@ static void gc_load_peers(Messenger *m, GC_Chat *chat, const GC_SavedPeerInfo *a
                              addrs[i].tcp_relay.ip_port,
                              addrs[i].tcp_relay.public_key);
 
-        if (add_tcp_result < 0 && !ip_port_is_set) {
+        if (add_tcp_result == -1 && !ip_port_is_set) {
             continue;
         }
 
-        int save_tcp_result = save_tcp_relay(gconn, &addrs[i].tcp_relay);
+        int save_tcp_result = gcc_save_tcp_relay(gconn, &addrs[i].tcp_relay);
 
         if (save_tcp_result == -1 && !ip_port_is_set) {
             continue;
@@ -6273,10 +6243,22 @@ int handle_gc_invite_confirmed_packet(const GC_Session *c, int friend_number, co
         return -1;
     }
 
+    uint32_t tcp_relays_added = 0;
+
     for (size_t i = 0; i < num_nodes; ++i) {
-        add_tcp_relay_connection(chat->tcp_conn, gconn->tcp_connection_num, tcp_relays[i].ip_port,
-                                 tcp_relays[i].public_key);
-        save_tcp_relay(gconn, &tcp_relays[i]);
+        int add_tcp_result = add_tcp_relay_connection(chat->tcp_conn, gconn->tcp_connection_num, tcp_relays[i].ip_port,
+                             tcp_relays[i].public_key);
+
+        if (add_tcp_result == 0) {
+            if (gcc_save_tcp_relay(gconn, &tcp_relays[i]) == 0) {
+                ++tcp_relays_added;
+            }
+        }
+    }
+
+    if (tcp_relays_added == 0 && !copy_ip_port_result) {
+        LOGGER_ERROR(chat->logger, "Got invalid connection info from peer");
+        return -1;
     }
 
     if (copy_ip_port_result) {
@@ -6341,11 +6323,11 @@ int handle_gc_invite_accepted_packet(GC_Session *c, int friend_number, const uin
     GC_Connection *gconn = gcc_get_connection(chat, peer_number);
 
     Node_format tcp_relays[GCC_MAX_TCP_SHARED_RELAYS];
-    unsigned int num = tcp_copy_connected_relays(chat->tcp_conn, tcp_relays, GCC_MAX_TCP_SHARED_RELAYS);
+    unsigned int num_tcp_relays = tcp_copy_connected_relays(chat->tcp_conn, tcp_relays, GCC_MAX_TCP_SHARED_RELAYS);
 
     bool copy_ip_port_result = copy_friend_ip_port_to_gconn(m, friend_number, gconn);
 
-    if (num <= 0 && !copy_ip_port_result) {
+    if (num_tcp_relays <= 0 && !copy_ip_port_result) {
         return -1;
     }
 
@@ -6354,14 +6336,26 @@ int handle_gc_invite_accepted_packet(GC_Session *c, int friend_number, const uin
     memcpy(send_data, chat_id, CHAT_ID_SIZE);
     memcpy(send_data + CHAT_ID_SIZE, chat->self_public_key, ENC_PUBLIC_KEY);
 
-    if (num > 0) {
-        for (unsigned int i = 0; i < num; ++i) {
-            add_tcp_relay_connection(chat->tcp_conn, gconn->tcp_connection_num, tcp_relays[i].ip_port,
-                                     tcp_relays[i].public_key);
-            save_tcp_relay(gconn, &tcp_relays[i]);
+    if (num_tcp_relays > 0) {
+        uint32_t added_tcp_relays = 0;
+
+        for (unsigned int i = 0; i < num_tcp_relays; ++i) {
+            int add_tcp_result = add_tcp_relay_connection(chat->tcp_conn, gconn->tcp_connection_num, tcp_relays[i].ip_port,
+                                 tcp_relays[i].public_key);
+
+            if (add_tcp_result == 0) {
+                if (gcc_save_tcp_relay(gconn, &tcp_relays[i]) == 0) {
+                    ++added_tcp_relays;
+                }
+            }
         }
 
-        int nodes_len = pack_nodes(send_data + len, sizeof(send_data) - len, tcp_relays, num);
+        if (added_tcp_relays == 0 && !copy_ip_port_result) {
+            LOGGER_ERROR(chat->logger, "Got invalid connection info from peer");
+            return -1;
+        }
+
+        int nodes_len = pack_nodes(send_data + len, sizeof(send_data) - len, tcp_relays, num_tcp_relays);
 
         if (nodes_len <= 0 && !copy_ip_port_result) {
             return -1;
@@ -6693,7 +6687,7 @@ int add_peers_from_announces(const GC_Session *gc_session, GC_Chat *chat, GC_Ann
                 continue;
             }
 
-            if (save_tcp_relay(gconn, &announce->tcp_relays[j]) == -1) {
+            if (gcc_save_tcp_relay(gconn, &announce->tcp_relays[j]) == -1) {
                 continue;
             }
 
