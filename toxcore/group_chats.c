@@ -393,7 +393,11 @@ uint16_t gc_copy_peer_addrs(const GC_Chat *chat, GC_SavedPeerInfo *addrs, size_t
         GC_Connection *gconn = &chat->gcc[i];
 
         if (gconn->confirmed || chat->connection_state != CS_CONNECTED) {
-            gcc_copy_tcp_relay(gconn, &addrs[num].tcp_relay);
+            if (gconn->tcp_relays_count > 0) {
+                uint32_t rand_idx = random_u32() % gconn->tcp_relays_count;
+                memcpy(&addrs[num].tcp_relay, &gconn->connected_tcp_relays[rand_idx], sizeof(Node_format));
+            }
+
             memcpy(&addrs[num].ip_port, &gconn->addr.ip_port, sizeof(IP_Port));
             memcpy(addrs[num].public_key, gconn->addr.public_key, ENC_PUBLIC_KEY);
             ++num;
@@ -4271,7 +4275,7 @@ static int send_gc_handshake_packet(const GC_Chat *chat, uint32_t peer_number, u
     int ret2 = send_packet_tcp_connection(chat->tcp_conn, gconn->tcp_connection_num, packet, length);
 
     if (ret1 == -1 && ret2 == -1) {
-        LOGGER_ERROR(chat->logger, "Send handshake packet failed. Type %u", request_type);
+       // LOGGER_ERROR(chat->logger, "Send handshake packet failed. Type %u", request_type);
         return -1;
     }
 
