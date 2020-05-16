@@ -1035,7 +1035,7 @@ static int unpack_gc_sync_announce(const Messenger *m, const GC_Chat *chat, uint
         }
 
         if (!announce.ip_port_is_set && added_tcp_relays == 0) {
-            gcc_mark_for_deletion(new_gconn, Exit_Type_Disconnected, nullptr, 0);
+            gcc_mark_for_deletion(new_gconn, GC_EXIT_TYPE_DISCONNECTED, nullptr, 0);
             LOGGER_ERROR(chat->logger, "Sync error: Invalid peer connection info");
             return -1;
         }
@@ -1563,7 +1563,7 @@ static int handle_gc_invite_request(Messenger *m, int group_number, uint32_t pee
 
 FAILED_INVITE:
     send_gc_invite_response_reject(chat, gconn, invite_error);
-    gcc_mark_for_deletion(gconn, Exit_Type_Disconnected, nullptr, 0);
+    gcc_mark_for_deletion(gconn, GC_EXIT_TYPE_DISCONNECTED, nullptr, 0);
 
     return -1;
 }
@@ -1995,7 +1995,7 @@ static int handle_gc_peer_info_response(Messenger *m, int group_number, uint32_t
     }
 
     if (validate_gc_peer_role(chat, peer_number) == -1) {
-        gcc_mark_for_deletion(gconn, Exit_Type_Sync_Error, nullptr, 0);
+        gcc_mark_for_deletion(gconn, GC_EXIT_TYPE_SYNC_ERR, nullptr, 0);
         LOGGER_ERROR(m->log, "failed to validate peer role");
         return -1;
     }
@@ -2119,7 +2119,7 @@ static int handle_gc_shared_state_error(Messenger *m, int group_number, uint32_t
     GC_Connection *gconn = gcc_get_connection(chat, peer_number);
 
     if (gconn != nullptr) {
-        gcc_mark_for_deletion(gconn, Exit_Type_Sync_Error, nullptr, 0);
+        gcc_mark_for_deletion(gconn, GC_EXIT_TYPE_SYNC_ERR, nullptr, 0);
     }
 
     if (chat->shared_state.version == 0) {
@@ -2250,7 +2250,7 @@ static int handle_gc_mod_list(Messenger *m, int group_number, uint32_t peer_numb
 ON_ERROR:
 
     if (gconn != nullptr) {
-        gcc_mark_for_deletion(gconn, Exit_Type_Sync_Error, nullptr, 0);
+        gcc_mark_for_deletion(gconn, GC_EXIT_TYPE_SYNC_ERR, nullptr, 0);
     }
 
     if (chat->shared_state.version == 0) {
@@ -2532,7 +2532,7 @@ static int handle_gc_peer_exit(Messenger *m, int group_number, uint32_t peer_num
         return -1;
     }
 
-    gcc_mark_for_deletion(gconn, Exit_Type_Quit, data, length);
+    gcc_mark_for_deletion(gconn, GC_EXIT_TYPE_QUIT, data, length);
 
     return 0;
 }
@@ -2664,7 +2664,7 @@ static int handle_gc_nick(Messenger *m, int group_number, uint32_t peer_number, 
 
     /* If this happens malicious behaviour is highly suspect */
     if (length == 0 || length > MAX_GC_NICK_SIZE || get_nick_peer_number(chat, nick, length) != -1) {
-        gcc_mark_for_deletion(&chat->gcc[peer_number], Exit_Type_Sync_Error, nullptr, 0);
+        gcc_mark_for_deletion(&chat->gcc[peer_number], GC_EXIT_TYPE_SYNC_ERR, nullptr, 0);
         LOGGER_ERROR(chat->logger, "Failed to validate nick: %s", nick);
         return 0;
     }
@@ -3772,7 +3772,7 @@ static int handle_gc_kick_peer(Messenger *m, int group_number, uint32_t peer_num
         }
 
         for (uint32_t i = 1; i < chat->numpeers; ++i) {
-            gcc_mark_for_deletion(&chat->gcc[i], Exit_Type_Disconnected, nullptr, 0);
+            gcc_mark_for_deletion(&chat->gcc[i], GC_EXIT_TYPE_DISCONNECTED, nullptr, 0);
         }
 
         chat->connection_state = CS_FAILED;
@@ -3789,7 +3789,7 @@ static int handle_gc_kick_peer(Messenger *m, int group_number, uint32_t peer_num
                          mod_event, c->moderation_userdata);
     }
 
-    gcc_mark_for_deletion(&chat->gcc[target_peer_number], Exit_Type_Kick, nullptr, 0);
+    gcc_mark_for_deletion(&chat->gcc[target_peer_number], GC_EXIT_TYPE_KICKED, nullptr, 0);
 
     return 0;
 }
@@ -3867,7 +3867,7 @@ int gc_kick_peer(Messenger *m, int group_number, uint32_t peer_id)
         return -5;
     }
 
-    gcc_mark_for_deletion(gconn, Exit_Type_No_Callback, nullptr, 0);
+    gcc_mark_for_deletion(gconn, GC_EXIT_TYPE_NO_CALLBACK, nullptr, 0);
 
     return 0;
 }
@@ -4370,7 +4370,7 @@ static int peer_reconnect(Messenger *m, const GC_Chat *chat, const uint8_t *peer
     }
 
     kill_tcp_connection_to(chat->tcp_conn, gconn->tcp_connection_num);
-    gcc_mark_for_deletion(gconn, Exit_Type_Disconnected, nullptr, 0);
+    gcc_mark_for_deletion(gconn, GC_EXIT_TYPE_DISCONNECTED, nullptr, 0);
 
     return peer_add(m, chat->group_number, nullptr, peer_pk);
 }
@@ -4455,7 +4455,7 @@ static int handle_gc_handshake_request(Messenger *m, int group_number, const IP_
     if (nodes_count <= 0 && ipp == nullptr) {
         if (is_new_peer) {
             LOGGER_ERROR(m->log, "broken tcp relay for new peer");
-            gcc_mark_for_deletion(gconn, Exit_Type_Disconnected, nullptr, 0);
+            gcc_mark_for_deletion(gconn, GC_EXIT_TYPE_DISCONNECTED, nullptr, 0);
         }
 
         return -1;
@@ -4467,7 +4467,7 @@ static int handle_gc_handshake_request(Messenger *m, int group_number, const IP_
 
         if (add_tcp_result < 0 && is_new_peer && ipp == nullptr) {
             LOGGER_ERROR(m->log, "broken tcp relay for new peer");
-            gcc_mark_for_deletion(gconn, Exit_Type_Quit, nullptr, 0);
+            gcc_mark_for_deletion(gconn, GC_EXIT_TYPE_QUIT, nullptr, 0);
             return -1;
         }
 
@@ -4487,7 +4487,7 @@ static int handle_gc_handshake_request(Messenger *m, int group_number, const IP_
     uint8_t join_type = data[ENC_PUBLIC_KEY + SIG_PUBLIC_KEY + 1];
 
     if (join_type == HJ_PUBLIC && !is_public_chat(chat)) {
-        gcc_mark_for_deletion(gconn, Exit_Type_Disconnected, nullptr, 0);
+        gcc_mark_for_deletion(gconn, GC_EXIT_TYPE_DISCONNECTED, nullptr, 0);
         return -1;
     }
 
@@ -4533,7 +4533,7 @@ static int handle_gc_handshake_packet(Messenger *m, const GC_Chat *chat, const I
         GC_Connection *gconn = gcc_get_connection(chat, peer_number);
 
         if (gconn != nullptr) {
-            gcc_mark_for_deletion(gconn, Exit_Type_Disconnected, nullptr, 0);
+            gcc_mark_for_deletion(gconn, GC_EXIT_TYPE_DISCONNECTED, nullptr, 0);
         }
 
         LOGGER_ERROR(m->log, "Failed to unwrap handshake packet");
@@ -5071,7 +5071,7 @@ static int gc_peer_delete(Messenger *m, int group_number, uint32_t peer_number, 
     }
 
     /* Needs to occur before peer is removed*/
-    if (exit_type != Exit_Type_No_Callback && c->peer_exit && gconn->confirmed) {
+    if (exit_type != GC_EXIT_TYPE_NO_CALLBACK && c->peer_exit && gconn->confirmed) {
         (*c->peer_exit)(m, group_number, chat->group[peer_number].peer_id, exit_type, chat->group[peer_number].nick,
                         chat->group[peer_number].nick_length, data, length, c->peer_exit_userdata);
     }
@@ -5130,7 +5130,7 @@ static int peer_update(Messenger *m, int group_number, GC_GroupPeer *peer, uint3
     int nick_num = get_nick_peer_number(chat, peer->nick, peer->nick_length);
 
     if (nick_num != -1 && nick_num != peer_number) {   /* duplicate nick */
-        gcc_mark_for_deletion(&chat->gcc[peer_number], Exit_Type_Sync_Error, nullptr, 0);
+        gcc_mark_for_deletion(&chat->gcc[peer_number], GC_EXIT_TYPE_SYNC_ERR, nullptr, 0);
         return -1;
     }
 
@@ -5264,7 +5264,7 @@ static void do_peer_connections(Messenger *m, int group_number)
         }
 
         if (peer_timed_out(m->mono_time, chat, gconn)) {
-            gcc_mark_for_deletion(gconn, Exit_Type_Timeout, nullptr, 0);
+            gcc_mark_for_deletion(gconn, GC_EXIT_TYPE_TIMEOUT, nullptr, 0);
             continue;
         }
 
@@ -6054,7 +6054,7 @@ static bool gc_rejoin_connected_group(GC_Session *c, GC_Chat *chat)
     for (uint32_t i = 1; i < chat->numpeers; ++i) {
         GC_Connection *gconn = &chat->gcc[i];
         kill_tcp_connection_to(chat->tcp_conn, gconn->tcp_connection_num);
-        gcc_mark_for_deletion(gconn, Exit_Type_Disconnected, nullptr, 0);
+        gcc_mark_for_deletion(gconn, GC_EXIT_TYPE_DISCONNECTED, nullptr, 0);
     }
 
     if (is_public_chat(chat)) {
