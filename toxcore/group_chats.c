@@ -73,6 +73,9 @@
 /* How often we can send a group sync request packet */
 #define GC_SYNC_REQUEST_LIMIT 6
 
+/* How often we try to handshake with an unconfirmed peer */
+#define GC_SEND_HANDSHAKE_INTERVAL 4
+
 
 typedef enum Group_Handshake_Packet_Type {
     GH_REQUEST,
@@ -146,7 +149,7 @@ void pack_group_info(const GC_Chat *chat, Saved_Group *temp, bool can_use_cached
     temp->num_mods = net_htons(chat->moderation.num_mods);
     mod_list_pack(chat, temp->mod_list);
 
-    bool is_manually_disconnected = chat->connection_state == CS_MANUALLY_DISCONNECTED;
+    bool is_manually_disconnected = chat->connection_state == CS_DISCONNECTED;
     temp->group_connection_state = is_manually_disconnected ? SGCS_DISCONNECTED : SGCS_CONNECTED;
 
     memcpy(temp->self_public_key, chat->self_public_key, EXT_PUBLIC_KEY);
@@ -1050,7 +1053,6 @@ static int unpack_gc_sync_announce(const Messenger *m, const GC_Chat *chat, uint
             new_gconn->is_oob_handshake = false;
             new_gconn->is_pending_handshake_response = false;
             new_gconn->last_received_ping_time = tm;
-            new_gconn->pending_handshake = tm + HANDSHAKE_SENDING_TIMEOUT;
         }
     }
 
@@ -1163,7 +1165,7 @@ static int handle_gc_sync_request(const Messenger *m, int group_number, int peer
         return -1;
     }
 
-    if (chat->connection_state <= CS_MANUALLY_DISCONNECTED || chat->shared_state.version == 0) {
+    if (chat->shared_state.version == 0) {
         LOGGER_ERROR(m->log, "Invalid state or version number");
         return -1;
     }
@@ -1362,11 +1364,6 @@ static int handle_gc_tcp_relays(const Messenger *m, int group_number, GC_Connect
         return -1;
     }
 
-    if (chat->connection_state <= CS_MANUALLY_DISCONNECTED) {
-        LOGGER_ERROR(m->log, "Invalid connetion state %d", chat->connection_state);
-        return -1;
-    }
-
     Node_format tcp_relays[GCC_MAX_TCP_SHARED_RELAYS];
     int num_nodes = unpack_nodes(tcp_relays, GCC_MAX_TCP_SHARED_RELAYS, nullptr, data, length, 1);
 
@@ -1463,7 +1460,7 @@ static int handle_gc_invite_response_reject(Messenger *m, int group_number, cons
         type = GJ_INVITE_FAILED;
     }
 
-    chat->connection_state = CS_FAILED;
+    chat->connection_state = CS_DISCONNECTED;
 
     if (c->rejected) {
         (*c->rejected)(m, group_number, type, c->rejected_userdata);
@@ -1510,8 +1507,8 @@ static int handle_gc_invite_request(Messenger *m, int group_number, uint32_t pee
         return -1;
     }
 
-    if (chat->connection_state <= CS_MANUALLY_DISCONNECTED || chat->shared_state.version == 0) {
-        LOGGER_WARNING(m->log, "not connected - state: %d", chat->connection_state);
+    if (chat->shared_state.version == 0) {
+        LOGGER_WARNING(m->log, "Invalid shared state version");
         return -1;
     }
 
@@ -1962,11 +1959,6 @@ static int handle_gc_peer_info_response(Messenger *m, int group_number, uint32_t
         return -1;
     }
 
-    if (chat->connection_state <= CS_MANUALLY_DISCONNECTED) {
-        LOGGER_ERROR(m->log, "handle_gc_peer_info_response() failed: state %d", chat->connection_state);
-        return -1;
-    }
-
     if (!gconn->confirmed && get_gc_confirmed_numpeers(chat) >= chat->shared_state.maxpeers) {
         return -1;
     }
@@ -2122,7 +2114,7 @@ static int handle_gc_shared_state_error(Messenger *m, int group_number, uint32_t
     }
 
     if (chat->shared_state.version == 0) {
-        chat->connection_state = CS_DISCONNECTED;
+        chat->connection_state = CS_CONNECTING;
         return -1;
     }
 
@@ -2253,7 +2245,7 @@ ON_ERROR:
     }
 
     if (chat->shared_state.version == 0) {
-        chat->connection_state = CS_DISCONNECTED;
+        chat->connection_state = CS_CONNECTING;
         return -1;
     }
 
@@ -2271,7 +2263,7 @@ static int handle_gc_sanctions_list_error(Messenger *m, int group_number, uint32
     }
 
     if (chat->shared_state.version == 0) {
-        chat->connection_state = CS_DISCONNECTED;
+        chat->connection_state = CS_CONNECTING;
         return -1;
     }
 
@@ -3448,7 +3440,7 @@ int gc_founder_set_privacy_state(Messenger *m, int group_number, uint8_t new_pri
         return -3;
     }
 
-    if (chat->connection_state == CS_MANUALLY_DISCONNECTED) {
+    if (chat->connection_state <= CS_DISCONNECTED) {
         return -4;
     }
 
@@ -3774,7 +3766,7 @@ static int handle_gc_kick_peer(Messenger *m, int group_number, uint32_t peer_num
             gcc_mark_for_deletion(&chat->gcc[i], GC_EXIT_TYPE_DISCONNECTED, nullptr, 0);
         }
 
-        chat->connection_state = CS_FAILED;
+        chat->connection_state = CS_DISCONNECTED;
 
         return 0;
     }
@@ -3986,10 +3978,10 @@ static int handle_gc_hs_response_ack(Messenger *m, int group_number, GC_Connecti
         return -1;
     }
 
-    gconn->handshaked = true;
-    gconn->pending_handshake = 0;
+    gconn->handshaked = true;  // has to be true before we can send a lossless paket
 
     if (send_gc_invite_request(chat, gconn) == -1) {
+        gconn->handshaked = false;
         return -1;
     }
 
@@ -4041,11 +4033,6 @@ static int handle_gc_broadcast(Messenger *m, int group_number, uint32_t peer_num
     GC_Connection *gconn = gcc_get_connection(chat, peer_number);
 
     if (gconn == nullptr) {
-        return -1;
-    }
-
-    if (chat->connection_state <= CS_MANUALLY_DISCONNECTED) {
-        LOGGER_ERROR(m->log, "handle_gc_broadcast() failed. State: %d", chat->connection_state);
         return -1;
     }
 
@@ -4224,10 +4211,12 @@ static int send_gc_handshake_packet(const GC_Chat *chat, uint32_t peer_number, u
         return -1;
     }
 
-    uint8_t packet[GC_MIN_ENCRYPTED_HS_PACKET_SIZE + sizeof(Node_format)];
     Node_format node[GCA_MAX_ANNOUNCED_TCP_RELAYS];
+    memset(node, 0, sizeof(node));
+
     gcc_copy_tcp_relay(gconn, node);
 
+    uint8_t packet[GC_MIN_ENCRYPTED_HS_PACKET_SIZE + sizeof(Node_format)];
     int length = make_gc_handshake_packet(chat, gconn, handshake_type, request_type, join_type, packet,
                                           sizeof(packet), node);
 
@@ -4244,7 +4233,7 @@ static int send_gc_handshake_packet(const GC_Chat *chat, uint32_t peer_number, u
     int ret2 = send_packet_tcp_connection(chat->tcp_conn, gconn->tcp_connection_num, packet, length);
 
     if (ret1 == -1 && ret2 == -1) {
-        // LOGGER_ERROR(chat->logger, "Send handshake packet failed. Type %u", request_type);
+        LOGGER_ERROR(chat->logger, "Send handshake packet failed. Type %u", request_type);
         return -1;
     }
 
@@ -4265,6 +4254,8 @@ static int send_gc_oob_handshake_packet(const GC_Chat *chat, uint32_t peer_numbe
     }
 
     Node_format node[1];
+    memset(node, 0, sizeof(node));
+
     gcc_copy_tcp_relay(gconn, node);
 
     uint8_t packet[GC_MIN_ENCRYPTED_HS_PACKET_SIZE + sizeof(Node_format)];
@@ -4319,7 +4310,6 @@ static int handle_gc_handshake_response(const Messenger *m, int group_number, co
     ++gconn->received_message_id;
 
     gconn->handshaked = true;
-    gconn->pending_handshake = 0;
     gc_send_hs_response_ack(chat, gconn);
 
     int ret;
@@ -4394,7 +4384,7 @@ static int handle_gc_handshake_request(Messenger *m, int group_number, const IP_
         return -1;
     }
 
-    if (chat->connection_state == CS_FAILED) {
+    if (chat->connection_state <= CS_DISCONNECTED) {
         return -1;
     }
 
@@ -4498,11 +4488,9 @@ static int handle_gc_handshake_request(Messenger *m, int group_number, const IP_
         gconn->is_oob_handshake = false;
         gconn->is_pending_handshake_response = true;
         gconn->last_received_ping_time = tm;
-        gconn->pending_handshake = tm + HANDSHAKE_SENDING_TIMEOUT;
     } else {
         send_gc_handshake_response(chat, peer_number, request_type);
         gcc_set_send_message_id(gconn, gconn->send_message_id + 1);
-        gconn->pending_handshake = 0;
     }
 
     return peer_number;
@@ -4706,8 +4694,7 @@ static int handle_gc_lossless_message(Messenger *m, const GC_Chat *chat, const u
     int lossless_ret = gcc_handle_received_message(chat, peer_number, real_data, real_len, packet_type, message_id,
                        direct_conn);
 
-    if (packet_type == GP_INVITE_REQUEST && !gconn->handshaked) {  // race condition
-        LOGGER_ERROR(m->log, "race condition %d", packet_type);
+    if (packet_type == GP_INVITE_REQUEST && !gconn->handshaked) {  // Both peers sent requset at same time
         return 0;
     }
 
@@ -4837,7 +4824,7 @@ static int handle_gc_lossy_message(Messenger *m, const GC_Chat *chat, const uint
 
 static bool group_can_handle_packets(const GC_Chat *chat)
 {
-    return chat->connection_state > CS_MANUALLY_DISCONNECTED;
+    return chat->connection_state > CS_DISCONNECTED && chat->connection_state < CS_INVALID;
 }
 
 /* Sends a group packet to appropriate handler function.
@@ -5137,7 +5124,7 @@ static int peer_update(Messenger *m, int group_number, GC_GroupPeer *peer, uint3
     curr_peer->role = peer->role;
     curr_peer->status = peer->status;
     curr_peer->nick_length = peer->nick_length;
-    memcpy(curr_peer->nick, peer->nick, MAX_GC_NICK_SIZE);
+    memcpy(curr_peer->nick, peer->nick, peer->nick_length);
 
     return peer_number;
 }
@@ -5219,6 +5206,7 @@ static int peer_add(const Messenger *m, int group_number, const IP_Port *ipp, co
     gconn->tcp_connection_num = tcp_connection_num;
     gconn->last_sent_ip_time = tm;
     gconn->last_sent_ping_time = tm + (peer_number % (GC_PING_TIMEOUT / 2));
+    gconn->last_handshake_attempt = tm - 1 - (peer_number % GC_SEND_HANDSHAKE_INTERVAL);
 
     return peer_number;
 }
@@ -5243,6 +5231,39 @@ static bool peer_timed_out(const Mono_Time *mono_time, const GC_Chat *chat, cons
                                 : GC_UNCONFIRMED_PEER_TIMEOUT);
 }
 
+static int send_pending_handshake(const GC_Chat *chat, GC_Connection *gconn, uint32_t peer_number)
+{
+    if (chat == nullptr || gconn == nullptr) {
+        return -1;
+    }
+
+    gconn->last_handshake_attempt = mono_time_get(chat->mono_time);
+
+    int result;
+
+    if (gconn->is_pending_handshake_response) {
+        result = send_gc_handshake_response(chat, peer_number, gconn->pending_handshake_type);
+    } else if (gconn->is_oob_handshake) {
+        result = send_gc_oob_handshake_packet(chat, peer_number, GH_REQUEST,
+                                              gconn->pending_handshake_type, chat->join_type);
+    } else {
+        result = send_gc_handshake_packet(chat, peer_number, GH_REQUEST,
+                                          gconn->pending_handshake_type, chat->join_type);
+    }
+
+    if (result < 0) {
+        return -1;
+    }
+
+    if (!gconn->is_pending_handshake_response) {
+        gcc_set_send_message_id(gconn, 2);
+    } else {
+        gcc_set_send_message_id(gconn, gconn->send_message_id + 1);
+    }
+
+    return 0;
+}
+
 static void do_peer_connections(Messenger *m, int group_number)
 {
     GC_Chat *chat = gc_get_group(m->group_handler, group_number);
@@ -5253,10 +5274,6 @@ static void do_peer_connections(Messenger *m, int group_number)
 
     for (uint32_t i = 1; i < chat->numpeers; ++i) {
         GC_Connection *gconn = &chat->gcc[i];
-
-        if (gconn == nullptr) {
-            continue;
-        }
 
         if (gconn->pending_delete) {
             continue;
@@ -5276,6 +5293,27 @@ static void do_peer_connections(Messenger *m, int group_number)
         }
 
         gcc_check_received_array(m, group_number, i);   // may change peer numbers
+    }
+}
+
+static void do_handshakes(Messenger *m, int group_number)
+{
+    GC_Chat *chat = gc_get_group(m->group_handler, group_number);
+
+    if (chat == nullptr) {
+        return;
+    }
+
+    for (uint32_t i = 1; i < chat->numpeers; ++i) {
+        GC_Connection *gconn = &chat->gcc[i];
+
+        if (gconn->handshaked || gconn->pending_delete) {
+            continue;
+        }
+
+        if (mono_time_is_timeout(m->mono_time, gconn->last_handshake_attempt, GC_SEND_HANDSHAKE_INTERVAL)) {
+            send_pending_handshake(chat, gconn, i);
+        }
     }
 }
 
@@ -5385,60 +5423,10 @@ static void do_new_connection_cooldown(GC_Chat *chat)
     }
 }
 
-#define PENDING_HANDSHAKE_SENDING_MAX_INTERVAL 15
-static int send_pending_handshake(const GC_Chat *chat, GC_Connection *gconn, uint32_t peer_number)
-{
-    if (chat == nullptr || gconn == nullptr || peer_number == 0) {
-        return 1;
-    }
-
-    uint64_t time = mono_time_get(chat->mono_time);
-
-    if (gconn->pending_handshake && chat->should_start_sending_handshakes) {
-        gconn->pending_handshake = time;
-    }
-
-    if (!gconn->pending_handshake || time < gconn->pending_handshake) {
-        return 0;
-    }
-
-    if (gconn->handshaked) {
-        gconn->pending_handshake = 0;
-        return 0;
-    }
-
-    int result;
-
-    if (gconn->is_pending_handshake_response) {
-        result = send_gc_handshake_response(chat, peer_number, gconn->pending_handshake_type);
-    } else if (gconn->is_oob_handshake) {
-        result = send_gc_oob_handshake_packet(chat, peer_number, GH_REQUEST,
-                                              gconn->pending_handshake_type, chat->join_type);
-    } else {
-        result = send_gc_handshake_packet(chat, peer_number, GH_REQUEST,
-                                          gconn->pending_handshake_type, chat->join_type);
-    }
-
-    if (result == 0 || time > gconn->pending_handshake + PENDING_HANDSHAKE_SENDING_MAX_INTERVAL) {
-        gconn->pending_handshake = 0;
-    }
-
-    if (result == 0) {
-        if (!gconn->is_pending_handshake_response) {
-            gcc_set_send_message_id(gconn, 2);
-        } else {
-            gcc_set_send_message_id(gconn, gconn->send_message_id + 1);
-        }
-
-    }
-
-    return 0;
-}
-
 #define TCP_RELAYS_CHECK_INTERVAL 10
 static void do_gc_tcp(Messenger *m, GC_Chat *chat, void *userdata)
 {
-    if (chat->tcp_conn == nullptr || chat->connection_state <= CS_MANUALLY_DISCONNECTED) {
+    if (chat->tcp_conn == nullptr || !group_can_handle_packets(chat)) {
         return;
     }
 
@@ -5448,7 +5436,6 @@ static void do_gc_tcp(Messenger *m, GC_Chat *chat, void *userdata)
         GC_Connection *gconn = &chat->gcc[i];
         bool tcp_set = !gcc_connection_is_direct(chat->mono_time, gconn);
         set_tcp_connection_to_status(chat->tcp_conn, gconn->tcp_connection_num, tcp_set);
-        send_pending_handshake(chat, gconn, i);
     }
 
     if (mono_time_is_timeout(chat->mono_time, chat->last_checked_tcp_relays, TCP_RELAYS_CHECK_INTERVAL)) {
@@ -5460,18 +5447,8 @@ static void do_gc_tcp(Messenger *m, GC_Chat *chat, void *userdata)
 
         chat->last_checked_tcp_relays = mono_time_get(chat->mono_time);
     }
-
-    chat->should_start_sending_handshakes = false;
 }
 
-#define GROUP_JOIN_ATTEMPT_INTERVAL 10
-
-/* CS_CONNECTED: Peers are pinged, unsent packets are resent, and timeouts are checked.
- * CS_CONNECTING: Look for new DHT nodes after an interval.
- * CS_DISCONNECTED: Send an invite request using a random node if our timeout GROUP_JOIN_ATTEMPT_INTERVAL has expired.
- * CS_MANUALLY_DISCONNECTED: Do nothing. We manually disconnected from the group.
- * CS_FAILED: Do nothing. This occurs if we cannot connect to a group or our invite request is rejected.
- */
 void do_gc(GC_Session *c, void *userdata)
 {
     if (c == nullptr) {
@@ -5480,49 +5457,22 @@ void do_gc(GC_Session *c, void *userdata)
 
     for (uint32_t i = 0; i < c->num_chats; ++i) {
         GC_Chat *chat = &c->chats[i];
+
+        if (chat->connection_state == CS_NONE || chat->connection_state >= CS_INVALID) {
+            continue;
+        }
+
         do_peer_delete(c->messenger, i);
-        do_gc_tcp(c->messenger, chat, userdata);
 
-        switch (chat->connection_state) {
-            case CS_CONNECTED: {
-                do_gc_pings(c->messenger, chat);
-                do_peer_connections(c->messenger, i);
-                do_new_connection_cooldown(chat);
-                break;
-            }
+        if (chat->connection_state > CS_DISCONNECTED) {
+            do_gc_tcp(c->messenger, chat, userdata);
+            do_handshakes(c->messenger, i);
+        }
 
-            case CS_CONNECTING: {
-                if (mono_time_is_timeout(chat->mono_time, chat->last_join_attempt, GROUP_JOIN_ATTEMPT_INTERVAL)) {
-                    chat->connection_state = CS_DISCONNECTED;
-                }
-
-                break;
-            }
-
-            case CS_DISCONNECTED: {
-                if (chat->numpeers <= 1
-                        || !mono_time_is_timeout(c->messenger->mono_time, chat->last_join_attempt, GROUP_JOIN_ATTEMPT_INTERVAL)) {
-                    break;
-                }
-
-                chat->last_join_attempt = mono_time_get(c->messenger->mono_time);
-                chat->connection_state = CS_CONNECTING;
-
-                for (uint32_t j = 1; j < chat->numpeers; ++j) {
-                    GC_Connection *gconn = &chat->gcc[j];
-
-                    if (!gconn->handshaked && !gconn->pending_handshake) {
-                        gconn->pending_handshake = mono_time_get(c->messenger->mono_time) + HANDSHAKE_SENDING_TIMEOUT;
-                    }
-                }
-
-                break;
-            }
-
-            case CS_MANUALLY_DISCONNECTED:
-            case CS_FAILED: {
-                break;
-            }
+        if (chat->connection_state == CS_CONNECTED) {
+            do_gc_pings(c->messenger, chat);
+            do_peer_connections(c->messenger, i);
+            do_new_connection_cooldown(chat);
         }
     }
 }
@@ -5601,10 +5551,6 @@ static void handle_connection_status_updated_callback(void *object, TCP_Connecti
     if (status != TCP_CONNECTIONS_STATUS_REGISTERED) {
         chat->should_update_self_announces = true;
     }
-
-    if (status == TCP_CONNECTIONS_STATUS_ONLINE) {
-        chat->should_start_sending_handshakes = true;
-    }
 }
 
 static void add_tcp_relays_to_chat(Messenger *m, GC_Chat *chat)
@@ -5668,7 +5614,7 @@ static int create_new_group(GC_Session *c, const uint8_t *nick, size_t nick_leng
 
     chat->group_number = group_number;
     chat->numpeers = 0;
-    chat->connection_state = CS_DISCONNECTED;
+    chat->connection_state = CS_CONNECTING;
     chat->net = m->net;
     chat->mono_time = m->mono_time;
     chat->logger = m->log;
@@ -5759,7 +5705,6 @@ static void gc_load_peers(Messenger *m, GC_Chat *chat, const GC_SavedPeerInfo *a
         gconn->is_oob_handshake = add_tcp_result == 0;
         gconn->is_pending_handshake_response = false;
         gconn->pending_handshake_type = HS_INVITE_REQUEST;
-        gconn->pending_handshake = tm + HANDSHAKE_SENDING_TIMEOUT;
         gconn->last_received_ping_time = tm;
     }
 }
@@ -5785,9 +5730,8 @@ int gc_group_load(GC_Session *c, const Saved_Group *save, int group_number)
 
     chat->group_number = group_number;
     chat->numpeers = 0;
-    chat->connection_state = is_active_chat ? CS_CONNECTING : CS_MANUALLY_DISCONNECTED;
+    chat->connection_state = is_active_chat ? CS_CONNECTING : CS_DISCONNECTED;
     chat->join_type = HJ_PRIVATE;
-    chat->last_join_attempt = tm;
     chat->net = m->net;
     chat->mono_time = m->mono_time;
     chat->logger = m->log;
@@ -5984,7 +5928,6 @@ int gc_group_join(GC_Session *c, const uint8_t *chat_id, const uint8_t *nick, si
     expand_chat_id(chat->chat_public_key, chat_id);
     chat->chat_id_hash = get_chat_id_hash(get_chat_id(chat->chat_public_key));
     chat->join_type = HJ_PUBLIC;
-    chat->last_join_attempt = mono_time_get(chat->mono_time);
     chat->connection_state = CS_CONNECTING;
 
     if (passwd != nullptr && passwd_len > 0) {
@@ -6009,7 +5952,7 @@ bool gc_disconnect_from_group(GC_Session *c, GC_Chat *chat)
     }
 
     uint8_t previous_state = chat->connection_state;
-    chat->connection_state = CS_MANUALLY_DISCONNECTED;
+    chat->connection_state = CS_DISCONNECTED;
 
     chat->save = (Saved_Group *)malloc(sizeof(Saved_Group));
 
@@ -6076,7 +6019,7 @@ bool gc_rejoin_group(GC_Session *c, GC_Chat *chat)
 
     chat->time_connected = 0;
 
-    if (chat->connection_state == CS_MANUALLY_DISCONNECTED) {
+    if (!group_can_handle_packets(chat)) {
         return gc_rejoin_disconnected_group(c, chat);
     }
 
@@ -6267,7 +6210,6 @@ int handle_gc_invite_confirmed_packet(const GC_Session *c, int friend_number, co
         gconn->pending_handshake_type = HS_INVITE_REQUEST;
         gconn->is_oob_handshake = false;
         gconn->is_pending_handshake_response = false;
-        gconn->pending_handshake = mono_time_get(chat->mono_time) + HANDSHAKE_SENDING_TIMEOUT;
     }
 
     return 0;
@@ -6305,7 +6247,7 @@ int handle_gc_invite_accepted_packet(GC_Session *c, int friend_number, const uin
 
     GC_Chat *chat = gc_get_group_by_public_key(c, chat_id);
 
-    if (chat == nullptr || chat->connection_state <= CS_DISCONNECTED) {
+    if (chat == nullptr || !group_can_handle_packets(chat)) {
         return -2;
     }
 
@@ -6423,7 +6365,6 @@ int gc_accept_invite(GC_Session *c, int32_t friend_number, const uint8_t *data, 
     chat->chat_id_hash = get_chat_id_hash(get_chat_id(chat->chat_public_key));
     chat->join_type = HJ_PRIVATE;
     chat->shared_state.privacy_state = GI_PRIVATE;
-    chat->last_join_attempt = mono_time_get(c->messenger->mono_time);
 
     if (passwd != nullptr && passwd_len > 0) {
         if (set_gc_password_local(chat, passwd, passwd_len) == -1) {
@@ -6524,11 +6465,8 @@ static int group_delete(GC_Session *c, GC_Chat *chat)
  */
 int gc_group_exit(GC_Session *c, GC_Chat *chat, const uint8_t *message, uint16_t length)
 {
-    bool is_chat_active = chat->connection_state != CS_MANUALLY_DISCONNECTED;
-    int ret = is_chat_active ? send_gc_self_exit(chat, message, length) : 0;
-
+    int ret =  group_can_handle_packets(chat) ? send_gc_self_exit(chat, message, length) : 0;
     group_delete(c, chat);
-
     return ret;
 }
 
@@ -6537,10 +6475,11 @@ void kill_dht_groupchats(GC_Session *c)
     for (uint32_t i = 0; i < c->num_chats; ++i) {
         GC_Chat *chat = &c->chats[i];
 
-        if (chat->connection_state != CS_NONE && chat->connection_state != CS_MANUALLY_DISCONNECTED) {
+        if (group_can_handle_packets(chat)) {
             send_gc_self_exit(chat, nullptr, 0);
-            group_cleanup(c, chat);
         }
+
+        group_cleanup(c, chat);
     }
 
     networking_registerhandler(c->messenger->net, NET_PACKET_GC_LOSSY, nullptr, nullptr);
@@ -6711,7 +6650,6 @@ int add_peers_from_announces(const GC_Session *gc_session, GC_Chat *chat, GC_Ann
             gconn->is_pending_handshake_response = false;
             gconn->pending_handshake_type = HS_INVITE_REQUEST;
             gconn->last_received_ping_time = tm;
-            gconn->pending_handshake = tm + HANDSHAKE_SENDING_TIMEOUT;
         }
 
         ++added_peers;

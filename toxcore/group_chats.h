@@ -94,8 +94,6 @@ typedef enum Group_Peer_Status {
 
 typedef enum Group_Connection_State {
     CS_NONE,
-    CS_FAILED,
-    CS_MANUALLY_DISCONNECTED,
     CS_DISCONNECTED,
     CS_CONNECTING,
     CS_CONNECTED,
@@ -299,7 +297,6 @@ typedef struct GC_Chat {
 
     uint8_t     connection_state;
     uint64_t    time_connected;
-    uint64_t    last_join_attempt;
     uint64_t    last_ping_interval;
     uint64_t    last_sync_request;
     uint8_t     join_type;   /* How we joined the group (invite or DHT) */
@@ -314,7 +311,6 @@ typedef struct GC_Chat {
 
     uint8_t m_group_public_key[CRYPTO_PUBLIC_KEY_SIZE];  /* Identifier for group's messenger friend connection */
     bool should_update_self_announces;
-    bool should_start_sending_handshakes;
 
     Saved_Group *save;
 } GC_Chat;
