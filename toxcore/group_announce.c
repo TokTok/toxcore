@@ -139,7 +139,7 @@ int gca_get_announces(GC_Announces_List *gc_announces_list, GC_Announce *gc_anno
     return gc_announces_count;
 }
 
-int gca_pack_announce(uint8_t *data, uint16_t length, GC_Announce *announce)
+int gca_pack_announce(uint8_t *data, uint16_t length, const GC_Announce *announce)
 {
     if (data == nullptr || announce == nullptr || length < GCA_ANNOUNCE_MAX_SIZE) {
         return -1;
@@ -215,7 +215,7 @@ int gca_unpack_announce(const uint8_t *data, uint16_t length, GC_Announce *annou
     return offset + nodes_length;
 }
 
-int gca_pack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce *announce)
+int gca_pack_public_announce(uint8_t *data, uint16_t length, const GC_Public_Announce *announce)
 {
     if (announce == nullptr || data == nullptr || length < CHAT_ID_SIZE) {
         return -1;
@@ -232,7 +232,7 @@ int gca_pack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce 
     return packed_size + CHAT_ID_SIZE;
 }
 
-int gca_unpack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announce *announce)
+int gca_unpack_public_announce(const uint8_t *data, uint16_t length, GC_Public_Announce *announce)
 {
     if (length < CHAT_ID_SIZE || announce == nullptr || data == nullptr) {
         return -1;
@@ -249,7 +249,7 @@ int gca_unpack_public_announce(uint8_t *data, uint16_t length, GC_Public_Announc
     return base_announce_size + CHAT_ID_SIZE;
 }
 
-int gca_pack_announces_list(uint8_t *data, uint16_t length, GC_Announce *announces, uint8_t announces_count,
+int gca_pack_announces_list(uint8_t *data, uint16_t length, const GC_Announce *announces, uint8_t announces_count,
                             size_t *processed)
 {
     if (data == nullptr || announces == nullptr) {

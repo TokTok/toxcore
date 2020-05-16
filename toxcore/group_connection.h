@@ -72,7 +72,7 @@ struct GC_Connection {
     uint8_t     oob_relay_pk[CRYPTO_PUBLIC_KEY_SIZE];
     bool        confirmed;  /* true if this peer has given us their info */
 
-    bool    pending_delete;
+    bool    pending_delete;  /* true if this peer has been marked for deletion */
     GC_Exit_Info exit_info;
 };
 
