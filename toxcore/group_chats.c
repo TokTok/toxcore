@@ -4344,25 +4344,6 @@ static int send_gc_handshake_response(const GC_Chat *chat, uint32_t peer_number,
     return 0;
 }
 
-static int peer_reconnect(Messenger *m, const GC_Chat *chat, const uint8_t *peer_pk)
-{
-    int peer_number = get_peernum_of_enc_pk(chat, peer_pk, false);
-
-    if (peer_number < 0) {
-        return -1;
-    }
-
-    GC_Connection *gconn = gcc_get_connection(chat, peer_number);
-
-    if (gconn == nullptr) {
-        return -1;
-    }
-
-    gcc_mark_for_deletion(gconn, chat->tcp_conn, GC_EXIT_TYPE_DISCONNECTED, nullptr, 0);
-
-    return peer_add(m, chat->group_number, nullptr, peer_pk);
-}
-
 /* Handles handshake request packets.
  * Peer is added to peerlist and a lossless connection is established.
  *
@@ -4398,6 +4379,9 @@ static int handle_gc_handshake_request(Messenger *m, int group_number, const IP_
 
     ++chat->connection_O_metre;
 
+    uint8_t request_type = data[ENC_PUBLIC_KEY + SIG_PUBLIC_KEY];
+    uint8_t join_type = data[ENC_PUBLIC_KEY + SIG_PUBLIC_KEY + 1];
+
     int peer_number = get_peernum_of_enc_pk(chat, sender_pk, false);
     bool is_new_peer = false;
 
@@ -4417,14 +4401,7 @@ static int handle_gc_handshake_request(Messenger *m, int group_number, const IP_
         }
 
         if (gconn->handshaked) {
-            peer_number = peer_reconnect(m, chat, sender_pk);
-            LOGGER_WARNING(m->log, "Reconnecting with confirmed peer");
-
-            if (peer_number < 0) {
-                return -1;
-            }
-
-            is_new_peer = true;
+            return send_gc_handshake_response(chat, peer_number, request_type);
         }
     }
 
@@ -4470,9 +4447,6 @@ static int handle_gc_handshake_request(Messenger *m, int group_number, const IP_
     encrypt_precompute(sender_session_pk, gconn->session_secret_key, gconn->shared_key);
 
     set_sig_pk(gconn->addr.public_key, public_sig_key);
-
-    uint8_t request_type = data[ENC_PUBLIC_KEY + SIG_PUBLIC_KEY];
-    uint8_t join_type = data[ENC_PUBLIC_KEY + SIG_PUBLIC_KEY + 1];
 
     if (join_type == HJ_PUBLIC && !is_public_chat(chat)) {
         gcc_mark_for_deletion(gconn, chat->tcp_conn, GC_EXIT_TYPE_DISCONNECTED, nullptr, 0);
