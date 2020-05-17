@@ -430,7 +430,8 @@ bool gcc_connection_is_direct(const Mono_Time *mono_time, const GC_Connection *g
 }
 
 /* Marks a peer for deletion. If gconn is null this function has no effect. */
-void gcc_mark_for_deletion(GC_Connection *gconn, TCP_Connections *tcp_conn, Group_Exit_Type type, const uint8_t *part_message, size_t length)
+void gcc_mark_for_deletion(GC_Connection *gconn, TCP_Connections *tcp_conn, Group_Exit_Type type,
+                           const uint8_t *part_message, size_t length)
 {
     if (gconn == nullptr) {
         return;
