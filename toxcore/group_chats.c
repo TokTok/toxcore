@@ -4523,7 +4523,7 @@ static int handle_gc_handshake_packet(Messenger *m, const GC_Chat *chat, const I
             gcc_mark_for_deletion(gconn, GC_EXIT_TYPE_DISCONNECTED, nullptr, 0);
         }
 
-        LOGGER_ERROR(m->log, "Failed to unwrap handshake packet");
+        LOGGER_DEBUG(m->log, "Failed to unwrap handshake packet");
         return -1;
     }
 
@@ -4556,7 +4556,7 @@ static int handle_gc_handshake_packet(Messenger *m, const GC_Chat *chat, const I
         return -1;
     }
 
-    if (peer_number > 0 && direct_conn) {
+    if (direct_conn) {
         gconn->last_received_direct_time = mono_time_get(chat->mono_time);
     }
 
@@ -4662,7 +4662,7 @@ static int handle_gc_lossless_message(Messenger *m, const GC_Chat *chat, const u
     int len = unwrap_group_packet(m->log, gconn->shared_key, data, &message_id, &packet_type, packet, length);
 
     if (len <= 0) {
-        LOGGER_ERROR(m->log, "Failed to unwrap lossless packet");
+        LOGGER_DEBUG(m->log, "Failed to unwrap lossless packet");
         return -1;
     }
 
@@ -4768,7 +4768,7 @@ static int handle_gc_lossy_message(Messenger *m, const GC_Chat *chat, const uint
     int len = unwrap_group_packet(m->log, gconn->shared_key, data, nullptr, &packet_type, packet, length);
 
     if (len <= 0) {
-        LOGGER_ERROR(m->log, "Failed to unwrap packet");
+        LOGGER_DEBUG(m->log, "Failed to unwrap lossy packet");
         return -1;
     }
 
@@ -4816,7 +4816,7 @@ static int handle_gc_lossy_message(Messenger *m, const GC_Chat *chat, const uint
     }
 
     if (ret < 0) {
-        LOGGER_ERROR(m->log, "Failed to handle lossy packet type %d", packet_type);
+        LOGGER_WARNING(m->log, "Failed to handle lossy packet type %d from peer %d", packet_type, peer_number);
     }
 
     return ret;
@@ -5151,7 +5151,7 @@ static int peer_add(const Messenger *m, int group_number, const IP_Port *ipp, co
     int peer_number = chat->numpeers;
     int tcp_connection_num = -1;
 
-    if (peer_number > 1) {  // we don't need a connection to ourself
+    if (peer_number > 0) {  // we don't need a connection to ourself
         tcp_connection_num = new_tcp_connection_to(chat->tcp_conn, public_key, 0);
 
         if (tcp_connection_num == -1) {
@@ -5162,10 +5162,7 @@ static int peer_add(const Messenger *m, int group_number, const IP_Port *ipp, co
     GC_Connection *tmp_gcc = (GC_Connection *)realloc(chat->gcc, sizeof(GC_Connection) * (chat->numpeers + 1));
 
     if (tmp_gcc == nullptr) {
-        if (tcp_connection_num != -1) {
-            kill_tcp_connection_to(chat->tcp_conn, tcp_connection_num);
-        }
-
+        kill_tcp_connection_to(chat->tcp_conn, tcp_connection_num);
         return -1;
     }
 
@@ -5175,10 +5172,7 @@ static int peer_add(const Messenger *m, int group_number, const IP_Port *ipp, co
     GC_GroupPeer *tmp_group = (GC_GroupPeer *)realloc(chat->group, sizeof(GC_GroupPeer) * (chat->numpeers + 1));
 
     if (tmp_group == nullptr) {
-        if (tcp_connection_num != -1) {
-            kill_tcp_connection_to(chat->tcp_conn, tcp_connection_num);
-        }
-
+        kill_tcp_connection_to(chat->tcp_conn, tcp_connection_num);
         return -1;
     }
 
@@ -6679,7 +6673,8 @@ int add_peers_from_announces(const GC_Session *gc_session, GC_Chat *chat, GC_Ann
         }
 
         if (!ip_port_set && added_tcp_relays == 0) {
-            LOGGER_WARNING(chat->logger, "Got invalid announcement connection info");
+            LOGGER_WARNING(chat->logger, "Got invalid announcement: %u relays, IPP set: %d",
+                           added_tcp_relays, ip_port_set);
             continue;
         }
 
