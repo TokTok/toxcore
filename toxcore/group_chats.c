@@ -4711,7 +4711,7 @@ static int handle_gc_lossless_message(Messenger *m, const GC_Chat *chat, const u
 
     /* request missing packet */
     if (lossless_ret == 1) {
-        LOGGER_ERROR(m->log, "received out of order packet from peer %u. expected %lu, got %lu", peer_number,
+        LOGGER_DEBUG(m->log, "received out of order packet from peer %u. expected %lu, got %lu", peer_number,
                      gconn->received_message_id + 1, message_id);
         return gc_send_message_ack(chat, gconn, 0, gconn->received_message_id + 1);
     }
@@ -5342,7 +5342,7 @@ static void do_peer_delete(Messenger *m, int group_number)
     }
 }
 
-static int ping_peer(const GC_Chat *chat, GC_Connection *gconn, bool self_ip_port_set)
+static int ping_peer(const GC_Chat *chat, GC_Connection *gconn)
 {
     uint32_t buf_size = HASH_ID_BYTES + GC_PING_PACKET_MIN_DATA_SIZE + sizeof(IP_Port);
     VLA(uint8_t, data, buf_size);
@@ -5355,7 +5355,7 @@ static int ping_peer(const GC_Chat *chat, GC_Connection *gconn, bool self_ip_por
 
     uint32_t real_length = HASH_ID_BYTES + GC_PING_PACKET_MIN_DATA_SIZE;
 
-    if (self_ip_port_set && !gcc_connection_is_direct(chat->mono_time, gconn)
+    if (chat->self_ip_port_set && !gcc_connection_is_direct(chat->mono_time, gconn)
             && mono_time_is_timeout(chat->mono_time, gconn->last_sent_ip_time, GC_SEND_IP_PORT_INTERVAL)) {
 
         int packed_ipp_len = pack_ip_port(data + buf_size - sizeof(IP_Port), sizeof(IP_Port), &chat->self_ip_port);
@@ -5380,9 +5380,6 @@ static void do_gc_pings(const Messenger *m, GC_Chat *chat)
         return;
     }
 
-    // Our IP may change during a session so we keep updating it
-    bool self_ip_port_set = ipport_self_copy(m->dht, &chat->self_ip_port, false) == 0;
-
     uint64_t tm = mono_time_get(chat->mono_time);
 
     for (uint32_t i = 1; i < chat->numpeers; ++i) {
@@ -5396,7 +5393,7 @@ static void do_gc_pings(const Messenger *m, GC_Chat *chat)
             continue;
         }
 
-        if (ping_peer(chat, gconn, self_ip_port_set) >= 0) {
+        if (ping_peer(chat, gconn) >= 0) {
             gconn->last_sent_ping_time = tm;
         }
     }
@@ -5449,6 +5446,34 @@ static void do_gc_tcp(Messenger *m, GC_Chat *chat, void *userdata)
     }
 }
 
+#define GC_ANNOUNCE_CHECK_INTERVAL 5
+#define GC_ANNOUNCE_REFRESH_INTERVAL (60 * 10)
+static void do_self_connection(Messenger *m, GC_Chat *chat)
+{
+    if (!mono_time_is_timeout(chat->mono_time, chat->last_self_announce_check, GC_ANNOUNCE_CHECK_INTERVAL)) {
+        return;
+    }
+
+    bool self_ip_port_set = ipport_self_copy(m->dht, &chat->self_ip_port, false) == 0;
+    bool can_announce = self_ip_port_set || (chat->tcp_connection_status == TCP_CONNECTIONS_STATUS_ONLINE);
+
+    if (chat->self_ip_port_set != self_ip_port_set) {
+        chat->self_ip_port_set = self_ip_port_set;
+
+        if (can_announce) {
+            chat->update_self_announces = true;
+        }
+    }
+
+    if (mono_time_is_timeout(chat->mono_time, chat->last_self_announce_time, GC_ANNOUNCE_REFRESH_INTERVAL)) {
+        if (can_announce) {
+            chat->update_self_announces = true;
+        }
+    }
+
+    chat->last_self_announce_check = mono_time_get(chat->mono_time);
+}
+
 void do_gc(GC_Session *c, void *userdata)
 {
     if (c == nullptr) {
@@ -5467,6 +5492,7 @@ void do_gc(GC_Session *c, void *userdata)
         if (chat->connection_state > CS_DISCONNECTED) {
             do_gc_tcp(c->messenger, chat, userdata);
             do_handshakes(c->messenger, i);
+            do_self_connection(c->messenger, chat);
         }
 
         if (chat->connection_state == CS_CONNECTED) {
@@ -5538,7 +5564,7 @@ static GC_Chat *get_chat_by_tcp_connections(const GC_Session *c, TCP_Connections
     return nullptr;
 }
 
-static void handle_connection_status_updated_callback(void *object, TCP_Connections *tcp_c, int status)
+static void handle_tcp_connection_status_callback(void *object, TCP_Connections *tcp_c, int status)
 {
     const Messenger *m = (const Messenger *)object;
 
@@ -5548,8 +5574,21 @@ static void handle_connection_status_updated_callback(void *object, TCP_Connecti
         return;
     }
 
-    if (status != TCP_CONNECTIONS_STATUS_REGISTERED) {
-        chat->should_update_self_announces = true;
+    if (status != TCP_CONNECTIONS_STATUS_ONLINE && status != TCP_CONNECTIONS_STATUS_NONE) {
+        return;
+    }
+
+    bool status_changed = chat->tcp_connection_status != status;
+    chat->tcp_connection_status = status;
+
+    if (!status_changed) {
+        return;
+    }
+
+    if (status == TCP_CONNECTIONS_STATUS_ONLINE) {
+        chat->update_self_announces = true;
+    } else if (chat->self_ip_port_set) {
+        chat->update_self_announces = true;
     }
 }
 
@@ -5581,7 +5620,7 @@ static int init_gc_tcp_connection(Messenger *m, GC_Chat *chat)
 
     set_packet_tcp_connection_callback(chat->tcp_conn, &handle_gc_tcp_packet, m);
     set_oob_packet_tcp_connection_callback(chat->tcp_conn, &handle_gc_tcp_oob_packet, m);
-    set_connection_status_updated_callback(chat->tcp_conn, &handle_connection_status_updated_callback, m);
+    set_connection_status_updated_callback(chat->tcp_conn, &handle_tcp_connection_status_callback, m);
 
     return 0;
 }
@@ -5612,13 +5651,16 @@ static int create_new_group(GC_Session *c, const uint8_t *nick, size_t nick_leng
         return -1;
     }
 
+    uint64_t tm = mono_time_get(m->mono_time);
+
     chat->group_number = group_number;
     chat->numpeers = 0;
     chat->connection_state = CS_CONNECTING;
     chat->net = m->net;
     chat->mono_time = m->mono_time;
     chat->logger = m->log;
-    chat->last_ping_interval = mono_time_get(m->mono_time);
+    chat->last_ping_interval = tm;
+    chat->last_self_announce_time = tm;
 
     if (peer_add(m, group_number, nullptr, chat->self_public_key) != 0) {    /* you are always peer_number/index 0 */
         group_delete(c, chat);

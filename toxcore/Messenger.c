@@ -420,9 +420,7 @@ int32_t m_add_group(Messenger *m, GC_Chat *chat)
     Onion_Friend *onion_friend = onion_get_friend(m->onion_c, onion_friend_number);
     onion_friend_set_gc_public_key(onion_friend, get_chat_id(chat->chat_public_key));
 
-    if (try_pack_gc_data(m, chat, onion_friend) == -1) {
-        LOGGER_DEBUG(m->log, "Failed to publish group announce to the DHT");
-    }
+    try_pack_gc_data(m, chat, onion_friend);
 
     return group_number;
 }
@@ -2870,6 +2868,11 @@ static int try_pack_gc_data(const Messenger *m, GC_Chat *chat, Onion_Friend *oni
 
     onion_friend_set_gc_data(onion_friend, gc_data, (int16_t)length);
 
+    chat->update_self_announces = false;
+    chat->last_self_announce_time = mono_time_get(chat->mono_time);
+
+    LOGGER_DEBUG(chat->logger, "Published group announce. TCP status: %d, UDP status: %d", tcp_num > 0,
+                 chat->self_ip_port_set);
     return 0;
 }
 
@@ -2892,12 +2895,8 @@ static void update_gc_friends_data(const Messenger *m)
             continue;
         }
 
-        if (gc_data_length == -1 || chat->should_update_self_announces) {
-            if (try_pack_gc_data(m, chat, onion_friend) == -1) {
-                LOGGER_DEBUG(m->log, "Failed to publish group announce to the DHT");
-            }
-
-            chat->should_update_self_announces = false;
+        if (gc_data_length == -1 || chat->update_self_announces) {
+            try_pack_gc_data(m, chat, onion_friend);
         }
     }
 }

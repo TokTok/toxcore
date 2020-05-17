@@ -268,9 +268,12 @@ typedef struct GC_Chat {
     const Logger    *logger;
 
     IP_Port         self_ip_port;
+    bool            self_ip_port_set;
+
     Networking_Core *net;
     TCP_Connections *tcp_conn;
     uint64_t        last_checked_tcp_relays;
+    int             tcp_connection_status;
 
     GC_GroupPeer    *group;
     GC_Connection   *gcc;
@@ -306,11 +309,14 @@ typedef struct GC_Chat {
     uint64_t    connection_cooldown_timer;
     bool        block_handshakes;
 
-    int32_t saved_invites[MAX_GC_SAVED_INVITES];
-    uint8_t saved_invites_index;
+    int32_t     saved_invites[MAX_GC_SAVED_INVITES];
+    uint8_t     saved_invites_index;
 
-    uint8_t m_group_public_key[CRYPTO_PUBLIC_KEY_SIZE];  /* Identifier for group's messenger friend connection */
-    bool should_update_self_announces;
+    uint8_t     m_group_public_key[CRYPTO_PUBLIC_KEY_SIZE];  /* Identifier for group's messenger friend connection */
+
+    bool        update_self_announces;
+    uint64_t    last_self_announce_check;
+    uint64_t    last_self_announce_time;
 
     Saved_Group *save;
 } GC_Chat;
