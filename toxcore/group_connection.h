@@ -82,7 +82,7 @@ struct GC_Connection {
 GC_Connection *gcc_get_connection(const GC_Chat *chat, int peer_number);
 
 /* Marks a peer for deletion. If gconn is null this function has no effect. */
-void gcc_mark_for_deletion(GC_Connection *gconn, Group_Exit_Type type, const uint8_t *part_message, size_t length);
+void gcc_mark_for_deletion(GC_Connection *gconn, TCP_Connections *tcp_conn, Group_Exit_Type type, const uint8_t *part_message, size_t length);
 
 /* Adds data of length to gconn's send_array.
  *
