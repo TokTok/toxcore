@@ -64,8 +64,11 @@
 /* Maximum number of bytes to pad packets with */
 #define GC_MAX_PACKET_PADDING 8
 
-/* Min size of a ping packet, which contains the peer count, shared state version, sanctions list version and topic version */
-#define GC_PING_PACKET_MIN_DATA_SIZE (sizeof(uint32_t) * 4)
+/*
+ * Min size of a ping packet, which contains the peer count, peer list checksum, shared state version, sanctions list
+ * version and topic version
+ */
+#define GC_PING_PACKET_MIN_DATA_SIZE ((sizeof(uint16_t) * 2) + (sizeof(uint32_t) * 3))
 
 /* How often we check which peers needs to be pinged */
 #define GC_DO_PINGS_INTERVAL 2
@@ -74,7 +77,7 @@
 #define GC_SYNC_REQUEST_LIMIT 6
 
 /* How often we try to handshake with an unconfirmed peer */
-#define GC_SEND_HANDSHAKE_INTERVAL 4
+#define GC_SEND_HANDSHAKE_INTERVAL 5
 
 
 typedef enum Group_Handshake_Packet_Type {
@@ -198,17 +201,17 @@ static uint32_t get_chat_id_hash(const uint8_t *chat_id)
  */
 static void set_peers_checksum(GC_Chat *chat)
 {
-    uint32_t h = 0;
+    uint16_t sum = 0;
 
     for (uint32_t i = 0; i < chat->numpeers; ++i) {
         const GC_Connection *gconn = &chat->gcc[i];
 
         if (gconn->confirmed) {
-            h += gconn->public_key_hash;
+            sum += gconn->public_key_hash;
         }
     }
 
-    chat->peers_checksum = h;
+    chat->peers_checksum = sum;
 }
 
 /* Check if peer with the public encryption key is in peer list.
@@ -1638,19 +1641,23 @@ static bool do_gc_peer_state_sync(GC_Chat *chat, GC_Connection *gconn, const uin
         return false;
     }
 
-    uint32_t peers_checksum;
+    uint16_t peers_checksum;
+    uint16_t peer_count;
     uint32_t sstate_version;
     uint32_t screds_version;
     uint32_t topic_version;
-    net_unpack_u32(sync_data, &peers_checksum);
-    net_unpack_u32(sync_data + sizeof(uint32_t), &sstate_version);
-    net_unpack_u32(sync_data + (sizeof(uint32_t) * 2), &screds_version);
-    net_unpack_u32(sync_data + (sizeof(uint32_t) * 3), &topic_version);
+    net_unpack_u16(sync_data, &peers_checksum);
+    net_unpack_u16(sync_data + sizeof(uint16_t), &peer_count);
+    net_unpack_u32(sync_data + (sizeof(uint16_t) * 2), &sstate_version);
+    net_unpack_u32(sync_data + (sizeof(uint16_t) * 2) + sizeof(uint32_t), &screds_version);
+    net_unpack_u32(sync_data + (sizeof(uint16_t) * 2) + (sizeof(uint32_t) * 2), &topic_version);
 
     uint16_t sync_flags = 0;
 
     if (peers_checksum != chat->peers_checksum) {
-        sync_flags |= GF_PEER_LIST;
+        if (peer_count >= (uint16_t) get_gc_confirmed_numpeers(chat)) {
+            sync_flags |= GF_PEER_LIST;
+        }
     }
 
     if (sstate_version > chat->shared_state.version || screds_version > chat->moderation.sanctions_creds.version) {
@@ -5314,10 +5321,12 @@ static int ping_peer(const GC_Chat *chat, GC_Connection *gconn)
     VLA(uint8_t, data, buf_size);
 
     net_pack_u32(data, chat->self_public_key_hash);
-    net_pack_u32(data + HASH_ID_BYTES, chat->peers_checksum);
-    net_pack_u32(data + HASH_ID_BYTES + sizeof(uint32_t), chat->shared_state.version);
-    net_pack_u32(data + HASH_ID_BYTES + (sizeof(uint32_t) * 2), chat->moderation.sanctions_creds.version);
-    net_pack_u32(data + HASH_ID_BYTES + (sizeof(uint32_t) * 3), chat->topic_info.version);
+    net_pack_u16(data + HASH_ID_BYTES, chat->peers_checksum);
+    net_pack_u16(data + HASH_ID_BYTES + sizeof(uint16_t), (uint16_t) get_gc_confirmed_numpeers(chat));
+    net_pack_u32(data + HASH_ID_BYTES + (sizeof(uint16_t) * 2), chat->shared_state.version);
+    net_pack_u32(data + HASH_ID_BYTES + (sizeof(uint16_t) * 2) + sizeof(uint32_t),
+                 chat->moderation.sanctions_creds.version);
+    net_pack_u32(data + HASH_ID_BYTES + (sizeof(uint16_t) * 2) + (sizeof(uint32_t) * 2), chat->topic_info.version);
 
     uint32_t real_length = HASH_ID_BYTES + GC_PING_PACKET_MIN_DATA_SIZE;
 
@@ -5337,8 +5346,9 @@ static int ping_peer(const GC_Chat *chat, GC_Connection *gconn)
 /*
  * Sends a ping packet to peers that haven't been pinged in at least GC_PING_TIMEOUT seconds.
  *
- * Packet always includes your confirmed peer count, shared state version and sanctions list version for syncing purposes.
- * We also occasionally try to send our own IP info to peers that we do not have a direct connection with.
+ * Packet always includes your confirmed peer count, a peer list checksum, your shared state and sanctions
+ * list version for syncing purposes. We also occasionally try to send our own IP info to peers that we
+ * do not have a direct connection with.
  */
 static void do_gc_pings(const Messenger *m, GC_Chat *chat)
 {

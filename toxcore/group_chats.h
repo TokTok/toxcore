@@ -285,7 +285,7 @@ typedef struct GC_Chat {
     GC_TopicInfo    topic_info;
     uint8_t         topic_sig[SIGNATURE_SIZE];    /* Signed by a moderator or the founder */
 
-    uint32_t    peers_checksum;   /* A sum of the public key hash of every confirmed peer in the group */
+    uint16_t    peers_checksum;   /* A sum of the public key hash of every confirmed peer in the group */
     uint32_t    numpeers;
     uint32_t    base_peer_id;  /* An incrementing counter used to assign peers unique ID's */
     int         group_number;
