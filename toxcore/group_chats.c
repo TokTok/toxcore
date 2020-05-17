@@ -5324,7 +5324,8 @@ static int ping_peer(const GC_Chat *chat, GC_Connection *gconn)
     net_pack_u16(data + HASH_ID_BYTES, chat->peers_checksum);
     net_pack_u16(data + HASH_ID_BYTES + sizeof(uint16_t), (uint16_t) get_gc_confirmed_numpeers(chat));
     net_pack_u32(data + HASH_ID_BYTES + (sizeof(uint16_t) * 2), chat->shared_state.version);
-    net_pack_u32(data + HASH_ID_BYTES + (sizeof(uint16_t) * 2) + sizeof(uint32_t), chat->moderation.sanctions_creds.version);
+    net_pack_u32(data + HASH_ID_BYTES + (sizeof(uint16_t) * 2) + sizeof(uint32_t),
+                 chat->moderation.sanctions_creds.version);
     net_pack_u32(data + HASH_ID_BYTES + (sizeof(uint16_t) * 2) + (sizeof(uint32_t) * 2), chat->topic_info.version);
 
     uint32_t real_length = HASH_ID_BYTES + GC_PING_PACKET_MIN_DATA_SIZE;
