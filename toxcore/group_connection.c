@@ -381,7 +381,7 @@ void gcc_resend_packets(Messenger *m, const GC_Chat *chat, uint32_t peer_number)
         }
 
         if (mono_time_is_timeout(m->mono_time, array_entry->time_added, GC_CONFIRMED_PEER_TIMEOUT)) {
-            gcc_mark_for_deletion(gconn, GC_EXIT_TYPE_TIMEOUT, nullptr, 0);
+            gcc_mark_for_deletion(gconn, chat->tcp_conn, GC_EXIT_TYPE_TIMEOUT, nullptr, 0);
             return;
         }
     }
@@ -430,7 +430,8 @@ bool gcc_connection_is_direct(const Mono_Time *mono_time, const GC_Connection *g
 }
 
 /* Marks a peer for deletion. If gconn is null this function has no effect. */
-void gcc_mark_for_deletion(GC_Connection *gconn, Group_Exit_Type type, const uint8_t *part_message, size_t length)
+void gcc_mark_for_deletion(GC_Connection *gconn, TCP_Connections *tcp_conn, Group_Exit_Type type,
+                           const uint8_t *part_message, size_t length)
 {
     if (gconn == nullptr) {
         return;
@@ -442,6 +443,8 @@ void gcc_mark_for_deletion(GC_Connection *gconn, Group_Exit_Type type, const uin
 
     gconn->pending_delete = true;
     gconn->exit_info.exit_type = type;
+
+    kill_tcp_connection_to(tcp_conn, gconn->tcp_connection_num);
 
     if (length > 0 && length <= MAX_GC_PART_MESSAGE_SIZE  && part_message != nullptr) {
         memcpy(gconn->exit_info.part_message, part_message, length);
