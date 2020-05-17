@@ -2871,7 +2871,8 @@ static int try_pack_gc_data(const Messenger *m, GC_Chat *chat, Onion_Friend *oni
     chat->update_self_announces = false;
     chat->last_self_announce_time = mono_time_get(chat->mono_time);
 
-    LOGGER_DEBUG(chat->logger, "Published group announce. TCP status: %d, UDP status: %d\n", tcp_num > 0, chat->self_ip_port_set);
+    LOGGER_DEBUG(chat->logger, "Published group announce. TCP status: %d, UDP status: %d\n", tcp_num > 0,
+                 chat->self_ip_port_set);
     return 0;
 }
 
