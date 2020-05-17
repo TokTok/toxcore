@@ -2808,7 +2808,7 @@ static void connection_status_callback(Messenger *m, void *userdata)
 
 
 /* Minimum messenger run interval in ms
-   TODO(mannol): A/V */
+ * TODO(mannol): A/V */
 #define MIN_RUN_INTERVAL 50
 
 /* Return the time in milliseconds before do_messenger() should be called again
