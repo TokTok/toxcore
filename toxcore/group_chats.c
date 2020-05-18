@@ -4408,7 +4408,7 @@ static int handle_gc_handshake_request(Messenger *m, int group_number, const IP_
         }
 
         if (gconn->handshaked) {
-            return 0;
+            return -1;
         }
     }
 
@@ -5430,6 +5430,8 @@ static void do_self_connection(Messenger *m, GC_Chat *chat)
         return;
     }
 
+    uint64_t tm = mono_time_get(chat->mono_time);
+
     bool self_ip_port_set = ipport_self_copy(m->dht, &chat->self_ip_port, false) == 0;
     bool can_announce = self_ip_port_set || (chat->tcp_connection_status == TCP_CONNECTIONS_STATUS_ONLINE);
 
@@ -5448,9 +5450,11 @@ static void do_self_connection(Messenger *m, GC_Chat *chat)
         if (can_announce && should_announce) {
             chat->update_self_announces = true;
         }
+
+        chat->last_self_announce_time = tm;  // reset timer even if we didn't announce
     }
 
-    chat->last_self_announce_check = mono_time_get(chat->mono_time);
+    chat->last_self_announce_check = tm;
 }
 
 void do_gc(GC_Session *c, void *userdata)

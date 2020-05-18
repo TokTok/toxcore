@@ -317,7 +317,7 @@ typedef struct GC_Chat {
 
     bool        update_self_announces;     /* true if we should try to update our announcements */
     uint64_t    last_self_announce_check;  /* the last time we checked if we should update our announcements */
-    uint64_t    last_self_announce_time;   /* the last time we successfully updated our announcements */
+    uint64_t    last_self_announce_time;   /* the last time we attrpted to update our announcements */
 
     Saved_Group *save;
 } GC_Chat;
