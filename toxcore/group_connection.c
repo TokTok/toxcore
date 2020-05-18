@@ -437,6 +437,10 @@ void gcc_mark_for_deletion(GC_Connection *gconn, TCP_Connections *tcp_conn, Grou
         return;
     }
 
+    if (gconn->pending_delete) {
+        return;
+    }
+
     if (type >= GC_EXIT_TYPE_INVALID) {
         type = GC_EXIT_TYPE_QUIT;
     }

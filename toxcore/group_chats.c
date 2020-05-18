@@ -4408,7 +4408,7 @@ static int handle_gc_handshake_request(Messenger *m, int group_number, const IP_
         }
 
         if (gconn->handshaked) {
-            return send_gc_handshake_response(chat, peer_number, request_type);
+            return 0;
         }
     }
 
