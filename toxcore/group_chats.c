@@ -423,6 +423,17 @@ static uint32_t get_gc_confirmed_numpeers(const GC_Chat *chat)
     return count;
 }
 
+/* Marks peer associated with public_key for deletion if they exist in our peer list. */
+static void remove_gc_public_key(const GC_Chat *chat, const uint8_t *public_key)
+{
+    int peer_number = get_peernum_of_enc_pk(chat, public_key, false);
+    GC_Connection *gconn = gcc_get_connection(chat, peer_number);
+
+    if (gconn != nullptr) {
+        gcc_mark_for_deletion(gconn, chat->tcp_conn, GC_EXIT_TYPE_DISCONNECTED, nullptr, 0);
+    }
+}
+
 static int sign_gc_shared_state(GC_Chat *chat);
 static int broadcast_gc_mod_list(const GC_Chat *chat);
 static int broadcast_gc_shared_state(const GC_Chat *chat);
@@ -4496,13 +4507,7 @@ static int handle_gc_handshake_packet(Messenger *m, const GC_Chat *chat, const I
 
     // probably got multiple announcements from the same peer with a differet session key
     if (plain_len != SIZEOF_VLA(data)) {
-        int peer_number = get_peernum_of_enc_pk(chat, sender_pk, false);
-        GC_Connection *gconn = gcc_get_connection(chat, peer_number);
-
-        if (gconn != nullptr) {
-            gcc_mark_for_deletion(gconn, chat->tcp_conn, GC_EXIT_TYPE_DISCONNECTED, nullptr, 0);
-        }
-
+        remove_gc_public_key(chat, sender_pk);
         LOGGER_DEBUG(m->log, "Failed to unwrap handshake packet");
         return -1;
     }
@@ -4642,6 +4647,7 @@ static int handle_gc_lossless_message(Messenger *m, const GC_Chat *chat, const u
     int len = unwrap_group_packet(m->log, gconn->shared_key, data, &message_id, &packet_type, packet, length);
 
     if (len <= 0) {
+        remove_gc_public_key(chat, sender_pk);
         LOGGER_DEBUG(m->log, "Failed to unwrap lossless packet");
         return -1;
     }
@@ -4748,6 +4754,7 @@ static int handle_gc_lossy_message(Messenger *m, const GC_Chat *chat, const uint
     int len = unwrap_group_packet(m->log, gconn->shared_key, data, nullptr, &packet_type, packet, length);
 
     if (len <= 0) {
+        remove_gc_public_key(chat, sender_pk);
         LOGGER_DEBUG(m->log, "Failed to unwrap lossy packet");
         return -1;
     }
