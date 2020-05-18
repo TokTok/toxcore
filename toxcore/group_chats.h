@@ -92,18 +92,18 @@ typedef enum Group_Peer_Status {
     GS_INVALID,
 } Group_Peer_Status;
 
-typedef enum Group_Connection_State {
+typedef enum GC_Conn_State {
     CS_NONE,
     CS_DISCONNECTED,
     CS_CONNECTING,
     CS_CONNECTED,
     CS_INVALID,
-} Group_Connection_State;
+} GC_Conn_State;
 
-typedef enum Saved_Group_Connection_State {
+typedef enum Saved_GC_Conn_State {
     SGCS_DISCONNECTED,
     SGCS_CONNECTED,
-} Saved_Group_Connection_State;
+} Saved_GC_Conn_State;
 
 typedef enum Group_Join_Rejected {
     GJ_NICK_TAKEN,
@@ -279,6 +279,8 @@ typedef struct GC_Chat {
     GC_Connection   *gcc;
     GC_Moderation   moderation;
 
+    GC_Conn_State   connection_state;
+
     GC_SharedState  shared_state;
     uint8_t         shared_state_sig[SIGNATURE_SIZE];    /* Signed by founder using the chat secret key */
 
@@ -287,7 +289,7 @@ typedef struct GC_Chat {
 
     uint16_t    peers_checksum;   /* A sum of the public key hash of every confirmed peer in the group */
     uint32_t    numpeers;
-    uint32_t    base_peer_id;  /* An incrementing counter used to assign peers unique ID's */
+    uint32_t    base_peer_id;    /* An incrementing counter used to assign peers unique ID's */
     int         group_number;
 
     uint8_t     chat_public_key[EXT_PUBLIC_KEY];    /* the chat_id is the sig portion */
@@ -298,11 +300,10 @@ typedef struct GC_Chat {
     uint8_t     self_secret_key[EXT_SECRET_KEY];
     uint32_t    self_public_key_hash;
 
-    uint8_t     connection_state;
     uint64_t    time_connected;
     uint64_t    last_ping_interval;
     uint64_t    last_sync_request;
-    uint8_t     join_type;   /* How we joined the group (invite or DHT) */
+    uint8_t     join_type;    /* How we joined the group (invite or DHT) */
 
     /* keeps track of frequency of new inbound connections */
     uint8_t     connection_O_metre;
@@ -312,11 +313,11 @@ typedef struct GC_Chat {
     int32_t     saved_invites[MAX_GC_SAVED_INVITES];
     uint8_t     saved_invites_index;
 
-    uint8_t     m_group_public_key[CRYPTO_PUBLIC_KEY_SIZE];  /* Identifier for group's messenger friend connection */
+    uint8_t     m_group_public_key[CRYPTO_PUBLIC_KEY_SIZE];    /* Identifier for group's messenger friend connection */
 
-    bool        update_self_announces;
-    uint64_t    last_self_announce_check;
-    uint64_t    last_self_announce_time;
+    bool        update_self_announces;     /* true if we should try to update our announcements */
+    uint64_t    last_self_announce_check;  /* the last time we checked if we should update our announcements */
+    uint64_t    last_self_announce_time;   /* the last time we successfully updated our announcements */
 
     Saved_Group *save;
 } GC_Chat;

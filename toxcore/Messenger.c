@@ -414,12 +414,14 @@ int32_t m_add_group(Messenger *m, GC_Chat *chat)
     }
 
     Group *g = &m->grouplist[group_number];
+
     int friend_connection_id = g->friendcon_id;
     Friend_Conn *connection = get_conn(m->fr_c, friend_connection_id);
+
     int onion_friend_number = friend_conn_get_onion_friendnum(connection);
     Onion_Friend *onion_friend = onion_get_friend(m->onion_c, onion_friend_number);
-    onion_friend_set_gc_public_key(onion_friend, get_chat_id(chat->chat_public_key));
 
+    onion_friend_set_gc_public_key(onion_friend, get_chat_id(chat->chat_public_key));
     try_pack_gc_data(m, chat, onion_friend);
 
     return group_number;
@@ -2871,8 +2873,7 @@ static int try_pack_gc_data(const Messenger *m, GC_Chat *chat, Onion_Friend *oni
     chat->update_self_announces = false;
     chat->last_self_announce_time = mono_time_get(chat->mono_time);
 
-    LOGGER_DEBUG(chat->logger, "Published group announce. TCP status: %d, UDP status: %d", tcp_num > 0,
-                 chat->self_ip_port_set);
+    LOGGER_DEBUG(chat->logger, "Published group announce. TCP status: %d, UDP status: %d", tcp_num > 0, ip_port_is_set);
     return 0;
 }
 

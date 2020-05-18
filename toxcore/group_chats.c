@@ -3985,7 +3985,7 @@ static int handle_gc_hs_response_ack(Messenger *m, int group_number, GC_Connecti
         return -1;
     }
 
-    gconn->handshaked = true;  // has to be true before we can send a lossless paket
+    gconn->handshaked = true;  // has to be true before we can send a lossless packet
 
     if (send_gc_invite_request(chat, gconn) == -1) {
         gconn->handshaked = false;
@@ -5423,7 +5423,7 @@ static void do_gc_tcp(Messenger *m, GC_Chat *chat, void *userdata)
 }
 
 #define GC_ANNOUNCE_CHECK_INTERVAL 5
-#define GC_ANNOUNCE_REFRESH_INTERVAL (60 * 10)
+#define GC_ANNOUNCE_REFRESH_INTERVAL (60 * 30)
 static void do_self_connection(Messenger *m, GC_Chat *chat)
 {
     if (!mono_time_is_timeout(chat->mono_time, chat->last_self_announce_check, GC_ANNOUNCE_CHECK_INTERVAL)) {
@@ -5442,7 +5442,10 @@ static void do_self_connection(Messenger *m, GC_Chat *chat)
     }
 
     if (mono_time_is_timeout(chat->mono_time, chat->last_self_announce_time, GC_ANNOUNCE_REFRESH_INTERVAL)) {
-        if (can_announce) {
+        uint32_t num_confirmed_peers = get_gc_confirmed_numpeers(chat);
+        bool should_announce = random_int_range(num_confirmed_peers) == 0;
+
+        if (can_announce && should_announce) {
             chat->update_self_announces = true;
         }
     }
@@ -5969,7 +5972,7 @@ bool gc_disconnect_from_group(GC_Session *c, GC_Chat *chat)
         return false;
     }
 
-    uint8_t previous_state = chat->connection_state;
+    GC_Conn_State previous_state = chat->connection_state;
     chat->connection_state = CS_DISCONNECTED;
 
     chat->save = (Saved_Group *)malloc(sizeof(Saved_Group));
