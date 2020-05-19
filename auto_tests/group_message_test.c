@@ -11,7 +11,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "../toxcore/tox.h"
+#include "check_compat.h"
 
 typedef struct State {
     uint32_t index;
@@ -24,10 +24,10 @@ typedef struct State {
     int last_msg_recv;
 } State;
 
-
 #include "run_auto_test.h"
 
 
+#define NUM_GROUP_TOXES 2
 #define MAX_NUM_MESSAGES 1000
 #define TEST_MESSAGE "Where is it I've read that someone condemned to death says or thinks, an hour before his death, that if he had to live on some high rock, on such a narrow ledge that he'd only room to stand, and the ocean, everlasting darkness, everlasting solitude, everlasting tempest around him, if he had to remain standing on a square yard of space all his life, a thousand years, eternity, it were better to live so than to die at once. Only to live, to live and live! Life, whatever it may be!"
 #define TEST_GROUP_NAME "Utah Data Center"
@@ -125,6 +125,9 @@ static void group_message_handler_2(Tox *tox, uint32_t groupnumber, uint32_t pee
 
 static void group_message_test(Tox **toxes, State *state)
 {
+#ifndef VANILLA_NACL
+    ck_assert_msg(NUM_GROUP_TOXES >= 2, "NUM_GROUP_TOXES is too small: %d", NUM_GROUP_TOXES);
+
     tox_self_set_name(toxes[0], (const uint8_t *)"a", 1, nullptr);
     tox_self_set_name(toxes[1], (const uint8_t *)"b", 1, nullptr);
 
@@ -146,7 +149,7 @@ static void group_message_test(Tox **toxes, State *state)
     ck_assert(err_invite == TOX_ERR_GROUP_INVITE_FRIEND_OK);
 
     while (!state[0].message_received) {
-        iterate_all_wait(2, toxes, state, ITERATION_INTERVAL);
+        iterate_all_wait(NUM_GROUP_TOXES, toxes, state, ITERATION_INTERVAL);
 
         if (state[1].peer_joined && !state[1].message_sent) {
             TOX_ERR_GROUP_SEND_MESSAGE err_send;
@@ -161,7 +164,7 @@ static void group_message_test(Tox **toxes, State *state)
     fprintf(stderr, "Doing lossless packet test...\n");
 
     tox_callback_group_message(toxes[1], group_message_handler_2);
-    iterate_all_wait(2, toxes, state, ITERATION_INTERVAL);
+    iterate_all_wait(NUM_GROUP_TOXES, toxes, state, ITERATION_INTERVAL);
 
     state[1].last_msg_recv = -1;
 
@@ -179,28 +182,30 @@ static void group_message_test(Tox **toxes, State *state)
     fprintf(stderr, "Waiting for packets to be received...\n");
 
     while (!state[1].lossless_check) {
-        iterate_all_wait(2, toxes, state, ITERATION_INTERVAL);
+        iterate_all_wait(NUM_GROUP_TOXES, toxes, state, ITERATION_INTERVAL);
     }
 
-    for (size_t i = 0; i < 2; i++) {
+    for (size_t i = 0; i < NUM_GROUP_TOXES; i++) {
         TOX_ERR_GROUP_LEAVE err_exit;
         tox_group_leave(toxes[i], group_number, nullptr, 0, &err_exit);
         ck_assert(err_exit == TOX_ERR_GROUP_LEAVE_OK);
     }
 
     fprintf(stderr, "All tests passed!\n");
+#endif  // VANILLA_NACL
 }
-
-#undef PEER1_NICK
-#undef PEER0_NICK
-#undef TEST_GROUP_NAME
-#undef TEST_MESSAGE
-#undef MAX_NUM_MESSAGES
 
 int main(void)
 {
     setvbuf(stdout, nullptr, _IONBF, 0);
 
-    run_auto_test(2, group_message_test, false);
+    run_auto_test(NUM_GROUP_TOXES, group_message_test, false);
     return 0;
 }
+
+#undef NUM_GROUP_TOXES
+#undef PEER1_NICK
+#undef PEER0_NICK
+#undef TEST_GROUP_NAME
+#undef TEST_MESSAGE
+#undef MAX_NUM_MESSAGES

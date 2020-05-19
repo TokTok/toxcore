@@ -15,7 +15,9 @@
 
 #include "../toxcore/tox.h"
 
-#define MAX_NUM_PEERS 5 // Needs to be at least 3
+#include "check_compat.h"
+
+#define NUM_GROUP_TOXES 5
 #define TEST_GROUP_NAME "Headquarters"
 
 typedef struct Peer {
@@ -34,7 +36,7 @@ typedef struct State {
     uint32_t group_number;
 
     uint32_t num_peers;
-    Peer peers[MAX_NUM_PEERS - 1];
+    Peer peers[NUM_GROUP_TOXES - 1];
 
     bool mod_check;
     char mod_name[TOX_MAX_NAME_LENGTH];
@@ -60,7 +62,7 @@ static void check_mod_event(State *state, Tox **toxes, size_t num_peers, TOX_GRO
     do {
         peers_recv_changes = 0;
 
-        iterate_all_wait(MAX_NUM_PEERS, toxes, state, ITERATION_INTERVAL);
+        iterate_all_wait(NUM_GROUP_TOXES, toxes, state, ITERATION_INTERVAL);
 
         for (size_t i = 0; i < num_peers; ++i) {
             bool check = false;
@@ -156,7 +158,7 @@ static void group_peer_join_handler(Tox *tox, uint32_t group_number, uint32_t pe
 
     ++state->num_peers;
 
-    ck_assert(state->num_peers < MAX_NUM_PEERS);
+    ck_assert(state->num_peers < NUM_GROUP_TOXES);
 }
 
 static void group_mod_event_handler(Tox *tox, uint32_t group_number, uint32_t source_peer_id, uint32_t target_peer_id,
@@ -218,9 +220,12 @@ static void group_mod_event_handler(Tox *tox, uint32_t group_number, uint32_t so
     }
 }
 
-static void group_message_test(Tox **toxes, State *state)
+static void group_moderation_test(Tox **toxes, State *state)
 {
-    for (size_t i = 0; i < MAX_NUM_PEERS; ++i) {
+#ifndef VANILLA_NACL
+    ck_assert_msg(NUM_GROUP_TOXES >= NUM_GROUP_TOXES, "NUM_GROUP_TOXES is too small: %d", NUM_GROUP_TOXES);
+
+    for (size_t i = 0; i < NUM_GROUP_TOXES; ++i) {
         char name[TOX_MAX_NAME_LENGTH];
         snprintf(name, sizeof(name), "Toxicle %zu", i);
         size_t length = strlen(name);
@@ -252,11 +257,8 @@ static void group_message_test(Tox **toxes, State *state)
 
     fprintf(stderr, "Peers attemping to join DHT group via the chat ID\n");
 
-    for (size_t i = 1; i < MAX_NUM_PEERS; ++i) {
-        for (size_t j = 0; j < 40; ++j) {
-            iterate_all_wait(MAX_NUM_PEERS, toxes, state, ITERATION_INTERVAL);
-        }
-
+    for (size_t i = 1; i < NUM_GROUP_TOXES; ++i) {
+        iterate_all_wait(NUM_GROUP_TOXES, toxes, state, ITERATION_INTERVAL);
         TOX_ERR_GROUP_JOIN join_err;
         state[i].group_number = tox_group_join(toxes[i], chat_id, (const uint8_t *)state[i].self_name,
                                                state[i].self_name_length,
@@ -266,18 +268,18 @@ static void group_message_test(Tox **toxes, State *state)
 
     /* Wait for all peers to be connected with one another in the group */
     while (1) {
-        iterate_all_wait(MAX_NUM_PEERS, toxes, state, ITERATION_INTERVAL);
+        iterate_all_wait(NUM_GROUP_TOXES, toxes, state, ITERATION_INTERVAL);
 
         uint32_t peers_connected = 0;
 
-        for (size_t i = 0; i < MAX_NUM_PEERS; ++i) {
-            if (state[i].num_peers == MAX_NUM_PEERS - 1) {
+        for (size_t i = 0; i < NUM_GROUP_TOXES; ++i) {
+            if (state[i].num_peers == NUM_GROUP_TOXES - 1) {
                 ++peers_connected;
             }
         }
 
-        if (peers_connected == MAX_NUM_PEERS) {
-            fprintf(stderr, "%d peers successfully connected to group\n", MAX_NUM_PEERS);
+        if (peers_connected == NUM_GROUP_TOXES) {
+            fprintf(stderr, "%d peers successfully connected to group\n", NUM_GROUP_TOXES);
             break;
         }
     }
@@ -288,7 +290,7 @@ static void group_message_test(Tox **toxes, State *state)
     state[0].kick_check = true;
 
     /* manually tell the other peers the names of the peers that will be assigned new roles */
-    for (size_t i = 0; i < MAX_NUM_PEERS; ++i) {
+    for (size_t i = 0; i < NUM_GROUP_TOXES; ++i) {
         memcpy(state[i].mod_name, state[0].peers[0].name, sizeof(state[i].mod_name));
         memcpy(state[i].observer_name, state[0].peers[1].name, sizeof(state[i].observer_name));
     }
@@ -300,7 +302,7 @@ static void group_message_test(Tox **toxes, State *state)
     tox_group_mod_set_role(toxes[0], state[0].group_number, state[0].peers[0].peer_id, TOX_GROUP_ROLE_MODERATOR, &role_err);
     ck_assert_msg(role_err == TOX_ERR_GROUP_MOD_SET_ROLE_OK, "Failed to set moderator. error: %d", role_err);
 
-    check_mod_event(state, toxes, MAX_NUM_PEERS, TOX_GROUP_MOD_EVENT_MODERATOR);
+    check_mod_event(state, toxes, NUM_GROUP_TOXES, TOX_GROUP_MOD_EVENT_MODERATOR);
 
     fprintf(stderr, "All peers successfully received mod event\n");
 
@@ -310,13 +312,13 @@ static void group_message_test(Tox **toxes, State *state)
     tox_group_mod_set_role(toxes[0], state[0].group_number, state[0].peers[1].peer_id, TOX_GROUP_ROLE_OBSERVER, &role_err);
     ck_assert_msg(role_err == TOX_ERR_GROUP_MOD_SET_ROLE_OK, "Failed to set observer. error: %d", role_err);
 
-    check_mod_event(state, toxes, MAX_NUM_PEERS, TOX_GROUP_MOD_EVENT_OBSERVER);
+    check_mod_event(state, toxes, NUM_GROUP_TOXES, TOX_GROUP_MOD_EVENT_OBSERVER);
 
     fprintf(stderr, "All peers successfully received observer event\n");
 
     /* New moderator promotes second peer back to user */
-    uint32_t idx = get_state_index_by_nick(state, MAX_NUM_PEERS, state[0].peers[0].name, state[0].peers[0].name_length);
-    uint32_t obs_peer_id = get_peer_id_by_nick(state[idx].peers, MAX_NUM_PEERS - 1, state[idx].observer_name);
+    uint32_t idx = get_state_index_by_nick(state, NUM_GROUP_TOXES, state[0].peers[0].name, state[0].peers[0].name_length);
+    uint32_t obs_peer_id = get_peer_id_by_nick(state[idx].peers, NUM_GROUP_TOXES - 1, state[idx].observer_name);
     state[idx].user_check = true;  // promoter doesn't receive a callback so default to true
 
     fprintf(stderr, "%s is promoting %s back to user\n", state[idx].self_name, state[0].peers[1].name);
@@ -325,12 +327,12 @@ static void group_message_test(Tox **toxes, State *state)
     ck_assert_msg(role_err == TOX_ERR_GROUP_MOD_SET_ROLE_OK, "Failed to promote observer back to user. error: %d",
                   role_err);
 
-    check_mod_event(state, toxes, MAX_NUM_PEERS, TOX_GROUP_MOD_EVENT_USER);
+    check_mod_event(state, toxes, NUM_GROUP_TOXES, TOX_GROUP_MOD_EVENT_USER);
 
     fprintf(stderr, "All peers successfully received user event\n");
 
     /* moderator attempts to demote and kick founder */
-    uint32_t founder_peer_id = get_peer_id_by_nick(state[idx].peers, MAX_NUM_PEERS - 1, state[0].self_name);
+    uint32_t founder_peer_id = get_peer_id_by_nick(state[idx].peers, NUM_GROUP_TOXES - 1, state[0].self_name);
     tox_group_mod_set_role(toxes[idx], state[idx].group_number, founder_peer_id, TOX_GROUP_ROLE_OBSERVER, &role_err);
     ck_assert_msg(role_err != TOX_ERR_GROUP_MOD_SET_ROLE_OK, "Mod set founder to observer");
 
@@ -344,26 +346,27 @@ static void group_message_test(Tox **toxes, State *state)
     tox_group_mod_kick_peer(toxes[0], state[0].group_number, state[0].peers[0].peer_id, &k_err);
     ck_assert_msg(k_err == TOX_ERR_GROUP_MOD_KICK_PEER_OK, "Failed to kick peer. error: %d", k_err);
 
-    check_mod_event(state, toxes, MAX_NUM_PEERS, TOX_GROUP_MOD_EVENT_KICK);
+    check_mod_event(state, toxes, NUM_GROUP_TOXES, TOX_GROUP_MOD_EVENT_KICK);
 
     fprintf(stderr, "All peers successfully received kick event\n");
 
-    for (size_t i = 0; i < MAX_NUM_PEERS; i++) {
+    for (size_t i = 0; i < NUM_GROUP_TOXES; i++) {
         TOX_ERR_GROUP_LEAVE err_exit;
         tox_group_leave(toxes[i], state[i].group_number, nullptr, 0, &err_exit);
         ck_assert(err_exit == TOX_ERR_GROUP_LEAVE_OK);
     }
 
     fprintf(stderr, "All tests passed!\n");
+#endif  // VANILLA_NACL
 }
 
 int main(void)
 {
     setvbuf(stdout, nullptr, _IONBF, 0);
 
-    run_auto_test(MAX_NUM_PEERS, group_message_test, false);
+    run_auto_test(NUM_GROUP_TOXES, group_moderation_test, false);
     return 0;
 }
 
-#undef MAX_NUM_PEERS
+#undef NUM_GROUP_TOXES
 #undef TEST_GROUP_NAME

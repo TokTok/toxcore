@@ -20,6 +20,7 @@ typedef struct State {
 
 #include "run_auto_test.h"
 
+#define NUM_GROUP_TOXES 2
 #define TEST_MESSAGE "The kiosk in my temporal lobe is shaped like Rosalynn Carter"
 #define TEST_GROUP_NAME "NASA Headquarters"
 #define PEER0_NICK "Lois"
@@ -55,8 +56,11 @@ static void group_message_handler(Tox *tox, uint32_t groupnumber, uint32_t peer_
     state->message_received = true;
 }
 
-static void group_message_test(Tox **toxes, State *state)
+static void group_announce_test(Tox **toxes, State *state)
 {
+#ifndef VANILLA_NACL
+    ck_assert_msg(NUM_GROUP_TOXES >= 2, "NUM_GROUP_TOXES is too small: %d", NUM_GROUP_TOXES);
+
     tox_self_set_name(toxes[0], (const uint8_t *)"a", 1, nullptr);
     tox_self_set_name(toxes[1], (const uint8_t *)"b", 1, nullptr);
 
@@ -83,7 +87,7 @@ static void group_message_test(Tox **toxes, State *state)
     ck_assert(err_join == TOX_ERR_GROUP_JOIN_OK);
 
     while (!state[0].message_received) {
-        iterate_all_wait(2, toxes, state, ITERATION_INTERVAL);
+        iterate_all_wait(NUM_GROUP_TOXES, toxes, state, ITERATION_INTERVAL);
 
         if (state[1].peer_joined && !state[1].message_sent) {
             TOX_ERR_GROUP_SEND_MESSAGE err_send;
@@ -100,17 +104,19 @@ static void group_message_test(Tox **toxes, State *state)
 
     tox_group_leave(toxes[1], group_number, nullptr, 0, &err_exit);
     ck_assert(err_exit == TOX_ERR_GROUP_LEAVE_OK);
+#endif  // VANILLA_NACL
 }
-
-#undef PEER1_NICK
-#undef PEER0_NICK
-#undef TEST_GROUP_NAME
-#undef TEST_MESSAGE
 
 int main(void)
 {
     setvbuf(stdout, nullptr, _IONBF, 0);
 
-    run_auto_test(2, group_message_test, false);
+    run_auto_test(NUM_GROUP_TOXES, group_announce_test, false);
     return 0;
 }
+
+#undef NUM_GROUP_TOXES
+#undef PEER1_NICK
+#undef PEER0_NICK
+#undef TEST_GROUP_NAME
+#undef TEST_MESSAGE
