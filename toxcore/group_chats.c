@@ -5878,6 +5878,8 @@ static bool gc_rejoin_disconnected_group(GC_Session *c, GC_Chat *chat)
 
 static bool gc_rejoin_connected_group(GC_Session *c, GC_Chat *chat)
 {
+    send_gc_self_exit(chat, nullptr, 0);
+
     GC_SavedPeerInfo peers[GROUP_SAVE_MAX_PEERS];
     uint16_t num_addrs = gc_copy_peer_addrs(chat, peers, GROUP_SAVE_MAX_PEERS);
 
