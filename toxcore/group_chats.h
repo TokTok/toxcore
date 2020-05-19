@@ -33,7 +33,7 @@
 #define GC_PING_TIMEOUT 12
 #define GC_SEND_IP_PORT_INTERVAL (GC_PING_TIMEOUT * 5)
 #define GC_CONFIRMED_PEER_TIMEOUT (GC_PING_TIMEOUT * 6 + 10)
-#define GC_UNCONFIRMED_PEER_TIMEOUT (GC_PING_TIMEOUT * 2)
+#define GC_UNCONFIRMED_PEER_TIMEOUT GC_PING_TIMEOUT
 
 #define GC_JOIN_DATA_LENGTH (ENC_PUBLIC_KEY + CHAT_ID_SIZE)
 
@@ -133,8 +133,7 @@ typedef enum Group_Packet_Type {
     GP_TCP_RELAYS               = 4,
 
     /* lossless packets */
-    GP_CUSTOM_PACKET            = 241,
-    GP_PEER_ANNOUNCE            = 242,
+    GP_CUSTOM_PACKET            = 242,
     GP_BROADCAST                = 243,
     GP_PEER_INFO_REQUEST        = 244,
     GP_PEER_INFO_RESPONSE       = 245,
@@ -317,7 +316,7 @@ typedef struct GC_Chat {
 
     bool        update_self_announces;     /* true if we should try to update our announcements */
     uint64_t    last_self_announce_check;  /* the last time we checked if we should update our announcements */
-    uint64_t    last_self_announce_time;   /* the last time we attrpted to update our announcements */
+    uint64_t    last_self_announce_time;   /* the last time we attempted to update our announcements */
 
     Saved_Group *save;
 } GC_Chat;
