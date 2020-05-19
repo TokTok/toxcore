@@ -1048,7 +1048,8 @@ static int unpack_gc_sync_announce(const Messenger *m, const GC_Chat *chat, uint
     return 0;
 }
 
-static int handle_gc_sync_response(Messenger *m, int group_number, int peer_number, const uint8_t *data, uint32_t length)
+static int handle_gc_sync_response(Messenger *m, int group_number, int peer_number, const uint8_t *data,
+                                   uint32_t length)
 {
     const GC_Session *c = m->group_handler;
     GC_Chat *chat = gc_get_group(c, group_number);
