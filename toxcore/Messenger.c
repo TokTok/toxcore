@@ -395,8 +395,6 @@ int32_t m_addfriend_norequest(Messenger *m, const uint8_t *real_pk)
     return m_add_friend_contact_no_request(m, real_pk);
 }
 
-static int try_pack_gc_data(const Messenger *m, GC_Chat *chat, Onion_Friend *onion_friend);
-
 /*
  * Add a group chat to messenger.
  *
@@ -422,7 +420,7 @@ int32_t m_add_group(Messenger *m, GC_Chat *chat)
     Onion_Friend *onion_friend = onion_get_friend(m->onion_c, onion_friend_number);
 
     onion_friend_set_gc_public_key(onion_friend, get_chat_id(chat->chat_public_key));
-    try_pack_gc_data(m, chat, onion_friend);
+    onion_friend_set_gc_data(onion_friend, nullptr, -1);
 
     return group_number;
 }
@@ -2829,16 +2827,19 @@ uint32_t messenger_run_interval(const Messenger *m)
     return crypto_interval;
 }
 
-static int try_pack_gc_data(const Messenger *m, GC_Chat *chat, Onion_Friend *onion_friend)
+/* Attempts to create a DHT announcement for a group chat with our connection info. An
+ * announcement can only be created if we either have a UDP or TCP connection to the network.
+ *
+ * Returns 0 on success.
+ * Returns -1 on failure.
+ */
+#ifndef VANILLA_NACL
+static int self_announce_group(const Messenger *m, GC_Chat *chat, Onion_Friend *onion_friend)
 {
     GC_Public_Announce announce;
-    IP_Port self_ip_port;
     memset(&announce, 0, sizeof(GC_Public_Announce));
-    memset(&self_ip_port, 0, sizeof(IP_Port));
 
-    int copy_ip_port_result = ipport_self_copy(m->dht, &self_ip_port, true);
-    bool ip_port_is_set = copy_ip_port_result == 0;
-
+    bool ip_port_is_set = chat->self_ip_port_status != SELF_UDP_STATUS_NONE;
     int tcp_num = tcp_copy_connected_relays(chat->tcp_conn, announce.base_announce.tcp_relays,
                                             GCA_MAX_ANNOUNCED_TCP_RELAYS);
 
@@ -2851,7 +2852,7 @@ static int try_pack_gc_data(const Messenger *m, GC_Chat *chat, Onion_Friend *oni
     announce.base_announce.ip_port_is_set = (uint8_t)(ip_port_is_set ? 1 : 0);
 
     if (ip_port_is_set) {
-        memcpy(&announce.base_announce.ip_port, &self_ip_port, sizeof(IP_Port));
+        memcpy(&announce.base_announce.ip_port, &chat->self_ip_port, sizeof(IP_Port));
     }
 
     memcpy(announce.base_announce.peer_public_key, chat->self_public_key, ENC_PUBLIC_KEY);
@@ -2860,24 +2861,24 @@ static int try_pack_gc_data(const Messenger *m, GC_Chat *chat, Onion_Friend *oni
     uint8_t gc_data[GCA_MAX_DATA_LENGTH];
     int length = gca_pack_public_announce(gc_data, GCA_MAX_DATA_LENGTH, &announce);
 
-    if (length == -1) {
+    if (length <= 0) {
+        onion_friend_set_gc_data(onion_friend, nullptr, -1);
         return -1;
     }
 
     if (gca_add_announce(m->mono_time, m->group_announce, &announce) == nullptr) {
+        onion_friend_set_gc_data(onion_friend, nullptr, -1);
         return -1;
     }
 
     onion_friend_set_gc_data(onion_friend, gc_data, (int16_t)length);
-
     chat->update_self_announces = false;
-    chat->last_self_announce_time = mono_time_get(chat->mono_time);
 
-    LOGGER_DEBUG(chat->logger, "Published group announce. TCP status: %d, UDP status: %d", tcp_num > 0, ip_port_is_set);
+    LOGGER_DEBUG(chat->logger, "Published group announce. TCP status: %d, UDP status: %d", tcp_num > 0,
+                 chat->self_ip_port_status + 1);
     return 0;
 }
 
-#ifndef VANILLA_NACL
 static void update_gc_friends_data(const Messenger *m)
 {
     const uint16_t num_friends = onion_get_friend_count(m->onion_c);
@@ -2896,12 +2897,12 @@ static void update_gc_friends_data(const Messenger *m)
             continue;
         }
 
-        if (gc_data_length == -1 || chat->update_self_announces) {
-            try_pack_gc_data(m, chat, onion_friend);
+        if (chat->update_self_announces) {
+            self_announce_group(m, chat, onion_friend);
         }
     }
 }
-#endif
+#endif  // VANILLA_NACL
 
 /* The main loop that needs to be run at least 20 times per second. */
 void do_messenger(Messenger *m, void *userdata)

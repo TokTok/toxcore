@@ -132,12 +132,6 @@ typedef int tcp_onion_cb(void *object, const uint8_t *data, uint16_t length, voi
  */
 void set_onion_packet_tcp_connection_callback(TCP_Connections *tcp_c, tcp_onion_cb *tcp_onion_callback, void *object);
 
-typedef void tcp_connection_status_updated_cb(void *object, TCP_Connections *tcp_c, int status);
-
-void set_connection_status_updated_callback(TCP_Connections *tcp_c,
-        tcp_connection_status_updated_cb *connection_status_updated_callback,
-        void *object);
-
 typedef int tcp_oob_cb(void *object, const uint8_t *public_key, unsigned int tcp_connections_number,
                        const uint8_t *data, uint16_t length, void *userdata);
 

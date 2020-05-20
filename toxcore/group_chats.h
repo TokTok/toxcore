@@ -37,6 +37,11 @@
 
 #define GC_JOIN_DATA_LENGTH (ENC_PUBLIC_KEY + CHAT_ID_SIZE)
 
+typedef enum Self_UDP_Status {
+    SELF_UDP_STATUS_NONE = -1,
+    SELF_UDP_STATUS_WAN =   0,
+    SELF_UDP_STATUS_LAN =   1,
+} Self_UDP_Status;
 
 typedef enum Group_Privacy_State {
     GI_PUBLIC,
@@ -266,13 +271,14 @@ typedef struct GC_Chat {
     const Mono_Time *mono_time;
     const Logger    *logger;
 
+    Self_UDP_Status self_ip_port_status;
     IP_Port         self_ip_port;
-    bool            self_ip_port_set;
+
 
     Networking_Core *net;
     TCP_Connections *tcp_conn;
     uint64_t        last_checked_tcp_relays;
-    int             tcp_connection_status;
+    uint16_t        tcp_connections; // the number of global TCP relays we're connected to
 
     GC_GroupPeer    *group;
     GC_Connection   *gcc;
@@ -316,7 +322,6 @@ typedef struct GC_Chat {
 
     bool        update_self_announces;     /* true if we should try to update our announcements */
     uint64_t    last_self_announce_check;  /* the last time we checked if we should update our announcements */
-    uint64_t    last_self_announce_time;   /* the last time we attempted to update our announcements */
 
     Saved_Group *save;
 } GC_Chat;

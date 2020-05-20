@@ -3010,28 +3010,38 @@ bool dht_non_lan_connected(const DHT *dht)
     return false;
 }
 
-/* Copies your own ip_port structure to dest. If allow_LAN is false an error will be returned
- * if the result is a LAN address.
+/* Copies our own ip_port structure to dest. WAN addresses take priority over LAN addresses.
  *
- * Return 0 on success.
- * Return -1 on failure.
+ * Return -1 if our ip port can't be found (this usually means we're not connected to the DHT).
+ * Return 0 if IP is a WAN address.
+ * Return 1 if IP is a LAN address.
  */
-int ipport_self_copy(const DHT *dht, IP_Port *dest, bool allow_LAN)
+int ipport_self_copy(const DHT *dht, IP_Port *dest)
 {
+    bool is_lan = false;
+
     for (size_t i = 0; i < LCLIENT_LIST; ++i) {
         const Client_data *client = dht_get_close_client(dht, i);
         const IP_Port *ip_port4 = &client->assoc4.ret_ip_port;
 
         if (client->assoc4.ret_ip_self && ipport_isset(ip_port4)) {
             ipport_copy(dest, ip_port4);
-            break;
+            is_lan = ip_is_lan(dest->ip);
+
+            if (!is_lan) {
+                break;
+            }
         }
 
         const IP_Port *ip_port6 = &client->assoc6.ret_ip_port;
 
         if (client->assoc6.ret_ip_self && ipport_isset(ip_port6)) {
             ipport_copy(dest, ip_port6);
-            break;
+            is_lan = ip_is_lan(dest->ip);
+
+            if (!is_lan) {
+                break;
+            }
         }
     }
 
@@ -3039,10 +3049,5 @@ int ipport_self_copy(const DHT *dht, IP_Port *dest, bool allow_LAN)
         return -1;
     }
 
-    if (!allow_LAN && ip_is_lan(dest->ip)) {
-        return -1;
-    }
-
-    return 0;
+    return (int)is_lan;
 }
-

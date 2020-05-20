@@ -427,12 +427,12 @@ bool dht_non_lan_connected(const DHT *dht);
 
 uint32_t addto_lists(DHT *dht, IP_Port ip_port, const uint8_t *public_key);
 
-/* Copies your own ip_port structure to dest. If allow_LAN is false an error will be returned
- * if the result is a LAN address.
+/* Copies our own ip_port structure to dest. WAN addresses take priority over LAN addresses.
  *
- * Return 0 on success.
- * Return -1 on failure.
+ * Return -1 if our ip port can't be found (this usually means we're not connected to the DHT).
+ * Return 0 if IP is a WAN address.
+ * Return 1 if IP is a LAN address.
  */
-int ipport_self_copy(const DHT *dht, IP_Port *dest, bool allow_LAN);
+int ipport_self_copy(const DHT *dht, IP_Port *dest);
 
 #endif
