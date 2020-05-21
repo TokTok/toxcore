@@ -4053,6 +4053,13 @@ namespace group {
        * The packet failed to send.
        */
       FAIL_SEND,
+      /**
+       * The function failed to allocate enough memory for the operation.
+       */
+      MALLOC,
+      /**
+       * The group is disconnected.
+       */
       GROUP_IS_DISCONNECTED,
     }
 

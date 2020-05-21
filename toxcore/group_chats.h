@@ -38,9 +38,9 @@
 #define GC_JOIN_DATA_LENGTH (ENC_PUBLIC_KEY + CHAT_ID_SIZE)
 
 typedef enum Self_UDP_Status {
-    SELF_UDP_STATUS_NONE = -1,
-    SELF_UDP_STATUS_WAN =   0,
-    SELF_UDP_STATUS_LAN =   1,
+    SELF_UDP_STATUS_NONE,
+    SELF_UDP_STATUS_WAN,
+    SELF_UDP_STATUS_LAN,
 } Self_UDP_Status;
 
 typedef enum Group_Privacy_State {
@@ -271,7 +271,7 @@ typedef struct GC_Chat {
     const Mono_Time *mono_time;
     const Logger    *logger;
 
-    Self_UDP_Status self_ip_port_status;
+    Self_UDP_Status self_udp_status;
     IP_Port         self_ip_port;
 
 
@@ -560,6 +560,7 @@ int gc_set_peer_role(const Messenger *m, int group_number, uint32_t peer_id, uin
  * Returns -1 if the caller does not have sufficient permissions for the action.
  * Returns -2 if the password is too long.
  * Returns -3 if the packet failed to send.
+ * Returns -4 if malloc failed.
  */
 int gc_founder_set_password(GC_Chat *chat, const uint8_t *password, uint16_t password_length);
 

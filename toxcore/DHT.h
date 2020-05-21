@@ -429,10 +429,10 @@ uint32_t addto_lists(DHT *dht, IP_Port ip_port, const uint8_t *public_key);
 
 /* Copies our own ip_port structure to dest. WAN addresses take priority over LAN addresses.
  *
- * Return -1 if our ip port can't be found (this usually means we're not connected to the DHT).
- * Return 0 if IP is a WAN address.
- * Return 1 if IP is a LAN address.
+ * Return 0 if our ip port can't be found (this usually means we're not connected to the DHT).
+ * Return 1 if IP is a WAN address.
+ * Return 2 if IP is a LAN address.
  */
-int ipport_self_copy(const DHT *dht, IP_Port *dest);
+unsigned int ipport_self_copy(const DHT *dht, IP_Port *dest);
 
 #endif

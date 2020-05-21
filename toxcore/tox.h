@@ -4741,7 +4741,12 @@ typedef enum TOX_ERR_GROUP_FOUNDER_SET_PASSWORD {
     TOX_ERR_GROUP_FOUNDER_SET_PASSWORD_FAIL_SEND,
 
     /**
-     * TODO: Generate doc
+     * The function failed to allocate enough memory for the operation.
+     */
+    TOX_ERR_GROUP_FOUNDER_SET_PASSWORD_MALLOC,
+
+    /**
+     * The group is disconnected.
      */
     TOX_ERR_GROUP_FOUNDER_SET_PASSWORD_GROUP_IS_DISCONNECTED,
 

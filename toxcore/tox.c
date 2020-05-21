@@ -3560,6 +3560,10 @@ bool tox_group_founder_set_password(Tox *tox, uint32_t group_number, const uint8
         case -3:
             SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_FOUNDER_SET_PASSWORD_FAIL_SEND);
             return 0;
+
+        case -4:
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_FOUNDER_SET_PASSWORD_MALLOC);
+            return 0;
     }
 
     /* can't happen */
