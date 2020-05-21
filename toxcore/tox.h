@@ -4614,6 +4614,12 @@ typedef enum TOX_GROUP_EXIT_TYPE {
     TOX_GROUP_EXIT_TYPE_DISCONNECTED,
 
     /**
+     * Your connection with all peers has been severed. This will occur when you are kicked from
+     * a group, rejoin a group, or manually disconnect from a group.
+     */
+    TOX_GROUP_EXIT_TYPE_SELF_DISCONNECTED,
+
+    /**
      * The peer has been kicked.
      */
     TOX_GROUP_EXIT_TYPE_KICK,

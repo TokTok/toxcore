@@ -2700,7 +2700,7 @@ static int self_announce_group(const Messenger *m, GC_Chat *chat, Onion_Friend *
     onion_friend_set_gc_data(onion_friend, gc_data, (int16_t)length);
     chat->update_self_announces = false;
 
-    LOGGER_DEBUG(chat->logger, "Published group announce. TCP relays: %d, UDP status: %d", tcp_num > 0,
+    LOGGER_DEBUG(chat->logger, "Published group announce. TCP relays: %d, UDP status: %d", tcp_num,
                  chat->self_udp_status);
     return 0;
 }

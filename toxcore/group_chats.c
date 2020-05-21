@@ -3664,7 +3664,7 @@ static int handle_gc_kick_peer(Messenger *m, int group_number, uint32_t peer_num
         }
 
         for (uint32_t i = 1; i < chat->numpeers; ++i) {
-            gcc_mark_for_deletion(&chat->gcc[i], chat->tcp_conn, GC_EXIT_TYPE_DISCONNECTED, nullptr, 0);
+            gcc_mark_for_deletion(&chat->gcc[i], chat->tcp_conn, GC_EXIT_TYPE_SELF_DISCONNECTED, nullptr, 0);
         }
 
         chat->connection_state = CS_DISCONNECTED;
@@ -5818,16 +5818,11 @@ bool gc_disconnect_from_group(GC_Session *c, GC_Chat *chat)
 
     if (chat->save == nullptr) {
         chat->connection_state = previous_state;
-
         return false;
     }
 
     send_gc_broadcast_message(chat, nullptr, 0, GM_PEER_EXIT);
-
-    // save info about group
     pack_group_info(chat, chat->save, false);
-
-    // cleanup gc data
     group_cleanup(c, chat);
 
     return true;
@@ -5857,7 +5852,7 @@ static bool gc_rejoin_connected_group(GC_Session *c, GC_Chat *chat)
 
     for (uint32_t i = 1; i < chat->numpeers; ++i) {
         GC_Connection *gconn = &chat->gcc[i];
-        gcc_mark_for_deletion(gconn, chat->tcp_conn, GC_EXIT_TYPE_DISCONNECTED, nullptr, 0);
+        gcc_mark_for_deletion(gconn, chat->tcp_conn, GC_EXIT_TYPE_SELF_DISCONNECTED, nullptr, 0);
     }
 
     if (is_public_chat(chat)) {

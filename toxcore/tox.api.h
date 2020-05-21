@@ -3936,6 +3936,12 @@ namespace group {
     DISCONNECTED,
 
     /**
+     * Your connection with all peers has been severed. This will occur when you are kicked from
+     * a group, rejoin a group, or manually disconnect from a group.
+     */
+    SELF_DISCONNECTED,
+
+    /**
      * The peer has been kicked.
      */
     KICK,
