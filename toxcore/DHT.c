@@ -3012,11 +3012,11 @@ bool dht_non_lan_connected(const DHT *dht)
 
 /* Copies our own ip_port structure to dest. WAN addresses take priority over LAN addresses.
  *
- * Return -1 if our ip port can't be found (this usually means we're not connected to the DHT).
- * Return 0 if IP is a WAN address.
- * Return 1 if IP is a LAN address.
+ * Return 0 if our ip port can't be found (this usually means we're not connected to the DHT).
+ * Return 1 if IP is a WAN address.
+ * Return 2 if IP is a LAN address.
  */
-int ipport_self_copy(const DHT *dht, IP_Port *dest)
+unsigned int ipport_self_copy(const DHT *dht, IP_Port *dest)
 {
     bool is_lan = false;
 
@@ -3046,8 +3046,12 @@ int ipport_self_copy(const DHT *dht, IP_Port *dest)
     }
 
     if (!ipport_isset(dest)) {
-        return -1;
+        return 0;
     }
 
-    return (int)is_lan;
+    if (is_lan) {
+        return 2;
+    }
+
+    return 1;
 }

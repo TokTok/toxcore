@@ -2865,9 +2865,13 @@ int gc_founder_set_password(GC_Chat *chat, const uint8_t *password, uint16_t pas
         return -1;
     }
 
+    uint8_t *oldpasswd = nullptr;
     uint16_t oldlen = chat->shared_state.password_length;
-    uint8_t *const oldpasswd = (uint8_t *)malloc(oldlen);
-    memcpy(oldpasswd, chat->shared_state.password, oldlen);
+
+    if (oldlen > 0) {
+        oldpasswd = (uint8_t *)malloc(oldlen);
+        memcpy(oldpasswd, chat->shared_state.password, oldlen);
+    }
 
     if (set_gc_password_local(chat, password, password_length) == -1) {
         free(oldpasswd);
@@ -5200,7 +5204,7 @@ static int ping_peer(const GC_Chat *chat, GC_Connection *gconn)
 
     uint32_t real_length = HASH_ID_BYTES + GC_PING_PACKET_MIN_DATA_SIZE;
 
-    if (chat->self_ip_port_status == SELF_UDP_STATUS_WAN && !gcc_connection_is_direct(chat->mono_time, gconn)
+    if (chat->self_udp_status == SELF_UDP_STATUS_WAN && !gcc_connection_is_direct(chat->mono_time, gconn)
             && mono_time_is_timeout(chat->mono_time, gconn->last_sent_ip_time, GC_SEND_IP_PORT_INTERVAL)) {
 
         int packed_ipp_len = pack_ip_port(data + buf_size - sizeof(IP_Port), sizeof(IP_Port), &chat->self_ip_port);
@@ -5305,13 +5309,13 @@ static void do_self_connection(Messenger *m, GC_Chat *chat)
     }
 
     uint16_t tcp_connections = tcp_connected_relays_count(chat->tcp_conn);
-    int self_ip_status = ipport_self_copy(m->dht, &chat->self_ip_port);
+    Self_UDP_Status self_udp_status = (Self_UDP_Status) ipport_self_copy(m->dht, &chat->self_ip_port);
 
-    if ((chat->self_ip_port_status != self_ip_status) || (chat->tcp_connections != tcp_connections)) {
-        chat->self_ip_port_status = (Self_UDP_Status) self_ip_status;
+    if ((chat->self_udp_status != self_udp_status) || (chat->tcp_connections != tcp_connections)) {
+        chat->self_udp_status = self_udp_status;
         chat->tcp_connections = tcp_connections;
 
-        if (self_ip_status != SELF_UDP_STATUS_NONE || tcp_connections > 0) {
+        if (self_udp_status != SELF_UDP_STATUS_NONE || tcp_connections > 0) {
             chat->update_self_announces = true;
         }
     }

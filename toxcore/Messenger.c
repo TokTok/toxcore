@@ -2665,7 +2665,7 @@ static int self_announce_group(const Messenger *m, GC_Chat *chat, Onion_Friend *
     GC_Public_Announce announce;
     memset(&announce, 0, sizeof(GC_Public_Announce));
 
-    bool ip_port_is_set = chat->self_ip_port_status != SELF_UDP_STATUS_NONE;
+    bool ip_port_is_set = chat->self_udp_status != SELF_UDP_STATUS_NONE;
     int tcp_num = tcp_copy_connected_relays(chat->tcp_conn, announce.base_announce.tcp_relays,
                                             GCA_MAX_ANNOUNCED_TCP_RELAYS);
 
@@ -2700,8 +2700,8 @@ static int self_announce_group(const Messenger *m, GC_Chat *chat, Onion_Friend *
     onion_friend_set_gc_data(onion_friend, gc_data, (int16_t)length);
     chat->update_self_announces = false;
 
-    LOGGER_DEBUG(chat->logger, "Published group announce. TCP status: %d, UDP status: %d", tcp_num > 0,
-                 chat->self_ip_port_status + 1);
+    LOGGER_DEBUG(chat->logger, "Published group announce. TCP relays: %d, UDP status: %d", tcp_num > 0,
+                 chat->self_udp_status);
     return 0;
 }
 

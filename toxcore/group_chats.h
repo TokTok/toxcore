@@ -38,9 +38,9 @@
 #define GC_JOIN_DATA_LENGTH (ENC_PUBLIC_KEY + CHAT_ID_SIZE)
 
 typedef enum Self_UDP_Status {
-    SELF_UDP_STATUS_NONE = -1,
-    SELF_UDP_STATUS_WAN =   0,
-    SELF_UDP_STATUS_LAN =   1,
+    SELF_UDP_STATUS_NONE = 0U,
+    SELF_UDP_STATUS_WAN,
+    SELF_UDP_STATUS_LAN,
 } Self_UDP_Status;
 
 typedef enum Group_Privacy_State {
@@ -271,7 +271,7 @@ typedef struct GC_Chat {
     const Mono_Time *mono_time;
     const Logger    *logger;
 
-    Self_UDP_Status self_ip_port_status;
+    Self_UDP_Status self_udp_status;
     IP_Port         self_ip_port;
 
 
