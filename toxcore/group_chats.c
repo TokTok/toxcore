@@ -399,7 +399,7 @@ uint16_t gc_copy_peer_addrs(const GC_Chat *chat, GC_SavedPeerInfo *addrs, size_t
         GC_Connection *gconn = &chat->gcc[i];
 
         if (gconn->confirmed || chat->connection_state != CS_CONNECTED) {
-            gcc_copy_tcp_relay(gconn, &addrs[num].tcp_relay);
+            gcc_copy_tcp_relay(&addrs[num].tcp_relay, gconn);
             memcpy(&addrs[num].ip_port, &gconn->addr.ip_port, sizeof(IP_Port));
             memcpy(addrs[num].public_key, gconn->addr.public_key, ENC_PUBLIC_KEY);
             ++num;
@@ -1098,7 +1098,7 @@ static bool create_announce_for_peer(const GC_Chat *chat, GC_Connection *gconn, 
     announce->tcp_relays_count = 0;
 
     if (gconn->tcp_relays_count > 0) {
-        if (gcc_copy_tcp_relay(gconn, &announce->tcp_relays[0]) == 0) {
+        if (gcc_copy_tcp_relay(&announce->tcp_relays[0], gconn) == 0) {
             announce->tcp_relays_count = 1;
         }
     }
@@ -4101,7 +4101,7 @@ static int send_gc_handshake_packet(const GC_Chat *chat, uint32_t peer_number, u
     Node_format node[GCA_MAX_ANNOUNCED_TCP_RELAYS];
     memset(node, 0, sizeof(node));
 
-    gcc_copy_tcp_relay(gconn, node);
+    gcc_copy_tcp_relay(node, gconn);
 
     uint8_t packet[GC_MIN_ENCRYPTED_HS_PACKET_SIZE + sizeof(Node_format)];
     int length = make_gc_handshake_packet(chat, gconn, handshake_type, request_type, join_type, packet,
@@ -4149,7 +4149,10 @@ static int send_gc_oob_handshake_packet(const GC_Chat *chat, uint32_t peer_numbe
     Node_format node[1];
     memset(node, 0, sizeof(node));
 
-    gcc_copy_tcp_relay(gconn, node);
+    if (gcc_copy_tcp_relay(node, gconn) == -1) {
+        LOGGER_ERROR(chat->logger, "Failed to copy TCP relay");
+        return -1;
+    }
 
     uint8_t packet[GC_MIN_ENCRYPTED_HS_PACKET_SIZE + sizeof(Node_format)];
     int length = make_gc_handshake_packet(chat, gconn, handshake_type, request_type, join_type, packet,
@@ -5527,16 +5530,20 @@ static void gc_load_peers(Messenger *m, GC_Chat *chat, const GC_SavedPeerInfo *a
                              addrs[i].tcp_relay.public_key);
 
         if (add_tcp_result == -1 && !ip_port_is_set) {
+            gcc_mark_for_deletion(gconn, chat->tcp_conn, GC_EXIT_TYPE_DISCONNECTED, nullptr, 0);
             continue;
         }
 
-        int save_tcp_result = gcc_save_tcp_relay(gconn, &addrs[i].tcp_relay);
+        if (add_tcp_result == 0) {
+            int save_tcp_result = gcc_save_tcp_relay(gconn, &addrs[i].tcp_relay);
 
-        if (save_tcp_result == -1 && !ip_port_is_set) {
-            continue;
+            if (save_tcp_result == -1) {
+                gcc_mark_for_deletion(gconn, chat->tcp_conn, GC_EXIT_TYPE_DISCONNECTED, nullptr, 0);
+                continue;
+            }
+
+            memcpy(gconn->oob_relay_pk, addrs[i].tcp_relay.public_key, CRYPTO_PUBLIC_KEY_SIZE);
         }
-
-        memcpy(gconn->oob_relay_pk, addrs[i].tcp_relay.public_key, CRYPTO_PUBLIC_KEY_SIZE);
 
         gconn->is_oob_handshake = add_tcp_result == 0;
         gconn->is_pending_handshake_response = false;

@@ -134,7 +134,7 @@ void gcc_set_ip_port(GC_Connection *gconn, const IP_Port *ipp);
  * Return 0 on success.
  * Return -1 on failure.
  */
-int gcc_copy_tcp_relay(const GC_Connection *gconn, Node_format *node);
+int gcc_copy_tcp_relay(Node_format *tcp_node, const GC_Connection *gconn);
 
 /* Saves tcp_node to gconn's list of connected tcp relays.
  *
@@ -142,7 +142,6 @@ int gcc_copy_tcp_relay(const GC_Connection *gconn, Node_format *node);
  *
  * Return 0 on success.
  * Return -1 on failure.
- * Return -2 if relays list is full.
  */
 int gcc_save_tcp_relay(GC_Connection *gconn, const Node_format *tcp_node);
 

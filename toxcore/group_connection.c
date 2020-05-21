@@ -201,9 +201,9 @@ void gcc_set_ip_port(GC_Connection *gconn, const IP_Port *ipp)
  * Return 0 on success.
  * Return -1 on failure.
  */
-int gcc_copy_tcp_relay(const GC_Connection *gconn, Node_format *node)
+int gcc_copy_tcp_relay(Node_format *tcp_node, const GC_Connection *gconn)
 {
-    if (gconn == nullptr || node == nullptr) {
+    if (gconn == nullptr || tcp_node == nullptr) {
         return -1;
     }
 
@@ -212,7 +212,12 @@ int gcc_copy_tcp_relay(const GC_Connection *gconn, Node_format *node)
     }
 
     uint32_t rand_idx = random_u32() % gconn->tcp_relays_count;
-    memcpy(node, &gconn->connected_tcp_relays[rand_idx], sizeof(Node_format));
+
+    if (!ipport_isset(&gconn->connected_tcp_relays[rand_idx].ip_port)) {
+        return -1;
+    }
+
+    memcpy(tcp_node, &gconn->connected_tcp_relays[rand_idx], sizeof(Node_format));
 
     return 0;
 }
@@ -223,7 +228,6 @@ int gcc_copy_tcp_relay(const GC_Connection *gconn, Node_format *node)
  *
  * Return 0 on success.
  * Return -1 on failure.
- * Return -2 if relays list is full.
  */
 int gcc_save_tcp_relay(GC_Connection *gconn, const Node_format *tcp_node)
 {
@@ -231,10 +235,14 @@ int gcc_save_tcp_relay(GC_Connection *gconn, const Node_format *tcp_node)
         return -1;
     }
 
+    if (!ipport_isset(&tcp_node->ip_port)) {
+        return -1;
+    }
+
     uint32_t idx = gconn->tcp_relays_count;
 
     if (idx >= MAX_FRIEND_TCP_CONNECTIONS) {
-        return -2;
+        return 0;
     }
 
     memcpy(&gconn->connected_tcp_relays[idx], tcp_node, sizeof(Node_format));
