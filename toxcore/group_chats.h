@@ -318,10 +318,11 @@ typedef struct GC_Chat {
     int32_t     saved_invites[MAX_GC_SAVED_INVITES];
     uint8_t     saved_invites_index;
 
-    uint8_t     m_group_public_key[CRYPTO_PUBLIC_KEY_SIZE];    /* Identifier for group's messenger friend connection */
-
     bool        update_self_announces;     /* true if we should try to update our announcements */
     uint64_t    last_self_announce_check;  /* the last time we checked if we should update our announcements */
+
+    uint8_t     m_group_public_key[CRYPTO_PUBLIC_KEY_SIZE];    /* Public key for group's messenger friend connection */
+    int         friend_connection_id;   /* Identifier for group's messenger friend connection */
 
     Saved_Group *save;
 } GC_Chat;
@@ -658,7 +659,7 @@ int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name
  * Return -3 if nick is too long.
  * Return -4 if nick is empty or nick length is zero.
  * Return -5 if there is an error setting the group password.
- * Return -6 if there is an error adding a friend.
+ * Return -6 if the Messenger friend connection fails to initialize.
  */
 int gc_group_join(GC_Session *c, const uint8_t *chat_id, const uint8_t *nick, size_t nick_length, const uint8_t *passwd,
                   uint16_t passwd_len);

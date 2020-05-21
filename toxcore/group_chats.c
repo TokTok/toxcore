@@ -1952,9 +1952,11 @@ static void do_gc_shared_state_changes(const GC_Session *c, GC_Chat *chat, const
         }
 
         if (is_public_chat(chat)) {
-            m_add_group(c->messenger, chat);
+            if (m_create_group_connection(c->messenger, chat) == -1) {
+                LOGGER_ERROR(chat->logger, "Failed to initialize group friend connection");
+            }
         } else if (chat->shared_state.privacy_state == GI_PRIVATE) {
-            m_remove_group(c->messenger, chat);
+            m_kill_group_connection(c->messenger, chat);
             cleanup_gca(c->announces_list, get_chat_id(chat->chat_public_key));
         }
     }
@@ -3346,9 +3348,11 @@ int gc_founder_set_privacy_state(Messenger *m, int group_number, uint8_t new_pri
 
     if (new_privacy_state == GI_PRIVATE) {
         cleanup_gca(c->announces_list, get_chat_id(chat->chat_public_key));
-        m_remove_group(c->messenger, chat);
+        m_kill_group_connection(c->messenger, chat);
     } else {
-        m_add_group(c->messenger, chat);
+        if (m_create_group_connection(c->messenger, chat) == -1) {
+            LOGGER_ERROR(chat->logger, "Failed to initialize group friend connection");
+        }
     }
 
     if (broadcast_gc_shared_state(chat) == -1) {
@@ -4559,7 +4563,7 @@ static int handle_gc_lossless_message(Messenger *m, const GC_Chat *chat, const u
 
     /* Duplicate packet */
     if (lossless_ret == 0) {
-        LOGGER_DEBUG(m->log, "got duplicate packet from peer %u. ID: %lu, type: %u)", peer_number, message_id, packet_type);
+        // LOGGER_DEBUG(m->log, "got duplicate packet from peer %u. ID: %lu, type: %u)", peer_number, message_id, packet_type);
         return gc_send_message_ack(chat, gconn, message_id, 0);
     }
 
@@ -5645,7 +5649,9 @@ int gc_group_load(GC_Session *c, const Saved_Group *save, int group_number)
     }
 
     if (is_public_chat(chat)) {
-        m_add_group(m, chat);
+        if (m_create_group_connection(m, chat) == -1) {
+            LOGGER_ERROR(m->log, "Failed to initialize group friend connection");
+        }
     }
 
     uint16_t num_addrs = net_ntohs(save->num_addrs);
@@ -5720,7 +5726,8 @@ int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name
     chat->connection_state = CS_CONNECTED;
 
     if (is_public_chat(chat)) {
-        if (m_add_group(c->messenger, chat) < 0) {
+        if (m_create_group_connection(c->messenger, chat) < 0) {
+            LOGGER_ERROR(chat->logger, "Failed to initialize group friend connection");
             group_delete(c, chat);
             return -6;
         }
@@ -5739,7 +5746,7 @@ int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name
  * Return -3 if nick is too long.
  * Return -4 if nick is empty or nick length is zero.
  * Return -5 if there is an error setting the group password.
- * Return -6 if there is an error adding a friend.
+ * Return -6 if the Messenger friend connection fails to initialize.
  */
 int gc_group_join(GC_Session *c, const uint8_t *chat_id, const uint8_t *nick, size_t nick_length, const uint8_t *passwd,
                   uint16_t passwd_len)
@@ -5779,7 +5786,7 @@ int gc_group_join(GC_Session *c, const uint8_t *chat_id, const uint8_t *nick, si
         }
     }
 
-    int friend_number = m_add_group(c->messenger, chat);
+    int friend_number = m_create_group_connection(c->messenger, chat);
 
     if (friend_number < 0) {
         return -6;
@@ -5844,8 +5851,11 @@ static bool gc_rejoin_connected_group(GC_Session *c, GC_Chat *chat)
     }
 
     if (is_public_chat(chat)) {
-        m_remove_group(c->messenger, chat);
-        m_add_group(c->messenger, chat);
+        m_kill_group_connection(c->messenger, chat);
+
+        if (m_create_group_connection(c->messenger, chat) == -1) {
+            return false;
+        }
     }
 
     gc_load_peers(c->messenger, chat, peers, num_addrs);
@@ -6243,7 +6253,7 @@ GC_Session *new_dht_groupchats(Messenger *m)
 
 static void group_cleanup(GC_Session *c, GC_Chat *chat)
 {
-    m_remove_group(c->messenger, chat);
+    m_kill_group_connection(c->messenger, chat);
     mod_list_cleanup(chat);
     sanctions_list_cleanup(chat);
 
