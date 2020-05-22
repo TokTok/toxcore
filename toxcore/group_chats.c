@@ -1095,8 +1095,6 @@ static bool create_announce_for_peer(const GC_Chat *chat, GC_Connection *gconn, 
         return false;
     }
 
-    announce->tcp_relays_count = 0;
-
     if (gconn->tcp_relays_count > 0) {
         if (gcc_copy_tcp_relay(&announce->tcp_relays[0], gconn) == 0) {
             announce->tcp_relays_count = 1;
@@ -1279,11 +1277,9 @@ static int send_gc_tcp_relays(const Mono_Time *mono_time, const GC_Chat *chat, G
     length += nodes_len;
 
     if (send_lossy_group_packet(chat, gconn, data, length, GP_TCP_RELAYS) == -1) {
-        LOGGER_ERROR(chat->logger, "Failed to send lossy packet");
+        LOGGER_ERROR(chat->logger, "Failed to send tcp relays");
         return -1;
     }
-
-    gconn->last_tcp_relays_shared = mono_time_get(mono_time);
 
     return 0;
 }
@@ -1315,7 +1311,11 @@ static int handle_gc_tcp_relays(const Messenger *m, int group_number, GC_Connect
     }
 
     for (size_t i = 0; i < num_nodes; ++i) {
-        add_tcp_relay_connection(chat->tcp_conn, gconn->tcp_connection_num, tcp_relays[i].ip_port, tcp_relays[i].public_key);
+        Node_format *tcp_node = &tcp_relays[i];
+
+        if (add_tcp_relay_connection(chat->tcp_conn, gconn->tcp_connection_num, tcp_node->ip_port, tcp_node->public_key) == 0) {
+            gcc_save_tcp_relay(gconn, tcp_node);
+        }
     }
 
     return 0;
@@ -5139,14 +5139,14 @@ static void do_peer_connections(Messenger *m, int group_number)
 
         gcc_resend_packets(m, chat, i);
 
-        if (gconn->confirmed) {
-            if (mono_time_is_timeout(m->mono_time, gconn->last_tcp_relays_shared, GCC_TCP_SHARED_RELAYS_TIMEOUT)) {
-                send_gc_tcp_relays(m->mono_time, chat, gconn);
-            }
+        if (gconn->confirmed && chat->new_tcp_relay) {
+            send_gc_tcp_relays(m->mono_time, chat, gconn);
         }
 
         gcc_check_received_array(m, group_number, i);   // may change peer numbers
     }
+
+    chat->new_tcp_relay = false;
 }
 
 static void do_handshakes(Messenger *m, int group_number)
@@ -5418,7 +5418,9 @@ static void add_tcp_relays_to_chat(Messenger *m, GC_Chat *chat)
     uint32_t num_copied = tcp_copy_connected_relays(nc_get_tcp_c(m->net_crypto), tcp_relays, num_relays);
 
     for (uint32_t i = 0; i < num_copied; ++i) {
-        add_tcp_relay_global(chat->tcp_conn, tcp_relays[i].ip_port, tcp_relays[i].public_key);
+        if (add_tcp_relay_global(chat->tcp_conn, tcp_relays[i].ip_port, tcp_relays[i].public_key) == 0) {
+            chat->new_tcp_relay = true;
+        }
     }
 }
 

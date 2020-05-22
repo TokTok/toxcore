@@ -278,8 +278,10 @@ typedef struct GC_Chat {
 
     Networking_Core *net;
     TCP_Connections *tcp_conn;
-    uint64_t        last_checked_tcp_relays;
+
+    bool            new_tcp_relay;   // true if we need to send peers a new TCP relay
     uint16_t        tcp_connections; // the number of global TCP relays we're connected to
+    uint64_t        last_checked_tcp_relays;
 
     GC_GroupPeer    *group;
     GC_Connection   *gcc;

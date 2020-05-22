@@ -18,11 +18,6 @@
 /* Max number of TCP relays we share with a peer */
 #define GCC_MAX_TCP_SHARED_RELAYS 3
 
-/* The time between attempts to share our TCP relays with a peer */
-#define GCC_TCP_SHARED_RELAYS_TIMEOUT 120
-
-#define HANDSHAKE_SENDING_TIMEOUT 3
-
 typedef struct GC_Message_Array_Entry {
     uint8_t *data;
     uint32_t data_length;
@@ -55,7 +50,6 @@ struct GC_Connection {
 
     int         tcp_connection_num;
     uint64_t    last_received_direct_time;   /* the last time we received a direct UDP packet from this connection */
-    uint64_t    last_tcp_relays_shared;  /* the last time we tried to send this peer our tcp relays */
     uint64_t    last_sent_ip_time;  /* the last time we sent our ip info to this peer in a ping packet */
 
     Node_format connected_tcp_relays[MAX_FRIEND_TCP_CONNECTIONS];
@@ -129,19 +123,21 @@ bool gcc_ip_port_is_set(const GC_Connection *gconn);
  */
 void gcc_set_ip_port(GC_Connection *gconn, const IP_Port *ipp);
 
-/* Copies a random TCP relay node from gconn to node.
+/* Copies a random TCP relay node from gconn to tcp_node.
  *
  * Return 0 on success.
  * Return -1 on failure.
  */
 int gcc_copy_tcp_relay(Node_format *tcp_node, const GC_Connection *gconn);
 
-/* Saves tcp_node to gconn's list of connected tcp relays.
+/* Saves tcp_node to gconn's list of connected tcp relays. If relays list is full a
+ * random node is overwritten with the new node.
  *
  * TODO: we never test these after they're set.
  *
  * Return 0 on success.
  * Return -1 on failure.
+ * Return -2 if node is already in list.
  */
 int gcc_save_tcp_relay(GC_Connection *gconn, const Node_format *tcp_node);
 

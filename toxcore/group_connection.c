@@ -196,7 +196,7 @@ void gcc_set_ip_port(GC_Connection *gconn, const IP_Port *ipp)
     }
 }
 
-/* Copies a random TCP relay node from gconn to node.
+/* Copies a random TCP relay node from gconn to tcp_node.
  *
  * Return 0 on success.
  * Return -1 on failure.
@@ -222,12 +222,14 @@ int gcc_copy_tcp_relay(Node_format *tcp_node, const GC_Connection *gconn)
     return 0;
 }
 
-/* Saves tcp_node to gconn's list of connected tcp relays.
+/* Saves tcp_node to gconn's list of connected tcp relays. If relays list is full a
+ * random node is overwritten with the new node.
  *
  * TODO: we never test these after they're set.
  *
  * Return 0 on success.
  * Return -1 on failure.
+ * Return -2 if node is already in list.
  */
 int gcc_save_tcp_relay(GC_Connection *gconn, const Node_format *tcp_node)
 {
@@ -239,14 +241,21 @@ int gcc_save_tcp_relay(GC_Connection *gconn, const Node_format *tcp_node)
         return -1;
     }
 
+    for (uint16_t i = 0; i < gconn->tcp_relays_count; ++i) {
+        if (id_equal(gconn->connected_tcp_relays[i].public_key, tcp_node->public_key)) {
+            return -2;
+        }
+    }
+
     uint32_t idx = gconn->tcp_relays_count;
 
-    if (idx >= MAX_FRIEND_TCP_CONNECTIONS) {
-        return 0;
+    if (gconn->tcp_relays_count >= MAX_FRIEND_TCP_CONNECTIONS) {
+        idx = random_u32() % gconn->tcp_relays_count;
+    } else {
+        ++gconn->tcp_relays_count;
     }
 
     memcpy(&gconn->connected_tcp_relays[idx], tcp_node, sizeof(Node_format));
-    ++gconn->tcp_relays_count;
 
     return 0;
 }
