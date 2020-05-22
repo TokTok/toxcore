@@ -3027,19 +3027,38 @@ namespace group {
     CORE,
   }
 
+  /**
+   * Returns true if the group chat is currently connected or attempting to connect to other peers
+   * in the group.
+   *
+   * @param group_number The group number of the designated group.
+   */
   bool is_connected(uint32_t group_number) {
+    /**
+     * The group number passed did not designate a valid group.
+     */
     GROUP_NOT_FOUND,
   }
 
+  /**
+   * Returns true if the group chat is currently disconnected and not attempting to connect to
+   * other peers in the group.
+   *
+   * @param group_number The group number of the designated group.
+   */
   bool disconnect(uint32_t group_number) {
+    /**
+     * The group number passed did not designate a valid group.
+     */
     GROUP_NOT_FOUND,
+    /**
+     * The group is already disconnected.
+     */
     ALREADY_DISCONNECTED,
-    ERROR,
-  }
-
-  error for peer_list_query {
-    GROUP_NOT_FOUND,
-    PARAMETER_IS_NULL,
+    /**
+     * The group state could not be saved due to a memory allocation error.
+     */
+    MALLOC,
   }
 
   /**
@@ -3057,6 +3076,9 @@ namespace group {
      * The group number passed did not designate a valid group.
      */
     GROUP_NOT_FOUND,
+    /**
+     * The group state could not be saved due to a memory allocation error. TODO(Jfreegman): too vague
+     */
     MALLOC,
   }
 

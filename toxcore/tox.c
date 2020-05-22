@@ -2815,10 +2815,24 @@ bool tox_group_disconnect(Tox *tox, uint32_t group_number, Tox_Err_Group_Disconn
         return 0;
     }
 
-    bool disconnection_result = gc_disconnect_from_group(tox->m->group_handler, chat);
-    SET_ERROR_PARAMETER(error, disconnection_result ? TOX_ERR_GROUP_DISCONNECT_OK : TOX_ERR_GROUP_DISCONNECT_ERROR);
+    int ret = gc_disconnect_from_group(tox->m->group_handler, chat);
 
-    return disconnection_result;
+    switch (ret) {
+        case 0:
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_DISCONNECT_OK);
+            return 1;
+
+        case -1:
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_DISCONNECT_GROUP_NOT_FOUND);
+            return 0;
+
+        case -2:
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_DISCONNECT_MALLOC);
+            return 0;
+    }
+
+    /* can't happen */
+    return 0;
 }
 
 bool tox_group_reconnect(Tox *tox, uint32_t group_number, Tox_Err_Group_Reconnect *error)

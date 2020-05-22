@@ -3485,13 +3485,19 @@ typedef enum TOX_ERR_GROUP_IS_CONNECTED {
     TOX_ERR_GROUP_IS_CONNECTED_OK,
 
     /**
-     * TODO: Generate doc
+     * The group number passed did not designate a valid group.
      */
     TOX_ERR_GROUP_IS_CONNECTED_GROUP_NOT_FOUND,
 
 } TOX_ERR_GROUP_IS_CONNECTED;
 
 
+/**
+ * Returns true if the group chat is currently connected or attempting to connect to other peers
+ * in the group.
+ *
+ * @param group_number The group number of the designated group.
+ */
 bool tox_group_is_connected(Tox *tox, uint32_t group_number, TOX_ERR_GROUP_IS_CONNECTED *error);
 
 typedef enum TOX_ERR_GROUP_DISCONNECT {
@@ -3502,44 +3508,30 @@ typedef enum TOX_ERR_GROUP_DISCONNECT {
     TOX_ERR_GROUP_DISCONNECT_OK,
 
     /**
-     * TODO: Generate doc
+     * The group number passed did not designate a valid group.
      */
     TOX_ERR_GROUP_DISCONNECT_GROUP_NOT_FOUND,
 
     /**
-     * TODO: Generate doc
+     * The group is already disconnected.
      */
     TOX_ERR_GROUP_DISCONNECT_ALREADY_DISCONNECTED,
 
     /**
-     * TODO: Generate doc
+     * The group state could not be saved due to a memory allocation error.
      */
-    TOX_ERR_GROUP_DISCONNECT_ERROR,
+    TOX_ERR_GROUP_DISCONNECT_MALLOC,
 
 } TOX_ERR_GROUP_DISCONNECT;
 
 
+/**
+ * Returns true if the group chat is currently disconnected and not attempting to connect to
+ * other peers in the group.
+ *
+ * @param group_number The group number of the designated group.
+ */
 bool tox_group_disconnect(Tox *tox, uint32_t group_number, TOX_ERR_GROUP_DISCONNECT *error);
-
-typedef enum TOX_ERR_GROUP_PEER_LIST_QUERY {
-
-    /**
-     * The function returned successfully.
-     */
-    TOX_ERR_GROUP_PEER_LIST_QUERY_OK,
-
-    /**
-     * TODO: Generate doc
-     */
-    TOX_ERR_GROUP_PEER_LIST_QUERY_GROUP_NOT_FOUND,
-
-    /**
-     * TODO: Generate doc
-     */
-    TOX_ERR_GROUP_PEER_LIST_QUERY_PARAMETER_IS_NULL,
-
-} TOX_ERR_GROUP_PEER_LIST_QUERY;
-
 
 typedef enum TOX_ERR_GROUP_RECONNECT {
 
@@ -3554,7 +3546,7 @@ typedef enum TOX_ERR_GROUP_RECONNECT {
     TOX_ERR_GROUP_RECONNECT_GROUP_NOT_FOUND,
 
     /**
-     * TODO: Generate doc
+     * The group state could not be saved due to a memory allocation error. TODO(Jfreegman): too vague
      */
     TOX_ERR_GROUP_RECONNECT_MALLOC,
 

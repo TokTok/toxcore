@@ -668,7 +668,13 @@ int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name
 int gc_group_join(GC_Session *c, const uint8_t *chat_id, const uint8_t *nick, size_t nick_length, const uint8_t *passwd,
                   uint16_t passwd_len);
 
-bool gc_disconnect_from_group(GC_Session *c, GC_Chat *chat);
+/* Disconnects from all peers in a group but saves the group state for later use.
+ *
+ * Return 0 on sucess.
+ * Return -1 if the group handler object or chat object is null.
+ * Return -2 if malloc fails.
+ */
+int gc_disconnect_from_group(GC_Session *c, GC_Chat *chat);
 
 /* Resets chat saving all self state and attempts to reconnect to group */
 bool gc_rejoin_group(GC_Session *c, GC_Chat *chat);

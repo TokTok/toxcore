@@ -5807,10 +5807,16 @@ int gc_group_join(GC_Session *c, const uint8_t *chat_id, const uint8_t *nick, si
     return group_number;
 }
 
-bool gc_disconnect_from_group(GC_Session *c, GC_Chat *chat)
+/* Disconnects from all peers in a group but saves the group state for later use.
+ *
+ * Return 0 on sucess.
+ * Return -1 if the group handler object or chat object is null.
+ * Return -2 if malloc fails.
+ */
+int gc_disconnect_from_group(GC_Session *c, GC_Chat *chat)
 {
     if (c == nullptr || chat == nullptr) {
-        return false;
+        return -1;
     }
 
     GC_Conn_State previous_state = chat->connection_state;
@@ -5820,14 +5826,17 @@ bool gc_disconnect_from_group(GC_Session *c, GC_Chat *chat)
 
     if (chat->save == nullptr) {
         chat->connection_state = previous_state;
-        return false;
+        return -2;
     }
 
     send_gc_broadcast_message(chat, nullptr, 0, GM_PEER_EXIT);
     pack_group_info(chat, chat->save, false);
-    group_cleanup(c, chat);
 
-    return true;
+    for (uint32_t i = 1; i < chat->numpeers; ++i) {
+        gcc_mark_for_deletion(&chat->gcc[i], chat->tcp_conn, GC_EXIT_TYPE_SELF_DISCONNECTED, nullptr, 0);
+    }
+
+    return 0;
 }
 
 static bool gc_rejoin_disconnected_group(GC_Session *c, GC_Chat *chat)
