@@ -6458,6 +6458,10 @@ int add_peers_from_announces(const GC_Session *gc_session, GC_Chat *chat, GC_Ann
         return -1;
     }
 
+    if (chat->connection_state == CS_CONNECTED && chat->numpeers > 1) {
+        return 0;
+    }
+
     int added_peers = 0;
 
     for (uint8_t i = 0; i < gc_announces_count; ++i) {
