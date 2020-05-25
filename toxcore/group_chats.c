@@ -5841,6 +5841,10 @@ int gc_disconnect_from_group(GC_Session *c, GC_Chat *chat)
 
 static bool gc_rejoin_disconnected_group(GC_Session *c, GC_Chat *chat)
 {
+    if (chat->save == nullptr) {
+        return false;
+    }
+
     chat->save->group_connection_state = SGCS_CONNECTED;
 
     int group_loading_result = gc_group_load(c, chat->save, chat->group_number);
