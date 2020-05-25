@@ -3145,7 +3145,7 @@ bool tox_group_set_topic(Tox *tox, uint32_t group_number, const uint8_t *topic, 
     }
 
     if (chat->connection_state == CS_DISCONNECTED) {
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_TOPIC_SET_GROUP_IS_DISCONNECTED);
+        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_TOPIC_SET_DISCONNECTED);
         return 0;
     }
 
@@ -3250,13 +3250,6 @@ uint32_t tox_group_get_number_groups(const Tox *tox)
     return gc_count_groups(tox->m->group_handler);
 }
 
-void tox_groups_get_list(const Tox *tox, uint32_t *list)
-{
-    const GC_Session *c = tox->m->group_handler;
-
-    gc_copy_groups_numbers(c, list);
-}
-
 Tox_Group_Privacy_State tox_group_get_privacy_state(const Tox *tox, uint32_t group_number,
         Tox_Err_Group_State_Queries *error)
 {
@@ -3324,7 +3317,7 @@ bool tox_group_send_message(Tox *tox, uint32_t group_number, Tox_Message_Type ty
     }
 
     if (chat->connection_state == CS_DISCONNECTED) {
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_SEND_MESSAGE_GROUP_IS_DISCONNECTED);
+        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_SEND_MESSAGE_DISCONNECTED);
         return 0;
     }
 
@@ -3371,7 +3364,7 @@ bool tox_group_send_private_message(Tox *tox, uint32_t group_number, uint32_t pe
     }
 
     if (chat->connection_state == CS_DISCONNECTED) {
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_SEND_PRIVATE_MESSAGE_GROUP_IS_DISCONNECTED);
+        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_SEND_PRIVATE_MESSAGE_DISCONNECTED);
         return 0;
     }
 
@@ -3422,7 +3415,7 @@ bool tox_group_send_custom_packet(Tox *tox, uint32_t group_number, bool lossless
     }
 
     if (chat->connection_state == CS_DISCONNECTED) {
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_SEND_CUSTOM_PACKET_GROUP_IS_DISCONNECTED);
+        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_SEND_CUSTOM_PACKET_DISCONNECTED);
         return 0;
     }
 
@@ -3461,7 +3454,7 @@ bool tox_group_invite_friend(Tox *tox, uint32_t group_number, uint32_t friend_nu
     }
 
     if (chat->connection_state == CS_DISCONNECTED) {
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_INVITE_FRIEND_GROUP_IS_DISCONNECTED);
+        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_INVITE_FRIEND_DISCONNECTED);
         return 0;
     }
 
@@ -3552,7 +3545,7 @@ bool tox_group_founder_set_password(Tox *tox, uint32_t group_number, const uint8
     }
 
     if (chat->connection_state == CS_DISCONNECTED) {
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_FOUNDER_SET_PASSWORD_GROUP_IS_DISCONNECTED);
+        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_FOUNDER_SET_PASSWORD_DISCONNECTED);
         return 0;
     }
 
@@ -3607,7 +3600,7 @@ bool tox_group_founder_set_privacy_state(Tox *tox, uint32_t group_number, Tox_Gr
             return 0;
 
         case -4:
-            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_FOUNDER_SET_PRIVACY_STATE_GROUP_IS_DISCONNECTED);
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_FOUNDER_SET_PRIVACY_STATE_DISCONNECTED);
             return 0;
 
         case -5:
@@ -3634,7 +3627,7 @@ bool tox_group_founder_set_peer_limit(Tox *tox, uint32_t group_number, uint32_t 
     }
 
     if (chat->connection_state == CS_DISCONNECTED) {
-        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_FOUNDER_SET_PEER_LIMIT_GROUP_IS_DISCONNECTED);
+        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_FOUNDER_SET_PEER_LIMIT_DISCONNECTED);
         return 0;
     }
 

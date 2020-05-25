@@ -2926,10 +2926,6 @@ namespace group {
  *
  ******************************************************************************/
 
-namespace groups {
-  const void get_list(uint32_t *list);
-}
-
 namespace group {
 
   /**
@@ -3444,7 +3440,10 @@ namespace group {
        * The packet failed to send.
        */
       FAIL_SEND,
-      GROUP_IS_DISCONNECTED,
+      /**
+       * The group is disconnected.
+       */
+      DISCONNECTED,
   }
 
   uint8_t[length <= MAX_TOPIC_LENGTH] topic {
@@ -3682,7 +3681,10 @@ namespace group {
        * Packet failed to send.
        */
       FAIL_SEND,
-      GROUP_IS_DISCONNECTED,
+      /**
+       * The group is disconnected.
+       */
+      DISCONNECTED,
     }
 
     /**
@@ -3728,7 +3730,13 @@ namespace group {
        * Packet failed to send.
        */
       FAIL_SEND,
-      GROUP_IS_DISCONNECTED,
+      /**
+       * The group is disconnected.
+       */
+      DISCONNECTED,
+      /**
+       * The message type is invalid.
+       */
       BAD_TYPE,
     }
 
@@ -3769,7 +3777,10 @@ namespace group {
        * The caller does not have the required permissions to send group messages.
        */
       PERMISSIONS,
-      GROUP_IS_DISCONNECTED,
+      /**
+       * The group is disconnected.
+       */
+      DISCONNECTED,
     }
   }
 }
@@ -3861,7 +3872,10 @@ namespace group {
        * Packet failed to send.
        */
       FAIL_SEND,
-      GROUP_IS_DISCONNECTED,
+      /**
+       * The group is disconnected.
+       */
+      DISCONNECTED,
     }
 
     /**
@@ -4088,7 +4102,7 @@ namespace group {
       /**
        * The group is disconnected.
        */
-      GROUP_IS_DISCONNECTED,
+      DISCONNECTED,
     }
 
     /**
@@ -4127,7 +4141,10 @@ namespace group {
        * The packet failed to send.
        */
       FAIL_SEND,
-      GROUP_IS_DISCONNECTED,
+      /**
+       * The group is disconnected.
+       */
+      DISCONNECTED,
     }
 
     /**
@@ -4159,7 +4176,10 @@ namespace group {
        * The packet failed to send.
        */
       FAIL_SEND,
-      GROUP_IS_DISCONNECTED,
+      /**
+       * The group is disconnected.
+       */
+      DISCONNECTED,
     }
   }
 

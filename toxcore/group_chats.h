@@ -721,8 +721,6 @@ int gc_group_exit(GC_Session *c, GC_Chat *chat, const uint8_t *message, uint16_t
  */
 uint32_t gc_count_groups(const GC_Session *c);
 
-void gc_copy_groups_numbers(const GC_Session *c, uint32_t *list);
-
 /* Returns true if peer_number exists */
 bool gc_peer_number_is_valid(const GC_Chat *chat, int peer_number);
 

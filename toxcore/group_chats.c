@@ -6390,18 +6390,6 @@ uint32_t gc_count_groups(const GC_Session *c)
     return count;
 }
 
-void gc_copy_groups_numbers(const GC_Session *c, uint32_t *list)
-{
-    uint32_t count = 0;
-
-    for (uint32_t i = 0; i < c->num_chats; ++i) {
-        if (c->chats[i].connection_state > CS_NONE && c->chats[i].connection_state < CS_INVALID) {
-            list[count] = i;
-            ++count;
-        }
-    }
-}
-
 /* Return group_number's GC_Chat pointer on success
  * Return NULL on failure
  */
