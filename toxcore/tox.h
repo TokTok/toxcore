@@ -3544,9 +3544,9 @@ typedef enum TOX_ERR_GROUP_RECONNECT {
     TOX_ERR_GROUP_RECONNECT_GROUP_NOT_FOUND,
 
     /**
-     * The group state could not be saved due to a memory allocation error. TODO(Jfreegman): too vague
+     * There was a core error when initiating the group.
      */
-    TOX_ERR_GROUP_RECONNECT_MALLOC,
+    TOX_ERR_GROUP_RECONNECT_CORE,
 
 } TOX_ERR_GROUP_RECONNECT;
 

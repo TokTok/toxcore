@@ -5644,6 +5644,10 @@ int gc_group_load(GC_Session *c, const Saved_Group *save, int group_number)
         }
     }
 
+    if (init_gc_tcp_connection(m, chat) == -1) {
+        return -1;
+    }
+
     if (!is_active_chat) {
         chat->save = (Saved_Group *)malloc(sizeof(Saved_Group));
 
@@ -5654,10 +5658,6 @@ int gc_group_load(GC_Session *c, const Saved_Group *save, int group_number)
         memcpy(chat->save, save, sizeof(Saved_Group));
 
         return group_number;
-    }
-
-    if (init_gc_tcp_connection(m, chat) == -1) {
-        return -1;
     }
 
     if (is_public_chat(chat)) {
@@ -5679,8 +5679,8 @@ int gc_group_load(GC_Session *c, const Saved_Group *save, int group_number)
  * Return -3 if the privacy state is an invalid type.
  * Return -4 if the the group object fails to initialize.
  * Return -5 if the group state fails to initialize.
- * Return -6 if the announce was unsuccessful.
-*/
+ * Return -6 if the Messenger friend connection fails to initialize.
+ */
 int gc_group_add(GC_Session *c, uint8_t privacy_state, const uint8_t *group_name, uint16_t group_name_length,
                  const uint8_t *nick, size_t nick_length)
 {
@@ -5839,28 +5839,23 @@ int gc_disconnect_from_group(GC_Session *c, GC_Chat *chat)
     return 0;
 }
 
-static bool gc_rejoin_disconnected_group(GC_Session *c, GC_Chat *chat)
+/* Resets chat saving all self state and attempts to reconnect to group.
+ *
+ * Returns 0 on success.
+ * Returns -1 if the group handler object or chat object is null.
+ * Returns -2 if the Messenger friend connection fails to initialize.
+ */
+int gc_rejoin_group(GC_Session *c, GC_Chat *chat)
 {
-    if (chat->save == nullptr) {
-        return false;
+    if (c == nullptr || chat == nullptr) {
+        return -1;
     }
 
-    chat->save->group_connection_state = SGCS_CONNECTED;
+    chat->time_connected = 0;
 
-    int group_loading_result = gc_group_load(c, chat->save, chat->group_number);
-    bool rejoin_successful = group_loading_result != -1;
-
-    if (rejoin_successful) {
-        free(chat->save);
-        chat->save = nullptr;
+    if (group_can_handle_packets(chat)) {
+        send_gc_self_exit(chat, nullptr, 0);
     }
-
-    return rejoin_successful;
-}
-
-static bool gc_rejoin_connected_group(GC_Session *c, GC_Chat *chat)
-{
-    send_gc_self_exit(chat, nullptr, 0);
 
     GC_SavedPeerInfo peers[GROUP_SAVE_MAX_PEERS];
     uint16_t num_addrs = gc_copy_peer_addrs(chat, peers, GROUP_SAVE_MAX_PEERS);
@@ -5874,30 +5869,14 @@ static bool gc_rejoin_connected_group(GC_Session *c, GC_Chat *chat)
         m_kill_group_connection(c->messenger, chat);
 
         if (m_create_group_connection(c->messenger, chat) == -1) {
-            return false;
+            return -2;
         }
     }
 
     gc_load_peers(c->messenger, chat, peers, num_addrs);
     chat->connection_state = CS_CONNECTING;
 
-    return true;
-}
-
-/* Resets chat saving all self state and attempts to reconnect to group */
-bool gc_rejoin_group(GC_Session *c, GC_Chat *chat)
-{
-    if (c == nullptr || chat == nullptr) {
-        return false;
-    }
-
-    chat->time_connected = 0;
-
-    if (!group_can_handle_packets(chat)) {
-        return gc_rejoin_disconnected_group(c, chat);
-    }
-
-    return gc_rejoin_connected_group(c, chat);
+    return 0;
 }
 
 

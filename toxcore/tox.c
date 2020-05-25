@@ -2844,10 +2844,24 @@ bool tox_group_reconnect(Tox *tox, uint32_t group_number, Tox_Err_Group_Reconnec
         return 0;
     }
 
-    bool reconnection_result = gc_rejoin_group(tox->m->group_handler, chat);
-    SET_ERROR_PARAMETER(error, reconnection_result ? TOX_ERR_GROUP_RECONNECT_OK : TOX_ERR_GROUP_RECONNECT_MALLOC);
+    int ret = gc_rejoin_group(tox->m->group_handler, chat);
 
-    return reconnection_result;
+    switch (ret) {
+        case 0:
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_RECONNECT_OK);
+            return 1;
+
+        case -1:
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_RECONNECT_GROUP_NOT_FOUND);
+            return 0;
+
+        case -2:
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_RECONNECT_CORE);
+            return 0;
+    }
+
+    /* can't happen */
+    return 0;
 }
 
 bool tox_group_leave(Tox *tox, uint32_t group_number, const uint8_t *partmessage, size_t length,

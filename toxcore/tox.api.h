@@ -3073,9 +3073,9 @@ namespace group {
      */
     GROUP_NOT_FOUND,
     /**
-     * The group state could not be saved due to a memory allocation error. TODO(Jfreegman): too vague
+     * There was a core error when initiating the group.
      */
-    MALLOC,
+    CORE,
   }
 
   /**
