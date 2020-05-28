@@ -119,6 +119,9 @@ typedef enum Net_Packet_Type {
     NET_PACKET_ONION_RECV_2         = 0x9c,
     NET_PACKET_ONION_RECV_1         = 0x9d,
 
+    NET_PACKET_ANNOUNCE_REQUEST_OLD = 0x96, /* TODO: DEPRECATE */
+    NET_PACKET_ANNOUNCE_RSPONSE_OLD = 0x97, /* TODO: DEPRECATE */
+
     BOOTSTRAP_INFO_PACKET_ID        = 0xf1, /* Only used for bootstrap nodes */
 
     NET_PACKET_MAX                  = 0xff, /* This type must remain within a single uint8. */
@@ -150,10 +153,13 @@ typedef enum Net_Packet_Type {
     NET_PACKET_ONION_SEND_1         = 0x81,
     NET_PACKET_ONION_SEND_2         = 0x82,
 
-    NET_PACKET_ANNOUNCE_REQUEST     = 0x83,
-    NET_PACKET_ANNOUNCE_RESPONSE    = 0x84,
+    NET_PACKET_ANNOUNCE_REQUEST_OLD = 0x83, /* TODO: DEPRECATE */
+    NET_PACKET_ANNOUNCE_RSPONSE_OLD = 0x84, /* TODO: DEPRECATE */
+
     NET_PACKET_ONION_DATA_REQUEST   = 0x85,
     NET_PACKET_ONION_DATA_RESPONSE  = 0x86,
+    NET_PACKET_ANNOUNCE_REQUEST     = 0x87,
+    NET_PACKET_ANNOUNCE_RESPONSE    = 0x88,
 
     NET_PACKET_ONION_RECV_3         = 0x8c,
     NET_PACKET_ONION_RECV_2         = 0x8d,

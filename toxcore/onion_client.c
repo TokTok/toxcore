@@ -987,6 +987,75 @@ static int handle_announce_response(void *object, IP_Port source, const uint8_t 
 
     // TODO: LAN vs non LAN ips?, if we are connected only to LAN, are we offline?
     onion_c->last_packet_recv = mono_time_get(onion_c->mono_time);
+
+    return 0;
+}
+
+/* TODO: DEPRECATE */
+static int handle_announce_response_old(void *object, IP_Port source, const uint8_t *packet, uint16_t length,
+                                        void *userdata)
+{
+    Onion_Client *onion_c = (Onion_Client *)object;
+
+    if (length < ONION_ANNOUNCE_RESPONSE_MIN_SIZE || length > ONION_ANNOUNCE_RESPONSE_MAX_SIZE) {
+        return 1;
+    }
+
+    uint16_t len_nodes = length - ONION_ANNOUNCE_RESPONSE_MIN_SIZE;
+
+    uint8_t public_key[CRYPTO_PUBLIC_KEY_SIZE];
+    IP_Port ip_port;
+    uint32_t path_num;
+    uint32_t num = check_sendback(onion_c, packet + 1, public_key, &ip_port, &path_num);
+
+    if (num > onion_c->num_friends) {
+        return 1;
+    }
+
+    VLA(uint8_t, plain, 1 + ONION_PING_ID_SIZE + len_nodes);
+    int len;
+
+    if (num == 0) {
+        len = decrypt_data(public_key, nc_get_self_secret_key(onion_c->c),
+                           packet + 1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH,
+                           packet + 1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH + CRYPTO_NONCE_SIZE,
+                           length - (1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH + CRYPTO_NONCE_SIZE), plain);
+    } else {
+        if (onion_c->friends_list[num - 1].status == 0) {
+            return 1;
+        }
+
+        len = decrypt_data(public_key, onion_c->friends_list[num - 1].temp_secret_key,
+                           packet + 1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH,
+                           packet + 1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH + CRYPTO_NONCE_SIZE,
+                           length - (1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH + CRYPTO_NONCE_SIZE), plain);
+    }
+
+    if ((uint32_t)len != SIZEOF_VLA(plain)) {
+        return 1;
+    }
+
+    uint32_t path_used = set_path_timeouts(onion_c, num, path_num);
+
+    if (client_add_to_list(onion_c, num, public_key, ip_port, plain[0], plain + 1, path_used) == -1) {
+        return 1;
+    }
+
+    if (len_nodes != 0) {
+        Node_format nodes[MAX_SENT_NODES];
+        int num_nodes = unpack_nodes(nodes, MAX_SENT_NODES, nullptr, plain + 1 + ONION_PING_ID_SIZE, len_nodes, 0);
+
+        if (num_nodes <= 0) {
+            return 1;
+        }
+
+        if (client_ping_nodes(onion_c, num, nodes, num_nodes, source) == -1) {
+            return 1;
+        }
+    }
+
+    // TODO(irungentoo): LAN vs non LAN ips?, if we are connected only to LAN, are we offline?
+    onion_c->last_packet_recv = mono_time_get(onion_c->mono_time);
     return 0;
 }
 
@@ -1110,6 +1179,10 @@ static int handle_tcp_onion(void *object, const uint8_t *data, uint16_t length, 
 
     if (data[0] == NET_PACKET_ANNOUNCE_RESPONSE) {
         return handle_announce_response(object, ip_port, data, length, userdata);
+    }
+
+    if (data[0] == NET_PACKET_ANNOUNCE_RSPONSE_OLD) {
+        return handle_announce_response_old(object, ip_port, data, length, userdata);
     }
 
     if (data[0] == NET_PACKET_ONION_DATA_RESPONSE) {
@@ -1985,6 +2058,7 @@ Onion_Client *new_onion_client(const Logger *logger, Mono_Time *mono_time, Net_C
     new_symmetric_key(onion_c->secret_symmetric_key);
     crypto_new_keypair(onion_c->temp_public_key, onion_c->temp_secret_key);
     networking_registerhandler(onion_c->net, NET_PACKET_ANNOUNCE_RESPONSE, &handle_announce_response, onion_c);
+    networking_registerhandler(onion_c->net, NET_PACKET_ANNOUNCE_RSPONSE_OLD, &handle_announce_response_old, onion_c);
     networking_registerhandler(onion_c->net, NET_PACKET_ONION_DATA_RESPONSE, &handle_data_response, onion_c);
     oniondata_registerhandler(onion_c, ONION_DATA_DHTPK, &handle_dhtpk_announce, onion_c);
     cryptopacket_registerhandler(onion_c->dht, CRYPTO_PACKET_DHTPK, &handle_dht_dhtpk, onion_c);
@@ -2002,6 +2076,7 @@ void kill_onion_client(Onion_Client *onion_c)
     ping_array_kill(onion_c->announce_ping_array);
     realloc_onion_friends(onion_c, 0);
     networking_registerhandler(onion_c->net, NET_PACKET_ANNOUNCE_RESPONSE, nullptr, nullptr);
+    networking_registerhandler(onion_c->net, NET_PACKET_ANNOUNCE_RSPONSE_OLD, nullptr, nullptr);
     networking_registerhandler(onion_c->net, NET_PACKET_ONION_DATA_RESPONSE, nullptr, nullptr);
     oniondata_registerhandler(onion_c, ONION_DATA_DHTPK, nullptr, nullptr);
     cryptopacket_registerhandler(onion_c->dht, CRYPTO_PACKET_DHTPK, nullptr, nullptr);

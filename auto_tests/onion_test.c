@@ -134,6 +134,41 @@ static int handle_test_3(void *object, IP_Port source, const uint8_t *packet, ui
     return 0;
 }
 
+/* TODO: DEPRECATE */
+static int handle_test_3_old(void *object, IP_Port source, const uint8_t *packet, uint16_t length, void *userdata)
+{
+    Onion *onion = (Onion *)object;
+
+    if (length < ONION_ANNOUNCE_RESPONSE_MIN_SIZE || length > ONION_ANNOUNCE_RESPONSE_MAX_SIZE) {
+        return 1;
+    }
+
+    uint8_t plain[2 + CRYPTO_SHA256_SIZE];
+#if 0
+    print_client_id(packet, length);
+#endif
+    int len = decrypt_data(test_3_pub_key, dht_get_self_secret_key(onion->dht),
+                           packet + 1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH,
+                           packet + 1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH + CRYPTO_NONCE_SIZE,
+                           1 + CRYPTO_SHA256_SIZE + CRYPTO_MAC_SIZE, plain);
+
+    if (len == -1) {
+        return 1;
+    }
+
+
+    if (memcmp(packet + 1, sb_data, ONION_ANNOUNCE_SENDBACK_DATA_LENGTH) != 0) {
+        return 1;
+    }
+
+    memcpy(test_3_ping_id, plain + 1, CRYPTO_SHA256_SIZE);
+#if 0
+    print_client_id(test_3_ping_id, sizeof(test_3_ping_id));
+#endif
+    handled_test_3 = 1;
+    return 0;
+}
+
 static uint8_t nonce[CRYPTO_NONCE_SIZE];
 static int handled_test_4;
 static int handle_test_4(void *object, IP_Port source, const uint8_t *packet, uint16_t length, void *userdata)
@@ -215,6 +250,8 @@ static void test_basic(void)
         do_onion(onion2);
     } while (handled_test_1 == 0);
 
+    fprintf(stderr, "test 1 complete\n");
+
     networking_registerhandler(onion1->net, NET_PACKET_ANNOUNCE_RESPONSE, &handle_test_2, onion1);
     handled_test_2 = 0;
 
@@ -223,10 +260,13 @@ static void test_basic(void)
         do_onion(onion2);
     } while (handled_test_2 == 0);
 
+    fprintf(stderr, "test 2 complete\n");
+
     GC_Announces_List unused_var;
     Onion_Announce *onion1_a = new_onion_announce(mono_time1, onion1->dht, &unused_var);
     Onion_Announce *onion2_a = new_onion_announce(mono_time2, onion2->dht, &unused_var);
     networking_registerhandler(onion1->net, NET_PACKET_ANNOUNCE_RESPONSE, &handle_test_3, onion1);
+    networking_registerhandler(onion1->net, NET_PACKET_ANNOUNCE_RSPONSE_OLD, &handle_test_3_old, onion1);
     ck_assert_msg((onion1_a != nullptr) && (onion2_a != nullptr), "Onion_Announce failed initializing.");
     uint8_t zeroes[64] = {0};
     random_bytes(sb_data, sizeof(sb_data));
@@ -247,6 +287,8 @@ static void test_basic(void)
         do_onion(onion2);
         c_sleep(50);
     } while (handled_test_3 == 0);
+
+    fprintf(stderr, "test 3 complete\n");
 
     random_bytes(sb_data, sizeof(sb_data));
     memcpy(&s, sb_data, sizeof(uint64_t));
@@ -290,6 +332,8 @@ static void test_basic(void)
         do_onion(onion2);
         c_sleep(50);
     } while (handled_test_4 == 0);
+
+    fprintf(stderr, "test 4 complete\n");
 
     kill_onion_announce(onion2_a);
     kill_onion_announce(onion1_a);

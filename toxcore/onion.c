@@ -468,7 +468,9 @@ static int handle_send_2(void *object, IP_Port source, const uint8_t *packet, ui
         return 1;
     }
 
-    if (plain[SIZE_IPPORT] != NET_PACKET_ANNOUNCE_REQUEST &&
+    uint8_t packet_id = plain[SIZE_IPPORT];
+
+    if (!(packet_id == NET_PACKET_ANNOUNCE_REQUEST || packet_id == NET_PACKET_ANNOUNCE_REQUEST_OLD) &&
             plain[SIZE_IPPORT] != NET_PACKET_ONION_DATA_REQUEST) {
         return 1;
     }
@@ -516,8 +518,10 @@ static int handle_recv_3(void *object, IP_Port source, const uint8_t *packet, ui
         return 1;
     }
 
-    if (packet[1 + RETURN_3] != NET_PACKET_ANNOUNCE_RESPONSE &&
-            packet[1 + RETURN_3] != NET_PACKET_ONION_DATA_RESPONSE) {
+    uint8_t packet_id = packet[1 + RETURN_3];
+
+    if (packet_id != NET_PACKET_ANNOUNCE_RESPONSE && packet_id != NET_PACKET_ANNOUNCE_RSPONSE_OLD &&
+            packet_id != NET_PACKET_ONION_DATA_RESPONSE) {
         return 1;
     }
 
@@ -562,8 +566,10 @@ static int handle_recv_2(void *object, IP_Port source, const uint8_t *packet, ui
         return 1;
     }
 
-    if (packet[1 + RETURN_2] != NET_PACKET_ANNOUNCE_RESPONSE &&
-            packet[1 + RETURN_2] != NET_PACKET_ONION_DATA_RESPONSE) {
+    uint8_t packet_id = packet[1 + RETURN_2];
+
+    if (packet_id != NET_PACKET_ANNOUNCE_RESPONSE && packet_id != NET_PACKET_ANNOUNCE_RSPONSE_OLD &&
+            packet_id != NET_PACKET_ONION_DATA_RESPONSE) {
         return 1;
     }
 
@@ -608,8 +614,10 @@ static int handle_recv_1(void *object, IP_Port source, const uint8_t *packet, ui
         return 1;
     }
 
-    if (packet[1 + RETURN_1] != NET_PACKET_ANNOUNCE_RESPONSE &&
-            packet[1 + RETURN_1] != NET_PACKET_ONION_DATA_RESPONSE) {
+    uint8_t packet_id = packet[1 + RETURN_1];
+
+    if (packet_id != NET_PACKET_ANNOUNCE_RESPONSE && packet_id != NET_PACKET_ANNOUNCE_RSPONSE_OLD &&
+            packet_id != NET_PACKET_ONION_DATA_RESPONSE) {
         return 1;
     }
 

@@ -24,6 +24,9 @@
 #define ANNOUNCE_REQUEST_MIN_SIZE_RECV (ONION_ANNOUNCE_REQUEST_MIN_SIZE + ONION_RETURN_3)
 #define ANNOUNCE_REQUEST_MAX_SIZE_RECV (ONION_ANNOUNCE_REQUEST_MAX_SIZE + ONION_RETURN_3)
 
+/* TODO: DEPRECATE */
+#define ANNOUNCE_REQUEST_SIZE_RECV (ONION_ANNOUNCE_REQUEST_SIZE + ONION_RETURN_3)
+
 #define DATA_REQUEST_MIN_SIZE ONION_DATA_REQUEST_MIN_SIZE
 #define DATA_REQUEST_MIN_SIZE_RECV (DATA_REQUEST_MIN_SIZE + ONION_RETURN_3)
 
@@ -86,7 +89,7 @@ int create_announce_request(uint8_t *packet, uint16_t max_packet_length, const u
     memcpy(plain + ONION_PING_ID_SIZE + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_PUBLIC_KEY_SIZE, &sendback_data,
            sizeof(sendback_data));
 
-    packet[0] = NET_PACKET_ANNOUNCE_REQUEST;
+    packet[0] = NET_PACKET_ANNOUNCE_REQUEST_OLD;
     random_nonce(packet + 1);
 
     int len = encrypt_data(dest_client_id, secret_key, packet + 1, plain, sizeof(plain),
@@ -641,6 +644,108 @@ static int handle_announce_request(void *object, IP_Port source, const uint8_t *
     return 0;
 }
 
+/* TODO: DEPRECATE */
+static int handle_announce_request_old(void *object, IP_Port source, const uint8_t *packet, uint16_t length,
+                                       void *userdata)
+{
+    Onion_Announce *onion_a = (Onion_Announce *)object;
+
+    if (length != ANNOUNCE_REQUEST_SIZE_RECV) {
+        return 1;
+    }
+
+    const uint8_t *packet_public_key = packet + 1 + CRYPTO_NONCE_SIZE;
+    uint8_t shared_key[CRYPTO_SHARED_KEY_SIZE];
+    get_shared_key(onion_a->mono_time, &onion_a->shared_keys_recv, shared_key, dht_get_self_secret_key(onion_a->dht),
+                   packet_public_key);
+
+    uint8_t plain[ONION_PING_ID_SIZE + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_PUBLIC_KEY_SIZE +
+                                     ONION_ANNOUNCE_SENDBACK_DATA_LENGTH];
+    int len = decrypt_data_symmetric(shared_key, packet + 1, packet + 1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE,
+                                     ONION_PING_ID_SIZE + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_PUBLIC_KEY_SIZE + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH +
+                                     CRYPTO_MAC_SIZE, plain);
+
+    if ((uint32_t)len != sizeof(plain)) {
+        return 1;
+    }
+
+    uint8_t ping_id1[ONION_PING_ID_SIZE];
+    generate_ping_id(onion_a, mono_time_get(onion_a->mono_time), packet_public_key, source, ping_id1);
+
+    uint8_t ping_id2[ONION_PING_ID_SIZE];
+    generate_ping_id(onion_a, mono_time_get(onion_a->mono_time) + PING_ID_TIMEOUT, packet_public_key, source, ping_id2);
+
+    int index;
+
+    uint8_t *data_public_key = plain + ONION_PING_ID_SIZE + CRYPTO_PUBLIC_KEY_SIZE;
+
+    if (crypto_memcmp(ping_id1, plain, ONION_PING_ID_SIZE) == 0
+            || crypto_memcmp(ping_id2, plain, ONION_PING_ID_SIZE) == 0) {
+        index = add_to_entries(onion_a, source, packet_public_key, data_public_key,
+                               packet + (ANNOUNCE_REQUEST_SIZE_RECV - ONION_RETURN_3));
+    } else {
+        index = in_entries(onion_a, plain + ONION_PING_ID_SIZE);
+    }
+
+    /*Respond with a announce response packet*/
+    Node_format nodes_list[MAX_SENT_NODES];
+    unsigned int num_nodes =
+        get_close_nodes(onion_a->dht, plain + ONION_PING_ID_SIZE, nodes_list, net_family_unspec, ip_is_lan(source.ip), 1);
+    uint8_t nonce[CRYPTO_NONCE_SIZE];
+    random_nonce(nonce);
+
+    uint8_t pl[1 + ONION_PING_ID_SIZE + sizeof(nodes_list)];
+
+    if (index == -1) {
+        pl[0] = 0;
+        memcpy(pl + 1, ping_id2, ONION_PING_ID_SIZE);
+    } else {
+        if (public_key_cmp(onion_a->entries[index].public_key, packet_public_key) == 0) {
+            if (public_key_cmp(onion_a->entries[index].data_public_key, data_public_key) != 0) {
+                pl[0] = 0;
+                memcpy(pl + 1, ping_id2, ONION_PING_ID_SIZE);
+            } else {
+                pl[0] = 2;
+                memcpy(pl + 1, ping_id2, ONION_PING_ID_SIZE);
+            }
+        } else {
+            pl[0] = 1;
+            memcpy(pl + 1, onion_a->entries[index].data_public_key, CRYPTO_PUBLIC_KEY_SIZE);
+        }
+    }
+
+    int nodes_length = 0;
+
+    if (num_nodes != 0) {
+        nodes_length = pack_nodes(pl + 1 + ONION_PING_ID_SIZE, sizeof(nodes_list), nodes_list, num_nodes);
+
+        if (nodes_length <= 0) {
+            return 1;
+        }
+    }
+
+    uint8_t data[ONION_ANNOUNCE_RESPONSE_MAX_SIZE];
+    len = encrypt_data_symmetric(shared_key, nonce, pl, 1 + ONION_PING_ID_SIZE + nodes_length,
+                                 data + 1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH + CRYPTO_NONCE_SIZE);
+
+    if (len != 1 + ONION_PING_ID_SIZE + nodes_length + CRYPTO_MAC_SIZE) {
+        return 1;
+    }
+
+    data[0] = NET_PACKET_ANNOUNCE_RSPONSE_OLD;
+    memcpy(data + 1, plain + ONION_PING_ID_SIZE + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_PUBLIC_KEY_SIZE,
+           ONION_ANNOUNCE_SENDBACK_DATA_LENGTH);
+    memcpy(data + 1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH, nonce, CRYPTO_NONCE_SIZE);
+
+    if (send_onion_response(onion_a->net, source, data,
+                            1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH + CRYPTO_NONCE_SIZE + len,
+                            packet + (ANNOUNCE_REQUEST_SIZE_RECV - ONION_RETURN_3)) == -1) {
+        return 1;
+    }
+
+    return 0;
+}
+
 static int handle_data_request(void *object, IP_Port source, const uint8_t *packet, uint16_t length, void *userdata)
 {
     Onion_Announce *onion_a = (Onion_Announce *)object;
@@ -698,6 +803,7 @@ Onion_Announce *new_onion_announce(Mono_Time *mono_time, DHT *dht, GC_Announces_
     new_symmetric_key(onion_a->secret_bytes);
 
     networking_registerhandler(onion_a->net, NET_PACKET_ANNOUNCE_REQUEST, &handle_announce_request, onion_a);
+    networking_registerhandler(onion_a->net, NET_PACKET_ANNOUNCE_REQUEST_OLD, &handle_announce_request_old, onion_a);
     networking_registerhandler(onion_a->net, NET_PACKET_ONION_DATA_REQUEST, &handle_data_request, onion_a);
 
     return onion_a;
@@ -710,6 +816,8 @@ void kill_onion_announce(Onion_Announce *onion_a)
     }
 
     networking_registerhandler(onion_a->net, NET_PACKET_ANNOUNCE_REQUEST, nullptr, nullptr);
+    networking_registerhandler(onion_a->net, NET_PACKET_ANNOUNCE_REQUEST_OLD, nullptr, nullptr);
     networking_registerhandler(onion_a->net, NET_PACKET_ONION_DATA_REQUEST, nullptr, nullptr);
     free(onion_a);
 }
+
