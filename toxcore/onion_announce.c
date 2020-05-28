@@ -645,7 +645,8 @@ static int handle_announce_request(void *object, IP_Port source, const uint8_t *
 }
 
 /* TODO: DEPRECATE */
-static int handle_announce_request_leg(void *object, IP_Port source, const uint8_t *packet, uint16_t length, void *userdata)
+static int handle_announce_request_leg(void *object, IP_Port source, const uint8_t *packet, uint16_t length,
+                                       void *userdata)
 {
     Onion_Announce *onion_a = (Onion_Announce *)object;
 
