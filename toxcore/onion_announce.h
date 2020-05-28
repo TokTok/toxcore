@@ -62,8 +62,8 @@ int create_announce_request(uint8_t *packet, uint16_t max_packet_length, const u
 
 /* TODO: DEPRECATE */
 int create_announce_request_old(uint8_t *packet, uint16_t max_packet_length, const uint8_t *dest_client_id,
-                            const uint8_t *public_key, const uint8_t *secret_key, const uint8_t *ping_id, const uint8_t *client_id,
-                            const uint8_t *data_public_key, uint64_t sendback_data);
+                                const uint8_t *public_key, const uint8_t *secret_key, const uint8_t *ping_id, const uint8_t *client_id,
+                                const uint8_t *data_public_key, uint64_t sendback_data);
 
 int create_gca_announce_request(uint8_t *packet, uint16_t max_packet_length, const uint8_t *dest_client_id,
                                 const uint8_t *public_key, const uint8_t *secret_key, const uint8_t *ping_id,

@@ -630,15 +630,15 @@ static int client_send_announce_request(Onion_Client *onion_c, uint32_t num, IP_
 
     if (num == 0) {
         len = create_announce_request_old(request, ONION_ANNOUNCE_REQUEST_SIZE, dest_pubkey, nc_get_self_public_key(onion_c->c),
-                                      nc_get_self_secret_key(onion_c->c), ping_id, nc_get_self_public_key(onion_c->c),
-                                      onion_c->temp_public_key, sendback);
+                                          nc_get_self_secret_key(onion_c->c), ping_id, nc_get_self_public_key(onion_c->c),
+                                          onion_c->temp_public_key, sendback);
     } else {
         Onion_Friend *onion_friend = &onion_c->friends_list[num - 1];
 
         if (onion_friend->gc_data_length == 0) { // contact is a friend
             len = create_announce_request_old(request, ONION_ANNOUNCE_REQUEST_SIZE, dest_pubkey, onion_friend->temp_public_key,
-                                          onion_friend->temp_secret_key, ping_id, onion_friend->real_public_key,
-                                          zero_ping_id, sendback);
+                                              onion_friend->temp_secret_key, ping_id, onion_friend->real_public_key,
+                                              zero_ping_id, sendback);
         } else if (onion_friend->gc_data_length > 0)  { // contact is a gc
 
 #ifndef VANILLA_NACL
