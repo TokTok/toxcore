@@ -5117,6 +5117,7 @@ static int send_pending_handshake(const GC_Chat *chat, GC_Connection *gconn, uin
     return 0;
 }
 
+#define GC_TCP_RELAY_SEND_INTERVAL 120
 static void do_peer_connections(Messenger *m, int group_number)
 {
     GC_Chat *chat = gc_get_group(m->group_handler, group_number);
@@ -5139,8 +5140,12 @@ static void do_peer_connections(Messenger *m, int group_number)
 
         gcc_resend_packets(m, chat, i);
 
-        if (gconn->confirmed && chat->new_tcp_relay) {
-            send_gc_tcp_relays(m->mono_time, chat, gconn);
+        if (chat->new_tcp_relay || (gconn->tcp_relays_count == 0 &&
+                                    mono_time_is_timeout(chat->mono_time, gconn->last_sent_tcp_relays_time, GC_TCP_RELAY_SEND_INTERVAL))) {
+            if (gconn->confirmed) {
+                send_gc_tcp_relays(m->mono_time, chat, gconn);
+                gconn->last_sent_tcp_relays_time = mono_time_get(chat->mono_time);
+            }
         }
 
         gcc_check_received_array(m, group_number, i);   // may change peer numbers
