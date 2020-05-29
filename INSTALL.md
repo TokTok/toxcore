@@ -160,19 +160,18 @@ Tested on Windows 10.
 You will need a working Cygwin environment.
 
 - Download Cygwin ([x86](https://cygwin.com/setup-x86.exe)/[x64](https://cygwin.com/setup-x86_64.exe))
-
 - Search and select exactly these packages in Devel category:
-      - mingw64-i686-gcc-core (x86) / mingw64-x86_64-gcc-core (x64)
-      - mingw64-i686-gcc-g++ (x86) / mingw64-x86_64-gcc-g++ (x64)
-      - make
-      - cmake
-      - libtool
-      - autoconf
-      - automake
-      - tree
-      - curl
-      - perl
-      - yasm
+  - mingw64-i686-gcc-core (x86) / mingw64-x86_64-gcc-core (x64)
+  - mingw64-i686-gcc-g++ (x86) / mingw64-x86_64-gcc-g++ (x64)
+  - make
+  - cmake
+  - libtool
+  - autoconf
+  - automake
+  - tree
+  - curl
+  - perl
+  - yasm
 
 To handle Windows EOL correctly add to ~/.bash_profile
 
