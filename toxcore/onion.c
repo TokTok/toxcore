@@ -470,8 +470,8 @@ static int handle_send_2(void *object, IP_Port source, const uint8_t *packet, ui
 
     uint8_t packet_id = plain[SIZE_IPPORT];
 
-    if (!(packet_id == NET_PACKET_ANNOUNCE_REQUEST || packet_id == NET_PACKET_ANNOUNCE_REQUEST_OLD) &&
-            plain[SIZE_IPPORT] != NET_PACKET_ONION_DATA_REQUEST) {
+    if (packet_id != NET_PACKET_ANNOUNCE_REQUEST && packet_id != NET_PACKET_ANNOUNCE_REQUEST_OLD &&
+            packet_id != NET_PACKET_ONION_DATA_REQUEST) {
         return 1;
     }
 

@@ -250,7 +250,7 @@ static void test_basic(void)
         do_onion(onion2);
     } while (handled_test_1 == 0);
 
-    fprintf(stderr, "test 1 complete\n");
+    printf("test 1 complete\n");
 
     networking_registerhandler(onion1->net, NET_PACKET_ANNOUNCE_RESPONSE, &handle_test_2, onion1);
     handled_test_2 = 0;
@@ -260,7 +260,7 @@ static void test_basic(void)
         do_onion(onion2);
     } while (handled_test_2 == 0);
 
-    fprintf(stderr, "test 2 complete\n");
+    printf("test 2 complete\n");
 
     GC_Announces_List unused_var;
     Onion_Announce *onion1_a = new_onion_announce(mono_time1, onion1->dht, &unused_var);
@@ -288,7 +288,7 @@ static void test_basic(void)
         c_sleep(50);
     } while (handled_test_3 == 0);
 
-    fprintf(stderr, "test 3 complete\n");
+    printf("test 3 complete\n");
 
     random_bytes(sb_data, sizeof(sb_data));
     memcpy(&s, sb_data, sizeof(uint64_t));
@@ -333,7 +333,7 @@ static void test_basic(void)
         c_sleep(50);
     } while (handled_test_4 == 0);
 
-    fprintf(stderr, "test 4 complete\n");
+    printf("test 4 complete\n");
 
     kill_onion_announce(onion2_a);
     kill_onion_announce(onion1_a);

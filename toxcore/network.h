@@ -99,11 +99,6 @@ typedef enum Net_Packet_Type {
     NET_PACKET_GC_HANDSHAKE         = 0x62, /* Group chat handshake packet ID */
     NET_PACKET_GC_LOSSLESS          = 0x63, /* Group chat lossless packet ID */
     NET_PACKET_GC_LOSSY             = 0x64, /* Group chat lossy packet ID */
-    NET_PACKET_GCA_ANNOUNCE         = 0x65, /* Group announce announcement packet ID */
-    NET_PACKET_GCA_GET_NODES        = 0x66, /* Group announce get nodes request packet ID */
-    NET_PACKET_GCA_SEND_NODES       = 0x67, /* Group announce send nodes packet ID */
-    NET_PACKET_GCA_PING_REQUEST     = 0x68, /* Group announce ping request packet ID */
-    NET_PACKET_GCA_PING_RESPONSE    = 0x69, /* Group announce ping response packet ID */
 
     /* See: `docs/Prevent_Tracking.txt` and `onion.{c,h}` */
     NET_PACKET_ONION_SEND_INITIAL   = 0x8f,
@@ -115,12 +110,12 @@ typedef enum Net_Packet_Type {
     NET_PACKET_ONION_DATA_REQUEST   = 0x94,
     NET_PACKET_ONION_DATA_RESPONSE  = 0x95,
 
+    NET_PACKET_ANNOUNCE_REQUEST_OLD = 0x96, /* TODO: DEPRECATE */
+    NET_PACKET_ANNOUNCE_RSPONSE_OLD = 0x97, /* TODO: DEPRECATE */
+
     NET_PACKET_ONION_RECV_3         = 0x9b,
     NET_PACKET_ONION_RECV_2         = 0x9c,
     NET_PACKET_ONION_RECV_1         = 0x9d,
-
-    NET_PACKET_ANNOUNCE_REQUEST_OLD = 0x96, /* TODO: DEPRECATE */
-    NET_PACKET_ANNOUNCE_RSPONSE_OLD = 0x97, /* TODO: DEPRECATE */
 
     BOOTSTRAP_INFO_PACKET_ID        = 0xf1, /* Only used for bootstrap nodes */
 
@@ -142,11 +137,6 @@ typedef enum Net_Packet_Type {
     NET_PACKET_GC_HANDSHAKE         = 0x5a, /* Group chat handshake packet ID */
     NET_PACKET_GC_LOSSLESS          = 0x5b, /* Group chat lossless packet ID */
     NET_PACKET_GC_LOSSY             = 0x5c, /* Group chat lossy packet ID */
-    NET_PACKET_GCA_ANNOUNCE         = 0x5d, /* Group announce announcement packet ID */
-    NET_PACKET_GCA_GET_NODES        = 0x5e, /* Group announce get nodes request packet ID */
-    NET_PACKET_GCA_SEND_NODES       = 0x5f, /* Group announce send nodes packet ID */
-    NET_PACKET_GCA_PING_REQUEST     = 0x60, /* Group announce ping request packet ID */
-    NET_PACKET_GCA_PING_RESPONSE    = 0x61, /* Group announce ping response packet ID */
 
     /* See: `docs/Prevent_Tracking.txt` and `onion.{c,h}` */
     NET_PACKET_ONION_SEND_INITIAL   = 0x80,
