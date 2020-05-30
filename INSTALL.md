@@ -155,35 +155,38 @@ msbuild ALL_BUILD.vcxproj
 
 ###### MSYS/Cygwin
 
-Tested on Windows 10.
+Download Cygwin ([32-bit](https://cygwin.com/setup-x86.exe)/[64-bit](https://cygwin.com/setup-x86_64.exe))
 
-You will need a working Cygwin environment.
+Search and select exactly these packages in Devel category:
 
-- Download Cygwin ([x86](https://cygwin.com/setup-x86.exe)/[x64](https://cygwin.com/setup-x86_64.exe))
-- Search and select exactly these packages in Devel category:
-  - mingw64-i686-gcc-core (x86) / mingw64-x86_64-gcc-core (x64)
-  - mingw64-i686-gcc-g++ (x86) / mingw64-x86_64-gcc-g++ (x64)
-  - make
-  - cmake
-  - libtool
-  - autoconf
-  - automake
-  - tree
-  - curl
-  - perl
-  - yasm
+- mingw64-i686-gcc-core (32-bit) / mingw64-x86_64-gcc-core (64-bit)
+- mingw64-i686-gcc-g++ (32-bit) / mingw64-x86_64-gcc-g++ (64-bit)
+- make
+- cmake
+- libtool
+- autoconf
+- automake
+- tree
+- curl
+- perl
+- yasm
 
-To handle Windows EOL correctly add to ~/.bash_profile
+To handle Windows EOL correctly run the following in the Cygwin Terminal:
 
-```bash
+```sh
+echo '
 export SHELLOPTS
 set -o igncr
+' > ~/.bash_profile
 ```
 
-Open Cygwin Terminal in Toxcore folder and run `./other/windows_build_script_toxcore.sh`
-All Toxcore result files will be in `/root/prefix/` relatively to Cygwin folder (default `C:\cygwin64`).
+Download toxcore source code and extract it to a folder.
 
-Dependencies versions could be customized in `windows_build_script_toxcore.sh` and described in the section below.
+Open Cygwin Terminal in the toxcore folder and run `./other/windows_build_script_toxcore.sh` to start the build process.
+
+Toxcore build result files will appear in `/root/prefix/` relatively to Cygwin folder (default `C:\cygwin64`).
+
+Dependency versions can be customized in `./other/windows_build_script_toxcore.sh` and described in the section below.
 
 
 ##### Cross-compiling from Linux
