@@ -26,7 +26,7 @@
 #include <omp.h>
 #define NUM_THREADS() ((unsigned) omp_get_max_threads())
 #else
-    NUM_THREADS() (1U)
+#define NUM_THREADS() (1U)
 #endif
 
 static void print_key(const uint8_t *client_id)
