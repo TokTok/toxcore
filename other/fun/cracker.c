@@ -137,7 +137,7 @@ int main(int argc, char *argv[])
     uint64_t *counter = priv_key_shadow + 2;
 
     // Can't check this case inside the loop because of uint64_t overflow
-    *counter = UINT64_MAX;
+    *counter += UINT64_MAX;
 
     uint32_t longest_match = 0;
 
@@ -158,45 +158,41 @@ int main(int argc, char *argv[])
         }
     }
 
-    // Finishes a batch every ~5s on my PC
-    uint64_t batch_size = 32768 * NUM_THREADS();
+    // Finishes a batch every ~10s on my PC
+    uint64_t batch_size = (UINT64_C(1) << 17) * NUM_THREADS();
 
     double seconds_passed = 0.0;
     double old_seconds_passed = seconds_passed;
 
     for(uint64_t tries = 0; tries < UINT64_MAX; tries += batch_size) {
-        uint32_t l_longest_match = longest_match;
-#pragma omp parallel for firstprivate(priv_key_shadow, l_longest_match) shared(longest_match, tries, batch_size, hex_prefix, prefix_chars_len) schedule(static) default(none)
+#pragma omp parallel for firstprivate(priv_key_shadow) shared(longest_match, tries, batch_size, hex_prefix, prefix_chars_len) schedule(static) default(none)
         for (uint64_t batch = tries; batch < (tries + batch_size); batch++) {
             uint8_t *priv_key = (uint8_t *) priv_key_shadow;
             uint64_t *counter = priv_key_shadow + 2;
-            *counter = batch;
+            *counter += batch;
             uint8_t pub_key[KEY_LEN] = {0};
 
             crypto_scalarmult_curve25519_base(pub_key, priv_key);
 
             uint32_t matching = (uint32_t) match_hex_prefix(pub_key, hex_prefix, prefix_chars_len);
 
-            // Fast local compare
+            // Global compare and update
+            uint32_t l_longest_match;
+            #pragma omp atomic read
+            l_longest_match = longest_match;
+
             if (matching > l_longest_match) {
+                #pragma omp atomic write
+                longest_match = matching;
 
-                // Global compare and update
-                #pragma omp atomic read
-                l_longest_match = longest_match;
-
-                if (matching > l_longest_match) {
-                    #pragma omp atomic write
-                    longest_match = matching;
-
-                    #pragma omp critical
-                    {
-                        printf("Longest match after ~%e tries\n", (double)batch);
-                        printf("Public key: ");
-                        print_key(pub_key);
-                        printf("\nSecret key: ");
-                        print_key(priv_key);
-                        printf("\n");
-                    }
+                #pragma omp critical
+                {
+                    printf("Longest match after ~%e tries\n", (double)batch);
+                    printf("Public key: ");
+                    print_key(pub_key);
+                    printf("\nSecret key: ");
+                    print_key(priv_key);
+                    printf("\n");
                 }
             }
         }
