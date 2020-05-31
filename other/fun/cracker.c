@@ -43,8 +43,9 @@ static size_t hex_string_to_bin(const char *hex_string, size_t hex_len, uint8_t 
     const char *pos = hex_string;
     // make even
 
-    for (i = 0; i < hex_len/2; ++i, pos += 2) {
+    for (i = 0; i < hex_len / 2; ++i, pos += 2) {
         uint8_t val;
+
         if (sscanf(pos, "%02hhx", &val) != 1) {
             return 0;
         }
@@ -52,13 +53,14 @@ static size_t hex_string_to_bin(const char *hex_string, size_t hex_len, uint8_t 
         bytes[i] = val;
     }
 
-    if (i*2 < hex_len) {
+    if (i * 2 < hex_len) {
         uint8_t val;
+
         if (sscanf(pos, "%hhx", &val) != 1) {
             return 0;
         }
 
-        bytes[i] = (uint8_t) (val << 4);
+        bytes[i] = (uint8_t)(val << 4);
         ++i;
     }
 
@@ -70,14 +72,17 @@ static size_t match_hex_prefix(const uint8_t *key, const uint8_t *prefix, size_t
     size_t same = 0;
     uint8_t diff = 0;
     size_t i;
-    for(i = 0; i < prefix_len / 2; i++) {
+
+    for (i = 0; i < prefix_len / 2; i++) {
         diff = key[i] ^ prefix[i];
+
         // First check high nibble
-        if((diff & 0xF0) == 0) {
+        if ((diff & 0xF0) == 0) {
             same++;
         }
+
         // Then low nibble
-        if(diff == 0) {
+        if (diff == 0) {
             same++;
         } else {
             break;
@@ -87,8 +92,9 @@ static size_t match_hex_prefix(const uint8_t *key, const uint8_t *prefix, size_t
     // check last high nibble
     if ((prefix_len % 2) && diff == 0) {
         diff = key[i] ^ prefix[i];
+
         // First check high nibble
-        if((diff & 0xF0) == 0) {
+        if ((diff & 0xF0) == 0) {
             same++;
         }
     }
@@ -117,6 +123,7 @@ int main(int argc, char *argv[])
     uint8_t hex_prefix[8] = {0};
 
     size_t prefix_len = hex_string_to_bin(argv[1], prefix_chars_len, hex_prefix);
+
     if (prefix_len == 0) {
         printf("Invalid hex key specified\n");
         return -1;
@@ -126,7 +133,7 @@ int main(int argc, char *argv[])
 
     time_t start_time = time(NULL);
     uint8_t pub_key[KEY_LEN];
-    uint64_t priv_key_shadow[KEY_LEN/8];
+    uint64_t priv_key_shadow[KEY_LEN / 8];
     uint8_t *priv_key = (uint8_t *) priv_key_shadow;
     randombytes(priv_key, 32);
 
@@ -144,6 +151,7 @@ int main(int argc, char *argv[])
     /* Maybe we're lucky */
     crypto_scalarmult_curve25519_base(pub_key, priv_key);
     uint32_t matching = (uint32_t) match_hex_prefix(pub_key, hex_prefix, prefix_chars_len);
+
     if (matching > 0) {
         longest_match = matching;
         printf("Longest match after ~1 tries\n");
@@ -152,6 +160,7 @@ int main(int argc, char *argv[])
         printf("\nSecret key: ");
         print_key(priv_key);
         printf("\n");
+
         if (longest_match >= prefix_chars_len) {
             printf("Found matching prefix, exiting...\n");
             return 0;
@@ -164,8 +173,9 @@ int main(int argc, char *argv[])
     double seconds_passed = 0.0;
     double old_seconds_passed = seconds_passed;
 
-    for(uint64_t tries = 0; tries < UINT64_MAX; tries += batch_size) {
-#pragma omp parallel for firstprivate(priv_key_shadow) shared(longest_match, tries, batch_size, hex_prefix, prefix_chars_len) schedule(static) default(none)
+    for (uint64_t tries = 0; tries < UINT64_MAX; tries += batch_size) {
+        #pragma omp parallel for firstprivate(priv_key_shadow) shared(longest_match, tries, batch_size, hex_prefix, prefix_chars_len) schedule(static) default(none)
+
         for (uint64_t batch = tries; batch < (tries + batch_size); batch++) {
             uint8_t *priv_key = (uint8_t *) priv_key_shadow;
             uint64_t *counter = priv_key_shadow + 2;
@@ -200,14 +210,14 @@ int main(int argc, char *argv[])
         seconds_passed = difftime(time(NULL), start_time);
 
         if (longest_match >= prefix_chars_len) {
-            printf("Runtime: %lus, Calculating %e keys/s\n", (unsigned long) seconds_passed, (tries + batch_size)/seconds_passed);
+            printf("Runtime: %lus, Calculating %e keys/s\n", (unsigned long) seconds_passed, (tries + batch_size) / seconds_passed);
             printf("Found matching prefix, exiting...\n");
             return 0;
         }
 
         if (seconds_passed - old_seconds_passed > 5.0) {
             old_seconds_passed = seconds_passed;
-            printf("Runtime: %lus, Calculating %e keys/s\n", (unsigned long) seconds_passed, (tries + batch_size)/seconds_passed);
+            printf("Runtime: %lus, Calculating %e keys/s\n", (unsigned long) seconds_passed, (tries + batch_size) / seconds_passed);
             fflush(stdout);
         }
 
