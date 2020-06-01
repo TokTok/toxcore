@@ -4246,6 +4246,7 @@ static int handle_gc_handshake_response(const Messenger *m, int group_number, co
             } else {
                 ret = send_gc_peer_exchange(m->group_handler, chat, gconn);
             }
+
             break;
 
         default:
