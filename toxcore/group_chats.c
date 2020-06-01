@@ -1072,8 +1072,9 @@ static int handle_gc_sync_response(Messenger *m, int group_number, int peer_numb
         return -1;
     }
 
-    chat->connection_state = CS_CONNECTED;
-    send_gc_peer_exchange(c, chat, gconn);
+    if (chat->connection_state == CS_CONNECTED) {
+        send_gc_peer_exchange(c, chat, gconn);
+    }
 
     if (c->self_join && chat->time_connected == 0) {
         (*c->self_join)(m, group_number, c->self_join_userdata);
@@ -1131,6 +1132,10 @@ static int handle_gc_sync_request(const Messenger *m, int group_number, int peer
     const GC_Chat *chat = gc_get_group(m->group_handler, group_number);
 
     if (chat == nullptr) {
+        return -1;
+    }
+
+    if (chat->connection_state != CS_CONNECTED) {
         return -1;
     }
 
@@ -1377,7 +1382,11 @@ static int handle_gc_invite_response(const Messenger *m, int group_number, GC_Co
         sync_flags = 0xffff;
     }
 
-    return send_gc_sync_request(chat, gconn, sync_flags);
+    if (chat->connection_state != CS_CONNECTED || get_gc_confirmed_numpeers(chat) <= 1) {
+        return send_gc_sync_request(chat, gconn, sync_flags);
+    }
+
+    return 0;
 }
 
 static int handle_gc_invite_response_reject(Messenger *m, int group_number, const uint8_t *data, uint32_t length)
@@ -1441,6 +1450,10 @@ static int handle_gc_invite_request(Messenger *m, int group_number, uint32_t pee
     const GC_Chat *chat = gc_get_group(c, group_number);
 
     if (chat == nullptr) {
+        return -1;
+    }
+
+    if (chat->connection_state != CS_CONNECTED) {
         return -1;
     }
 
@@ -1882,6 +1895,7 @@ static int handle_gc_peer_info_response(Messenger *m, int group_number, uint32_t
         (*c->peer_join)(m, group_number, chat->group[peer_number].peer_id, c->peer_join_userdata);
     }
 
+    gconn->handshaked = true;
     gconn->confirmed = true;
 
     set_peers_checksum(chat);
@@ -2220,6 +2234,8 @@ static int handle_gc_sanctions_list(Messenger *m, int group_number, uint32_t pee
             chat->group[0].role = GR_USER;
         }
     }
+
+    chat->connection_state = CS_CONNECTED;
 
     return 0;
 }
@@ -4138,10 +4154,6 @@ static int send_gc_handshake_packet(const GC_Chat *chat, uint32_t peer_number, u
         return -1;
     }
 
-    if (request_type == HS_PEER_INFO_EXCHANGE) {
-        gconn->handshaked = true;
-    }
-
     if (gconn->is_pending_handshake_response) {
         gcc_set_send_message_id(gconn, 3);  // handshake response is always second packet
     }  else {
@@ -4218,6 +4230,7 @@ static int handle_gc_handshake_response(const Messenger *m, int group_number, co
 
     gconn->received_message_id = 2;  // handshake response is always second packet
     gconn->handshaked = true;
+
     gc_send_hs_response_ack(chat, gconn);
 
     int ret;
@@ -4228,7 +4241,11 @@ static int handle_gc_handshake_response(const Messenger *m, int group_number, co
             break;
 
         case HS_PEER_INFO_EXCHANGE:
-            ret = send_gc_peer_exchange(m->group_handler, chat, gconn);
+            if (chat->connection_state != CS_CONNECTED) {
+                ret = -1;
+            } else {
+                ret = send_gc_peer_exchange(m->group_handler, chat, gconn);
+            }
             break;
 
         default:
@@ -4301,16 +4318,6 @@ static int handle_gc_handshake_request(Messenger *m, int group_number, const IP_
         }
 
         is_new_peer = true;
-    } else  {
-        GC_Connection *gconn = gcc_get_connection(chat, peer_number);
-
-        if (gconn == nullptr) {
-            return -1;
-        }
-
-        if (gconn->handshaked) {
-            return -1;
-        }
     }
 
     GC_Connection *gconn = gcc_get_connection(chat, peer_number);
@@ -4780,7 +4787,7 @@ static int handle_gc_udp_packet(void *object, IP_Port ipp, const uint8_t *packet
     const GC_Chat *chat = get_chat_by_hash(m->group_handler, chat_id_hash);
 
     if (chat == nullptr) {
-        LOGGER_ERROR(m->log, "get_chat_by_hash failed in handle_gc_udp_packet (type %u)", packet[0]);
+        LOGGER_ERROR(m->log, "get_chat_by_hash failed (type %u)", packet[0]);
         return -1;
     }
 
@@ -5475,7 +5482,7 @@ static int create_new_group(GC_Session *c, const uint8_t *nick, size_t nick_leng
 
     chat->group_number = group_number;
     chat->numpeers = 0;
-    chat->connection_state = CS_CONNECTING;
+    chat->connection_state = CS_CONNECTED;
     chat->net = m->net;
     chat->mono_time = m->mono_time;
     chat->logger = m->log;
@@ -5594,7 +5601,6 @@ int gc_group_load(GC_Session *c, const Saved_Group *save, int group_number)
 
     chat->group_number = group_number;
     chat->numpeers = 0;
-    chat->connection_state = is_active_chat ? CS_CONNECTING : CS_DISCONNECTED;
     chat->join_type = HJ_PRIVATE;
     chat->net = m->net;
     chat->mono_time = m->mono_time;
@@ -5632,6 +5638,8 @@ int gc_group_load(GC_Session *c, const Saved_Group *save, int group_number)
     chat->chat_id_hash = get_chat_id_hash(get_chat_id(chat->chat_public_key));
     chat->self_public_key_hash = get_peer_key_hash(chat->self_public_key);
 
+    chat->connection_state = chat->shared_state.version == 0 ? CS_CONNECTING : CS_CONNECTED;
+
     if (peer_add(m, group_number, nullptr, save->self_public_key) != 0) {
         return -1;
     }
@@ -5654,6 +5662,7 @@ int gc_group_load(GC_Session *c, const Saved_Group *save, int group_number)
     }
 
     if (!is_active_chat) {
+        chat->connection_state = CS_DISCONNECTED;
         chat->save = (Saved_Group *)malloc(sizeof(Saved_Group));
 
         if (chat->save == nullptr) {

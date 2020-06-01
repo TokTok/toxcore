@@ -33,7 +33,7 @@
 #define GC_PING_TIMEOUT 12
 #define GC_SEND_IP_PORT_INTERVAL (GC_PING_TIMEOUT * 5)
 #define GC_CONFIRMED_PEER_TIMEOUT (GC_PING_TIMEOUT * 6 + 10)
-#define GC_UNCONFIRMED_PEER_TIMEOUT GC_PING_TIMEOUT
+#define GC_UNCONFIRMED_PEER_TIMEOUT (GC_PING_TIMEOUT * 2)
 
 #define GC_JOIN_DATA_LENGTH (ENC_PUBLIC_KEY + CHAT_ID_SIZE)
 
@@ -99,9 +99,16 @@ typedef enum Group_Peer_Status {
 } Group_Peer_Status;
 
 typedef enum GC_Conn_State {
+    /* The group index is vacant */
     CS_NONE,
+
+    /* Not connected or attempting to connect to other peers */
     CS_DISCONNECTED,
+
+    /* Attempting to connect to other peers but does not yet have a valid shared state */
     CS_CONNECTING,
+
+    /* Has a valid shared state and is connected or attempting to connect to other peers */
     CS_CONNECTED,
     CS_INVALID,
 } GC_Conn_State;
