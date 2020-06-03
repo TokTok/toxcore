@@ -4309,6 +4309,7 @@ static int handle_gc_handshake_request(Messenger *m, int group_number, const IP_
         }
 
         if (gconn->handshaked) {
+            gconn->handshaked = false;
             return -1;
         }
     }
@@ -4386,15 +4387,7 @@ static int handle_gc_handshake_packet(Messenger *m, const GC_Chat *chat, const I
     int plain_len = unwrap_group_handshake_packet(m->log, chat->self_secret_key, sender_pk, data, SIZEOF_VLA(data), packet,
                     length);
 
-    // probably got multiple announcements from the same peer with a differet session key
     if (plain_len != SIZEOF_VLA(data)) {
-        int peer_number = get_peernum_of_enc_pk(chat, sender_pk, false);
-        GC_Connection *gconn = gcc_get_connection(chat, peer_number);
-
-        if (gconn != nullptr) {
-            gcc_mark_for_deletion(gconn, chat->tcp_conn, GC_EXIT_TYPE_DISCONNECTED, nullptr, 0);
-        }
-
         LOGGER_DEBUG(m->log, "Failed to unwrap handshake packet");
         return -1;
     }
