@@ -136,9 +136,9 @@ typedef enum Group_Packet_Type {
     GP_PING                     = 1,
     GP_MESSAGE_ACK              = 2,
     GP_INVITE_RESPONSE_REJECT   = 3,
-    GP_TCP_RELAYS               = 4,
 
     /* lossless packets */
+    GP_TCP_RELAYS               = 241,
     GP_CUSTOM_PACKET            = 242,
     GP_BROADCAST                = 243,
     GP_PEER_INFO_REQUEST        = 244,
@@ -177,7 +177,7 @@ typedef struct GC_Moderation {
     struct GC_Sanction_Creds sanctions_creds;
     uint32_t    num_sanctions;
 
-    uint8_t     **mod_list;    /* Array of public signature keys of all the mods */
+    uint8_t     **mod_list;  /* Array of public signature keys of all the mods */
     uint16_t    num_mods;
 } GC_Moderation;
 

@@ -1276,7 +1276,7 @@ static int send_gc_tcp_relays(const Mono_Time *mono_time, const GC_Chat *chat, G
 
     length += nodes_len;
 
-    if (send_lossy_group_packet(chat, gconn, data, length, GP_TCP_RELAYS) == -1) {
+    if (send_lossless_group_packet(chat, gconn, data, length, GP_TCP_RELAYS) == -1) {
         LOGGER_ERROR(chat->logger, "Failed to send tcp relays");
         return -1;
     }
@@ -4481,6 +4481,9 @@ int handle_gc_lossless_helper(Messenger *m, int group_number, uint32_t peer_numb
         case GP_HS_RESPONSE_ACK:
             return handle_gc_hs_response_ack(m, group_number, gconn);
 
+        case GP_TCP_RELAYS:
+            return handle_gc_tcp_relays(m, group_number, gconn, data, length);
+
         case GP_CUSTOM_PACKET:
             return handle_gc_custom_packet(m, group_number, peer_number, data, length);
 
@@ -4657,10 +4660,6 @@ static int handle_gc_lossy_message(Messenger *m, const GC_Chat *chat, const uint
 
         case GP_INVITE_RESPONSE_REJECT:
             ret = handle_gc_invite_response_reject(m, chat->group_number, real_data, len);
-            break;
-
-        case GP_TCP_RELAYS:
-            ret = handle_gc_tcp_relays(m, chat->group_number, gconn, real_data, len);
             break;
 
         case GP_CUSTOM_PACKET:
