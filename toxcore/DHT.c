@@ -762,7 +762,7 @@ bool add_to_list(Node_format *nodes_list, uint32_t length, const uint8_t *pk, IP
             nodes_list[i].ip_port = ip_port;
 
             if (i != length - 1) {
-                add_to_list(nodes_list, length, pk_bak, ip_port_bak, cmp_pk);
+                add_to_list(nodes_list + (i + 1), length - (i + 1）, pk_bak, ip_port_bak, cmp_pk);
             }
 
             return true;
