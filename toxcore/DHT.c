@@ -757,21 +757,22 @@ bool add_to_list(Node_format *nodes_list, uint32_t length, const uint8_t *pk, IP
     uint8_t pk_new[CRYPTO_PUBLIC_KEY_SIZE];
     memcpy(pk_new, pk, CRYPTO_PUBLIC_KEY_SIZE);
     IP_Port ip_port_new = ip_port;
-    
+
     for (uint32_t i = 0; i < length; ++i) {
         if (id_closest(cmp_pk, nodes_list[i].public_key, pk_new) == 2) {
             uint8_t pk_bak[CRYPTO_PUBLIC_KEY_SIZE];
             memcpy(pk_bak, nodes_list[i].public_key, CRYPTO_PUBLIC_KEY_SIZE);
             memcpy(nodes_list[i].public_key, pk_new, CRYPTO_PUBLIC_KEY_SIZE);
             memcpy(pk_new, pk_bak, CRYPTO_PUBLIC_KEY_SIZE);
-            
+
             const IP_Port ip_port_bak = nodes_list[i].ip_port;
             nodes_list[i].ip_port = ip_port_new;
             ip_port_new = ip_port_bak;
-            
+
             ret = true;
         }
     }
+
     return ret;
 }
 
