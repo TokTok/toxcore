@@ -2400,11 +2400,12 @@ static unsigned int send_lossy_all_connections(const Group_Chats *g_c, const Gro
         return sent;
     }
 
-    unsigned int to_send= connected_closest[0];
+    unsigned int to_send = connected_closest[0];
     uint64_t comp_val_old = (uint64_t) -1;
 
     for (unsigned int i = 0; i < num_connected_closest; ++i) {
         uint8_t real_pk[CRYPTO_PUBLIC_KEY_SIZE] = {0};
+
         if (get_friendcon_public_keys(real_pk, nullptr, g_c->fr_c, g->connections[connected_closest[i]].number) != 0) {
             continue;
         }
