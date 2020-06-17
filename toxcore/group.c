@@ -250,7 +250,7 @@ static uint64_t calculate_comp_value(const uint8_t *pk1, const uint8_t *pk2)
         cmp2 = (cmp2 << 8) + (uint64_t)pk2[i];
     }
 
-    return cmp1 - cmp2;
+    return cmp1 > cmp2 ? cmp1 - cmp2 : cmp2 - cmp1;
 }
 
 typedef enum Groupchat_Closest_Change {
@@ -2373,7 +2373,7 @@ static unsigned int send_lossy_all_connections(const Group_Chats *g_c, const Gro
 {
     unsigned int sent = 0;
     unsigned int num_connected_closest = 0;
-    unsigned int connected_closest[DESIRED_CLOSEST];
+    unsigned int connected_closest[MAX_GROUP_CONNECTIONS];
 
     for (unsigned int i = 0; i < MAX_GROUP_CONNECTIONS; ++i) {
         if (g->connections[i].type != GROUPCHAT_CONNECTION_ONLINE) {
@@ -2400,31 +2400,26 @@ static unsigned int send_lossy_all_connections(const Group_Chats *g_c, const Gro
         return sent;
     }
 
-    unsigned int to_send[2] = {0, 0};
-    uint64_t comp_val_old[2] = {(uint64_t) -1, (uint64_t) -1};
+    unsigned int to_send= connected_closest[0];
+    uint64_t comp_val_old = (uint64_t) -1;
 
     for (unsigned int i = 0; i < num_connected_closest; ++i) {
         uint8_t real_pk[CRYPTO_PUBLIC_KEY_SIZE] = {0};
-        get_friendcon_public_keys(real_pk, nullptr, g_c->fr_c, g->connections[connected_closest[i]].number);
+        if (get_friendcon_public_keys(real_pk, nullptr, g_c->fr_c, g->connections[connected_closest[i]].number) != 0) {
+            continue;
+        }
+
         const uint64_t comp_val = calculate_comp_value(g->real_pk, real_pk);
 
-        for (uint8_t j = 0; j < 2; ++j) {
-            if (j ? (comp_val > comp_val_old[j]) : (comp_val < comp_val_old[j])) {
-                to_send[j] = connected_closest[i];
-                comp_val_old[j] = comp_val;
-            }
+        if (comp_val_old > comp_val) {
+            comp_val_old = comp_val;
+            to_send = connected_closest[i];
         }
     }
 
-    for (uint8_t j = 0; j < 2; ++j) {
-        if (j && to_send[1] == to_send[0]) {
-            break;
-        }
-
-        if (send_lossy_group_peer(g_c->fr_c, g->connections[to_send[j]].number, PACKET_ID_LOSSY_CONFERENCE,
-                                  g->connections[to_send[j]].group_number, data, length)) {
-            ++sent;
-        }
+    if (send_lossy_group_peer(g_c->fr_c, g->connections[to_send].number, PACKET_ID_LOSSY_CONFERENCE,
+                              g->connections[to_send].group_number, data, length)) {
+        ++sent;
     }
 
     return sent;
