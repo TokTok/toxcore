@@ -5314,15 +5314,14 @@ static void do_self_connection(Messenger *m, GC_Chat *chat)
     uint16_t tcp_connections = tcp_connected_relays_count(chat->tcp_conn);
     unsigned int self_udp_status = ipport_self_copy(m->dht, &chat->self_ip_port);
 
-    if ((chat->self_udp_status != self_udp_status) || (chat->tcp_connections != tcp_connections)) {
-        chat->self_udp_status = (Self_UDP_Status) self_udp_status;
-        chat->tcp_connections = tcp_connections;
-
+    if (chat->self_udp_status != self_udp_status || tcp_connections < chat->tcp_connections > ) {
         if (self_udp_status != SELF_UDP_STATUS_NONE || tcp_connections > 0) {
             chat->update_self_announces = true;
         }
     }
 
+    chat->self_udp_status = (Self_UDP_Status) self_udp_status;
+    chat->tcp_connections = tcp_connections;
     chat->last_self_announce_check = mono_time_get(chat->mono_time);
 }
 
