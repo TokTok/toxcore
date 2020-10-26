@@ -466,7 +466,9 @@ static int prune_gc_mod_list(GC_Chat *chat)
         return -1;
     }
 
-    mod_list_make_hash(chat, chat->shared_state.mod_list_hash);
+    if (mod_list_make_hash(chat, chat->shared_state.mod_list_hash) == -1) {
+        return -1;
+    }
 
     if (sign_gc_shared_state(chat) == -1) {
         return -1;
@@ -867,12 +869,19 @@ static int wrap_group_packet(const Logger *logger, const uint8_t *self_pk, const
     random_nonce(nonce);
 
     uint16_t plain_len = padding_len + enc_header_len + length;
-    VLA(uint8_t, encrypt, plain_len + CRYPTO_MAC_SIZE);
+    size_t encrypt_buf_size = plain_len + CRYPTO_MAC_SIZE;
+
+    uint8_t *encrypt = (uint8_t *)malloc(encrypt_buf_size);
+
+    if (encrypt == nullptr) {
+        return -1;
+    }
 
     int enc_len = encrypt_data_symmetric(shared_key, nonce, plain, plain_len, encrypt);
 
-    if (enc_len != SIZEOF_VLA(encrypt)) {
-        LOGGER_ERROR(logger, "encrypt failed. packet type: %d, enc_len: %d", packet_type, enc_len);
+    if (enc_len != encrypt_buf_size) {
+        LOGGER_ERROR(logger, "encryption failed. packet type: %d, enc_len: %d", packet_type, enc_len);
+        free(encrypt);
         return -1;
     }
 
@@ -881,6 +890,8 @@ static int wrap_group_packet(const Logger *logger, const uint8_t *self_pk, const
     memcpy(packet + sizeof(uint8_t) + HASH_ID_BYTES, self_pk, ENC_PUBLIC_KEY);
     memcpy(packet + sizeof(uint8_t) + HASH_ID_BYTES + ENC_PUBLIC_KEY, nonce, CRYPTO_NONCE_SIZE);
     memcpy(packet + sizeof(uint8_t) + HASH_ID_BYTES + ENC_PUBLIC_KEY + CRYPTO_NONCE_SIZE, encrypt, enc_len);
+
+    free(encrypt);
 
     return 1 + HASH_ID_BYTES + ENC_PUBLIC_KEY + CRYPTO_NONCE_SIZE + enc_len;
 }
@@ -961,12 +972,21 @@ static int send_lossless_group_packet(const GC_Chat *chat, GC_Connection *gconn,
 static int send_gc_sync_request(const GC_Chat *chat, GC_Connection *gconn, uint16_t sync_flags)
 {
     uint32_t length = HASH_ID_BYTES + sizeof(uint16_t) + MAX_GC_PASSWORD_SIZE;
-    VLA(uint8_t, data, length);
+    uint8_t *data = (uint8_t *)malloc(length);
+
+    if (data == nullptr) {
+        return -1;
+    }
+
     net_pack_u32(data, chat->self_public_key_hash);
     net_pack_u16(data + HASH_ID_BYTES, sync_flags);
     memcpy(data + HASH_ID_BYTES + sizeof(uint16_t), chat->shared_state.password, MAX_GC_PASSWORD_SIZE);
 
-    return send_lossless_group_packet(chat, gconn, data, length, GP_SYNC_REQUEST);
+    int ret = send_lossless_group_packet(chat, gconn, data, length, GP_SYNC_REQUEST);
+
+    free(data);
+
+    return ret;
 }
 
 static int send_gc_sync_response(const GC_Chat *chat, GC_Connection *gconn, const uint8_t *data, uint32_t length)
@@ -1346,15 +1366,24 @@ static int send_gc_invite_request(const GC_Chat *chat, GC_Connection *gconn)
     return send_lossless_group_packet(chat, gconn, data, length, GP_INVITE_REQUEST);
 }
 
-/* Return -1 if fail
- * Return 0 if success
+/* Return 0 on success.
+ * Return -1 on failure.
  */
 static int send_gc_invite_response(const GC_Chat *chat, GC_Connection *gconn)
 {
     uint32_t length = HASH_ID_BYTES;
-    VLA(uint8_t,  data, length);
+    uint8_t *data = (uint8_t *)malloc(length);
+
+    if (data == nullptr) {
+        return -1;
+    }
+
     net_pack_u32(data, chat->self_public_key_hash);
-    return send_lossless_group_packet(chat, gconn, data, length, GP_INVITE_RESPONSE);
+    int ret = send_lossless_group_packet(chat, gconn, data, length, GP_INVITE_RESPONSE);
+
+    free(data);
+
+    return ret;
 }
 
 /* Return -1 if fail
@@ -1415,11 +1444,20 @@ static int handle_gc_invite_response_reject(Messenger *m, int group_number, cons
 static int send_gc_invite_response_reject(const GC_Chat *chat, GC_Connection *gconn, uint8_t type)
 {
     uint32_t length = HASH_ID_BYTES + 1;
-    VLA(uint8_t, data, length);
+    uint8_t *data = (uint8_t *)malloc(length);
+
+    if (data == nullptr) {
+        return -1;
+    }
+
     net_pack_u32(data, chat->self_public_key_hash);
     memcpy(data + HASH_ID_BYTES, &type, sizeof(uint8_t));
 
-    return send_lossy_group_packet(chat, gconn, data, length, GP_INVITE_RESPONSE_REJECT);
+    int ret = send_lossy_group_packet(chat, gconn, data, length, GP_INVITE_RESPONSE_REJECT);
+
+    free(data);
+
+    return ret;
 }
 
 /* Handles an invite request.
@@ -1558,10 +1596,17 @@ static int send_gc_broadcast_message(const GC_Chat *chat, const uint8_t *data, u
         return -1;
     }
 
-    VLA(uint8_t, packet, length + GC_BROADCAST_ENC_HEADER_SIZE);
+    uint8_t *packet = (uint8_t *)malloc(length + GC_BROADCAST_ENC_HEADER_SIZE);
+
+    if (packet == nullptr) {
+        return -1;
+    }
+
     uint32_t packet_len = make_gc_broadcast_header(chat, data, length, packet, bc_type);
 
     send_gc_lossless_packet_all_peers(chat, packet, packet_len, GP_BROADCAST);
+
+    free(packet);
 
     return 0;
 }
@@ -1802,10 +1847,19 @@ static int handle_gc_peer_info_request(const Messenger *m, int group_number, GC_
 static int send_gc_peer_info_request(const GC_Chat *chat, GC_Connection *gconn)
 {
     uint32_t length = HASH_ID_BYTES;
-    VLA(uint8_t, data, length);
+    uint8_t *data = (uint8_t *)malloc(length);
+
+    if (data == nullptr) {
+        return -1;
+    }
+
     net_pack_u32(data, chat->self_public_key_hash);
 
-    return send_lossless_group_packet(chat, gconn, data, length, GP_PEER_INFO_REQUEST);
+    int ret = send_lossless_group_packet(chat, gconn, data, length, GP_PEER_INFO_REQUEST);
+
+    free(data);
+
+    return ret;
 }
 
 /* Do peer info exchange with peer.
@@ -2113,7 +2167,10 @@ static int handle_gc_mod_list(Messenger *m, int group_number, uint32_t peer_numb
     }
 
     uint8_t mod_list_hash[GC_MODERATION_HASH_SIZE];
-    mod_list_make_hash(chat, mod_list_hash);
+
+    if (mod_list_make_hash(chat, mod_list_hash) == -1) {
+        goto ON_ERROR;
+    }
 
     if (memcmp(mod_list_hash, chat->shared_state.mod_list_hash, GC_MODERATION_HASH_SIZE) != 0) {
         LOGGER_ERROR(chat->logger, "failed to validate mod list hash");
@@ -2239,9 +2296,16 @@ static int make_gc_mod_list_packet(const GC_Chat *chat, uint8_t *data, uint32_t 
     net_pack_u16(data + HASH_ID_BYTES, chat->moderation.num_mods);
 
     if (mod_list_size > 0) {
-        VLA(uint8_t, packed_mod_list, mod_list_size);
+        uint8_t *packed_mod_list = (uint8_t *)malloc(mod_list_size);
+
+        if (packed_mod_list == nullptr) {
+            return -1;
+        }
+
         mod_list_pack(chat, packed_mod_list);
         memcpy(data + HASH_ID_BYTES + sizeof(uint16_t), packed_mod_list, mod_list_size);
+
+        free(packed_mod_list);
     }
 
     return HASH_ID_BYTES + sizeof(uint16_t) + mod_list_size;
@@ -2256,15 +2320,24 @@ static int send_peer_mod_list(const GC_Chat *chat, GC_Connection *gconn)
 {
     size_t mod_list_size = chat->moderation.num_mods * GC_MOD_LIST_ENTRY_SIZE;
     uint32_t length = HASH_ID_BYTES + sizeof(uint16_t) + mod_list_size;
-    VLA(uint8_t, packet, length);
+    uint8_t *packet = (uint8_t *)malloc(length);
 
-    int packet_len = make_gc_mod_list_packet(chat, packet, SIZEOF_VLA(packet), mod_list_size);
-
-    if (packet_len != length) {
+    if (packet == nullptr) {
         return -1;
     }
 
-    return send_lossless_group_packet(chat, gconn, packet, length, GP_MOD_LIST);
+    int packet_len = make_gc_mod_list_packet(chat, packet, length, mod_list_size);
+
+    if (packet_len != length) {
+        free(packet);
+        return -1;
+    }
+
+    int ret = send_lossless_group_packet(chat, gconn, packet, length, GP_MOD_LIST);
+
+    free(packet);
+
+    return ret;
 }
 
 /* Makes a sanctions list packet.
@@ -2361,15 +2434,23 @@ static int broadcast_gc_mod_list(const GC_Chat *chat)
 {
     size_t mod_list_size = chat->moderation.num_mods * GC_MOD_LIST_ENTRY_SIZE;
     uint32_t length = HASH_ID_BYTES + sizeof(uint16_t) + mod_list_size;
-    VLA(uint8_t, packet, length);
+    uint8_t *packet = (uint8_t *)malloc(length);
 
-    int packet_len = make_gc_mod_list_packet(chat, packet, SIZEOF_VLA(packet), mod_list_size);
+    if (packet == nullptr) {
+        return -1;
+    }
+
+    int packet_len = make_gc_mod_list_packet(chat, packet, length, mod_list_size);
 
     if (packet_len != length) {
+        free(packet);
         return -1;
     }
 
     send_gc_lossless_packet_all_peers(chat, packet, packet_len, GP_MOD_LIST);
+
+    free(packet);
+
     return 0;
 }
 
@@ -2640,16 +2721,26 @@ static int make_gc_topic_packet(const GC_Chat *chat, uint8_t *data, uint16_t len
  */
 static int send_peer_topic(const GC_Chat *chat, GC_Connection *gconn)
 {
-    VLA(uint8_t, packet, HASH_ID_BYTES + SIGNATURE_SIZE + chat->topic_info.length + GC_MIN_PACKED_TOPIC_INFO_SIZE);
-    int packet_len = make_gc_topic_packet(chat, packet, SIZEOF_VLA(packet));
+    size_t packet_buf_size = HASH_ID_BYTES + SIGNATURE_SIZE + chat->topic_info.length + GC_MIN_PACKED_TOPIC_INFO_SIZE;
+    uint8_t *packet = (uint8_t *)malloc(packet_buf_size);
 
-    if (packet_len != SIZEOF_VLA(packet)) {
+    if (packet == nullptr) {
+        return -1;
+    }
+
+    int packet_len = make_gc_topic_packet(chat, packet, packet_buf_size);
+
+    if (packet_len != packet_buf_size) {
+        free(packet);
         return -1;
     }
 
     if (send_lossless_group_packet(chat, gconn, packet, packet_len, GP_TOPIC) == -1) {
+        free(packet);
         return -1;
     }
+
+    free(packet);
 
     return 0;
 }
@@ -2661,14 +2752,24 @@ static int send_peer_topic(const GC_Chat *chat, GC_Connection *gconn)
  */
 static int broadcast_gc_topic(const GC_Chat *chat)
 {
-    VLA(uint8_t, packet, HASH_ID_BYTES + SIGNATURE_SIZE + chat->topic_info.length + GC_MIN_PACKED_TOPIC_INFO_SIZE);
-    int packet_len = make_gc_topic_packet(chat, packet, SIZEOF_VLA(packet));
+    size_t packet_buf_size = HASH_ID_BYTES + SIGNATURE_SIZE + chat->topic_info.length + GC_MIN_PACKED_TOPIC_INFO_SIZE;
+    uint8_t *packet = (uint8_t *)malloc(packet_buf_size);
 
-    if (packet_len != SIZEOF_VLA(packet)) {
+    if (packet == nullptr) {
+        return -1;
+    }
+
+    int packet_len = make_gc_topic_packet(chat, packet, packet_buf_size);
+
+    if (packet_len != packet_buf_size) {
+        free(packet);
         return -1;
     }
 
     send_gc_lossless_packet_all_peers(chat, packet, packet_len, GP_TOPIC);
+
+    free(packet);
+
     return 0;
 }
 
@@ -2704,11 +2805,18 @@ int gc_set_topic(GC_Chat *chat, const uint8_t *topic, uint16_t length)
     memcpy(chat->topic_info.topic, topic, length);
     memcpy(chat->topic_info.public_sig_key, get_sig_pk(chat->self_public_key), SIG_PUBLIC_KEY);
 
-    int err = -3;
-    VLA(uint8_t, packed_topic, length + GC_MIN_PACKED_TOPIC_INFO_SIZE);
-    uint16_t packed_len = pack_gc_topic_info(packed_topic, SIZEOF_VLA(packed_topic), &chat->topic_info);
+    size_t packet_buf_size = length + GC_MIN_PACKED_TOPIC_INFO_SIZE;
+    uint8_t *packed_topic = (uint8_t *)malloc(packet_buf_size);
 
-    if (packed_len != SIZEOF_VLA(packed_topic)) {
+    if (packed_topic == nullptr) {
+        return -3;
+    }
+
+    uint16_t packed_len = pack_gc_topic_info(packed_topic, packet_buf_size, &chat->topic_info);
+
+    int err = -3;
+
+    if (packed_len != packet_buf_size) {
         goto ON_ERROR;
     }
 
@@ -2721,11 +2829,13 @@ int gc_set_topic(GC_Chat *chat, const uint8_t *topic, uint16_t length)
         goto ON_ERROR;
     }
 
+    free(packed_topic);
     return 0;
 
 ON_ERROR:
     memcpy(&chat->topic_info, &old_topic_info, sizeof(GC_TopicInfo));
     memcpy(chat->topic_sig, old_topic_sig, SIGNATURE_SIZE);
+    free(packed_topic);
     return err;
 }
 
@@ -2966,13 +3076,21 @@ static int handle_gc_set_mod(Messenger *m, int group_number, uint32_t peer_numbe
 static int send_gc_set_mod(const GC_Chat *chat, GC_Connection *gconn, bool add_mod)
 {
     uint32_t length = 1 + SIG_PUBLIC_KEY;
-    VLA(uint8_t, data, length);
+    uint8_t *data = (uint8_t *)malloc(length);
+
+    if (data == nullptr) {
+        return -1;
+    }
+
     data[0] = add_mod ? 1 : 0;
     memcpy(data + 1, get_sig_pk(gconn->addr.public_key), SIG_PUBLIC_KEY);
 
     if (send_gc_broadcast_message(chat, data, length, GM_SET_MOD) == -1) {
+        free(data);
         return -1;
     }
+
+    free(data);
 
     return 0;
 }
@@ -3016,7 +3134,9 @@ static int founder_gc_set_moderator(GC_Chat *chat, GC_Connection *gconn, bool ad
     uint8_t old_hash[GC_MODERATION_HASH_SIZE];
     memcpy(old_hash, chat->shared_state.mod_list_hash, GC_MODERATION_HASH_SIZE);
 
-    mod_list_make_hash(chat, chat->shared_state.mod_list_hash);
+    if (mod_list_make_hash(chat, chat->shared_state.mod_list_hash) == -1) {
+        return -1;
+    }
 
     if (sign_gc_shared_state(chat) == -1) {
         memcpy(chat->shared_state.mod_list_hash, old_hash, GC_MODERATION_HASH_SIZE);
@@ -3115,14 +3235,22 @@ static int send_gc_set_observer(const GC_Chat *chat, const uint8_t *target_pk, c
                                 uint32_t length, bool add_obs)
 {
     uint32_t packet_len = 1 + EXT_PUBLIC_KEY + length;
-    VLA(uint8_t, packet, packet_len);
+    uint8_t *packet = (uint8_t *)malloc(packet_len);
+
+    if (packet == nullptr) {
+        return -1;
+    }
+
     packet[0] = add_obs ? 1 : 0;
     memcpy(packet + 1, target_pk, EXT_PUBLIC_KEY);
     memcpy(packet + 1 + EXT_PUBLIC_KEY, sanction_data, length);
 
     if (send_gc_broadcast_message(chat, packet, packet_len, GM_SET_OBSERVER) == -1) {
+        free(packet);
         return -1;
     }
+
+    free(packet);
 
     return 0;
 }
@@ -3486,8 +3614,9 @@ static int handle_gc_message(Messenger *m, int group_number, uint32_t peer_numbe
  * Returns -1 if the message is too long.
  * Returns -2 if the message pointer is NULL or length is zero.
  * Returns -3 if the peer_id is invalid.
- * Returns -4 if the sender has the observer role.
- * Returns -5 if the packet fails to send.
+ * Returns -4 if the message type is invalid.
+ * Returns -5 if the sender has the observer role.
+ * Returns -6 if the packet fails to send.
  */
 int gc_send_private_message(const GC_Chat *chat, uint32_t peer_id, uint8_t type, const uint8_t *message,
                             uint16_t length)
@@ -3516,16 +3645,32 @@ int gc_send_private_message(const GC_Chat *chat, uint32_t peer_id, uint8_t type,
         return -5;
     }
 
-    VLA(uint8_t, message_with_type, length + 1);
+    uint8_t *message_with_type = (uint8_t *)malloc(length + 1);
+
+    if (message_with_type == nullptr) {
+        return -6;
+    }
+
     message_with_type[0] = type;
     memcpy(message_with_type + 1, message, length);
 
-    VLA(uint8_t, packet, length + 1 + GC_BROADCAST_ENC_HEADER_SIZE);
-    uint32_t packet_len = make_gc_broadcast_header(chat, message_with_type, length + 1, packet, GM_PRIVATE_MESSAGE);
+    uint8_t *packet = (uint8_t *)malloc(length + 1 + GC_BROADCAST_ENC_HEADER_SIZE);
 
-    if (send_lossless_group_packet(chat, gconn, packet, packet_len, GP_BROADCAST) == -1) {
+    if (packet == nullptr) {
+        free(message_with_type);
         return -6;
     }
+
+    uint32_t packet_len = make_gc_broadcast_header(chat, message_with_type, length + 1, packet, GM_PRIVATE_MESSAGE);
+
+    free(message_with_type);
+
+    if (send_lossless_group_packet(chat, gconn, packet, packet_len, GP_BROADCAST) == -1) {
+        free(packet);
+        return -6;
+    }
+
+    free(packet);
 
     return 0;
 }
@@ -3801,12 +3946,21 @@ int gc_send_message_ack(const GC_Chat *chat, GC_Connection *gconn, uint64_t read
     }
 
     uint32_t length = HASH_ID_BYTES + (GC_MESSAGE_ID_BYTES * 2);
-    VLA(uint8_t, data, length);
+    uint8_t *data = (uint8_t *)malloc(length);
+
+    if (data == nullptr) {
+        return -1;
+    }
+
     net_pack_u32(data, chat->self_public_key_hash);
     net_pack_u64(data + HASH_ID_BYTES, read_id);
     net_pack_u64(data + HASH_ID_BYTES + GC_MESSAGE_ID_BYTES, request_id);
 
-    return send_lossy_group_packet(chat, gconn, data, length, GP_MESSAGE_ACK);
+    int ret = send_lossy_group_packet(chat, gconn, data, length, GP_MESSAGE_ACK);
+
+    free(data);
+
+    return ret;
 }
 
 /* If packet contains a non-zero request_id we try to resend its respective packet.
@@ -3860,10 +4014,19 @@ static int handle_gc_message_ack(const GC_Chat *chat, GC_Connection *gconn, cons
 static int gc_send_hs_response_ack(const GC_Chat *chat, GC_Connection *gconn)
 {
     uint32_t length = HASH_ID_BYTES;
-    VLA(uint8_t, data, length);
+    uint8_t *data = (uint8_t *)malloc(length);
+
+    if (data == nullptr) {
+        return -1;
+    }
+
     net_pack_u32(data, chat->self_public_key_hash);
 
-    return send_lossless_group_packet(chat, gconn, data, length, GP_HS_RESPONSE_ACK);
+    int ret = send_lossless_group_packet(chat, gconn, data, length, GP_HS_RESPONSE_ACK);
+
+    free(data);
+
+    return ret;
 }
 
 /* Handles a handshake response ack.
@@ -3945,39 +4108,57 @@ static int handle_gc_broadcast(Messenger *m, int group_number, uint32_t peer_num
     }
 
     uint32_t m_len = length - (1 + TIME_STAMP_SIZE);
-    VLA(uint8_t, message, m_len);
+    uint8_t *message = (uint8_t *)malloc(m_len);
+
+    if (message == nullptr) {
+        return -1;
+    }
+
     memcpy(message, data + 1 + TIME_STAMP_SIZE, m_len);
+    int ret = -1;
 
     switch (broadcast_type) {
         case GM_STATUS:
-            return handle_gc_status(m, group_number, peer_number, message, m_len);
+            ret = handle_gc_status(m, group_number, peer_number, message, m_len);
+            break;
 
         case GM_NICK:
-            return handle_gc_nick(m, group_number, peer_number, message, m_len);
+            ret = handle_gc_nick(m, group_number, peer_number, message, m_len);
+            break;
 
         case GM_ACTION_MESSAGE:  // intentional fallthrough
         case GM_PLAIN_MESSAGE:
-            return handle_gc_message(m, group_number, peer_number, message, m_len, broadcast_type);
+            ret = handle_gc_message(m, group_number, peer_number, message, m_len, broadcast_type);
+            break;
 
         case GM_PRIVATE_MESSAGE:
-            return handle_gc_private_message(m, group_number, peer_number, message, m_len);
+            ret = handle_gc_private_message(m, group_number, peer_number, message, m_len);
+            break;
 
         case GM_PEER_EXIT:
-            return handle_gc_peer_exit(m, group_number, peer_number, message, m_len);
+            ret = handle_gc_peer_exit(m, group_number, peer_number, message, m_len);
+            break;
 
         case GM_KICK_PEER:
-            return handle_gc_kick_peer(m, group_number, peer_number, message, m_len);
+            ret = handle_gc_kick_peer(m, group_number, peer_number, message, m_len);
+            break;
 
         case GM_SET_MOD:
-            return handle_gc_set_mod(m, group_number, peer_number, message, m_len);
+            ret = handle_gc_set_mod(m, group_number, peer_number, message, m_len);
+            break;
 
         case GM_SET_OBSERVER:
-            return handle_gc_set_observer(m, group_number, peer_number, message, m_len);
+            ret = handle_gc_set_observer(m, group_number, peer_number, message, m_len);
+            break;
 
         default:
             LOGGER_ERROR(m->log, "Warning: handle_gc_broadcast received an invalid broadcast type %u", broadcast_type);
-            return -1;
+            break;
     }
+
+    free(message);
+
+    return ret;
 }
 
 /* Decrypts data of length using self secret key and sender's public key.
@@ -4027,11 +4208,18 @@ static int wrap_group_handshake_packet(const Logger *logger, const uint8_t *self
     uint8_t nonce[CRYPTO_NONCE_SIZE];
     random_nonce(nonce);
 
-    VLA(uint8_t, encrypt, length + CRYPTO_MAC_SIZE);
+    size_t encrypt_buf_size = length + CRYPTO_MAC_SIZE;
+    uint8_t *encrypt = (uint8_t *)malloc(encrypt_buf_size);
+
+    if (encrypt == nullptr) {
+        return -1;
+    }
+
     int enc_len = encrypt_data(sender_pk, self_sk, nonce, data, length, encrypt);
 
-    if (enc_len != SIZEOF_VLA(encrypt)) {
+    if (enc_len != encrypt_buf_size) {
         LOGGER_ERROR(logger, "encrypt handshake request failed (len: %d)", enc_len);
+        free(encrypt);
         return -1;
     }
 
@@ -4040,6 +4228,8 @@ static int wrap_group_handshake_packet(const Logger *logger, const uint8_t *self
     memcpy(packet + 1 + HASH_ID_BYTES, self_pk, ENC_PUBLIC_KEY);
     memcpy(packet + 1 + HASH_ID_BYTES + ENC_PUBLIC_KEY, nonce, CRYPTO_NONCE_SIZE);
     memcpy(packet + 1 + HASH_ID_BYTES + ENC_PUBLIC_KEY + CRYPTO_NONCE_SIZE, encrypt, enc_len);
+
+    free(encrypt);
 
     return 1 + HASH_ID_BYTES + ENC_PUBLIC_KEY + CRYPTO_NONCE_SIZE + enc_len;
 }
@@ -4382,13 +4572,20 @@ static int handle_gc_handshake_packet(Messenger *m, const GC_Chat *chat, const I
     }
 
     uint8_t sender_pk[ENC_PUBLIC_KEY];
-    VLA(uint8_t, data, length - 1 - HASH_ID_BYTES - ENC_PUBLIC_KEY - CRYPTO_NONCE_SIZE - CRYPTO_MAC_SIZE);
 
-    int plain_len = unwrap_group_handshake_packet(m->log, chat->self_secret_key, sender_pk, data, SIZEOF_VLA(data), packet,
+    size_t data_buf_size = length - 1 - HASH_ID_BYTES - ENC_PUBLIC_KEY - CRYPTO_NONCE_SIZE - CRYPTO_MAC_SIZE;
+    uint8_t *data = (uint8_t *)malloc(data_buf_size);
+
+    if (data == nullptr) {
+        return -1;
+    }
+
+    int plain_len = unwrap_group_handshake_packet(m->log, chat->self_secret_key, sender_pk, data, data_buf_size, packet,
                     length);
 
-    if (plain_len != SIZEOF_VLA(data)) {
+    if (plain_len != data_buf_size) {
         LOGGER_DEBUG(m->log, "Failed to unwrap handshake packet");
+        free(data);
         return -1;
     }
 
@@ -4399,6 +4596,7 @@ static int handle_gc_handshake_packet(Messenger *m, const GC_Chat *chat, const I
 
     if (public_key_hash != get_peer_key_hash(sender_pk)) {
         LOGGER_ERROR(m->log, "Handshake failed: Invalid public key hash");
+        free(data);
         return -1;
     }
 
@@ -4412,8 +4610,11 @@ static int handle_gc_handshake_packet(Messenger *m, const GC_Chat *chat, const I
     } else if (handshake_type == GH_RESPONSE) {
         peer_number = handle_gc_handshake_response(m, chat->group_number, sender_pk, real_data, real_len);
     } else {
+        free(data);
         return -1;
     }
+
+    free(data);
 
     GC_Connection *gconn = gcc_get_connection(chat, peer_number);
 
@@ -5195,7 +5396,11 @@ static void do_peer_delete(Messenger *m, int group_number)
 static int ping_peer(const GC_Chat *chat, GC_Connection *gconn)
 {
     uint32_t buf_size = HASH_ID_BYTES + GC_PING_PACKET_MIN_DATA_SIZE + sizeof(IP_Port);
-    VLA(uint8_t, data, buf_size);
+    uint8_t *data = (uint8_t *)malloc(buf_size);
+
+    if (data == nullptr) {
+        return -1;
+    }
 
     net_pack_u32(data, chat->self_public_key_hash);
     net_pack_u16(data + HASH_ID_BYTES, chat->peers_checksum);
@@ -5218,8 +5423,11 @@ static int ping_peer(const GC_Chat *chat, GC_Connection *gconn)
     }
 
     if (send_lossy_group_packet(chat, gconn, data, real_length, GP_PING) == 0) {
+        free(data);
         return 0;
     }
+
+    free(data);
 
     return -1;
 }
@@ -5411,7 +5619,12 @@ static void add_tcp_relays_to_chat(Messenger *m, GC_Chat *chat)
         return;
     }
 
-    VLA(Node_format, tcp_relays, num_relays);
+    Node_format *tcp_relays = (Node_format *)malloc(num_relays * sizeof(Node_format));
+
+    if (tcp_relays == nullptr) {
+        return;
+    }
+
     uint32_t num_copied = tcp_copy_connected_relays(nc_get_tcp_c(m->net_crypto), tcp_relays, num_relays);
 
     for (uint32_t i = 0; i < num_copied; ++i) {
@@ -5419,6 +5632,8 @@ static void add_tcp_relays_to_chat(Messenger *m, GC_Chat *chat)
             chat->new_tcp_relay = true;
         }
     }
+
+    free(tcp_relays);
 }
 
 static int init_gc_tcp_connection(Messenger *m, GC_Chat *chat)

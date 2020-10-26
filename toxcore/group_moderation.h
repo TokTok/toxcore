@@ -53,8 +53,11 @@ void mod_list_pack(const GC_Chat *chat, uint8_t *data);
  * hash must have room for at least GC_MOD_LIST_HASH_SIZE bytes.
  *
  * If num_mods is 0 the hash is zeroed.
+ *
+ * Returns 0 on sucess.
+ * Returns -1 on failure;
  */
-void mod_list_make_hash(GC_Chat *chat, uint8_t *hash);
+int mod_list_make_hash(GC_Chat *chat, uint8_t *hash);
 
 /* Returns moderator list index for public_sig_key.
  * Returns -1 if key is not in the list.
@@ -171,16 +174,6 @@ int sanctions_list_remove_observer(GC_Chat *chat, const uint8_t *public_key, str
  * Returns the number of entries re-signed.
  */
 uint32_t sanctions_list_replace_sig(GC_Chat *chat, const uint8_t *public_sig_key);
-
-/* Creates a new sanction list hash and puts it in hash.
- *
- * The hash is derived from the signature of all entries plus the version number.
- * hash must have room for at least GC_MODERATION_HASH_SIZE bytes.
- *
- * If num_sanctions is 0 the hash is zeroed.
- */
-void sanctions_list_make_hash(struct GC_Sanction *sanctions, uint32_t new_version, uint32_t num_sanctions,
-                              uint8_t *hash);
 
 void sanctions_list_cleanup(GC_Chat *chat);
 

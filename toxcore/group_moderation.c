@@ -80,20 +80,33 @@ void mod_list_pack(const GC_Chat *chat, uint8_t *data)
 }
 
 /* Creates a new moderator list hash and puts it in hash.
- * hash must have room for at least GC_MODERATION_HASH_SIZE bytes.
+ * hash must have room for at least GC_MOD_LIST_HASH_SIZE bytes.
  *
  * If num_mods is 0 the hash is zeroed.
+ *
+ * Returns 0 on sucess.
+ * Returns -1 on failure;
  */
-void mod_list_make_hash(GC_Chat *chat, uint8_t *hash)
+int mod_list_make_hash(GC_Chat *chat, uint8_t *hash)
 {
     if (chat->moderation.num_mods == 0) {
         memset(hash, 0, GC_MODERATION_HASH_SIZE);
-        return;
+        return 0;
     }
 
-    VLA(uint8_t, data, chat->moderation.num_mods * GC_MOD_LIST_ENTRY_SIZE);
+    size_t data_buf_size = chat->moderation.num_mods * GC_MOD_LIST_ENTRY_SIZE;
+    uint8_t *data = (uint8_t *)malloc(data_buf_size);
+
+    if (data == nullptr) {
+        return -1;
+    }
+
     mod_list_pack(chat, data);
-    crypto_hash_sha256(hash, data, SIZEOF_VLA(data));
+    crypto_hash_sha256(hash, data, data_buf_size);
+
+    free(data);
+
+    return 0;
 }
 
 /* Returns moderator list index for public_sig_key.
@@ -404,24 +417,37 @@ int sanctions_list_unpack(struct GC_Sanction *sanctions, struct GC_Sanction_Cred
  * hash must have room for at least GC_MODERATION_HASH_SIZE bytes.
  *
  * If num_sanctions is 0 the hash is zeroed.
+ *
+ * Return 0 on success.
+ * Return -1 on failure.
  */
-void sanctions_list_make_hash(struct GC_Sanction *sanctions, uint32_t new_version, uint32_t num_sanctions,
-                              uint8_t *hash)
+static int sanctions_list_make_hash(struct GC_Sanction *sanctions, uint32_t new_version, uint32_t num_sanctions,
+                                     uint8_t *hash)
 {
     if (num_sanctions == 0 || sanctions == nullptr) {
         memset(hash, 0, GC_MODERATION_HASH_SIZE);
-        return;
+        return 0;
     }
 
     uint32_t sig_data_size = num_sanctions * SIGNATURE_SIZE;
-    VLA(uint8_t, data, sig_data_size + sizeof(uint32_t));
+    size_t data_buf_size = sig_data_size + sizeof(uint32_t);
+
+    uint8_t *data = (uint8_t *)malloc(data_buf_size);
+
+    if (data == nullptr) {
+        return -1;
+    }
 
     for (uint32_t i = 0; i < num_sanctions; ++i) {
         memcpy(&data[i * SIGNATURE_SIZE], sanctions[i].signature, SIGNATURE_SIZE);
     }
 
     memcpy(&data[sig_data_size], &new_version, sizeof(uint32_t));
-    crypto_hash_sha256(hash, data, SIZEOF_VLA(data));
+    crypto_hash_sha256(hash, data, data_buf_size);
+
+    free(data);
+
+    return 0;
 }
 
 /* Verifies that sanction contains valid info and was assigned by a current mod or group founder.
@@ -472,8 +498,14 @@ int sanctions_list_make_creds(GC_Chat *chat)
     ++chat->moderation.sanctions_creds.version;
 
     memcpy(chat->moderation.sanctions_creds.sig_pk, get_sig_pk(chat->self_public_key), SIG_PUBLIC_KEY);
-    sanctions_list_make_hash(chat->moderation.sanctions, chat->moderation.sanctions_creds.version,
-                             chat->moderation.num_sanctions, chat->moderation.sanctions_creds.hash);
+
+    uint8_t hash[GC_MODERATION_HASH_SIZE];
+    if (sanctions_list_make_hash(chat->moderation.sanctions, chat->moderation.sanctions_creds.version,
+                                 chat->moderation.num_sanctions, hash) == -1) {
+        return -1;
+    }
+
+    memcpy(chat->moderation.sanctions_creds.hash, hash, GC_MODERATION_HASH_SIZE);
 
     if (crypto_sign_detached(chat->moderation.sanctions_creds.sig, nullptr, chat->moderation.sanctions_creds.hash,
                              GC_MODERATION_HASH_SIZE, get_sig_sk(chat->self_secret_key)) == -1) {
@@ -502,7 +534,10 @@ static int sanctions_creds_validate(const GC_Chat *chat, struct GC_Sanction *san
     }
 
     uint8_t hash[GC_MODERATION_HASH_SIZE];
-    sanctions_list_make_hash(sanctions, creds->version, num_sanctions, hash);
+
+    if (sanctions_list_make_hash(sanctions, creds->version, num_sanctions, hash) == -1) {
+        return -1;
+    }
 
     if (memcmp(hash, creds->hash, GC_MODERATION_HASH_SIZE) != 0) {
         LOGGER_ERROR(chat->logger, "Invalid credentials hash");

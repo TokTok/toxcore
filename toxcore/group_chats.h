@@ -416,8 +416,9 @@ int gc_send_message(const GC_Chat *chat, const uint8_t *message, uint16_t length
  * Returns -1 if the message is too long.
  * Returns -2 if the message pointer is NULL or length is zero.
  * Returns -3 if the peer_id is invalid.
- * Returns -4 if the sender has the observer role.
- * Returns -5 if the packet fails to send.
+ * Returns -4 if the message type is invalid.
+ * Returns -5 if the sender has the observer role.
+ * Returns -6 if the packet fails to send.
  */
 int gc_send_private_message(const GC_Chat *chat, uint32_t peer_id, uint8_t type, const uint8_t *message,
                             uint16_t length);
