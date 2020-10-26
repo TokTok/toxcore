@@ -422,7 +422,7 @@ int sanctions_list_unpack(struct GC_Sanction *sanctions, struct GC_Sanction_Cred
  * Return -1 on failure.
  */
 static int sanctions_list_make_hash(struct GC_Sanction *sanctions, uint32_t new_version, uint32_t num_sanctions,
-                                     uint8_t *hash)
+                                    uint8_t *hash)
 {
     if (num_sanctions == 0 || sanctions == nullptr) {
         memset(hash, 0, GC_MODERATION_HASH_SIZE);
@@ -500,6 +500,7 @@ int sanctions_list_make_creds(GC_Chat *chat)
     memcpy(chat->moderation.sanctions_creds.sig_pk, get_sig_pk(chat->self_public_key), SIG_PUBLIC_KEY);
 
     uint8_t hash[GC_MODERATION_HASH_SIZE];
+
     if (sanctions_list_make_hash(chat->moderation.sanctions, chat->moderation.sanctions_creds.version,
                                  chat->moderation.num_sanctions, hash) == -1) {
         return -1;
