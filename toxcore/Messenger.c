@@ -1156,8 +1156,6 @@ long int new_filesender(const Messenger *m, int32_t friendnumber, uint32_t file_
 
     ft->requested = 0;
 
-    ft->slots_allocated = 0;
-
     ft->paused = FILE_PAUSE_NOT;
 
     memcpy(ft->id, file_id, FILE_ID_LENGTH);
@@ -1438,10 +1436,6 @@ int file_data(const Messenger *m, int32_t friendnumber, uint32_t filenumber, uin
         // TODO(irungentoo): record packet ids to check if other received complete file.
         ft->transferred += length;
 
-        if (ft->slots_allocated) {
-            --ft->slots_allocated;
-        }
-
         if (length != MAX_FILE_DATA_SIZE || ft->size == ft->transferred) {
             ft->status = FILESTATUS_FINISHED;
             ft->last_packet_number = ret;
@@ -1464,9 +1458,8 @@ int file_data(const Messenger *m, int32_t friendnumber, uint32_t filenumber, uin
  * @param userdata The client userdata to pass along to chunk request callbacks.
  * @param free_slots A pointer to the number of free send queue slots in the
  *   crypto connection.
+ * @return true if there's still work to do, false otherwise
  *
- * @return true if there are still file transfers ongoing, false if all file
- *   transfers are complete.
  */
 static bool do_all_filetransfers(Messenger *m, int32_t friendnumber, void *userdata, uint32_t *free_slots)
 {
@@ -1476,7 +1469,18 @@ static bool do_all_filetransfers(Messenger *m, int32_t friendnumber, void *userd
     // iterate exactly MAX_CONCURRENT_FILE_PIPES times.
     for (uint32_t i = 0; i < MAX_CONCURRENT_FILE_PIPES; ++i) {
         if (friendcon->num_sending_files == 0) {
-            // no active file transfers
+            // no active file transfers anymore
+            return false;
+        }
+
+        if (*free_slots == 0) {
+            // send buffer full enough
+            return false;
+        }
+
+        if (max_speed_reached(m->net_crypto, friend_connection_crypt_connection_id(
+                                  m->fr_c, friendcon->friendcon_id))) {
+            // connection doesn't support any more data
             return false;
         }
 
@@ -1493,22 +1497,7 @@ static bool do_all_filetransfers(Messenger *m, int32_t friendnumber, void *userd
             --friendcon->num_sending_files;
         }
 
-        // Any status other than NONE means the file transfer is active.
-        if (ft->status != FILESTATUS_NONE) {
-            // Decrease free slots by the number of slots this FT uses.
-            *free_slots = max_s32(0, (int32_t) * free_slots - ft->slots_allocated);
-        }
-
         if (ft->status == FILESTATUS_TRANSFERRING && ft->paused == FILE_PAUSE_NOT) {
-            if (max_speed_reached(m->net_crypto, friend_connection_crypt_connection_id(
-                                      m->fr_c, friendcon->friendcon_id))) {
-                *free_slots = 0;
-            }
-
-            if (*free_slots == 0) {
-                continue;
-            }
-
             if (ft->size == 0) {
                 /* Send 0 data to friend if file is 0 length. */
                 file_data(m, friendnumber, i, 0, nullptr, 0);
@@ -1519,9 +1508,6 @@ static bool do_all_filetransfers(Messenger *m, int32_t friendnumber, void *userd
                 // This file transfer is done.
                 continue;
             }
-
-            // Allocate 1 slot to this file transfer.
-            ++ft->slots_allocated;
 
             const uint16_t length = min_u64(ft->size - ft->requested, MAX_FILE_DATA_SIZE);
             const uint64_t position = ft->requested;
@@ -1536,7 +1522,7 @@ static bool do_all_filetransfers(Messenger *m, int32_t friendnumber, void *userd
         }
     }
 
-    return friendcon->num_sending_files > 0;
+    return true;
 }
 
 static void do_reqchunk_filecb(Messenger *m, int32_t friendnumber, void *userdata)
@@ -1566,8 +1552,10 @@ static void do_reqchunk_filecb(Messenger *m, int32_t friendnumber, void *userdat
     const uint32_t max_ft_loops = 16;
 
     for(uint32_t i = 0; i < max_ft_loops; i++) {
-        do_all_filetransfers(m, friendnumber, userdata, &free_slots);
-        if(free_slots == 0) {
+        if (!do_all_filetransfers(m, friendnumber, userdata, &free_slots)) {
+            break;
+        }
+        if (free_slots == 0) {
             // stop when the buffer is full enough
             break;
         }
