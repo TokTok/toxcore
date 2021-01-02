@@ -1552,10 +1552,11 @@ static void do_reqchunk_filecb(Messenger *m, int32_t friendnumber, void *userdat
     // Request up to that number of chunks per file from the client
     const uint32_t max_ft_loops = 16;
 
-    for(uint32_t i = 0; i < max_ft_loops; i++) {
+    for (uint32_t i = 0; i < max_ft_loops; i++) {
         if (!do_all_filetransfers(m, friendnumber, userdata, &free_slots)) {
             break;
         }
+
         if (free_slots == 0) {
             // stop when the buffer is full enough
             break;
