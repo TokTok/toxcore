@@ -110,7 +110,11 @@ build() {
     "$WINDOWS_TOOLCHAIN"-ar xv "$archive"
   done
 
-  LIBWINPTHREAD="/usr/$WINDOWS_TOOLCHAIN/lib/libwinpthread.a"
+  if [ "$CROSS_COMPILE" = "true" ]; then
+    LIBWINPTHREAD="/usr/$WINDOWS_TOOLCHAIN/lib/libwinpthread.a"
+  else
+    LIBWINPTHREAD="/usr/$WINDOWS_TOOLCHAIN/sys-root/mingw/lib/libwinpthread.a"
+  fi
 
   "$WINDOWS_TOOLCHAIN"-gcc -Wl,--export-all-symbols \
     -Wl,--out-implib=libtox.dll.a \
