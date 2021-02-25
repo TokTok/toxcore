@@ -69,7 +69,7 @@ build() {
     -DCMAKE_CXX_FLAGS="$CMAKE_CXX_FLAGS" \
     -DCMAKE_EXE_LINKER_FLAGS="$CMAKE_EXE_LINKER_FLAGS -fstack-protector" \
     -DCMAKE_SHARED_LINKER_FLAGS="$CMAKE_SHARED_LINKER_FLAGS" \
-    $EXTRA_CMAKE_FLAGS \
+    "$EXTRA_CMAKE_FLAGS" \
     ..
   cmake --build . --target install -- -j"$(nproc)"
 
