@@ -2,7 +2,8 @@
 from conans import CMake
 from conans import ConanFile
 from conans.tools import load
-import re, os
+import os
+import re
 
 
 class ToxConan(ConanFile):
