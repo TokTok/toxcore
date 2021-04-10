@@ -5,7 +5,6 @@ cache:
 install:
   - set PATH=C:\Python38-x64\Scripts;%PATH%
   - py -3 -m pip install conan
-  - conan remote add bincrafters https://api.bintray.com/conan/bincrafters/public-conan --force
 
 before_build:
   - ps: |
@@ -19,5 +18,5 @@ build_script:
 test_script:
   # TODO(iphydf): Tests are unstable and slow on windows at the moment.
   - set CONAN_CPU_COUNT=50
-  - conan build .. --test &
+  - conan build .. --configure --build --test &
     exit 0

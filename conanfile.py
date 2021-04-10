@@ -52,6 +52,9 @@ class ToxConan(ConanFile):
             self.requires("pthreads4w/3.0.0")
 
     def build(self):
+        if self.should_test:
+            self.options.with_tests = True
+
         cmake = self._create_cmake()
         cmake.build()
 
