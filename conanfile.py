@@ -15,18 +15,10 @@ class ToxConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     requires = "libsodium/1.0.18", "opus/1.3.1", "libvpx/1.9.0"
     generators = "cmake_find_package"
-    scm = {
-        "type": "git",
-        "url": "auto",
-        "revision": "auto"
-    }
+    scm = {"type": "git", "url": "auto", "revision": "auto"}
 
-    options = {
-        "with_tests": [True, False]
-    }
-    default_options = {
-        "with_tests": False
-    }
+    options = {"with_tests": [True, False]}
+    default_options = {"with_tests": False}
 
     _cmake = None
 
@@ -47,13 +39,19 @@ class ToxConan(ConanFile):
     def set_version(self):
         content = load(os.path.join(self.recipe_folder, "CMakeLists.txt"))
         version_major = re.search(
-            r"set\(PROJECT_VERSION_MAJOR \"(.*)\"\)", content).group(1)
+            r"set\(PROJECT_VERSION_MAJOR \"(.*)\"\)", content
+        ).group(1)
         version_minor = re.search(
-            r"set\(PROJECT_VERSION_MINOR \"(.*)\"\)", content).group(1)
+            r"set\(PROJECT_VERSION_MINOR \"(.*)\"\)", content
+        ).group(1)
         version_patch = re.search(
-            r"set\(PROJECT_VERSION_PATCH \"(.*)\"\)", content).group(1)
-        self.version = "%s.%s.%s" % (version_major.strip(
-        ), version_minor.strip(), version_patch.strip())
+            r"set\(PROJECT_VERSION_PATCH \"(.*)\"\)", content
+        ).group(1)
+        self.version = "%s.%s.%s" % (
+            version_major.strip(),
+            version_minor.strip(),
+            version_patch.strip(),
+        )
 
     def requirements(self):
         if self.settings.os == "Windows":
