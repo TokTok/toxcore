@@ -1,10 +1,11 @@
 # pylint: disable=not-callable
+import os
+import re
+
 from conans import CMake
 from conans import ConanFile
 from conans.tools import collect_libs
 from conans.tools import load
-import os
-import re
 
 
 class ToxConan(ConanFile):
