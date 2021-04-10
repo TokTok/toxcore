@@ -1,6 +1,7 @@
 # pylint: disable=not-callable
 from conans import CMake
 from conans import ConanFile
+from conans.tools import collect_libs
 from conans.tools import load
 import os
 import re
@@ -8,6 +9,9 @@ import re
 
 class ToxConan(ConanFile):
     name = "c-toxcore"
+    url = "https://tox.chat"
+    description = "The future of online communications."
+    license = "GPL-3.0-only"
     settings = "os", "compiler", "build_type", "arch"
     requires = "libsodium/1.0.18", "opus/1.3.1", "libvpx/1.9.0"
     generators = "cmake_find_package"
@@ -52,9 +56,6 @@ class ToxConan(ConanFile):
             self.requires("pthreads4w/3.0.0")
 
     def build(self):
-        if self.should_test:
-            self.options.with_tests = True
-
         cmake = self._create_cmake()
         cmake.build()
 
@@ -64,3 +65,9 @@ class ToxConan(ConanFile):
     def package(self):
         cmake = self._create_cmake()
         cmake.install()
+
+    def package_info(self):
+        self.cpp_info.libs = collect_libs(self)
+
+        if self.settings.os == "Windows":
+            self.cpp_info.system_libs = ["Ws2_32", "Iphlpapi"]
