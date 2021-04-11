@@ -10,6 +10,8 @@
 #define C_TOXCORE_TOXCORE_LOGGER_H
 
 #include <stdint.h>
+#include <stdarg.h>
+#include <pthread.h>
 
 #include "ccompat.h"
 
@@ -60,6 +62,40 @@ void logger_callback_log(Logger *log, logger_cb *function, void *context, void *
 void logger_write(
     const Logger *log, Logger_Level level, const char *file, int line, const char *func,
     const char *format, ...) GNU_PRINTF(6, 7);
+
+void logger_api_write(const Logger *log, Logger_Level level, const char *file, int line, const char *func,
+                      const char *format, va_list args) GNU_PRINTF(6, 0);
+
+
+/**
+ * ==================================================================================================
+ * toxcore public api call to logger, used by ToxAV
+ */
+#ifndef TOX_DEFINED
+#define TOX_DEFINED
+typedef struct Tox Tox;
+#endif /* TOX_DEFINED */
+
+void tox_logmsg(const Tox *tox, Logger_Level level, const char *file, int line, const char *func, const char *fmt,
+                ...) GNU_PRINTF(6, 7);
+
+#define LOGGER_API_TRACE(tox, ...)   LOGGER_API_WRITE(tox, LOGGER_LEVEL_TRACE  , __VA_ARGS__)
+#define LOGGER_API_DEBUG(tox, ...)   LOGGER_API_WRITE(tox, LOGGER_LEVEL_DEBUG  , __VA_ARGS__)
+#define LOGGER_API_INFO(tox, ...)    LOGGER_API_WRITE(tox, LOGGER_LEVEL_INFO   , __VA_ARGS__)
+#define LOGGER_API_WARNING(tox, ...) LOGGER_API_WRITE(tox, LOGGER_LEVEL_WARNING, __VA_ARGS__)
+#define LOGGER_API_ERROR(tox, ...)   LOGGER_API_WRITE(tox, LOGGER_LEVEL_ERROR  , __VA_ARGS__)
+
+#define LOGGER_API_WRITE(tox, level, ...) \
+    do { \
+        if (level >= MIN_LOGGER_LEVEL) { \
+            tox_logmsg(tox, level, __FILE__, __LINE__, __func__, __VA_ARGS__); \
+        } \
+    } while (0)
+
+/**
+ * ==================================================================================================
+ */
+
 
 
 #define LOGGER_WRITE(log, level, ...) \

@@ -4,7 +4,7 @@ load("//tools:no_undefined.bzl", "cc_library")
 filegroup(
     name = "public_headers",
     srcs = ["tox.h"],
-    visibility = ["//c-toxcore:__pkg__"],
+    visibility = ["//c-toxcore:__subpackages__"],
 )
 
 cc_library(

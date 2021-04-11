@@ -406,10 +406,6 @@ int m_delfriend(Messenger *m, int32_t friendnumber)
         return -1;
     }
 
-    if (m->friend_connectionstatuschange_internal) {
-        m->friend_connectionstatuschange_internal(m, friendnumber, 0, m->friend_connectionstatuschange_internal_userdata);
-    }
-
     clear_receipts(m, friendnumber);
     remove_request_received(m->fr, m->friendlist[friendnumber].real_pk);
     friend_connection_callbacks(m->fr_c, m->friendlist[friendnumber].friendcon_id, MESSENGER_CALLBACK_INDEX, nullptr,
@@ -882,13 +878,6 @@ void m_callback_core_connection(Messenger *m, m_self_connection_status_cb *funct
     m->core_connection_change = function;
 }
 
-void m_callback_connectionstatus_internal_av(Messenger *m, m_friend_connectionstatuschange_internal_cb *function,
-        void *userdata)
-{
-    m->friend_connectionstatuschange_internal = function;
-    m->friend_connectionstatuschange_internal_userdata = userdata;
-}
-
 static void check_friend_tcp_udp(Messenger *m, int32_t friendnumber, void *userdata)
 {
     int last_connection_udp_tcp = m->friendlist[friendnumber].last_connection_udp_tcp;
@@ -917,6 +906,7 @@ static void check_friend_tcp_udp(Messenger *m, int32_t friendnumber, void *userd
 }
 
 static void break_files(const Messenger *m, int32_t friendnumber);
+
 static void check_friend_connectionstatus(Messenger *m, int32_t friendnumber, uint8_t status, void *userdata)
 {
     if (status == NOFRIEND) {
@@ -940,11 +930,6 @@ static void check_friend_connectionstatus(Messenger *m, int32_t friendnumber, ui
         m->friendlist[friendnumber].status = status;
 
         check_friend_tcp_udp(m, friendnumber, userdata);
-
-        if (m->friend_connectionstatuschange_internal) {
-            m->friend_connectionstatuschange_internal(m, friendnumber, is_online,
-                    m->friend_connectionstatuschange_internal_userdata);
-        }
     }
 }
 
@@ -1728,41 +1713,12 @@ static int handle_filecontrol(Messenger *m, int32_t friendnumber, uint8_t receiv
     }
 }
 
-/* Set the callback for msi packets.
- */
-void m_callback_msi_packet(Messenger *m, m_msi_packet_cb *function, void *userdata)
-{
-    m->msi_packet = function;
-    m->msi_packet_userdata = userdata;
-}
-
-/* Send an msi packet.
- *
- *  return 1 on success
- *  return 0 on failure
- */
-int m_msi_packet(const Messenger *m, int32_t friendnumber, const uint8_t *data, uint16_t length)
-{
-    return write_cryptpacket_id(m, friendnumber, PACKET_ID_MSI, data, length, 0);
-}
-
 static int m_handle_lossy_packet(void *object, int friend_num, const uint8_t *packet, uint16_t length,
                                  void *userdata)
 {
     Messenger *m = (Messenger *)object;
 
     if (!friend_is_valid(m, friend_num)) {
-        return 1;
-    }
-
-    if (packet[0] <= PACKET_ID_RANGE_LOSSY_AV_END) {
-        const RTP_Packet_Handler *const ph =
-            &m->friendlist[friend_num].lossy_rtp_packethandlers[packet[0] % PACKET_ID_RANGE_LOSSY_AV_SIZE];
-
-        if (ph->function) {
-            return ph->function(m, friend_num, packet, length, ph->object);
-        }
-
         return 1;
     }
 
@@ -1778,30 +1734,6 @@ void custom_lossy_packet_registerhandler(Messenger *m, m_friend_lossy_packet_cb 
     m->lossy_packethandler = lossy_packethandler;
 }
 
-int m_callback_rtp_packet(Messenger *m, int32_t friendnumber, uint8_t byte, m_lossy_rtp_packet_cb *function,
-                          void *object)
-{
-    if (!friend_is_valid(m, friendnumber)) {
-        return -1;
-    }
-
-    if (byte < PACKET_ID_RANGE_LOSSY_AV_START || byte > PACKET_ID_RANGE_LOSSY_AV_END) {
-        return -1;
-    }
-
-    m->friendlist[friendnumber].lossy_rtp_packethandlers[byte % PACKET_ID_RANGE_LOSSY_AV_SIZE].function = function;
-    m->friendlist[friendnumber].lossy_rtp_packethandlers[byte % PACKET_ID_RANGE_LOSSY_AV_SIZE].object = object;
-    return 0;
-}
-
-
-/* TODO(oxij): this name is confusing, because this function sends both av and custom lossy packets.
- * Meanwhile, m_handle_lossy_packet routes custom packets to custom_lossy_packet_registerhandler
- * as you would expect from its name.
- *
- * I.e. custom_lossy_packet_registerhandler's "custom lossy packet" and this "custom lossy packet"
- * are not the same set of packets.
- */
 int m_send_custom_lossy_packet(const Messenger *m, int32_t friendnumber, const uint8_t *data, uint32_t length)
 {
     if (!friend_is_valid(m, friendnumber)) {
@@ -1812,7 +1744,6 @@ int m_send_custom_lossy_packet(const Messenger *m, int32_t friendnumber, const u
         return -2;
     }
 
-    // TODO(oxij): send_lossy_cryptpacket makes this check already, similarly for other similar places
     if (data[0] < PACKET_ID_RANGE_LOSSY_START || data[0] > PACKET_ID_RANGE_LOSSY_END) {
         return -3;
     }
@@ -1839,7 +1770,10 @@ static int handle_custom_lossless_packet(void *object, int friend_num, const uin
     }
 
     if (packet[0] < PACKET_ID_RANGE_LOSSLESS_CUSTOM_START || packet[0] > PACKET_ID_RANGE_LOSSLESS_CUSTOM_END) {
-        return -1;
+        // allow PACKET_ID_MSI packets to be handled by custom packet handler
+        if (packet[0] != PACKET_ID_MSI) {
+            return -1;
+        }
     }
 
     if (m->lossless_packethandler) {
@@ -2395,14 +2329,8 @@ static int m_handle_packet(void *object, int i, const uint8_t *temp, uint16_t le
         }
 
         case PACKET_ID_MSI: {
-            if (data_length == 0) {
-                break;
-            }
-
-            if (m->msi_packet) {
-                (*m->msi_packet)(m, i, data, data_length, m->msi_packet_userdata);
-            }
-
+            // allow MSI packets to be handled by custom packet handler
+            handle_custom_lossless_packet(object, i, temp, len, userdata);
             break;
         }
 

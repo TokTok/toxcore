@@ -2669,8 +2669,9 @@ namespace friend {
      */
     FRIEND_NOT_CONNECTED,
     /**
-     * The first byte of data was not in the specified range for the packet type.
-     * This range is 192-254 for lossy, and 69, 160-191 for lossless packets.
+     * The first byte of data was not one of the permitted values;
+     * for lossy packets the first byte must be in the range 192-254,
+     * and for lossless packets it must be either 69 or in the range 160-191.
      */
     INVALID,
     /**
@@ -2716,7 +2717,7 @@ namespace friend {
     /**
      * Send a custom lossless packet to a friend.
      *
-     * The first byte of data must be in the range 69, 160-191. Maximum length of a
+     * The first byte of data must be either 69 or in the range 160-191. Maximum length of a
      * custom packet is $MAX_CUSTOM_PACKET_SIZE.
      *
      * Lossless packet behaviour is comparable to TCP (reliability, arrive in order)
@@ -2737,6 +2738,9 @@ namespace friend {
 
   event lossy_packet const {
     /**
+     * tox_callback_friend_lossy_packet is the compatibility function to
+     * set callback for all packet IDs except those reserved for ToxAV
+     *
      * @param friend_number The friend number of the friend who sent a lossy packet.
      * @param data A byte array containing the received packet data.
      * @param length The length of the packet data byte array.

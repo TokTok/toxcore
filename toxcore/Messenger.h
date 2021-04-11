@@ -189,12 +189,8 @@ typedef void m_friend_lossy_packet_cb(Messenger *m, uint32_t friend_number, uint
                                       size_t length, void *user_data);
 typedef void m_friend_lossless_packet_cb(Messenger *m, uint32_t friend_number, uint8_t packet_id, const uint8_t *data,
         size_t length, void *user_data);
-typedef void m_friend_connectionstatuschange_internal_cb(Messenger *m, uint32_t friend_number,
-        uint8_t connection_status, void *user_data);
 typedef void m_conference_invite_cb(Messenger *m, uint32_t friend_number, const uint8_t *cookie, uint16_t length,
                                     void *user_data);
-typedef void m_msi_packet_cb(Messenger *m, uint32_t friend_number, const uint8_t *data, uint16_t length,
-                             void *user_data);
 typedef int m_lossy_rtp_packet_cb(Messenger *m, uint32_t friendnumber, const uint8_t *data, uint16_t len, void *object);
 
 typedef struct RTP_Packet_Handler {
@@ -229,8 +225,6 @@ typedef struct Friend {
     struct File_Transfers file_sending[MAX_CONCURRENT_FILE_PIPES];
     uint32_t num_sending_files;
     struct File_Transfers file_receiving[MAX_CONCURRENT_FILE_PIPES];
-
-    RTP_Packet_Handler lossy_rtp_packethandlers[PACKET_ID_RANGE_LOSSY_AV_SIZE];
 
     struct Receipts *receipts_start;
     struct Receipts *receipts_end;
@@ -277,8 +271,6 @@ struct Messenger {
     m_friend_typing_cb *friend_typingchange;
     m_friend_read_receipt_cb *read_receipt;
     m_friend_connection_status_cb *friend_connectionstatuschange;
-    m_friend_connectionstatuschange_internal_cb *friend_connectionstatuschange_internal;
-    void *friend_connectionstatuschange_internal_userdata;
 
     struct Group_Chats *conferences_object; /* Set by new_groupchats()*/
     m_conference_invite_cb *conference_invite;
@@ -287,9 +279,6 @@ struct Messenger {
     m_file_recv_control_cb *file_filecontrol;
     m_file_recv_chunk_cb *file_filedata;
     m_file_chunk_request_cb *file_reqchunk;
-
-    m_msi_packet_cb *msi_packet;
-    void *msi_packet_userdata;
 
     m_friend_lossy_packet_cb *lossy_packethandler;
     m_friend_lossless_packet_cb *lossless_packethandler;
@@ -546,10 +535,6 @@ void m_callback_read_receipt(Messenger *m, m_friend_read_receipt_cb *function);
  */
 void m_callback_connectionstatus(Messenger *m, m_friend_connection_status_cb *function);
 
-/* Same as previous but for internal A/V core usage only */
-void m_callback_connectionstatus_internal_av(Messenger *m, m_friend_connectionstatuschange_internal_cb *function,
-        void *userdata);
-
 
 /* Set the callback for typing changes.
  *  Function(unsigned int connection_status (0 = not connected, 1 = TCP only, 2 = UDP + TCP))
@@ -650,27 +635,6 @@ int file_seek(const Messenger *m, int32_t friendnumber, uint32_t filenumber, uin
  */
 int file_data(const Messenger *m, int32_t friendnumber, uint32_t filenumber, uint64_t position, const uint8_t *data,
               uint16_t length);
-
-/** A/V related */
-
-/* Set the callback for msi packets.
- */
-void m_callback_msi_packet(Messenger *m, m_msi_packet_cb *function, void *userdata);
-
-/* Send an msi packet.
- *
- *  return 1 on success
- *  return 0 on failure
- */
-int m_msi_packet(const Messenger *m, int32_t friendnumber, const uint8_t *data, uint16_t length);
-
-/* Set handlers for lossy rtp packets.
- *
- * return -1 on failure.
- * return 0 on success.
- */
-int m_callback_rtp_packet(Messenger *m, int32_t friendnumber, uint8_t byte,
-                          m_lossy_rtp_packet_cb *function, void *object);
 
 /** CUSTOM PACKETS */
 

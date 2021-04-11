@@ -553,7 +553,7 @@ int sendpacket(Networking_Core *net, IP_Port ip_port, const uint8_t *data, uint1
         addr6->sin6_flowinfo = 0;
         addr6->sin6_scope_id = 0;
     } else {
-        LOGGER_WARNING(net->log, "unknown address type: %d", ip_port.ip.family.value);
+        LOGGER_DEBUG(net->log, "unknown address type: %d", ip_port.ip.family.value);
         return -1;
     }
 
@@ -657,7 +657,7 @@ void networking_poll(Networking_Core *net, void *userdata)
         }
 
         if (!(net->packethandlers[data[0]].function)) {
-            LOGGER_WARNING(net->log, "[%02u] -- Packet has no handler", data[0]);
+            LOGGER_DEBUG(net->log, "[%02u] -- Packet has no handler", data[0]);
             continue;
         }
 

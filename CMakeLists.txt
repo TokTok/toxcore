@@ -275,6 +275,7 @@ if(BUILD_TOXAV)
     toxav/rtp.h
     toxav/toxav.c
     toxav/toxav.h
+    toxav/toxav_hacks.h
     toxav/toxav_old.c
     toxav/video.c
     toxav/video.h)
