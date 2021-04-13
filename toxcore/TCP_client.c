@@ -183,17 +183,23 @@ static void proxy_socks5_generate_handshake(TCP_Client_Connection *tcp_conn)
 {
     tcp_conn->last_packet[0] = 5; /* SOCKSv5 */
     tcp_conn->last_packet[1] = 1; /* number of authentication methods supported */
-    tcp_conn->last_packet[2] = 0; /* No authentication */
+
+    if (tcp_conn->proxy_info.socks5_username == nullptr || tcp_conn->proxy_info.socks5_password == nullptr) {
+        tcp_conn->last_packet[2] = 0; /* No authentication */
+    } else {
+        tcp_conn->last_packet[3] = 2; /* Username/password */
+    }
 
     tcp_conn->last_packet_length = 3;
     tcp_conn->last_packet_sent = 0;
 }
 
-/* return 1 on success.
+/* return 2 on success, username/password auth.
+ * return 1 on success, no auth.
  * return 0 if no data received.
  * return -1 on failure (connection refused).
  */
-static int socks5_read_handshake_response(const Logger *logger, TCP_Client_Connection *tcp_conn)
+static int proxy_socks5_read_handshake_response(const Logger *logger, TCP_Client_Connection *tcp_conn)
 {
     uint8_t data[2];
     int ret = read_TCP_packet(logger, tcp_conn->sock, data, sizeof(data));
@@ -202,7 +208,51 @@ static int socks5_read_handshake_response(const Logger *logger, TCP_Client_Conne
         return 0;
     }
 
-    if (data[0] == 5 && data[1] == 0) { // TODO(irungentoo): magic numbers
+    if (data[0] == 5) { /* must be SOCKSv5 */
+        if (data[1] == 0) { /* No authentication */
+            return 1;
+        }
+
+        if (data[1] == 2) { /* Username/password */
+            return 2;
+        }
+    }
+
+    return -1;
+}
+
+static void proxy_socks5_generate_authentication_request(TCP_Client_Connection *tcp_conn)
+{
+    tcp_conn->last_packet[0] = 1; /* rfc1929 auth version */
+    tcp_conn->last_packet[1] = tcp_conn->proxy_info.socks5_username_length;
+    uint16_t length = 2;
+    memcpy(tcp_conn->last_packet + length, tcp_conn->proxy_info.socks5_username,
+           tcp_conn->proxy_info.socks5_username_length);
+    length += tcp_conn->proxy_info.socks5_username_length;
+    tcp_conn->last_packet[length] = tcp_conn->proxy_info.socks5_password_length;
+    ++length;
+    memcpy(tcp_conn->last_packet + length, tcp_conn->proxy_info.socks5_password,
+           tcp_conn->proxy_info.socks5_password_length);
+    length += tcp_conn->proxy_info.socks5_password_length;
+
+    tcp_conn->last_packet_length = length;
+    tcp_conn->last_packet_sent = 0;
+}
+
+/* return 1 on success.
+ * return 0 if no data received.
+ * return -1 on failure (connection refused).
+ */
+static int proxy_socks5_read_authentication_response(const Logger *logger, TCP_Client_Connection *tcp_conn)
+{
+    uint8_t data[2];
+    int ret = read_TCP_packet(logger, tcp_conn->sock, data, sizeof(data));
+
+    if (ret == -1) {
+        return 0;
+    }
+
+    if (data[0] == 1 && data[1] == 0) {
         return 1;
     }
 
@@ -983,7 +1033,28 @@ void do_TCP_connection(const Logger *logger, Mono_Time *mono_time, TCP_Client_Co
 
     if (tcp_connection->status == TCP_CLIENT_PROXY_SOCKS5_CONNECTING) {
         if (client_send_pending_data(tcp_connection) == 0) {
-            int ret = socks5_read_handshake_response(logger, tcp_connection);
+            int ret = proxy_socks5_read_handshake_response(logger, tcp_connection);
+
+            if (ret == -1) {
+                tcp_connection->kill_at = 0;
+                tcp_connection->status = TCP_CLIENT_DISCONNECTED;
+            }
+
+            if (ret == 1) { /* no auth */
+                proxy_socks5_generate_connection_request(tcp_connection);
+                tcp_connection->status = TCP_CLIENT_PROXY_SOCKS5_UNCONFIRMED;
+            }
+
+            if (ret == 2) { /* username/password */
+                proxy_socks5_generate_authentication_request(tcp_connection);
+                tcp_connection->status = TCP_CLIENT_PROXY_SOCKS5_AUTHENTICATING;
+            }
+        }
+    }
+
+    if (tcp_connection->status == TCP_CLIENT_PROXY_SOCKS5_AUTHENTICATING) {
+        if (client_send_pending_data(tcp_connection) == 0) {
+            int ret = proxy_socks5_read_authentication_response(logger, tcp_connection);
 
             if (ret == -1) {
                 tcp_connection->kill_at = 0;

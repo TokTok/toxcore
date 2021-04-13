@@ -319,6 +319,20 @@ const MAX_FILENAME_LENGTH         = 255;
  */
 const MAX_HOSTNAME_LENGTH         = 255;
 
+/**
+ * Maximum length of a SOCKS5 proxy username in bytes.
+ *
+ * @deprecated The macro will be removed in 0.3.0. Use the function instead.
+ */
+const MAX_PROXY_SOCKS5_USERNAME_LENGTH = 255;
+
+/**
+ * Maximum length of a SOCKS5 proxy password in bytes.
+ *
+ * @deprecated The macro will be removed in 0.3.0. Use the function instead.
+ */
+const MAX_PROXY_SOCKS5_PASSWORD_LENGTH = 255;
+
 
 /*******************************************************************************
  *
@@ -540,6 +554,52 @@ static class options {
        * proxy_type is ${PROXY_TYPE.NONE}.
        */
       uint16_t port;
+
+      namespace socks5 {
+        /**
+         * The username to use to connect to a SOCKS5 proxy.
+         *
+         * If set to NULL, the username/password authentication is disabled.
+         *
+         * This member is ignored (it can be NULL) if proxy_type is not
+         * ${PROXY_TYPE.SOCKS5}.
+         *
+         * The data pointed at by this member is owned by the user, so must
+         * outlive the options object.
+         */
+        const uint8_t[length] username;
+
+        /**
+         * The length of the username.
+         *
+         * Must be at most $MAX_PROXY_SOCKS5_USERNAME_LENGTH.
+         *
+         * TODO(iphydf): this creates a pointless tox_options_set_proxy_socks5_username_length() function.
+         */
+        size_t username_length;
+
+        /**
+         * The password to use to connect to a Socks proxy.
+         *
+         * If set to NULL, the username/password authentication is disabled.
+         *
+         * This member is ignored (it can be NULL) if proxy_type is not
+         * ${PROXY_TYPE.SOCKS5}.
+         *
+         * The data pointed at by this member is owned by the user, so must
+         * outlive the options object.
+         */
+        const uint8_t[length] password;
+
+        /**
+         * The length of the password.
+         *
+         * Must be at most $MAX_PROXY_SOCKS5_PASSWORD_LENGTH.
+         *
+         * TODO(iphydf): this creates a pointless tox_options_set_proxy_socks5_password_length() function.
+         */
+        size_t password_length;
+      }
     }
 
     /**
@@ -595,6 +655,7 @@ static class options {
 
       /**
        * The length of the savedata.
+       * TODO(iphydf): this creates a pointless tox_options_set_savedata_length() function.
        */
       size_t length;
     }
@@ -741,6 +802,20 @@ static this new(const options_t *options) {
      */
     BAD_FORMAT,
   }
+
+  /**
+   * The proxy_socks5_username_length is zero or too long.
+   *
+   * TODO(iphydf): allow duplicate namespaces (e.g. PROXY).
+   */
+  PROXY_SOCKS5_BAD_USERNAME_LENGTH,
+
+  /**
+   * The proxy_socks5_password_length is zero or too long.
+   *
+   * TODO(iphydf): allow duplicate namespaces (e.g. PROXY).
+   */
+  PROXY_SOCKS5_BAD_PASSWORD_LENGTH,
 }
 
 

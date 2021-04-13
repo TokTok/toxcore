@@ -23,12 +23,17 @@ typedef enum TCP_Proxy_Type {
 typedef struct TCP_Proxy_Info {
     IP_Port ip_port;
     uint8_t proxy_type; // a value from TCP_PROXY_TYPE
+    const uint8_t *socks5_username;
+    size_t socks5_username_length;
+    const uint8_t *socks5_password;
+    size_t socks5_password_length;
 } TCP_Proxy_Info;
 
 typedef enum TCP_Client_Status {
     TCP_CLIENT_NO_STATUS,
     TCP_CLIENT_PROXY_HTTP_CONNECTING,
     TCP_CLIENT_PROXY_SOCKS5_CONNECTING,
+    TCP_CLIENT_PROXY_SOCKS5_AUTHENTICATING,
     TCP_CLIENT_PROXY_SOCKS5_UNCONFIRMED,
     TCP_CLIENT_CONNECTING,
     TCP_CLIENT_UNCONFIRMED,

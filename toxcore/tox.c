@@ -514,6 +514,32 @@ Tox *tox_new(const struct Tox_Options *options, Tox_Err_New *error)
         }
 
         m_options.proxy_info.ip_port.port = net_htons(tox_options_get_proxy_port(opts));
+
+        if (m_options.proxy_info.proxy_type == TCP_PROXY_SOCKS5) {
+            if (tox_options_get_proxy_socks5_username(opts) != nullptr &&
+                    (tox_options_get_proxy_socks5_username_length(opts) < 1 ||
+                     tox_options_get_proxy_socks5_username_length(opts) > TOX_MAX_PROXY_SOCKS5_USERNAME_LENGTH)) {
+                SET_ERROR_PARAMETER(error, TOX_ERR_NEW_PROXY_SOCKS5_BAD_USERNAME_LENGTH);
+                tox_options_free(default_options);
+                free(tox);
+                return nullptr;
+            }
+
+            m_options.proxy_info.socks5_username = tox_options_get_proxy_socks5_username(opts);
+            m_options.proxy_info.socks5_username_length = tox_options_get_proxy_socks5_username_length(opts);
+
+            if (tox_options_get_proxy_socks5_password(opts) != nullptr &&
+                    (tox_options_get_proxy_socks5_password_length(opts) < 1 ||
+                     tox_options_get_proxy_socks5_password_length(opts) > TOX_MAX_PROXY_SOCKS5_PASSWORD_LENGTH)) {
+                SET_ERROR_PARAMETER(error, TOX_ERR_NEW_PROXY_SOCKS5_BAD_PASSWORD_LENGTH);
+                tox_options_free(default_options);
+                free(tox);
+                return nullptr;
+            }
+
+            m_options.proxy_info.socks5_password = tox_options_get_proxy_socks5_password(opts);
+            m_options.proxy_info.socks5_password_length = tox_options_get_proxy_socks5_password_length(opts);
+        }
     }
 
     tox->mono_time = mono_time_new();

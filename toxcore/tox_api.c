@@ -33,6 +33,8 @@ CONST_FUNCTION(hash_length, HASH_LENGTH)
 CONST_FUNCTION(file_id_length, FILE_ID_LENGTH)
 CONST_FUNCTION(max_filename_length, MAX_FILENAME_LENGTH)
 CONST_FUNCTION(max_hostname_length, MAX_HOSTNAME_LENGTH)
+CONST_FUNCTION(max_proxy_socks5_username_length, MAX_PROXY_SOCKS5_USERNAME_LENGTH)
+CONST_FUNCTION(max_proxy_socks5_password_length, MAX_PROXY_SOCKS5_PASSWORD_LENGTH)
 
 
 #define ACCESSORS(type, ns, name) \
@@ -50,6 +52,8 @@ ACCESSORS(bool,, udp_enabled)
 ACCESSORS(Tox_Proxy_Type, proxy_, type)
 ACCESSORS(const char *, proxy_, host)
 ACCESSORS(uint16_t, proxy_, port)
+ACCESSORS(size_t, proxy_socks5_username_, length)
+ACCESSORS(size_t, proxy_socks5_password_, length)
 ACCESSORS(uint16_t,, start_port)
 ACCESSORS(uint16_t,, end_port)
 ACCESSORS(uint16_t,, tcp_port)
@@ -62,6 +66,28 @@ ACCESSORS(bool,, local_discovery_enabled)
 ACCESSORS(bool,, experimental_thread_safety)
 
 //!TOKSTYLE+
+
+const uint8_t *tox_options_get_proxy_socks5_username(const struct Tox_Options *options)
+{
+    return options->proxy_socks5_username;
+}
+
+void tox_options_set_proxy_socks5_username(struct Tox_Options *options, const uint8_t *username, size_t length)
+{
+    options->proxy_socks5_username = username;
+    options->proxy_socks5_username_length = length;
+}
+
+const uint8_t *tox_options_get_proxy_socks5_password(const struct Tox_Options *options)
+{
+    return options->proxy_socks5_password;
+}
+
+void tox_options_set_proxy_socks5_password(struct Tox_Options *options, const uint8_t *password, size_t length)
+{
+    options->proxy_socks5_password = password;
+    options->proxy_socks5_password_length = length;
+}
 
 const uint8_t *tox_options_get_savedata_data(const struct Tox_Options *options)
 {
