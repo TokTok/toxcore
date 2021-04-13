@@ -10,6 +10,7 @@
 #ifndef C_TOXCORE_TOXCORE_MESSENGER_H
 #define C_TOXCORE_TOXCORE_MESSENGER_H
 
+#include <stdbool.h>
 #include "friend_connection.h"
 #include "friend_requests.h"
 #include "logger.h"
@@ -777,5 +778,7 @@ uint32_t count_friendlist(const Messenger *m);
  * If the array was too small, the contents
  * of out_list will be truncated to list_size. */
 uint32_t copy_friendlist(const Messenger *m, uint32_t *out_list, uint32_t list_size);
+
+bool is_receiving_file(Messenger *m);
 
 #endif
