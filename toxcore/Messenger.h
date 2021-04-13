@@ -72,6 +72,31 @@ typedef struct Messenger_Options {
     uint8_t state_plugins_length;
 } Messenger_Options;
 
+/* this means no special capabilities, in other words clients that are older
+ * and did not implement this feature yet
+ */
+#define TOX_CAPABILITY_BASIC 0
+
+/* ATTENTION: if you are adding new flags in your fork or toxcore,
+ * or in c-toxcore master,
+ * please coordinate with us first!
+ * thank you, the Tox Devs.
+ */
+#define TOX_CAPABILITY_CAPABILITIES ((uint64_t)1) << 0
+/* add new flags/bits here */
+
+/* if the TOX_CAPABILITY_NEXT_IMPLEMENTATION flag is set it means
+ * we are using a different system for indicating capabilities now,
+ * and TOX_CAPABILITIES_* should be ignored and just the new (not yet known)
+ * system should be used
+ */
+#define TOX_CAPABILITY_NEXT_IMPLEMENTATION ((uint64_t)1) << 63
+
+/* hardcoded capabilities of this version/branch of toxcore */
+#define TOX_CAPABILITIES_CURRENT (uint64_t)(TOX_CAPABILITY_CAPABILITIES)
+/* size of the FLAGS in bytes */
+#define TOX_CAPABILITIES_SIZE sizeof(uint64_t)
+
 
 struct Receipts {
     uint32_t packet_num;
@@ -234,6 +259,7 @@ typedef struct Friend {
 
     struct Receipts *receipts_start;
     struct Receipts *receipts_end;
+    uint64_t toxcore_capabilities;
 } Friend;
 
 struct Messenger {
@@ -468,6 +494,11 @@ int m_copy_self_statusmessage(const Messenger *m, uint8_t *buf);
 uint8_t m_get_userstatus(const Messenger *m, int32_t friendnumber);
 uint8_t m_get_self_userstatus(const Messenger *m);
 
+
+/* get capabilities of friend's toxcore
+ * return TOX_CAPABILITY_BASIC on any error
+ */
+uint64_t m_get_friend_toxcore_capabilities(const Messenger *m, int32_t friendnumber);
 
 /* returns timestamp of last time friendnumber was seen online or 0 if never seen.
  * if friendnumber is invalid this function will return UINT64_MAX.
