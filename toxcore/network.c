@@ -487,6 +487,8 @@ struct Networking_Core {
     uint16_t port;
     /* Our UDP socket. */
     Socket sock;
+
+    uint8_t simulated_packet_loss_percentage;
 };
 
 Family net_family(const Networking_Core *net)
@@ -514,6 +516,11 @@ int sendpacket(Networking_Core *net, IP_Port ip_port, const uint8_t *data, uint1
         LOGGER_ERROR(net->log, "attempted to send message with network family %d (probably IPv6) on IPv4 socket",
                      ip_port.ip.family.value);
         return -1;
+    }
+
+    if (net->simulated_packet_loss_percentage
+            && (random() % 100) < net->simulated_packet_loss_percentage) {
+        return length;
     }
 
     if (net_family_is_ipv4(ip_port.ip.family) && net_family_is_ipv6(net->family)) {
@@ -663,6 +670,11 @@ void networking_poll(Networking_Core *net, void *userdata)
 
         net->packethandlers[data[0]].function(net->packethandlers[data[0]].object, ip_port, data, length, userdata);
     }
+}
+
+void set_simulated_packet_loss_percentage(Networking_Core *net, uint8_t simulated_packet_loss_percentage)
+{
+    net->simulated_packet_loss_percentage = simulated_packet_loss_percentage;
 }
 
 #ifndef VANILLA_NACL

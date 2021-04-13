@@ -1,5 +1,8 @@
 if BUILD_TESTS
 
+noinst_LTLIBRARIES += librun_auto_test.la
+librun_auto_test_la_SOURCES = ../auto_tests/run_auto_test.c ../auto_tests/run_auto_test.h
+
 TESTS = \
 	bootstrap_test \
 	conference_double_invite_test \
@@ -33,6 +36,7 @@ TESTS = \
 	set_name_test \
 	set_status_message_test \
 	skeleton_test \
+	tcp_backup_test \
 	TCP_test \
 	tcp_relay_test \
 	tox_many_tcp_test \
@@ -50,12 +54,12 @@ AUTOTEST_LDADD = \
 	$(LIBSODIUM_LDFLAGS) \
 	$(NACL_LDFLAGS) \
 	libmisc_tools.la \
+	librun_auto_test.la \
 	libtoxcore.la \
 	libtoxencryptsave.la \
 	$(LIBSODIUM_LIBS) \
 	$(NACL_OBJECTS) \
 	$(NACL_LIBS)
-
 
 if BUILD_AV
 TESTS += conference_av_test toxav_basic_test toxav_many_test
@@ -195,6 +199,10 @@ skeleton_test_LDADD = $(AUTOTEST_LDADD)
 tcp_relay_test_SOURCES = ../auto_tests/tcp_relay_test.c
 tcp_relay_test_CFLAGS = $(AUTOTEST_CFLAGS)
 tcp_relay_test_LDADD = $(AUTOTEST_LDADD)
+
+tox_many_tcp_test_SOURCES = ../auto_tests/tcp_backup_test.c
+tox_many_tcp_test_CFLAGS = $(AUTOTEST_CFLAGS)
+tox_many_tcp_test_LDADD = $(AUTOTEST_LDADD)
 
 TCP_test_SOURCES = ../auto_tests/TCP_test.c
 TCP_test_CFLAGS = $(AUTOTEST_CFLAGS)

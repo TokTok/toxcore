@@ -443,6 +443,10 @@ Networking_Core *new_networking_no_udp(const Logger *log);
 /* Function to cleanup networking stuff (doesn't do much right now). */
 void kill_networking(Networking_Core *net);
 
+/* Set percentage probability of a packet sent via sendpacket() being dropped
+ * (for tests) */
+void set_simulated_packet_loss_percentage(Networking_Core *net, uint8_t simulated_packet_loss_percentage);
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif
