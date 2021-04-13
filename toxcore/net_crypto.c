@@ -51,7 +51,7 @@ typedef struct Crypto_Connection {
     uint8_t sent_nonce[CRYPTO_NONCE_SIZE]; /* Nonce of sent packets. */
     uint8_t sessionpublic_key[CRYPTO_PUBLIC_KEY_SIZE]; /* Our public key for this session. */
     uint8_t sessionsecret_key[CRYPTO_SECRET_KEY_SIZE]; /* Our private key for this session. */
-    uint8_t peersessionpublic_key[CRYPTO_PUBLIC_KEY_SIZE]; /* The public key of the peer. */
+    uint8_t peersessionpublic_key[CRYPTO_PUBLIC_KEY_SIZE]; /* The session public key of the peer. */
     uint8_t shared_key[CRYPTO_SHARED_KEY_SIZE]; /* The precomputed shared key from encrypt_precompute. */
     Crypto_Conn_State status; /* See Crypto_Conn_State documentation */
     uint64_t cookie_request_number; /* number used in the cookie request packets for this connection */
@@ -211,6 +211,7 @@ static bool crypt_connection_id_is_valid(const Net_Crypto *c, int crypt_connecti
  * return -1 on failure.
  * return COOKIE_REQUEST_LENGTH on success.
  */
+// AKE: Peer A/Initiator creates a cookie request
 static int create_cookie_request(const Net_Crypto *c, uint8_t *packet, uint8_t *dht_public_key, uint64_t number,
                                  uint8_t *shared_key)
 {
@@ -221,12 +222,15 @@ static int create_cookie_request(const Net_Crypto *c, uint8_t *packet, uint8_t *
     memcpy(plain + CRYPTO_PUBLIC_KEY_SIZE, padding, CRYPTO_PUBLIC_KEY_SIZE);
     memcpy(plain + (CRYPTO_PUBLIC_KEY_SIZE * 2), &number, sizeof(uint64_t));
 
+    // AKE: shared key in case of cookie request is calculated by using initiators DHT secret key and receivers DHT public key
     dht_get_shared_key_sent(c->dht, shared_key, dht_public_key);
     uint8_t nonce[CRYPTO_NONCE_SIZE];
     random_nonce(nonce);
+    // AKE: set NET_PACKET_COOKIE_REQUEST => for packet handling
     packet[0] = NET_PACKET_COOKIE_REQUEST;
     memcpy(packet + 1, dht_get_self_public_key(c->dht), CRYPTO_PUBLIC_KEY_SIZE);
     memcpy(packet + 1 + CRYPTO_PUBLIC_KEY_SIZE, nonce, CRYPTO_NONCE_SIZE);
+    // AKE: shared key for encryption is based on DHT keys (for cookies)
     int len = encrypt_data_symmetric(shared_key, nonce, plain, sizeof(plain),
                                      packet + 1 + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE);
 
@@ -242,6 +246,7 @@ static int create_cookie_request(const Net_Crypto *c, uint8_t *packet, uint8_t *
  * return -1 on failure.
  * return 0 on success.
  */
+// AKE: cookie creation helper function
 static int create_cookie(const Logger *log, const Mono_Time *mono_time, uint8_t *cookie, const uint8_t *bytes,
                          const uint8_t *encryption_key)
 {
@@ -264,6 +269,7 @@ static int create_cookie(const Logger *log, const Mono_Time *mono_time, uint8_t 
  * return -1 on failure.
  * return 0 on success.
  */
+// AKE: Open Cookie helper function
 static int open_cookie(const Logger *log, const Mono_Time *mono_time, uint8_t *bytes, const uint8_t *cookie,
                        const uint8_t *encryption_key)
 {
@@ -295,6 +301,7 @@ static int open_cookie(const Logger *log, const Mono_Time *mono_time, uint8_t *b
  * return -1 on failure.
  * return COOKIE_RESPONSE_LENGTH on success.
  */
+// AKE: Peer B (receiver) receives a cookie request from another peer (e.g. Peer A)
 static int create_cookie_response(const Net_Crypto *c, uint8_t *packet, const uint8_t *request_plain,
                                   const uint8_t *shared_key, const uint8_t *dht_public_key)
 {
@@ -308,6 +315,7 @@ static int create_cookie_response(const Net_Crypto *c, uint8_t *packet, const ui
     }
 
     memcpy(plain + COOKIE_LENGTH, request_plain + COOKIE_DATA_LENGTH, sizeof(uint64_t));
+    // AKE: set NET_PACKET_COOKIE_RESPONSE => for packet handling
     packet[0] = NET_PACKET_COOKIE_RESPONSE;
     random_nonce(packet + 1);
     int len = encrypt_data_symmetric(shared_key, packet + 1, plain, sizeof(plain), packet + 1 + CRYPTO_NONCE_SIZE);
@@ -326,6 +334,7 @@ static int create_cookie_response(const Net_Crypto *c, uint8_t *packet, const ui
  * return -1 on failure.
  * return 0 on success.
  */
+// AKE: Peer B (receiver) handling a cookie request
 static int handle_cookie_request(const Net_Crypto *c, uint8_t *request_plain, uint8_t *shared_key,
                                  uint8_t *dht_public_key, const uint8_t *packet, uint16_t length)
 {
@@ -334,6 +343,7 @@ static int handle_cookie_request(const Net_Crypto *c, uint8_t *request_plain, ui
     }
 
     memcpy(dht_public_key, packet + 1, CRYPTO_PUBLIC_KEY_SIZE);
+    // AKE: calculate shared key from DHT keys
     dht_get_shared_key_sent(c->dht, shared_key, dht_public_key);
     int len = decrypt_data_symmetric(shared_key, packet + 1 + CRYPTO_PUBLIC_KEY_SIZE,
                                      packet + 1 + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE, COOKIE_REQUEST_PLAIN_LENGTH + CRYPTO_MAC_SIZE,
@@ -348,6 +358,7 @@ static int handle_cookie_request(const Net_Crypto *c, uint8_t *request_plain, ui
 
 /* Handle the cookie request packet (for raw UDP)
  */
+// AKE: 1. one of three functions triggering handle_cookie_request(). Triggered by receiving of NET_PACKET_COOKIE_REQUEST packet
 static int udp_handle_cookie_request(void *object, IP_Port source, const uint8_t *packet, uint16_t length,
                                      void *userdata)
 {
@@ -375,6 +386,7 @@ static int udp_handle_cookie_request(void *object, IP_Port source, const uint8_t
 
 /* Handle the cookie request packet (for TCP)
  */
+// AKE: 2. one of three functions triggering handle_cookie_request(). Triggered by receiving of NET_PACKET_COOKIE_REQUEST packet
 static int tcp_handle_cookie_request(Net_Crypto *c, int connections_number, const uint8_t *packet, uint16_t length)
 {
     uint8_t request_plain[COOKIE_REQUEST_PLAIN_LENGTH];
@@ -397,6 +409,7 @@ static int tcp_handle_cookie_request(Net_Crypto *c, int connections_number, cons
 
 /* Handle the cookie request packet (for TCP oob packets)
  */
+// AKE: 3. one of three functions triggering handle_cookie_request(). Triggered by receiving of NET_PACKET_COOKIE_REQUEST packet
 static int tcp_oob_handle_cookie_request(const Net_Crypto *c, unsigned int tcp_connections_number,
         const uint8_t *dht_public_key, const uint8_t *packet, uint16_t length)
 {
@@ -430,6 +443,7 @@ static int tcp_oob_handle_cookie_request(const Net_Crypto *c, unsigned int tcp_c
  * return -1 on failure.
  * return COOKIE_LENGTH on success.
  */
+// AKE: Peer A/initiator receives a cookie response packet after sending a cookie request packet
 static int handle_cookie_response(const Logger *log, uint8_t *cookie, uint64_t *number,
                                   const uint8_t *packet, uint16_t length,
                                   const uint8_t *shared_key)
@@ -460,23 +474,38 @@ static int handle_cookie_response(const Logger *log, uint8_t *cookie, uint64_t *
  * return -1 on failure.
  * return HANDSHAKE_PACKET_LENGTH on success.
  */
+// AKE: create a crypto handshake packet (both peers)
 static int create_crypto_handshake(const Net_Crypto *c, uint8_t *packet, const uint8_t *cookie, const uint8_t *nonce,
                                    const uint8_t *session_pk, const uint8_t *peer_real_pk, const uint8_t *peer_dht_pubkey)
 {
+    /* Handshake packet structure
+        [uint8_t 26]
+        [Cookie]
+        [nonce (24 bytes)]
+        [Encrypted message containing:
+            [24 bytes base nonce]
+            [session public key of the peer (32 bytes)]
+            [sha512 hash of the entire Cookie sitting outside the encrypted part]
+            [Other Cookie (used by the other to respond to the handshake packet)]
+        ]
+     */
     uint8_t plain[CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_SHA512_SIZE + COOKIE_LENGTH];
     memcpy(plain, nonce, CRYPTO_NONCE_SIZE);
     memcpy(plain + CRYPTO_NONCE_SIZE, session_pk, CRYPTO_PUBLIC_KEY_SIZE);
+    // AKE: This is the cookie from Peer B/receiver which is sent in plain (see handshake packet in spec)
     crypto_sha512(plain + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE, cookie, COOKIE_LENGTH);
     uint8_t cookie_plain[COOKIE_DATA_LENGTH];
     memcpy(cookie_plain, peer_real_pk, CRYPTO_PUBLIC_KEY_SIZE);
     memcpy(cookie_plain + CRYPTO_PUBLIC_KEY_SIZE, peer_dht_pubkey, CRYPTO_PUBLIC_KEY_SIZE);
 
+    // AKE: This is to create the OTHER cookie from Peer A/initiator
     if (create_cookie(c->log, c->mono_time, plain + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_SHA512_SIZE,
                       cookie_plain, c->secret_symmetric_key) != 0) {
         return -1;
     }
 
     random_nonce(packet + 1 + COOKIE_LENGTH);
+    // AKE: handshake packet is using peers real STATIC public and self STATIC secret key for encryption
     int len = encrypt_data(peer_real_pk, c->self_secret_key, packet + 1 + COOKIE_LENGTH, plain, sizeof(plain),
                            packet + 1 + COOKIE_LENGTH + CRYPTO_NONCE_SIZE);
 
@@ -508,6 +537,7 @@ static int create_crypto_handshake(const Net_Crypto *c, uint8_t *packet, const u
  * return -1 on failure.
  * return 0 on success.
  */
+// AKE: Peer B/receiver handle incoming handshake packet
 static int handle_crypto_handshake(const Net_Crypto *c, uint8_t *nonce, uint8_t *session_pk, uint8_t *peer_real_pk,
                                    uint8_t *dht_public_key, uint8_t *cookie, const uint8_t *packet, uint16_t length, const uint8_t *expected_real_pk)
 {
@@ -546,6 +576,7 @@ static int handle_crypto_handshake(const Net_Crypto *c, uint8_t *nonce, uint8_t 
 
     memcpy(nonce, plain, CRYPTO_NONCE_SIZE);
     memcpy(session_pk, plain + CRYPTO_NONCE_SIZE, CRYPTO_PUBLIC_KEY_SIZE);
+    // AKE: This is the OTHER cookie from Peer A/initiator
     memcpy(cookie, plain + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_SHA512_SIZE, COOKIE_LENGTH);
     memcpy(peer_real_pk, cookie_plain, CRYPTO_PUBLIC_KEY_SIZE);
     memcpy(dht_public_key, cookie_plain + CRYPTO_PUBLIC_KEY_SIZE, CRYPTO_PUBLIC_KEY_SIZE);
@@ -1418,6 +1449,7 @@ static int send_temp_packet(Net_Crypto *c, int crypt_connection_id)
  * return -1 on failure.
  * return 0 on success.
  */
+// AKE: Peer A/Initiator sends handshake packet after receiving of cookie response. Function also used by Peer B/receiver
 static int create_send_handshake(Net_Crypto *c, int crypt_connection_id, const uint8_t *cookie,
                                  const uint8_t *dht_public_key)
 {
@@ -1638,6 +1670,7 @@ static int handle_data_packet_core(Net_Crypto *c, int crypt_connection_id, const
  * return -1 on failure.
  * return 0 on success.
  */
+// AKE: handling of Cookie response packets, crypto handshake packets and crypto data packets -> therefore used by Peer A _AND_ Peer B
 static int handle_packet_connection(Net_Crypto *c, int crypt_connection_id, const uint8_t *packet, uint16_t length,
                                     bool udp, void *userdata)
 {
@@ -1652,6 +1685,7 @@ static int handle_packet_connection(Net_Crypto *c, int crypt_connection_id, cons
     }
 
     switch (packet[0]) {
+        // AKE: case to handle cookie response packets (Peer A/initiator)
         case NET_PACKET_COOKIE_RESPONSE: {
             if (conn->status != CRYPTO_CONN_COOKIE_REQUESTING) {
                 return -1;
@@ -1668,15 +1702,19 @@ static int handle_packet_connection(Net_Crypto *c, int crypt_connection_id, cons
                 return -1;
             }
 
+            // AKE: if cookie response was ok, create and send handshake packet to Peer B/receiver
             if (create_send_handshake(c, crypt_connection_id, cookie, conn->dht_public_key) != 0) {
                 return -1;
             }
 
+            // AKE: change crypto conn state to CRYPTO_CONN_HANDSHAKE_SENT
             conn->status = CRYPTO_CONN_HANDSHAKE_SENT;
             return 0;
         }
 
+        // AKE: case to handle handshake packets (Peer B/receiver)
         case NET_PACKET_CRYPTO_HS: {
+            // AKE: very likely, that "Peer B"/receiver (or Peer A/initiator) is in one of these states
             if (conn->status != CRYPTO_CONN_COOKIE_REQUESTING
                     && conn->status != CRYPTO_CONN_HANDSHAKE_SENT
                     && conn->status != CRYPTO_CONN_NOT_CONFIRMED) {
@@ -1693,14 +1731,20 @@ static int handle_packet_connection(Net_Crypto *c, int crypt_connection_id, cons
             }
 
             if (public_key_cmp(dht_public_key, conn->dht_public_key) == 0) {
+                // Peer B (or Peer A, whoever receives the handshake packet) calculation of shared session key
                 encrypt_precompute(conn->peersessionpublic_key, conn->sessionsecret_key, conn->shared_key);
 
+                /*
+                 * AKE: This seems to be an (error/not perfect handshake) case of Peer A
+                 * i.e. if Peer A receives handshake packet from Peer B, but has already sent a cookie request to Peer B himself
+                 */
                 if (conn->status == CRYPTO_CONN_COOKIE_REQUESTING) {
                     if (create_send_handshake(c, crypt_connection_id, cookie, dht_public_key) != 0) {
                         return -1;
                     }
                 }
 
+                // AKE: change crypto conn state to CRYPTO_CONN_HANDSHAKE_SENT (cf. accepted in spec)
                 conn->status = CRYPTO_CONN_NOT_CONFIRMED;
             } else {
                 if (conn->dht_pk_callback) {
@@ -1927,12 +1971,18 @@ void new_connection_handler(Net_Crypto *c, new_connection_cb *new_connection_cal
 /* Handle a handshake packet by someone who wants to initiate a new connection with us.
  * This calls the callback set by new_connection_handler() if the handshake is ok.
  *
+ * AKE: Peer B/receiver handles incoming handshake packet and sends a handshake packet himself
+ *
  * return -1 on failure.
  * return 0 on success.
  */
 static int handle_new_connection_handshake(Net_Crypto *c, IP_Port source, const uint8_t *data, uint16_t length,
         void *userdata)
 {
+    /*
+     * TODO AKE: This function seems to be called if Peer B/receiver doesn't have a Crypto_Connection
+     * conn yet (with the peer it received the handshake packet from)!
+     */
     New_Connection n_c;
     n_c.cookie = (uint8_t *)malloc(COOKIE_LENGTH);
 
@@ -1943,6 +1993,7 @@ static int handle_new_connection_handshake(Net_Crypto *c, IP_Port source, const 
     n_c.source = source;
     n_c.cookie_length = COOKIE_LENGTH;
 
+    // AKE: Handle the crypto handshake packet from Peer A/initiator (incl. Other Cookie from A)
     if (handle_crypto_handshake(c, n_c.recv_nonce, n_c.peersessionpublic_key, n_c.public_key, n_c.dht_public_key,
                                 n_c.cookie, data, length, nullptr) != 0) {
         free(n_c.cookie);
@@ -1967,16 +2018,22 @@ static int handle_new_connection_handshake(Net_Crypto *c, IP_Port source, const 
             }
 
             memcpy(conn->recv_nonce, n_c.recv_nonce, CRYPTO_NONCE_SIZE);
+            // AKE: Peer A/initiator session pk is copied into the crypto connection from the new connection
             memcpy(conn->peersessionpublic_key, n_c.peersessionpublic_key, CRYPTO_PUBLIC_KEY_SIZE);
+            // AKE: Peer B/receiver calculates shared session key from Peer A/initiator public key and self session secret key
+            // AKE: Where is conn->sessionsecret_key coming from? => conn already existed -> there it is saved! Keys are generated in new_net_crypto()!
             encrypt_precompute(conn->peersessionpublic_key, conn->sessionsecret_key, conn->shared_key);
 
             crypto_connection_add_source(c, crypt_connection_id, source);
 
+            // AKE: Send handshake packet/message 2 Peer B/receiver -> Peer A/initiator
             if (create_send_handshake(c, crypt_connection_id, n_c.cookie, n_c.dht_public_key) != 0) {
                 free(n_c.cookie);
                 return -1;
             }
 
+            // AKE: Peer B/receiver accepts the connection (cf. spec)
+            // AKE: TODO in accept_crypto_connection this happens before this peer calls create_send_handshake() -> shoudldn't this be also the case here?
             conn->status = CRYPTO_CONN_NOT_CONFIRMED;
             free(n_c.cookie);
             return 0;
@@ -1989,6 +2046,8 @@ static int handle_new_connection_handshake(Net_Crypto *c, IP_Port source, const 
 }
 
 /* Accept a crypto connection.
+ *
+ * TODO AKE: Peer B/receiver handshake (message 2), don't know when this gets called
  *
  * return -1 on failure.
  * return connection id on success.
@@ -2025,10 +2084,15 @@ int accept_crypto_connection(Net_Crypto *c, New_Connection *n_c)
     conn->connection_number_tcp = connection_number_tcp;
     memcpy(conn->public_key, n_c->public_key, CRYPTO_PUBLIC_KEY_SIZE);
     memcpy(conn->recv_nonce, n_c->recv_nonce, CRYPTO_NONCE_SIZE);
+    // AKE: the peer's session pk is copied into the crypto connection from new connection
     memcpy(conn->peersessionpublic_key, n_c->peersessionpublic_key, CRYPTO_PUBLIC_KEY_SIZE);
     random_nonce(conn->sent_nonce);
+    // AKE: Message 2: generate new session public/private keypair -> peer receiving the handshake packet
     crypto_new_keypair(conn->sessionpublic_key, conn->sessionsecret_key);
+    // AKE: Session Key Derivation by using session secret key and peer's session public key
+    // AKE: peers session pk (handshake receiving peer) -> it's coming from New_Connection n_c
     encrypt_precompute(conn->peersessionpublic_key, conn->sessionsecret_key, conn->shared_key);
+    // AKE: CRYPTO_CONN_NOT_CONFIRMED = ACCEPTED state of connection (need to send handshake packet)
     conn->status = CRYPTO_CONN_NOT_CONFIRMED;
 
     if (create_send_handshake(c, crypt_connection_id, n_c->cookie, n_c->dht_public_key) != 0) {
@@ -2054,6 +2118,7 @@ int accept_crypto_connection(Net_Crypto *c, New_Connection *n_c)
  * return -1 on failure.
  * return connection id on success.
  */
+// AKE: Perfect handshake: Peer A initiate handshake by creating a sending a cookie request. Realistic handshake: also called by Peer B
 int new_crypto_connection(Net_Crypto *c, const uint8_t *real_public_key, const uint8_t *dht_public_key)
 {
     int crypt_connection_id = getcryptconnection_id(c, real_public_key);
@@ -2071,6 +2136,11 @@ int new_crypto_connection(Net_Crypto *c, const uint8_t *real_public_key, const u
     Crypto_Connection *conn = &c->crypto_connections[crypt_connection_id];
 
     pthread_mutex_lock(&c->tcp_mutex);
+    // AKE: Initate handshake, create tcp connection to peer
+    /* AKE: Sometimes toxcore might receive the DHT public key of the peer first with a handshake
+     * packet so it is important that this case is handled and that the implementation passes the
+     * DHT public key to the other modules (DHT, TCP_connection) because this does happen.
+     */
     const int connection_number_tcp = new_tcp_connection_to(c->tcp_c, dht_public_key, crypt_connection_id);
     pthread_mutex_unlock(&c->tcp_mutex);
 
@@ -2082,7 +2152,9 @@ int new_crypto_connection(Net_Crypto *c, const uint8_t *real_public_key, const u
     conn->connection_number_tcp = connection_number_tcp;
     memcpy(conn->public_key, real_public_key, CRYPTO_PUBLIC_KEY_SIZE);
     random_nonce(conn->sent_nonce);
+    // AKE: Peer A handshake initiator _session_ public/private key pair generation
     crypto_new_keypair(conn->sessionpublic_key, conn->sessionsecret_key);
+    // AKE: Peer A crypto conn state is set to cookie requested
     conn->status = CRYPTO_CONN_COOKIE_REQUESTING;
     conn->packet_send_rate = CRYPTO_PACKET_MIN_RATE;
     conn->packet_send_rate_requested = CRYPTO_PACKET_MIN_RATE;
@@ -2093,6 +2165,8 @@ int new_crypto_connection(Net_Crypto *c, const uint8_t *real_public_key, const u
     conn->cookie_request_number = random_u64();
     uint8_t cookie_request[COOKIE_REQUEST_LENGTH];
 
+    // AKE: Call: Create cookie request -> Initiator of handshake and send cookie request
+    // AKE: Cookie request of initiator doesn't contain a cookie! Just to request one from peer!
     if (create_cookie_request(c, cookie_request, conn->dht_public_key, conn->cookie_request_number,
                               conn->shared_key) != sizeof(cookie_request)
             || new_temp_packet(c, crypt_connection_id, cookie_request, sizeof(cookie_request)) != 0) {
@@ -2159,6 +2233,7 @@ static int tcp_data_callback(void *object, int crypt_connection_id, const uint8_
     // This unlocks the mutex that at this point is locked by do_tcp before
     // calling do_tcp_connections.
     pthread_mutex_unlock(&c->tcp_mutex);
+    // AKE: One possiblity for Peer A/initator to handle a received cookie response packet
     int ret = handle_packet_connection(c, crypt_connection_id, data, length, 0, userdata);
     pthread_mutex_lock(&c->tcp_mutex);
 
@@ -2179,10 +2254,12 @@ static int tcp_oob_callback(void *object, const uint8_t *public_key, unsigned in
         return -1;
     }
 
+    // AKE: cookie request packet received
     if (data[0] == NET_PACKET_COOKIE_REQUEST) {
         return tcp_oob_handle_cookie_request(c, tcp_connections_number, public_key, data, length);
     }
 
+    // AKE: handshake packet received
     if (data[0] == NET_PACKET_CRYPTO_HS) {
         IP_Port source;
         source.port = 0;
@@ -2449,6 +2526,7 @@ static int udp_handle_packet(void *object, IP_Port source, const uint8_t *packet
         return 0;
     }
 
+    // AKE: One possiblity for Peer A/initator to handle a received cookie response packet
     if (handle_packet_connection(c, crypt_connection_id, packet, length, 1, userdata) != 0) {
         return 1;
     }
@@ -2963,6 +3041,7 @@ void load_secret_key(Net_Crypto *c, const uint8_t *sk)
 /* Run this to (re)initialize net_crypto.
  * Sets all the global connection variables to their default values.
  */
+// AKE: important function for every part of the handshake besides cookie request
 Net_Crypto *new_net_crypto(const Logger *log, Mono_Time *mono_time, DHT *dht, TCP_Proxy_Info *proxy_info)
 {
     if (dht == nullptr) {
@@ -2985,7 +3064,9 @@ Net_Crypto *new_net_crypto(const Logger *log, Mono_Time *mono_time, DHT *dht, TC
         return nullptr;
     }
 
+    // AKE: callback for TCP data packets
     set_packet_tcp_connection_callback(temp->tcp_c, &tcp_data_callback, temp);
+    // AKE: callback for TCP onion packets
     set_oob_packet_tcp_connection_callback(temp->tcp_c, &tcp_oob_callback, temp);
 
     if (create_recursive_mutex(&temp->tcp_mutex) != 0 ||
@@ -2997,11 +3078,13 @@ Net_Crypto *new_net_crypto(const Logger *log, Mono_Time *mono_time, DHT *dht, TC
 
     temp->dht = dht;
 
+    // AKE: there is a new public/private key pair generated and set. Therefore this should only be called once initially
     new_keys(temp);
     new_symmetric_key(temp->secret_symmetric_key);
 
     temp->current_sleep_time = CRYPTO_SEND_PACKET_INTERVAL;
 
+    // AKE: registering UDP packet handlers
     networking_registerhandler(dht_get_net(dht), NET_PACKET_COOKIE_REQUEST, &udp_handle_cookie_request, temp);
     networking_registerhandler(dht_get_net(dht), NET_PACKET_COOKIE_RESPONSE, &udp_handle_packet, temp);
     networking_registerhandler(dht_get_net(dht), NET_PACKET_CRYPTO_HS, &udp_handle_packet, temp);
@@ -3011,7 +3094,7 @@ Net_Crypto *new_net_crypto(const Logger *log, Mono_Time *mono_time, DHT *dht, TC
 
     return temp;
 }
-
+//TODO test
 static void kill_timedout(Net_Crypto *c, void *userdata)
 {
     for (uint32_t i = 0; i < c->crypto_connections_length; ++i) {
