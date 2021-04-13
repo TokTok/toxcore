@@ -10,6 +10,7 @@
 #define C_TOXCORE_TOXCORE_ONION_H
 
 #include "DHT.h"
+#include "forwarding.h"
 #include "mono_time.h"
 
 typedef int onion_recv_1_cb(void *object, IP_Port dest, const uint8_t *data, uint16_t length);
@@ -18,6 +19,7 @@ typedef struct Onion {
     Mono_Time *mono_time;
     DHT *dht;
     Networking_Core *net;
+    Forwarding *forwarding;
     uint8_t secret_symmetric_key[CRYPTO_SYMMETRIC_KEY_SIZE];
     uint64_t timestamp;
 

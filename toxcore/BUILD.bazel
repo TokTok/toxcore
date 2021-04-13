@@ -116,6 +116,17 @@ cc_test(
 )
 
 cc_library(
+    name = "timed_auth",
+    srcs = ["timed_auth.c"],
+    hdrs = ["timed_auth.h"],
+    deps = [
+        ":ccompat",
+        ":crypto_core",
+        ":mono_time",
+    ],
+)
+
+cc_library(
     name = "ping_array",
     srcs = ["ping_array.c"],
     hdrs = ["ping_array.h"],
@@ -178,6 +189,16 @@ cc_library(
     name = "onion",
     srcs = ["onion.c"],
     hdrs = ["onion.h"],
+    deps = [
+        ":DHT",
+        ":forwarding",
+    ],
+)
+
+cc_library(
+    name = "forwarding",
+    srcs = ["forwarding.c"],
+    hdrs = ["forwarding.h"],
     deps = [":DHT"],
 )
 
@@ -218,7 +239,9 @@ cc_library(
     name = "onion_announce",
     srcs = ["onion_announce.c"],
     hdrs = ["onion_announce.h"],
-    deps = [":onion"],
+    deps = [":onion",
+            ":timed_auth",
+    ],
 )
 
 cc_library(

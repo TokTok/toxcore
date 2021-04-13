@@ -1860,6 +1860,7 @@ int dht_bootstrap_from_address(DHT *dht, const char *address, uint8_t ipv6enable
 
 /* Send the given packet to node with public_key
  *
+ *  return number of bytes sent.
  *  return -1 if failure.
  */
 int route_packet(const DHT *dht, const uint8_t *public_key, const uint8_t *packet, uint16_t length)

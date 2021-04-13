@@ -42,6 +42,9 @@ struct TCP_Connections {
     tcp_onion_cb *tcp_onion_callback;
     void *tcp_onion_callback_object;
 
+    tcp_forwarding_cb *tcp_forwarding_callback;
+    void *tcp_forwarding_callback_object;
+
     TCP_Proxy_Info proxy_info;
 
     bool onion_status;
@@ -354,7 +357,7 @@ int send_packet_tcp_connection(TCP_Connections *tcp_c, int connections_number, c
  * return TCP connection number on success.
  * return -1 on failure.
  */
-int get_random_tcp_onion_conn_number(TCP_Connections *tcp_c)
+int get_random_tcp_onion_conn_number(const TCP_Connections *tcp_c)
 {
     const uint32_t r = random_u32();
 
@@ -367,6 +370,42 @@ int get_random_tcp_onion_conn_number(TCP_Connections *tcp_c)
     }
 
     return -1;
+}
+
+/* Return TCP connection number of active TCP connection with ip_port.
+ *
+ * return TCP connection number on success.
+ * return -1 on failure.
+ */
+static int get_conn_number_by_ip_port(TCP_Connections *tcp_c, IP_Port ip_port)
+{
+    for (uint32_t i = 0; i < tcp_c->tcp_connections_length; ++i) {
+        const IP_Port conn_ip_port = tcp_con_ip_port(tcp_c->tcp_connections[i].connection);
+
+        if (ipport_equal(&ip_port, &conn_ip_port) &&
+                tcp_c->tcp_connections[i].status == TCP_CONN_CONNECTED) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+/* Put IP_Port of a random onion TCP connection in ip_port.
+ *
+ * return true on success.
+ * return false on failure.
+ */
+bool tcp_get_random_conn_ip_port(const TCP_Connections *tcp_c, IP_Port *ip_port)
+{
+    const int index = get_random_tcp_onion_conn_number(tcp_c);
+
+    if (index == -1) {
+        return false;
+    }
+
+    *ip_port = tcp_con_ip_port(tcp_c->tcp_connections[index].connection);
+    return true;
 }
 
 /* Send an onion packet via the TCP relay corresponding to tcp_connections_number.
@@ -390,6 +429,42 @@ int tcp_send_onion_request(TCP_Connections *tcp_c, uint32_t tcp_connections_numb
     }
 
     return -1;
+}
+
+/* Send a forward request to the TCP relay with IP_Port tcp_forwarder,
+ * requesting to forward data to dest.
+ *
+ * return 0 on success.
+ * return -1 on failure.
+ */
+int tcp_send_forward_request(TCP_Connections *tcp_c, IP_Port tcp_forwarder,
+                             IP_Port dest, const uint8_t *data, uint16_t length)
+{
+    const int index = get_conn_number_by_ip_port(tcp_c, tcp_forwarder);
+
+    if (index == -1) {
+        return -1;
+    }
+
+    return (send_forward_request_tcp(tcp_c->tcp_connections[index].connection, dest, data, length) == 1 ? 0 : -1);
+}
+
+/* Send a forward request to the TCP relay with IP_Port tcp_forwarder,
+ * requesting to forward data to dest via DHT node dht_forwarder.
+ *
+ * return 0 on success.
+ * return -1 on failure.
+ */
+int tcp_send_double_forward_request(TCP_Connections *tcp_c,
+                                    IP_Port tcp_forwarder, IP_Port dht_forwarder, const uint8_t *dest_public_key,
+                                    const uint8_t *data, uint16_t length)
+{
+    const uint16_t len = 1 + CRYPTO_PUBLIC_KEY_SIZE + length;
+    VLA(uint8_t, packet, len);
+    packet[0] = NET_PACKET_FORWARD_REQUEST;
+    memcpy(packet + 1, dest_public_key, CRYPTO_PUBLIC_KEY_SIZE);
+    memcpy(packet + 1 + CRYPTO_PUBLIC_KEY_SIZE, data, length);
+    return tcp_send_forward_request(tcp_c, tcp_forwarder, dht_forwarder, packet, len);
 }
 
 /* Send an oob packet via the TCP relay corresponding to tcp_connections_number.
@@ -427,7 +502,7 @@ void set_packet_tcp_connection_callback(TCP_Connections *tcp_c, tcp_data_cb *tcp
     tcp_c->tcp_data_callback_object = object;
 }
 
-/* Set the callback for TCP onion packets.
+/* Set the callback for TCP oob data packets.
  */
 void set_oob_packet_tcp_connection_callback(TCP_Connections *tcp_c, tcp_oob_cb *tcp_oob_callback, void *object)
 {
@@ -435,7 +510,7 @@ void set_oob_packet_tcp_connection_callback(TCP_Connections *tcp_c, tcp_oob_cb *
     tcp_c->tcp_oob_callback_object = object;
 }
 
-/* Set the callback for TCP oob data packets.
+/* Set the callback for TCP onion packets.
  */
 void set_onion_packet_tcp_connection_callback(TCP_Connections *tcp_c, tcp_onion_cb *tcp_onion_callback, void *object)
 {
@@ -443,6 +518,37 @@ void set_onion_packet_tcp_connection_callback(TCP_Connections *tcp_c, tcp_onion_
     tcp_c->tcp_onion_callback_object = object;
 }
 
+/* Set the callback for TCP forwarding packets.
+ */
+void set_forwarding_packet_tcp_connection_callback(TCP_Connections *tcp_c, tcp_forwarding_cb *tcp_forwarding_callback,
+        void *object)
+{
+    tcp_c->tcp_forwarding_callback = tcp_forwarding_callback;
+    tcp_c->tcp_forwarding_callback_object = object;
+}
+
+/* Encode tcp_connections_number as a custom ip_port.
+ *
+ * return ip_port.
+ */
+IP_Port tcp_connections_number_to_ip_port(unsigned int tcp_connections_number)
+{
+    IP_Port ip_port = {{{0}}};
+    ip_port.ip.family = net_family_tcp_server;
+    ip_port.ip.ip.v6.uint32[0] = tcp_connections_number;
+    return ip_port;
+}
+
+/* Decode ip_port created by tcp_connections_number_to_ip_port to tcp_connections_number.
+ *
+ * return true on success.
+ * return false if ip_port is invalid.
+ */
+bool ip_port_to_tcp_connections_number(IP_Port ip_port, unsigned int *tcp_connections_number)
+{
+    *tcp_connections_number = ip_port.ip.ip.v6.uint32[0];
+    return net_family_is_tcp_server(ip_port.ip.family);
+}
 
 /* Find the TCP connection with public_key.
  *
@@ -1052,6 +1158,18 @@ static int tcp_onion_callback(void *object, const uint8_t *data, uint16_t length
     return 0;
 }
 
+static int tcp_forwarding_callback(void *object, const uint8_t *data, uint16_t length, IP_Port forwarder,
+                                   void *userdata)
+{
+    TCP_Connections *tcp_c = (TCP_Connections *)object;
+
+    if (tcp_c->tcp_forwarding_callback) {
+        tcp_c->tcp_forwarding_callback(tcp_c->tcp_forwarding_callback_object, forwarder, data, length, userdata);
+    }
+
+    return 0;
+}
+
 /* Set callbacks for the TCP relay connection.
  *
  * return 0 on success.
@@ -1070,6 +1188,7 @@ static int tcp_relay_set_callbacks(TCP_Connections *tcp_c, int tcp_connections_n
     tcp_con_set_custom_object(con, tcp_c);
     tcp_con_set_custom_uint(con, tcp_connections_number);
     onion_response_handler(con, &tcp_onion_callback, tcp_c);
+    forwarding_handler(con, &tcp_forwarding_callback, tcp_c);
     routing_response_handler(con, &tcp_response_callback, con);
     routing_status_handler(con, &tcp_status_callback, con);
     routing_data_handler(con, &tcp_conn_data_callback, con);

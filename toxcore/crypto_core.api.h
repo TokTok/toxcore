@@ -61,6 +61,16 @@ const CRYPTO_SHA256_SIZE = 32;
 const CRYPTO_SHA512_SIZE = 64;
 
 /**
+ * The number of bytes in an HMAC authenticator.
+ */
+const CRYPTO_HMAC_SIZE = 32;
+
+/**
+ * The number of bytes in an HMAC secret key.
+ */
+const CRYPTO_HMAC_KEY_SIZE = 32;
+
+/**
  * A `memcmp`-like function whose running time does not depend on the input
  * bytes, only on the input length. Useful to compare sensitive data where
  * timing attacks could reveal that data.
@@ -88,6 +98,16 @@ static void crypto_sha256(uint8_t[CRYPTO_SHA256_SIZE] hash, const uint8_t[length
  * Compute a SHA512 hash (64 bytes).
  */
 static void crypto_sha512(uint8_t[CRYPTO_SHA512_SIZE] hash, const uint8_t[length] data);
+
+/**
+ * Compute an HMAC authenticator (32 bytes).
+ */
+static void crypto_hmac(uint8_t[CRYPTO_HMAC_SIZE] auth, const uint8_t[CRYPTO_HMAC_KEY_SIZE] key, const uint8_t[length] data);
+
+/**
+ * Verify an HMAC authenticator.
+ */
+static bool crypto_hmac_verify(const uint8_t[CRYPTO_HMAC_SIZE] auth, const uint8_t[CRYPTO_HMAC_KEY_SIZE] key, const uint8_t[length] data);
 
 /**
  * Compare 2 public keys of length CRYPTO_PUBLIC_KEY_SIZE, not vulnerable to
@@ -243,6 +263,11 @@ static void increment_nonce_number(uint8_t[CRYPTO_NONCE_SIZE] nonce, uint32_t ho
  * Fill a key CRYPTO_SYMMETRIC_KEY_SIZE big with random bytes.
  */
 static void new_symmetric_key(uint8_t[CRYPTO_SYMMETRIC_KEY_SIZE] key);
+
+/**
+ * Fill a key CRYPTO_HMAC_KEY_SIZE big with random bytes.
+ */
+static void new_hmac_key(uint8_t[CRYPTO_HMAC_KEY_SIZE] key);
 
 %{
 #ifdef __cplusplus

@@ -280,8 +280,7 @@ static uint16_t random_nodes_path_onion(const Onion_Client *onion_c, Node_format
         }
 
         if (num_nodes >= 2) {
-            nodes[0].ip_port.ip.family = net_family_tcp_family;
-            nodes[0].ip_port.ip.ip.v4.uint32 = random_tcp;
+            nodes[0].ip_port = tcp_connections_number_to_ip_port(random_tcp);
 
             for (i = 1; i < max_num; ++i) {
                 nodes[i] = onion_c->path_nodes[random_u32() % num_nodes];
@@ -293,8 +292,7 @@ static uint16_t random_nodes_path_onion(const Onion_Client *onion_c, Node_format
                 return 0;
             }
 
-            nodes[0].ip_port.ip.family = net_family_tcp_family;
-            nodes[0].ip_port.ip.ip.v4.uint32 = random_tcp;
+            nodes[0].ip_port = tcp_connections_number_to_ip_port(random_tcp);
 
             for (i = 1; i < max_num; ++i) {
                 nodes[i] = onion_c->path_nodes_bs[random_u32() % num_nodes_bs];
@@ -477,7 +475,9 @@ static int send_onion_packet_tcp_udp(const Onion_Client *onion_c, const Onion_Pa
         return 0;
     }
 
-    if (net_family_is_tcp_family(path->ip_port1.ip.family)) {
+    unsigned int tcp_connections_number;
+
+    if (ip_port_to_tcp_connections_number(path->ip_port1, &tcp_connections_number)) {
         uint8_t packet[ONION_MAX_PACKET_SIZE];
         int len = create_onion_packet_tcp(packet, sizeof(packet), path, dest, data, length);
 
@@ -485,7 +485,7 @@ static int send_onion_packet_tcp_udp(const Onion_Client *onion_c, const Onion_Pa
             return -1;
         }
 
-        return send_tcp_onion_request(onion_c->c, path->ip_port1.ip.ip.v4.uint32, packet, len);
+        return send_tcp_onion_request(onion_c->c, tcp_connections_number, packet, len);
     }
 
     return -1;
@@ -1013,7 +1013,7 @@ static int handle_tcp_onion(void *object, const uint8_t *data, uint16_t length, 
     }
 
     IP_Port ip_port = {{{0}}};
-    ip_port.ip.family = net_family_tcp_family;
+    ip_port.ip.family = net_family_tcp_server;
 
     if (data[0] == NET_PACKET_ANNOUNCE_RESPONSE) {
         return handle_announce_response(object, ip_port, data, length, userdata);
@@ -1518,6 +1518,7 @@ static void populate_path_nodes_tcp(Onion_Client *onion_c)
     unsigned int i;
 
     for (i = 0; i < num_nodes; ++i) {
+        // XXX: but ip_port is TCP, so will be rejected by onion_add_bs_path_node...
         onion_add_bs_path_node(onion_c, nodes_list[i].ip_port, nodes_list[i].public_key);
     }
 }
@@ -1880,6 +1881,7 @@ Onion_Client *new_onion_client(const Logger *logger, Mono_Time *mono_time, Net_C
     onion_c->dht = nc_get_dht(c);
     onion_c->net = dht_get_net(onion_c->dht);
     onion_c->c = c;
+
     new_symmetric_key(onion_c->secret_symmetric_key);
     crypto_new_keypair(onion_c->temp_public_key, onion_c->temp_secret_key);
     networking_registerhandler(onion_c->net, NET_PACKET_ANNOUNCE_RESPONSE, &handle_announce_response, onion_c);

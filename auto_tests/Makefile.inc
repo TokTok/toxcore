@@ -13,6 +13,7 @@ TESTS = \
 	encryptsave_test \
 	file_saving_test \
 	file_transfer_test \
+	forwarding_test \
 	friend_connection_test \
 	friend_request_test \
 	invalid_tcp_proxy_test \
@@ -111,6 +112,10 @@ file_saving_test_LDADD = $(AUTOTEST_LDADD)
 file_transfer_test_SOURCES = ../auto_tests/file_transfer_test.c
 file_transfer_test_CFLAGS = $(AUTOTEST_CFLAGS)
 file_transfer_test_LDADD = $(AUTOTEST_LDADD)
+
+forwarding_test_SOURCES = ../auto_tests/forwarding_test.c
+forwarding_test_CFLAGS = $(AUTOTEST_CFLAGS)
+forwarding_test_LDADD = $(AUTOTEST_LDADD)
 
 friend_connection_test_SOURCES = ../auto_tests/friend_connection_test.c
 friend_connection_test_CFLAGS = $(AUTOTEST_CFLAGS)

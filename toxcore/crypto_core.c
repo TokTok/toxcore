@@ -23,6 +23,7 @@
 /* We use libsodium by default. */
 #include <sodium.h>
 #else
+#include <crypto_auth.h>
 #include <crypto_box.h>
 #include <crypto_hash_sha256.h>
 #include <crypto_hash_sha512.h>
@@ -55,6 +56,14 @@
 
 #if CRYPTO_NONCE_SIZE != crypto_box_NONCEBYTES
 #error "CRYPTO_NONCE_SIZE should be equal to crypto_box_NONCEBYTES"
+#endif
+
+#if CRYPTO_HMAC_SIZE != crypto_auth_BYTES
+#error "CRYPTO_HMAC_SIZE should be equal to crypto_auth_BYTES"
+#endif
+
+#if CRYPTO_HMAC_KEY_SIZE != crypto_auth_KEYBYTES
+#error "CRYPTO_HMAC_KEY_SIZE should be equal to crypto_auth_KEYBYTES"
 #endif
 
 #if CRYPTO_SHA256_SIZE != crypto_hash_sha256_BYTES
@@ -324,6 +333,22 @@ void crypto_derive_public_key(uint8_t *public_key, const uint8_t *secret_key)
 void crypto_sha256(uint8_t *hash, const uint8_t *data, size_t length)
 {
     crypto_hash_sha256(hash, data, length);
+}
+
+void new_hmac_key(uint8_t *key)
+{
+    random_bytes(key, CRYPTO_HMAC_KEY_SIZE);
+}
+
+void crypto_hmac(uint8_t *auth, const uint8_t *key, const uint8_t *data, size_t length)
+{
+    crypto_auth(auth, data, length, key);
+}
+
+bool crypto_hmac_verify(const uint8_t *auth, const uint8_t *key, const uint8_t *data,
+                        size_t length)
+{
+    return (crypto_auth_verify(auth, data, length, key) == 0);
 }
 
 void crypto_sha512(uint8_t *hash, const uint8_t *data, size_t length)

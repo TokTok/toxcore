@@ -184,6 +184,8 @@ set(toxcore_SOURCES ${toxcore_SOURCES}
   toxcore/network.h
   toxcore/state.c
   toxcore/state.h
+  toxcore/timed_auth.c
+  toxcore/timed_auth.h
   toxcore/util.c
   toxcore/util.h)
 
@@ -220,7 +222,9 @@ set(toxcore_SOURCES ${toxcore_SOURCES}
   toxcore/onion_announce.c
   toxcore/onion_announce.h
   toxcore/onion_client.c
-  toxcore/onion_client.h)
+  toxcore/onion_client.h
+  toxcore/forwarding.c
+  toxcore/forwarding.h)
 
 # LAYER 5: Friend requests and connections
 # ----------------------------------------
@@ -425,6 +429,7 @@ auto_test(dht                           MSVC_DONT_BUILD)
 auto_test(encryptsave)
 auto_test(file_transfer)
 auto_test(file_saving)
+auto_test(forwarding)
 auto_test(friend_connection)
 auto_test(friend_request)
 auto_test(invalid_tcp_proxy)

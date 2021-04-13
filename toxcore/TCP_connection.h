@@ -84,7 +84,14 @@ int send_packet_tcp_connection(TCP_Connections *tcp_c, int connections_number, c
  * return TCP connection number on success.
  * return -1 on failure.
  */
-int get_random_tcp_onion_conn_number(TCP_Connections *tcp_c);
+int get_random_tcp_onion_conn_number(const TCP_Connections *tcp_c);
+
+/* Put IP_Port of a random onion TCP connection in ip_port.
+ *
+ * return true on success.
+ * return false on failure.
+ */
+bool tcp_get_random_conn_ip_port(const TCP_Connections *tcp_c, IP_Port *ip_port);
 
 /* Send an onion packet via the TCP relay corresponding to tcp_connections_number.
  *
@@ -102,6 +109,26 @@ int tcp_send_onion_request(TCP_Connections *tcp_c, unsigned int tcp_connections_
  * return -1 on failure.
  */
 int set_tcp_onion_status(TCP_Connections *tcp_c, bool status);
+
+/* Send a forward request to the TCP relay with IP_Port tcp_forwarder,
+ * requesting to forward data to dest.
+ *
+ * return 0 on success.
+ * return -1 on failure.
+ */
+int tcp_send_forward_request(TCP_Connections *tcp_c, IP_Port tcp_forwarder, IP_Port dest,
+                             const uint8_t *data, uint16_t length);
+
+/* Send a forward request to the TCP relay with IP_Port tcp_forwarder,
+ * requesting to forward data to dest via DHT node dht_forwarder.
+ *
+ * return 0 on success.
+ * return -1 on failure.
+ */
+int tcp_send_double_forward_request(TCP_Connections *tcp_c,
+                                    IP_Port tcp_forwarder, IP_Port dht_forwarder, const uint8_t *dest_public_key,
+                                    const uint8_t *data, uint16_t length);
+
 
 /* Send an oob packet via the TCP relay corresponding to tcp_connections_number.
  *
@@ -123,12 +150,33 @@ typedef int tcp_onion_cb(void *object, const uint8_t *data, uint16_t length, voi
  */
 void set_onion_packet_tcp_connection_callback(TCP_Connections *tcp_c, tcp_onion_cb *tcp_onion_callback, void *object);
 
+typedef void tcp_forwarding_cb(void *object, IP_Port forwarder, const uint8_t *data, uint16_t length, void *userdata);
+
+/* Set the callback for TCP forwarding packets.
+ */
+void set_forwarding_packet_tcp_connection_callback(TCP_Connections *tcp_c, tcp_forwarding_cb *tcp_forwarding_callback,
+        void *object);
+
+
 typedef int tcp_oob_cb(void *object, const uint8_t *public_key, unsigned int tcp_connections_number,
                        const uint8_t *data, uint16_t length, void *userdata);
 
 /* Set the callback for TCP oob data packets.
  */
 void set_oob_packet_tcp_connection_callback(TCP_Connections *tcp_c, tcp_oob_cb *tcp_oob_callback, void *object);
+
+/* Encode tcp_connections_number as a custom ip_port.
+ *
+ * return ip_port.
+ */
+IP_Port tcp_connections_number_to_ip_port(unsigned int tcp_connections_number);
+
+/* Decode ip_port created by tcp_connections_number_to_ip_port to tcp_connections_number.
+ *
+ * return true on success.
+ * return false if ip_port is invalid.
+ */
+bool ip_port_to_tcp_connections_number(IP_Port ip_port, unsigned int *tcp_connections_number);
 
 /* Create a new TCP connection to public_key.
  *

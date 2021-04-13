@@ -63,12 +63,18 @@ void kill_TCP_connection(TCP_Client_Connection *tcp_connection);
 
 typedef int tcp_onion_response_cb(void *object, const uint8_t *data, uint16_t length, void *userdata);
 
+typedef int tcp_client_forwarding_cb(void *object, const uint8_t *data, uint16_t length, IP_Port forwarder,
+                                     void *userdata);
+
 /* return 1 on success.
  * return 0 if could not send packet.
  * return -1 on failure (connection must be killed).
  */
 int send_onion_request(TCP_Client_Connection *con, const uint8_t *data, uint16_t length);
 void onion_response_handler(TCP_Client_Connection *con, tcp_onion_response_cb *onion_callback, void *object);
+
+int send_forward_request_tcp(TCP_Client_Connection *con, IP_Port dest, const uint8_t *data, uint16_t length);
+void forwarding_handler(TCP_Client_Connection *con, tcp_client_forwarding_cb *forwarding_callback, void *object);
 
 typedef int tcp_routing_response_cb(void *object, uint8_t connection_id, const uint8_t *public_key);
 typedef int tcp_routing_status_cb(void *object, uint32_t number, uint8_t connection_id, uint8_t status);

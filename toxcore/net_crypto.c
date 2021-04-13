@@ -1902,8 +1902,10 @@ static int crypto_connection_add_source(Net_Crypto *c, int crypt_connection_id, 
         return 0;
     }
 
-    if (net_family_is_tcp_family(source.ip.family)) {
-        if (add_tcp_number_relay_connection(c->tcp_c, conn->connection_number_tcp, source.ip.ip.v6.uint32[0]) == 0) {
+    unsigned int tcp_connections_number;
+
+    if (ip_port_to_tcp_connections_number(source, &tcp_connections_number)) {
+        if (add_tcp_number_relay_connection(c->tcp_c, conn->connection_number_tcp, tcp_connections_number) == 0) {
             return 1;
         }
     }
@@ -2184,10 +2186,7 @@ static int tcp_oob_callback(void *object, const uint8_t *public_key, unsigned in
     }
 
     if (data[0] == NET_PACKET_CRYPTO_HS) {
-        IP_Port source;
-        source.port = 0;
-        source.ip.family = net_family_tcp_family;
-        source.ip.ip.v6.uint32[0] = tcp_connections_number;
+        IP_Port source = tcp_connections_number_to_ip_port(tcp_connections_number);
 
         if (handle_new_connection_handshake(c, source, data, length, userdata) != 0) {
             return -1;
@@ -2248,6 +2247,20 @@ int get_random_tcp_con_number(Net_Crypto *c)
     return ret;
 }
 
+/* Put IP_Port of a random onion TCP connection in ip_port.
+ *
+ * return true on success.
+ * return false on failure.
+ */
+bool get_random_tcp_conn_ip_port(Net_Crypto *c, IP_Port *ip_port)
+{
+    pthread_mutex_lock(&c->tcp_mutex);
+    int ret = tcp_get_random_conn_ip_port(c->tcp_c, ip_port);
+    pthread_mutex_unlock(&c->tcp_mutex);
+
+    return ret;
+}
+
 /* Send an onion packet via the TCP relay corresponding to tcp_connections_number.
  *
  * return 0 on success.
@@ -2257,6 +2270,39 @@ int send_tcp_onion_request(Net_Crypto *c, unsigned int tcp_connections_number, c
 {
     pthread_mutex_lock(&c->tcp_mutex);
     int ret = tcp_send_onion_request(c->tcp_c, tcp_connections_number, data, length);
+    pthread_mutex_unlock(&c->tcp_mutex);
+
+    return ret;
+}
+
+/* Send a forward request to the TCP relay with IP_Port tcp_forwarder,
+ * requesting to forward data to dest.
+ *
+ * return 0 on success.
+ * return -1 on failure.
+ */
+int send_tcp_forward_request(Net_Crypto *c, IP_Port tcp_forwarder,
+                             IP_Port dest, const uint8_t *data, uint16_t length)
+{
+    pthread_mutex_lock(&c->tcp_mutex);
+    int ret = tcp_send_forward_request(c->tcp_c, tcp_forwarder, dest, data, length);
+    pthread_mutex_unlock(&c->tcp_mutex);
+
+    return ret;
+}
+
+/* Send a forward request to the TCP relay with IP_Port tcp_forwarder,
+ * requesting to forward data to dest via DHT node dht_forwarder.
+ *
+ * return 0 on success.
+ * return -1 on failure.
+ */
+int send_tcp_double_forward_request(Net_Crypto *c,
+                                    IP_Port tcp_forwarder, IP_Port dht_forwarder, const uint8_t *dest_public_key,
+                                    const uint8_t *data, uint16_t length)
+{
+    pthread_mutex_lock(&c->tcp_mutex);
+    int ret = tcp_send_double_forward_request(c->tcp_c, tcp_forwarder, dht_forwarder, dest_public_key, data, length);
     pthread_mutex_unlock(&c->tcp_mutex);
 
     return ret;
