@@ -21,6 +21,13 @@ static uint8_t const key2[] = {
     0x77, 0x0B, 0xCC, 0x49, 0x17, 0xAB, 0x6A, 0x25,
 };
 
+static uint8_t const key3[] = {
+    0x79, 0xCA, 0xDA, 0x49, 0x74, 0xB0, 0x92, 0x6F,
+    0x28, 0x6F, 0x02, 0x5C, 0xD5, 0xFF, 0xDF, 0x3E,
+    0x65, 0x4A, 0x37, 0x58, 0xC5, 0x3E, 0x02, 0x73,
+    0xEC, 0xFC, 0x4D, 0x12, 0xC2, 0x1D, 0xCA, 0x48,
+};
+
 int main(void)
 {
     setvbuf(stdout, nullptr, _IONBF, 0);
@@ -30,15 +37,16 @@ int main(void)
     Tox *tox_tcp = tox_new_log(opts, nullptr, nullptr);
     tox_options_free(opts);
 
+    // TODO(iphydf): Why do we need to bootstrap in addition to adding TCP
+    // relays?
     tox_bootstrap(tox_tcp, "78.46.73.141", 33445, key1, nullptr);
     tox_bootstrap(tox_tcp, "tox.initramfs.io", 33445, key2, nullptr);
+    tox_bootstrap(tox_tcp, "172.93.52.70", 33445, key3, nullptr);
 
     Tox_Err_Bootstrap tcp_err;
     tox_add_tcp_relay(tox_tcp, "78.46.73.141", 33445, key1, &tcp_err);
-    ck_assert_msg(tcp_err == TOX_ERR_BOOTSTRAP_OK,
-                  "attempting to add tcp relay returned with an error: %d",
-                  tcp_err);
     tox_add_tcp_relay(tox_tcp, "tox.initramfs.io", 33445, key2, &tcp_err);
+    tox_add_tcp_relay(tox_tcp, "172.93.52.70", 33445, key3, &tcp_err);
     ck_assert_msg(tcp_err == TOX_ERR_BOOTSTRAP_OK,
                   "attempting to add tcp relay returned with an error: %d",
                   tcp_err);

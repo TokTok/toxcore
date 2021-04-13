@@ -13,6 +13,7 @@
 #include "net_crypto.h"
 #include "onion_announce.h"
 #include "ping_array.h"
+#include "group_chats.h"
 
 #define MAX_ONION_CLIENTS 8
 #define MAX_ONION_CLIENTS_ANNOUNCE 12 // Number of nodes to announce ourselves to.
@@ -39,15 +40,14 @@
 
 #define MAX_PATH_NODES 32
 
-/* If no announce response packets are received within this interval tox will
- * be considered offline. We give time for a node to be pinged often enough
- * that it times out, which leads to the network being thoroughly tested as it
- * is replaced.
+#define GCA_MAX_DATA_LENGTH GCA_PUBLIC_ANNOUNCE_MAX_SIZE
+
+/* If no packets are received within that interval tox will
+ * be considered offline.
  */
 #define ONION_OFFLINE_TIMEOUT (ONION_NODE_PING_INTERVAL * (ONION_NODE_MAX_PINGS+2))
 
 /* Onion data packet ids. */
-#define ONION_DATA_FRIEND_REQ CRYPTO_PACKET_FRIEND_REQ
 #define ONION_DATA_DHTPK CRYPTO_PACKET_DHTPK
 
 typedef struct Onion_Client Onion_Client;
@@ -171,7 +171,7 @@ void oniondata_registerhandler(Onion_Client *onion_c, uint8_t byte, oniondata_ha
 
 void do_onion_client(Onion_Client *onion_c);
 
-Onion_Client *new_onion_client(const Logger *logger, Mono_Time *mono_time, Net_Crypto *c);
+Onion_Client *new_onion_client(const Logger *logger, Mono_Time *mono_time, Net_Crypto *c, GC_Session *gc_session);
 
 void kill_onion_client(Onion_Client *onion_c);
 
@@ -181,5 +181,15 @@ void kill_onion_client(Onion_Client *onion_c);
  *  return 2 if we are also connected with UDP.
  */
 unsigned int onion_connection_status(const Onion_Client *onion_c);
+
+typedef struct Onion_Friend Onion_Friend;
+
+uint16_t onion_get_friend_count(Onion_Client *onion_c);
+Onion_Friend *onion_get_friend(Onion_Client *onion_c, uint16_t friend_num);
+const uint8_t *onion_friend_get_gc_public_key(Onion_Friend *onion_friend);
+void onion_friend_set_gc_public_key(Onion_Friend *onion_friend, const uint8_t *public_key);
+
+void onion_friend_set_gc_data(Onion_Friend *onion_friend, const uint8_t *gc_data, int16_t gc_data_length);
+int16_t onion_friend_gc_data_length(Onion_Friend *onion_friend);
 
 #endif

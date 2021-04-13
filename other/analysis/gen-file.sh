@@ -1,16 +1,16 @@
 #!/bin/bash
 
-CPPFLAGS="-DMIN_LOGGER_LEVEL=LOGGER_LEVEL_TRACE"
-CPPFLAGS+=("-isystem" "/usr/include/opus")
-CPPFLAGS+=("-Iauto_tests")
-CPPFLAGS+=("-Iother")
-CPPFLAGS+=("-Iother/bootstrap_daemon/src")
-CPPFLAGS+=("-Iother/fun")
-CPPFLAGS+=("-Itesting")
-CPPFLAGS+=("-Itesting/groupchats")
-CPPFLAGS+=("-Itoxcore")
-CPPFLAGS+=("-Itoxav")
-CPPFLAGS+=("-Itoxencryptsave")
+CPPFLAGS=(-DMIN_LOGGER_LEVEL=LOGGER_LEVEL_TRACE)
+CPPFLAGS+=(-isystem /usr/include/opus)
+CPPFLAGS+=(-Iauto_tests)
+CPPFLAGS+=(-Iother)
+CPPFLAGS+=(-Iother/bootstrap_daemon/src)
+CPPFLAGS+=(-Iother/fun)
+CPPFLAGS+=(-Itesting)
+CPPFLAGS+=(-Itesting/groupchats)
+CPPFLAGS+=(-Itoxcore)
+CPPFLAGS+=(-Itoxav)
+CPPFLAGS+=(-Itoxencryptsave)
 
 LDFLAGS=("-lopus" "-lsodium" "-lvpx" "-lpthread" "-lconfig")
 LDFLAGS+=("-fuse-ld=gold")

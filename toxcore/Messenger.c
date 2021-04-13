@@ -13,27 +13,25 @@
 #include "Messenger.h"
 
 #include <assert.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
+#include "friend_connection.h"
+#include "group_chats.h"
 #include "logger.h"
 #include "mono_time.h"
 #include "network.h"
 #include "state.h"
 #include "util.h"
+#include "onion_client.h"
+#include "DHT.h"
 
 static int write_cryptpacket_id(const Messenger *m, int32_t friendnumber, uint8_t packet_id, const uint8_t *data,
                                 uint32_t length, uint8_t congestion_control);
 static void m_register_default_plugins(Messenger *m);
 
-/**
- * Determines if the friendnumber passed is valid in the Messenger object.
- *
- * @param friendnumber The index in the friend list.
- */
-static bool friend_is_valid(const Messenger *m, int32_t friendnumber)
+bool friend_is_valid(const Messenger *m, int32_t friendnumber)
 {
     return (unsigned int)friendnumber < m->numfriends && m->friendlist[friendnumber].status != 0;
 }
@@ -113,9 +111,8 @@ static uint16_t address_checksum(const uint8_t *address, uint32_t len)
 {
     uint8_t checksum[2] = {0};
     uint16_t check;
-    uint32_t i;
 
-    for (i = 0; i < len; ++i) {
+    for (uint32_t i = 0; i < len; ++i) {
         checksum[i % 2] ^= address[i];
     }
 
@@ -136,15 +133,11 @@ void getaddress(const Messenger *m, uint8_t *address)
     memcpy(address + CRYPTO_PUBLIC_KEY_SIZE + sizeof(nospam), &checksum, sizeof(checksum));
 }
 
-static int send_online_packet(Messenger *m, int32_t friendnumber)
+static int send_online_packet(Messenger *m, int friendcon_id)
 {
-    if (!friend_is_valid(m, friendnumber)) {
-        return 0;
-    }
-
     uint8_t packet = PACKET_ID_ONLINE;
-    return write_cryptpacket(m->net_crypto, friend_connection_crypt_connection_id(m->fr_c,
-                             m->friendlist[friendnumber].friendcon_id), &packet, sizeof(packet), 0) != -1;
+    return write_cryptpacket(m->net_crypto, friend_connection_crypt_connection_id(m->fr_c, friendcon_id), &packet,
+                             sizeof(packet), 0) != -1;
 }
 
 static int send_offline_packet(Messenger *m, int friendcon_id)
@@ -200,7 +193,7 @@ static int32_t init_new_friend(Messenger *m, const uint8_t *real_pk, uint8_t sta
             }
 
             if (friend_con_connected(m->fr_c, friendcon_id) == FRIENDCONN_STATUS_CONNECTED) {
-                send_online_packet(m, i);
+                send_online_packet(m, friendcon_id);
             }
 
             return i;
@@ -287,12 +280,21 @@ int32_t m_addfriend(Messenger *m, const uint8_t *address, const uint8_t *data, u
     return ret;
 }
 
-int32_t m_addfriend_norequest(Messenger *m, const uint8_t *real_pk)
+static int32_t m_add_friend_contact_no_request(Messenger *m, const uint8_t *real_pk)
 {
     if (getfriend_id(m, real_pk) != -1) {
         return FAERR_ALREADYSENT;
     }
 
+    if (id_equal(real_pk, nc_get_self_public_key(m->net_crypto))) {
+        return FAERR_OWNKEY;
+    }
+
+    return init_new_friend(m, real_pk, FRIEND_CONFIRMED);
+}
+
+int32_t m_addfriend_norequest(Messenger *m, const uint8_t *real_pk)
+{
     if (!public_key_valid(real_pk)) {
         return FAERR_BADCHECKSUM;
     }
@@ -301,7 +303,59 @@ int32_t m_addfriend_norequest(Messenger *m, const uint8_t *real_pk)
         return FAERR_OWNKEY;
     }
 
-    return init_new_friend(m, real_pk, FRIEND_CONFIRMED);
+    return m_add_friend_contact_no_request(m, real_pk);
+}
+
+/* Initializes the friend connection and onion connection for a groupchat.
+ *
+ * Return 0 on success.
+ * Return -1 on failure.
+ */
+int32_t m_create_group_connection(Messenger *m, GC_Chat *chat)
+{
+    random_bytes(chat->m_group_public_key, CRYPTO_PUBLIC_KEY_SIZE);
+
+    int friendcon_id = new_friend_connection(m->fr_c, chat->m_group_public_key);
+
+    if (friendcon_id == -1) {
+        return -1;
+    }
+
+    chat->friend_connection_id = friendcon_id;
+
+    friend_connection_callbacks(m->fr_c, friendcon_id, MESSENGER_CALLBACK_INDEX, &m_handle_status, &m_handle_packet,
+                                &m_handle_lossy_packet, m, chat->group_number);
+
+    if (friend_con_connected(m->fr_c, friendcon_id) == FRIENDCONN_STATUS_CONNECTED) {
+        send_online_packet(m, friendcon_id);
+    }
+
+    Friend_Conn *connection = get_conn(m->fr_c, friendcon_id);
+
+    int onion_friend_number = friend_conn_get_onion_friendnum(connection);
+    Onion_Friend *onion_friend = onion_get_friend(m->onion_c, onion_friend_number);
+
+    onion_friend_set_gc_public_key(onion_friend, get_chat_id(chat->chat_public_key));
+    onion_friend_set_gc_data(onion_friend, nullptr, -1);
+
+    return 0;
+}
+
+/*
+ * Kills the friend connection for a groupchat.
+ */
+void m_kill_group_connection(Messenger *m, const GC_Chat *chat)
+{
+    remove_request_received(m->fr, chat->m_group_public_key);
+
+    friend_connection_callbacks(m->fr_c, chat->friend_connection_id, MESSENGER_CALLBACK_INDEX, nullptr,
+                                nullptr, nullptr, nullptr, 0);
+
+    if (friend_con_connected(m->fr_c, chat->friend_connection_id) == FRIENDCONN_STATUS_CONNECTED) {
+        send_offline_packet(m, chat->friend_connection_id);
+    }
+
+    kill_friend_connection(m->fr_c, chat->friend_connection_id);
 }
 
 static int clear_receipts(Messenger *m, int32_t friendnumber)
@@ -987,6 +1041,13 @@ void m_callback_conference_invite(Messenger *m, m_conference_invite_cb *function
 }
 
 
+void m_callback_group_invite(Messenger *m, m_group_invite_cb *function, void *userdata)
+{
+    m->group_invite = function;
+    m->group_invite_userdata = userdata;
+}
+
+
 /* Send a conference invite packet.
  *
  *  return 1 on success
@@ -996,6 +1057,22 @@ int send_conference_invite_packet(const Messenger *m, int32_t friendnumber, cons
 {
     return write_cryptpacket_id(m, friendnumber, PACKET_ID_INVITE_CONFERENCE, data, length, 0);
 }
+
+
+/* Send a group invite packet.
+ *
+ *  return 0 on success
+ *  return -1 on failure
+ */
+int send_group_invite_packet(const Messenger *m, uint32_t friendnumber, const uint8_t *data, size_t length)
+{
+    if (write_cryptpacket_id(m, friendnumber, PACKET_ID_INVITE_GROUPCHAT, data, length, 0)) {
+        return 0;
+    }
+
+    return -1;
+}
+
 
 /** FILE SENDING */
 
@@ -1978,9 +2055,37 @@ Messenger *new_messenger(Mono_Time *mono_time, Messenger_Options *options, unsig
         return nullptr;
     }
 
+#ifndef VANILLA_NACL
+    m->group_announce = new_gca_list();
+
+    if (m->group_announce == nullptr) {
+        kill_networking(m->net);
+        kill_net_crypto(m->net_crypto);
+        kill_dht(m->dht);
+        friendreq_kill(m->fr);
+        logger_kill(m->log);
+        free(m);
+        return nullptr;
+    }
+
+    m->group_handler = new_dht_groupchats(m);
+
+    if (m->group_handler == nullptr) {
+        kill_gca(m->group_announce);
+        kill_networking(m->net);
+        kill_net_crypto(m->net_crypto);
+        kill_dht(m->dht);
+        friendreq_kill(m->fr);
+        logger_kill(m->log);
+        free(m);
+        return nullptr;
+    }
+
+#endif /* VANILLA_NACL */
+
     m->onion = new_onion(m->mono_time, m->dht);
-    m->onion_a = new_onion_announce(m->mono_time, m->dht);
-    m->onion_c =  new_onion_client(m->log, m->mono_time, m->net_crypto);
+    m->onion_a = new_onion_announce(m->mono_time, m->dht, m->group_announce);
+    m->onion_c =  new_onion_client(m->log, m->mono_time, m->net_crypto, m->group_handler);
     m->fr_c = new_friend_connections(m->log, m->mono_time, m->onion_c, options->local_discovery_enabled);
 
     if (!(m->onion && m->onion_a && m->onion_c && m->fr_c)) {
@@ -1988,6 +2093,10 @@ Messenger *new_messenger(Mono_Time *mono_time, Messenger_Options *options, unsig
         kill_onion(m->onion);
         kill_onion_announce(m->onion_a);
         kill_onion_client(m->onion_c);
+#ifndef VANILLA_NACL
+        kill_dht_groupchats(m->group_handler);
+        kill_gca(m->group_announce);
+#endif /* VANILLA_NACL */
         kill_net_crypto(m->net_crypto);
         kill_dht(m->dht);
         kill_networking(m->net);
@@ -2006,6 +2115,10 @@ Messenger *new_messenger(Mono_Time *mono_time, Messenger_Options *options, unsig
             kill_onion(m->onion);
             kill_onion_announce(m->onion_a);
             kill_onion_client(m->onion_c);
+#ifndef VANILLA_NACL
+            kill_dht_groupchats(m->group_handler);
+            kill_gca(m->group_announce);
+#endif /* VANILLA_NACL */
             kill_net_crypto(m->net_crypto);
             kill_dht(m->dht);
             kill_networking(m->net);
@@ -2054,6 +2167,10 @@ void kill_messenger(Messenger *m)
     kill_onion(m->onion);
     kill_onion_announce(m->onion_a);
     kill_onion_client(m->onion_c);
+#ifndef VANILLA_NACL
+    kill_dht_groupchats(m->group_handler);
+    kill_gca(m->group_announce);
+#endif /* VANILLA_NACL */
     kill_net_crypto(m->net_crypto);
     kill_dht(m->dht);
     kill_networking(m->net);
@@ -2093,7 +2210,7 @@ static int m_handle_status(void *object, int i, uint8_t status, void *userdata)
     Messenger *m = (Messenger *)object;
 
     if (status) { /* Went online. */
-        send_online_packet(m, i);
+        send_online_packet(m, m->friendlist[i].friendcon_id);
     } else { /* Went offline. */
         if (m->friendlist[i].status == FRIEND_ONLINE) {
             set_friend_status(m, i, FRIEND_CONFIRMED, userdata);
@@ -2117,7 +2234,7 @@ static int m_handle_packet(void *object, int i, const uint8_t *temp, uint16_t le
     if (m->friendlist[i].status != FRIEND_ONLINE) {
         if (packet_id == PACKET_ID_ONLINE && len == 1) {
             set_friend_status(m, i, FRIEND_ONLINE, userdata);
-            send_online_packet(m, i);
+            send_online_packet(m, m->friendlist[i].friendcon_id);
         } else {
             return -1;
         }
@@ -2406,6 +2523,29 @@ static int m_handle_packet(void *object, int i, const uint8_t *temp, uint16_t le
             break;
         }
 
+        case PACKET_ID_INVITE_GROUPCHAT: {
+#ifndef VANILLA_NACL
+
+            if (data_length < 2 + GC_JOIN_DATA_LENGTH) {
+                break;
+            }
+
+            if (m->group_invite && data[1] == GROUP_INVITE && data_length != 2 + GC_JOIN_DATA_LENGTH) {
+                if (check_group_invite(m->group_handler, data + 2, data_length - 1)) {
+                    (*m->group_invite)(m, i, data + 2, GC_JOIN_DATA_LENGTH,
+                                       data + 2 + GC_JOIN_DATA_LENGTH, data_length - 2 - GC_JOIN_DATA_LENGTH,
+                                       m->group_invite_userdata);
+                }
+            } else if (data[1] == GROUP_INVITE_ACCEPTED) {
+                handle_gc_invite_accepted_packet(m->group_handler, i, data + 2, data_length - 2);
+            } else if (data[1] == GROUP_INVITE_CONFIRMATION) {
+                handle_gc_invite_confirmed_packet(m->group_handler, i, data + 2, data_length - 2);
+            }
+
+#endif
+            break;
+        }
+
         default: {
             handle_custom_lossless_packet(object, i, temp, len, userdata);
             break;
@@ -2492,22 +2632,6 @@ static void connection_status_callback(Messenger *m, void *userdata)
 
 #define DUMPING_CLIENTS_FRIENDS_EVERY_N_SECONDS 60UL
 
-#define IDSTRING_LEN (CRYPTO_PUBLIC_KEY_SIZE * 2 + 1)
-/* id_str should be of length at least IDSTRING_LEN */
-static char *id_to_string(const uint8_t *pk, char *id_str, size_t length)
-{
-    if (length < IDSTRING_LEN) {
-        snprintf(id_str, length, "Bad buf length");
-        return id_str;
-    }
-
-    for (uint32_t i = 0; i < CRYPTO_PUBLIC_KEY_SIZE; ++i) {
-        sprintf(&id_str[i * 2], "%02X", pk[i]);
-    }
-
-    id_str[CRYPTO_PUBLIC_KEY_SIZE * 2] = 0;
-    return id_str;
-}
 
 /* Minimum messenger run interval in ms
  * TODO(mannol): A/V */
@@ -2528,6 +2652,83 @@ uint32_t messenger_run_interval(const Messenger *m)
 
     return crypto_interval;
 }
+
+/* Attempts to create a DHT announcement for a group chat with our connection info. An
+ * announcement can only be created if we either have a UDP or TCP connection to the network.
+ *
+ * Returns 0 on success.
+ * Returns -1 on failure.
+ */
+#ifndef VANILLA_NACL
+static int self_announce_group(const Messenger *m, GC_Chat *chat, Onion_Friend *onion_friend)
+{
+    GC_Public_Announce announce;
+    memset(&announce, 0, sizeof(GC_Public_Announce));
+
+    bool ip_port_is_set = chat->self_udp_status != SELF_UDP_STATUS_NONE;
+    int tcp_num = tcp_copy_connected_relays(chat->tcp_conn, announce.base_announce.tcp_relays,
+                                            GCA_MAX_ANNOUNCED_TCP_RELAYS);
+
+    if (tcp_num == 0 && !ip_port_is_set) {
+        onion_friend_set_gc_data(onion_friend, nullptr, -1);
+        return -1;
+    }
+
+    announce.base_announce.tcp_relays_count = (uint8_t)tcp_num;
+    announce.base_announce.ip_port_is_set = (uint8_t)(ip_port_is_set ? 1 : 0);
+
+    if (ip_port_is_set) {
+        memcpy(&announce.base_announce.ip_port, &chat->self_ip_port, sizeof(IP_Port));
+    }
+
+    memcpy(announce.base_announce.peer_public_key, chat->self_public_key, ENC_PUBLIC_KEY);
+    memcpy(announce.chat_public_key, get_chat_id(chat->chat_public_key), ENC_PUBLIC_KEY);
+
+    uint8_t gc_data[GCA_MAX_DATA_LENGTH];
+    int length = gca_pack_public_announce(gc_data, GCA_MAX_DATA_LENGTH, &announce);
+
+    if (length <= 0) {
+        onion_friend_set_gc_data(onion_friend, nullptr, -1);
+        return -1;
+    }
+
+    if (gca_add_announce(m->mono_time, m->group_announce, &announce) == nullptr) {
+        onion_friend_set_gc_data(onion_friend, nullptr, -1);
+        return -1;
+    }
+
+    onion_friend_set_gc_data(onion_friend, gc_data, (int16_t)length);
+    chat->update_self_announces = false;
+
+    LOGGER_DEBUG(chat->logger, "Published group announce. TCP relays: %d, UDP status: %d", tcp_num,
+                 chat->self_udp_status);
+    return 0;
+}
+
+static void do_gc_onion_friends(const Messenger *m)
+{
+    const uint16_t num_friends = onion_get_friend_count(m->onion_c);
+
+    for (uint16_t i = 0; i < num_friends; ++i) {
+        Onion_Friend *onion_friend = onion_get_friend(m->onion_c, i);
+        const int16_t gc_data_length = onion_friend_gc_data_length(onion_friend);
+
+        if (gc_data_length == 0) {
+            continue;
+        }
+
+        GC_Chat *chat = gc_get_group_by_public_key(m->group_handler, onion_friend_get_gc_public_key(onion_friend));
+
+        if (chat == nullptr) {
+            continue;
+        }
+
+        if (chat->update_self_announces) {
+            self_announce_group(m, chat, onion_friend);
+        }
+    }
+}
+#endif  // VANILLA_NACL
 
 /* The main loop that needs to be run at least 20 times per second. */
 void do_messenger(Messenger *m, void *userdata)
@@ -2566,6 +2767,11 @@ void do_messenger(Messenger *m, void *userdata)
     do_onion_client(m->onion_c);
     do_friend_connections(m->fr_c, userdata);
     do_friends(m, userdata);
+#ifndef VANILLA_NACL
+    do_gc(m->group_handler, userdata);
+    do_gca(m->mono_time, m->group_announce);
+    do_gc_onion_friends(m);
+#endif
     connection_status_callback(m, userdata);
 
     if (mono_time_get(m->mono_time) > m->lastdump + DUMPING_CLIENTS_FRIENDS_EVERY_N_SECONDS) {
@@ -3030,6 +3236,74 @@ static State_Load_Status friends_list_load(Messenger *m, const uint8_t *data, ui
     return STATE_LOAD_STATUS_CONTINUE;
 }
 
+#ifndef VANILLA_NACL
+static uint32_t saved_groups_size(const Messenger *m)
+{
+    return gc_count_groups(m->group_handler) * sizeof(Saved_Group);
+}
+
+static uint8_t *groups_save(const Messenger *m, uint8_t *data)
+{
+    Saved_Group *temp = (Saved_Group *)malloc(sizeof(Saved_Group));
+
+    if (temp == nullptr) {
+        LOGGER_ERROR(m->log, "Failed to allocate memory for saved group");
+        return data;
+    }
+
+    const GC_Session *c = m->group_handler;
+
+    data = state_write_section_header(data, STATE_COOKIE_TYPE, saved_groups_size(m),
+                                      STATE_TYPE_GROUPS);
+
+    for (uint32_t i = 0; i < c->num_chats; ++i) {
+        const GC_Chat *chat = &c->chats[i];
+
+        if (chat->connection_state <= CS_NONE || chat->connection_state >= CS_INVALID) {
+            continue;
+        }
+
+        pack_group_info(chat, temp, true);
+
+        memcpy(data, temp, sizeof(Saved_Group));
+        data += sizeof(Saved_Group);
+    }
+
+    free(temp);
+
+    return data;
+}
+
+static State_Load_Status groups_load(Messenger *m, const uint8_t *data, uint32_t length)
+{
+    if (length % sizeof(Saved_Group) != 0) {
+        return STATE_LOAD_STATUS_ERROR; // TODO(endoffile78): error or continue?
+    }
+
+    Saved_Group *temp = (Saved_Group *)malloc(sizeof(Saved_Group));
+
+    if (temp == nullptr) {
+        return STATE_LOAD_STATUS_ERROR;
+    }
+
+    const uint32_t num = length / sizeof(Saved_Group);
+
+    for (uint32_t i = 0; i < num; ++i) {
+        memcpy(temp, data + i * sizeof(Saved_Group), sizeof(Saved_Group));
+
+        int group_number = gc_group_load(m->group_handler, temp, -1);
+
+        if (group_number == -1) {
+            LOGGER_WARNING(m->log, "Failed to join group");
+        }
+    }
+
+    free(temp);
+
+    return STATE_LOAD_STATUS_CONTINUE;
+}
+#endif /* VANILLA_NACL */
+
 // name state plugin
 static uint32_t name_size(const Messenger *m)
 {
@@ -3201,6 +3475,9 @@ static void m_register_default_plugins(Messenger *m)
     m_register_state_plugin(m, STATE_TYPE_STATUSMESSAGE, status_message_size, load_status_message,
                             save_status_message);
     m_register_state_plugin(m, STATE_TYPE_STATUS, status_size, load_status, save_status);
+#ifndef VANILLA_NACL
+    m_register_state_plugin(m, STATE_TYPE_GROUPS, saved_groups_size, groups_load, groups_save);
+#endif
     m_register_state_plugin(m, STATE_TYPE_TCP_RELAY, tcp_relay_size, load_tcp_relays, save_tcp_relays);
     m_register_state_plugin(m, STATE_TYPE_PATH_NODE, path_node_size, load_path_nodes, save_path_nodes);
 }
