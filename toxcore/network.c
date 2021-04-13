@@ -505,7 +505,7 @@ uint16_t net_port(const Networking_Core *net)
 int sendpacket(Networking_Core *net, IP_Port ip_port, const uint8_t *data, uint16_t length)
 {
     if (net_family_is_unspec(net->family)) { /* Socket not initialized */
-        LOGGER_ERROR(net->log, "attempted to send message of length %u on uninitialised socket", (unsigned)length);
+        // LOGGER_ERROR(net->log, "attempted to send message of length %u on uninitialised socket", (unsigned)length);
         return -1;
     }
 
@@ -690,9 +690,9 @@ int networking_at_startup(void)
         return -1;
     }
 
-#endif /*USE_RANDOMBYTES_STIR*/
+#endif /* USE_RANDOMBYTES_STIR */
 
-#endif/*VANILLA_NACL*/
+#endif /* VANILLA_NACL */
 
 #ifdef OS_WIN32
     WSADATA wsaData;
@@ -1051,6 +1051,16 @@ void ip_reset(IP *ip)
     }
 
     memset(ip, 0, sizeof(IP));
+}
+
+/* nulls out ip_port */
+void ipport_reset(IP_Port *ipport)
+{
+    if (!ipport) {
+        return;
+    }
+
+    memset(ipport, 0, sizeof(IP_Port));
 }
 
 /* nulls out ip, sets family according to flag */

@@ -105,6 +105,11 @@ if(NOT USE_IPV6)
   add_definitions(-DUSE_IPV6=0)
 endif()
 
+option(USE_TEST_NETWORK "Use a separate test network with different packet IDs" OFF)
+if(USE_TEST_NETWORK)
+  add_definitions(-DUSE_TEST_NETWORK=1)
+endif()
+
 option(USE_STDERR_LOGGER "Enable logging to stderr when the logger is NULL" OFF)
 if(USE_STDERR_LOGGER)
   add_definitions(-DUSE_STDERR_LOGGER=1)
@@ -230,19 +235,27 @@ set(toxcore_SOURCES ${toxcore_SOURCES}
   toxcore/friend_requests.c
   toxcore/friend_requests.h)
 
-# LAYER 6: Tox messenger
+# LAYER 6: DHT based group chats
+# ----------------------
+set(toxcore_SOURCES ${toxcore_SOURCES}
+  toxcore/group_announce.c
+  toxcore/group_chats.c
+  toxcore/group_connection.c
+  toxcore/group_moderation.c)
+
+# LAYER 7: Tox messenger
 # ----------------------
 set(toxcore_SOURCES ${toxcore_SOURCES}
   toxcore/Messenger.c
   toxcore/Messenger.h)
 
-# LAYER 7: Group chats
+# LAYER 8: Conferences: friend based group chats
 # --------------------
 set(toxcore_SOURCES ${toxcore_SOURCES}
   toxcore/group.c
   toxcore/group.h)
 
-# LAYER 8: Public API
+# LAYER 9: Public API
 # -------------------
 apidsl(toxcore/tox.api.h)
 set(toxcore_SOURCES ${toxcore_SOURCES}
@@ -427,6 +440,10 @@ auto_test(file_transfer)
 auto_test(file_saving)
 auto_test(friend_connection)
 auto_test(friend_request)
+auto_test(group_state)
+auto_test(group_announce)
+auto_test(group_message)
+auto_test(group_moderation)
 auto_test(invalid_tcp_proxy)
 auto_test(invalid_udp_proxy)
 auto_test(lan_discovery)
@@ -535,4 +552,5 @@ if (BUILD_MISC_TESTS)
   add_executable(afl_toxsave
     testing/afl_toxsave.c)
   target_link_modules(afl_toxsave toxcore)
+
 endif()

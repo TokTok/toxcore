@@ -81,6 +81,7 @@ travis_script() {
     -DSTRICT_ABI=ON \
     -DTEST_TIMEOUT_SECONDS=120 \
     -DUSE_IPV6=OFF \
+    -DUSE_TEST_NETWORK=ON \
     -DAUTOTEST=ON
 
   cmake --build _build --parallel "$NPROC" --target install -- -k 0

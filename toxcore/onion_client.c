@@ -17,6 +17,7 @@
 #include <string.h>
 
 #include "LAN_discovery.h"
+#include "group_chats.h"
 #include "mono_time.h"
 #include "util.h"
 
@@ -57,7 +58,7 @@ typedef struct Last_Pinged {
     uint64_t    timestamp;
 } Last_Pinged;
 
-typedef struct Onion_Friend {
+struct Onion_Friend {
     uint8_t status; /* 0 if friend is not valid, 1 if friend is valid.*/
     uint8_t is_online; /* Set by the onion_set_friend_status function. */
 
@@ -88,7 +89,11 @@ typedef struct Onion_Friend {
     uint32_t dht_pk_callback_number;
 
     uint32_t run_count;
-} Onion_Friend;
+
+    uint8_t gc_data[GCA_MAX_DATA_LENGTH];
+    uint8_t gc_public_key[ENC_PUBLIC_KEY];
+    int16_t gc_data_length;
+};
 
 typedef struct Onion_Data_Handler {
     oniondata_handler_cb *function;
@@ -101,6 +106,7 @@ struct Onion_Client {
 
     DHT     *dht;
     Net_Crypto *c;
+    GC_Session *gc_session;
     Networking_Core *net;
     Onion_Friend    *friends_list;
     uint16_t       num_friends;
@@ -135,6 +141,42 @@ struct Onion_Client {
     unsigned int onion_connected;
     bool udp_connected;
 };
+
+uint16_t onion_get_friend_count(Onion_Client *onion_c)
+{
+    return onion_c->num_friends;
+}
+
+Onion_Friend *onion_get_friend(Onion_Client *onion_c, uint16_t friend_num)
+{
+    return &onion_c->friends_list[friend_num];
+}
+
+const uint8_t *onion_friend_get_gc_public_key(Onion_Friend *onion_friend)
+{
+    return onion_friend->gc_public_key;
+}
+
+void onion_friend_set_gc_public_key(Onion_Friend *onion_friend, const uint8_t *public_key)
+{
+    memcpy(onion_friend->gc_public_key, public_key, ENC_PUBLIC_KEY);
+}
+
+
+void onion_friend_set_gc_data(Onion_Friend *onion_friend, const uint8_t *gc_data, int16_t gc_data_length)
+{
+    if (gc_data_length >= 0) {
+        memcpy(onion_friend->gc_data, gc_data, gc_data_length);
+    }
+
+    onion_friend->gc_data_length = gc_data_length;
+}
+
+int16_t onion_friend_gc_data_length(Onion_Friend *onion_friend)
+{
+    return onion_friend->gc_data_length;
+}
+
 
 DHT *onion_get_dht(const Onion_Client *onion_c)
 {
@@ -370,7 +412,7 @@ static int random_path(const Onion_Client *onion_c, Onion_Client_Paths *onion_pa
     }
 
     if (path_timed_out(onion_c->mono_time, onion_paths, pathnum)) {
-        Node_format nodes[ONION_PATH_LENGTH];
+        Node_format nodes[ONION_PATH_LENGTH] = {{{0}}};
 
         if (random_nodes_path_onion(onion_c, nodes, ONION_PATH_LENGTH) != ONION_PATH_LENGTH) {
             return -1;
@@ -583,7 +625,7 @@ static int client_send_announce_request(Onion_Client *onion_c, uint32_t num, IP_
         ping_id = zero_ping_id;
     }
 
-    uint8_t request[ONION_ANNOUNCE_REQUEST_SIZE];
+    uint8_t request[ONION_ANNOUNCE_REQUEST_MAX_SIZE];
     int len;
 
     if (num == 0) {
@@ -591,9 +633,25 @@ static int client_send_announce_request(Onion_Client *onion_c, uint32_t num, IP_
                                       nc_get_self_secret_key(onion_c->c), ping_id, nc_get_self_public_key(onion_c->c),
                                       onion_c->temp_public_key, sendback);
     } else {
-        len = create_announce_request(request, sizeof(request), dest_pubkey, onion_c->friends_list[num - 1].temp_public_key,
-                                      onion_c->friends_list[num - 1].temp_secret_key, ping_id,
-                                      onion_c->friends_list[num - 1].real_public_key, zero_ping_id, sendback);
+        Onion_Friend *onion_friend = &onion_c->friends_list[num - 1];
+
+        if (onion_friend->gc_data_length == 0) { // contact is a friend
+            len = create_announce_request(request, sizeof(request), dest_pubkey, onion_friend->temp_public_key,
+                                          onion_friend->temp_secret_key, ping_id, onion_friend->real_public_key,
+                                          zero_ping_id, sendback);
+        } else if (onion_friend->gc_data_length > 0)  { // contact is a gc
+
+#ifndef VANILLA_NACL
+            len = create_gca_announce_request(request, sizeof(request), dest_pubkey, onion_friend->temp_public_key,
+                                              onion_friend->temp_secret_key, ping_id, onion_friend->real_public_key,
+                                              zero_ping_id, sendback, onion_friend->gc_data,
+                                              onion_friend->gc_data_length);
+#else
+            return -1;
+#endif  // VANILLA_NACL
+        } else {
+            return 0;
+        }
     }
 
     if (len == -1) {
@@ -839,6 +897,110 @@ static int handle_announce_response(void *object, IP_Port source, const uint8_t 
         return 1;
     }
 
+    uint8_t public_key[CRYPTO_PUBLIC_KEY_SIZE];
+    IP_Port ip_port;
+    uint32_t path_num;
+    uint32_t num = check_sendback(onion_c, packet + 1, public_key, &ip_port, &path_num);
+
+    if (num > onion_c->num_friends) {
+        return 1;
+    }
+
+    uint8_t plain[1 + ONION_PING_ID_SIZE + ONION_ANNOUNCE_RESPONSE_MAX_SIZE - ONION_ANNOUNCE_RESPONSE_MIN_SIZE];
+    int plain_size = 1 + ONION_PING_ID_SIZE + length - ONION_ANNOUNCE_RESPONSE_MIN_SIZE;
+    int len;
+
+    if (num == 0) {
+        len = decrypt_data(public_key, nc_get_self_secret_key(onion_c->c),
+                           packet + 1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH,
+                           packet + 1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH + CRYPTO_NONCE_SIZE,
+                           length - (1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH + CRYPTO_NONCE_SIZE), plain);
+    } else {
+        if (onion_c->friends_list[num - 1].status == 0) {
+            return 1;
+        }
+
+        len = decrypt_data(public_key, onion_c->friends_list[num - 1].temp_secret_key,
+                           packet + 1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH,
+                           packet + 1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH + CRYPTO_NONCE_SIZE,
+                           length - (1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH + CRYPTO_NONCE_SIZE), plain);
+    }
+
+    if ((uint32_t)len != plain_size) {
+        return 1;
+    }
+
+    uint32_t path_used = set_path_timeouts(onion_c, num, path_num);
+
+    if (client_add_to_list(onion_c, num, public_key, ip_port, plain[0], plain + 1, path_used) == -1) {
+        return 1;
+    }
+
+    uint16_t len_nodes = 0;
+    uint8_t nodes_count = plain[1 + ONION_PING_ID_SIZE];
+
+    if (nodes_count > 0) {
+        if (nodes_count > MAX_SENT_NODES) {
+            return 1;
+        }
+
+        Node_format nodes[MAX_SENT_NODES];
+        int num_nodes = unpack_nodes(nodes, nodes_count, &len_nodes, plain + 2 + ONION_PING_ID_SIZE,
+                                     plain_size - 2 - ONION_PING_ID_SIZE, 0);
+
+        if (num_nodes < 0) {
+            return 1;
+        }
+
+        if (client_ping_nodes(onion_c, num, nodes, num_nodes, source) == -1) {
+            return 1;
+        }
+    }
+
+#ifndef VANILLA_NACL
+
+    if (len_nodes + 1 < length - ONION_ANNOUNCE_RESPONSE_MIN_SIZE) {
+        GC_Announce announces[GCA_MAX_SENT_ANNOUNCES];
+        GC_Chat *chat = gc_get_group_by_public_key(onion_c->gc_session,
+                        onion_c->friends_list[num - 1].gc_public_key);
+
+        if (!chat) {
+            return 1;
+        }
+
+        int offset = 2 + ONION_PING_ID_SIZE + len_nodes;
+        int gc_announces_count = gca_unpack_announces_list(onion_c->logger, plain + offset, plain_size - offset, announces,
+                                 GCA_MAX_SENT_ANNOUNCES, nullptr);
+
+        if (gc_announces_count == -1) {
+            return 1;
+        }
+
+        int added_peers = add_peers_from_announces(onion_c->gc_session, chat, announces, gc_announces_count);
+
+        if (added_peers < 0) {
+            return 1;
+        }
+    }
+
+#endif
+
+    // TODO: LAN vs non LAN ips?, if we are connected only to LAN, are we offline?
+    onion_c->last_packet_recv = mono_time_get(onion_c->mono_time);
+
+    return 0;
+}
+
+/* TODO: DEPRECATE */
+static int handle_announce_response_old(void *object, IP_Port source, const uint8_t *packet, uint16_t length,
+                                        void *userdata)
+{
+    Onion_Client *onion_c = (Onion_Client *)object;
+
+    if (length < ONION_ANNOUNCE_RESPONSE_MIN_SIZE || length > ONION_ANNOUNCE_RESPONSE_MAX_SIZE) {
+        return 1;
+    }
+
     uint16_t len_nodes = length - ONION_ANNOUNCE_RESPONSE_MIN_SIZE;
 
     uint8_t public_key[CRYPTO_PUBLIC_KEY_SIZE];
@@ -1017,6 +1179,10 @@ static int handle_tcp_onion(void *object, const uint8_t *data, uint16_t length, 
 
     if (data[0] == NET_PACKET_ANNOUNCE_RESPONSE) {
         return handle_announce_response(object, ip_port, data, length, userdata);
+    }
+
+    if (data[0] == NET_PACKET_ANNOUNCE_RSPONSE_OLD) {
+        return handle_announce_response_old(object, ip_port, data, length, userdata);
     }
 
     if (data[0] == NET_PACKET_ONION_DATA_RESPONSE) {
@@ -1856,11 +2022,19 @@ void do_onion_client(Onion_Client *onion_c)
     onion_c->last_run = mono_time_get(onion_c->mono_time);
 }
 
-Onion_Client *new_onion_client(const Logger *logger, Mono_Time *mono_time, Net_Crypto *c)
+Onion_Client *new_onion_client(const Logger *logger, Mono_Time *mono_time, Net_Crypto *c, GC_Session *gc_session)
 {
-    if (c == nullptr) {
+    if (!c) {
         return nullptr;
     }
+
+#ifndef VANILLA_NACL
+
+    if (gc_session == nullptr) {
+        return nullptr;
+    }
+
+#endif
 
     Onion_Client *onion_c = (Onion_Client *)calloc(1, sizeof(Onion_Client));
 
@@ -1875,6 +2049,7 @@ Onion_Client *new_onion_client(const Logger *logger, Mono_Time *mono_time, Net_C
         return nullptr;
     }
 
+    onion_c->gc_session = gc_session;
     onion_c->mono_time = mono_time;
     onion_c->logger = logger;
     onion_c->dht = nc_get_dht(c);
@@ -1883,6 +2058,7 @@ Onion_Client *new_onion_client(const Logger *logger, Mono_Time *mono_time, Net_C
     new_symmetric_key(onion_c->secret_symmetric_key);
     crypto_new_keypair(onion_c->temp_public_key, onion_c->temp_secret_key);
     networking_registerhandler(onion_c->net, NET_PACKET_ANNOUNCE_RESPONSE, &handle_announce_response, onion_c);
+    networking_registerhandler(onion_c->net, NET_PACKET_ANNOUNCE_RSPONSE_OLD, &handle_announce_response_old, onion_c);
     networking_registerhandler(onion_c->net, NET_PACKET_ONION_DATA_RESPONSE, &handle_data_response, onion_c);
     oniondata_registerhandler(onion_c, ONION_DATA_DHTPK, &handle_dhtpk_announce, onion_c);
     cryptopacket_registerhandler(onion_c->dht, CRYPTO_PACKET_DHTPK, &handle_dht_dhtpk, onion_c);
@@ -1900,6 +2076,7 @@ void kill_onion_client(Onion_Client *onion_c)
     ping_array_kill(onion_c->announce_ping_array);
     realloc_onion_friends(onion_c, 0);
     networking_registerhandler(onion_c->net, NET_PACKET_ANNOUNCE_RESPONSE, nullptr, nullptr);
+    networking_registerhandler(onion_c->net, NET_PACKET_ANNOUNCE_RSPONSE_OLD, nullptr, nullptr);
     networking_registerhandler(onion_c->net, NET_PACKET_ONION_DATA_RESPONSE, nullptr, nullptr);
     oniondata_registerhandler(onion_c, ONION_DATA_DHTPK, nullptr, nullptr);
     cryptopacket_registerhandler(onion_c->dht, CRYPTO_PACKET_DHTPK, nullptr, nullptr);

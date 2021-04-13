@@ -36,6 +36,7 @@
 
 #include "../toxcore/ccompat.h"
 #include "../toxcore/tox.h"
+#include "../toxcore/util.h"
 
 void c_sleep(uint32_t x)
 {
@@ -68,6 +69,13 @@ uint8_t *hex_string_to_bin(const char *hex_string)
     }
 
     return ret;
+}
+
+// You are responsible for freeing the return value!
+char *id_toa(const uint8_t *id)
+{
+    char *str = (char *)malloc(IDSTRING_LEN);
+    return id_to_string(id, str, IDSTRING_LEN);
 }
 
 void to_hex(char *out, uint8_t *in, int size)
@@ -165,9 +173,13 @@ static const char *tox_log_level_name(Tox_Log_Level level)
 void print_debug_log(Tox *m, Tox_Log_Level level, const char *file, uint32_t line, const char *func,
                      const char *message, void *user_data)
 {
+#if 1
+
     if (level == TOX_LOG_LEVEL_TRACE) {
         return;
     }
+
+#endif
 
     uint32_t index = user_data ? *(uint32_t *)user_data : 0;
     fprintf(stderr, "[#%u] %s %s:%u\t%s:\t%s\n", index, tox_log_level_name(level), file, line, func, message);

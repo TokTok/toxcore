@@ -336,11 +336,11 @@ static void update_bwc_values(const Logger *log, RTPSession *session, const stru
  * find out and handle it appropriately.
  *
  * @param session The current RTP session with:
- *   <code>
+ *   @code
  *   session->mcb == vc_queue_message() // this function is called from here
  *   session->mp == struct RTPMessage *
  *   session->cs == call->video.second // == VCSession created by vc_new() call
- *   </code>
+ *   @endcode
  * @param header The RTP header deserialised from the packet.
  * @param incoming_data The packet data *not* header, i.e. this is the actual
  *   payload.
