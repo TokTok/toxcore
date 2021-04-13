@@ -101,6 +101,6 @@ int main(void)
 {
     setvbuf(stdout, nullptr, _IONBF, 0);
 
-    run_auto_test(TOX_COUNT, test_reconnect, false);
+    run_auto_test(TOX_COUNT, test_reconnect, FRIEND_ADD_MODE_MESH);
     return 0;
 }

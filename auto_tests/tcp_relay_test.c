@@ -50,6 +50,8 @@ int main(void)
         fflush(stdout);
 
         tox_iterate(tox_tcp, nullptr);
+        // Note: we can't use mono_time to speed this up, because it depends on
+        // the target node iterating at the faster speed as well.
         c_sleep(ITERATION_INTERVAL);
     } while (tox_self_get_connection_status(tox_tcp) == TOX_CONNECTION_NONE);
 

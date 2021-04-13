@@ -5,6 +5,12 @@
 #include "../toxcore/Messenger.h"
 #include "../toxcore/mono_time.h"
 
+typedef enum Friend_Add_Mode {
+    FRIEND_ADD_MODE_MESH,
+    FRIEND_ADD_MODE_CHAIN,
+    FRIEND_ADD_MODE_NONE,
+} Friend_Add_Mode;
+
 static bool all_connected(uint32_t tox_count, Tox **toxes)
 {
     for (uint32_t i = 0; i < tox_count; i++) {
@@ -57,7 +63,54 @@ static void set_mono_time_callback(Tox *tox, State *state)
     mono_time_set_current_time_callback(mono_time, get_state_clock_callback, state);
 }
 
-static void run_auto_test(uint32_t tox_count, void test(Tox **toxes, State *state), bool chain)
+static void add_all_friends(uint32_t tox_count, Tox **toxes, Friend_Add_Mode mode)
+{
+    switch (mode) {
+        case FRIEND_ADD_MODE_CHAIN: {
+            printf("each tox adds adjacent toxes as friends\n");
+
+            for (uint32_t i = 0; i < tox_count; i++) {
+                for (uint32_t j = i - 1; j != i + 3; j += 2) {
+                    if (j >= tox_count) {
+                        continue;
+                    }
+
+                    uint8_t public_key[TOX_PUBLIC_KEY_SIZE];
+                    tox_self_get_public_key(toxes[j], public_key);
+                    Tox_Err_Friend_Add err;
+                    tox_friend_add_norequest(toxes[i], public_key, &err);
+                    ck_assert(err == TOX_ERR_FRIEND_ADD_OK);
+                }
+            }
+
+            break;
+        }
+
+        case FRIEND_ADD_MODE_MESH: {
+            printf("toxes all add each other as friends\n");
+
+            for (uint32_t i = 0; i < tox_count; i++) {
+                for (uint32_t j = 0; j < tox_count; j++) {
+                    if (i != j) {
+                        uint8_t public_key[TOX_PUBLIC_KEY_SIZE];
+                        tox_self_get_public_key(toxes[j], public_key);
+                        Tox_Err_Friend_Add err;
+                        tox_friend_add_norequest(toxes[i], public_key, &err);
+                        ck_assert(err == TOX_ERR_FRIEND_ADD_OK);
+                    }
+                }
+            }
+
+            break;
+        }
+
+        case FRIEND_ADD_MODE_NONE:
+            printf("toxes don't add any friends\n");
+            break;
+    }
+}
+
+static void run_auto_test(uint32_t tox_count, void test(Tox **toxes, State *state), Friend_Add_Mode mode)
 {
     printf("initialising %u toxes\n", tox_count);
     Tox **toxes = (Tox **)calloc(tox_count, sizeof(Tox *));
@@ -74,37 +127,7 @@ static void run_auto_test(uint32_t tox_count, void test(Tox **toxes, State *stat
         set_mono_time_callback(toxes[i], &state[i]);
     }
 
-    if (chain) {
-        printf("each tox adds adjacent toxes as friends\n");
-
-        for (uint32_t i = 0; i < tox_count; i++) {
-            for (uint32_t j = i - 1; j != i + 3; j += 2) {
-                if (j >= tox_count) {
-                    continue;
-                }
-
-                uint8_t public_key[TOX_PUBLIC_KEY_SIZE];
-                tox_self_get_public_key(toxes[j], public_key);
-                Tox_Err_Friend_Add err;
-                tox_friend_add_norequest(toxes[i], public_key, &err);
-                ck_assert(err == TOX_ERR_FRIEND_ADD_OK);
-            }
-        }
-    } else {
-        printf("toxes all add each other as friends\n");
-
-        for (uint32_t i = 0; i < tox_count; i++) {
-            for (uint32_t j = 0; j < tox_count; j++) {
-                if (i != j) {
-                    uint8_t public_key[TOX_PUBLIC_KEY_SIZE];
-                    tox_self_get_public_key(toxes[j], public_key);
-                    Tox_Err_Friend_Add err;
-                    tox_friend_add_norequest(toxes[i], public_key, &err);
-                    ck_assert(err == TOX_ERR_FRIEND_ADD_OK);
-                }
-            }
-        }
-    }
+    add_all_friends(tox_count, toxes, mode);
 
     printf("bootstrapping all toxes off toxes[0]\n");
     uint8_t dht_key[TOX_PUBLIC_KEY_SIZE];
@@ -123,11 +146,13 @@ static void run_auto_test(uint32_t tox_count, void test(Tox **toxes, State *stat
 
     printf("toxes are online\n");
 
-    do {
-        iterate_all_wait(tox_count, toxes, state, ITERATION_INTERVAL);
-    } while (!all_friends_connected(tox_count, toxes));
+    if (mode != FRIEND_ADD_MODE_NONE) {
+        do {
+            iterate_all_wait(tox_count, toxes, state, ITERATION_INTERVAL);
+        } while (!all_friends_connected(tox_count, toxes));
 
-    printf("tox clients connected\n");
+        printf("tox clients connected\n");
+    }
 
     test(toxes, state);
 

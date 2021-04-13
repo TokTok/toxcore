@@ -7,6 +7,13 @@
 #include "../testing/misc_tools.h"
 #include "check_compat.h"
 
+typedef struct State {
+    uint32_t index;
+    uint64_t clock;
+} State;
+
+#include "run_auto_test.h"
+
 static uint8_t const key1[] = {
     0x02, 0x80, 0x7C, 0xF4, 0xF8, 0xBB, 0x8F, 0xB3,
     0x90, 0xCC, 0x37, 0x94, 0xBD, 0xF1, 0xE8, 0x44,
@@ -24,8 +31,11 @@ static uint8_t const key2[] = {
 int main(void)
 {
     setvbuf(stdout, nullptr, _IONBF, 0);
+    (void)run_auto_test;
 
-    Tox *tox_udp = tox_new_log(nullptr, nullptr, nullptr);
+    State state = { 0, 0 };
+    Tox *tox_udp = tox_new_log(nullptr, nullptr, &state.index);
+    set_mono_time_callback(tox_udp, &state);
 
     tox_bootstrap(tox_udp, "78.46.73.141", 33445, key1, nullptr);
     tox_bootstrap(tox_udp, "tox.initramfs.io", 33445, key2, nullptr);
@@ -37,7 +47,10 @@ int main(void)
         fflush(stdout);
 
         tox_iterate(tox_udp, nullptr);
-        c_sleep(ITERATION_INTERVAL);
+        state.clock += tox_iteration_interval(tox_udp);
+        // 1ms per iteration is enough for network processing here. 0ms is not,
+        // because we immediately time out all nodes.
+        c_sleep(1);
     } while (tox_self_get_connection_status(tox_udp) == TOX_CONNECTION_NONE);
 
     const Tox_Connection status = tox_self_get_connection_status(tox_udp);
